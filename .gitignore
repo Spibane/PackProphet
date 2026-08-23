@@ -4,9 +4,12 @@ obj/
 *.user
 *.swp
 
-# Publish output
-publish/
-dist/
+# Publish output. Root-anchored, and that matters: an unanchored `dist/` also matched
+# src/PackProphet.App/wwwroot/lib/bootstrap/dist/, which silently kept every vendored
+# Bootstrap file out of the repo. Locally the app looked fine; on GitHub Pages the whole
+# stylesheet 404'd and the app rendered with no Bootstrap variables or utilities at all.
+/publish/
+/dist/
 
 # Tooling
 .vs/

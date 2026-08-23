@@ -1,0 +1,560 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+@* Virtualized card grid. Two JS modules do the heavy lifting, for reasons proven in the
+   Phase 0 spike:
+     - gridsweep.js hit-tests with elementFromPoint, because touch's implicit pointer
+       capture makes per-tile pointerenter useless for drag-select, and paints the
+       selection in the DOM so a sweep costs zero Blazor re-renders.
+     - imgloader.js caps in-flight image requests, because native loading="lazy" let a
+       fast scroll queue thousands of requests and the CDN dropped the connection. *@
+
+<div class="grid-toolbar">
+    @* The page's own filters share this bar rather than getting one above it. Keeping them
+       apart was tidier in principle and worse in practice: on Collection it meant a nav, a
+       header, a set-tab row, a filter row and a control row — five bars before a single card.
+       One bar, filters first and layout after, says the same thing in half the height. *@
+    @if (Filters is not null)
+    {
+        @Filters
+        <span class="bar-sep" aria-hidden="true"></span>
+    }
+
+    @* An explicit add/remove mode, because there was previously no way to decrement at all
+       on a touch device — shift-click is both undiscoverable and unavailable on a phone. *@
+    @if (AllowRemove)
+    {
+        <div class="btn-group btn-group-sm" role="group" aria-label="Tap action">
+            <button class="btn @(Removing ? "btn-outline-secondary" : "btn-success")"
+                    @onclick="() => Removing = false" title="Tapping a card adds a copy">
+                add
+            </button>
+            <button class="btn @(Removing ? "btn-danger" : "btn-outline-secondary")"
+                    @onclick="() => Removing = true" title="Tapping a card removes a copy">
+                remove
+            </button>
+        </div>
+    }
+
+    <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
+        <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
+                @onclick="() => SetList(false)" title="Card images in a grid">grid</button>
+        <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
+                @onclick="() => SetList(true)"
+                title="Compact rows with names and exact counts — easier to scan, and usable with images off">
+            list
+        </button>
+    </div>
+
+    @* Density, list only. Compact fits far more cards on screen; roomy trades that for the
+       attack and ability text inline, which compact can only show on hover. *@
+    @if (ListView)
+    {
+        <div class="btn-group btn-group-sm" role="group" aria-label="Row height">
+            <button class="btn @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
+                    @onclick="() => SetRoomy(false)"
+                    title="Short rows — most cards per screen">compact</button>
+            <button class="btn @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
+                    @onclick="() => SetRoomy(true)"
+                    title="Taller rows with attack and ability text shown in full">roomy</button>
+        </div>
+    }
+
+    <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
+            @onclick="ToggleSweep"
+            title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
+        sweep @(Sweeping ? "on" : "off")
+    </button>
+    @ToolbarExtras
+    <span class="ms-auto small text-body-secondary">
+        @if (ListView && FactOf is not null && !FactsReady)
+        {
+            <span class="text-body-tertiary">loading card detail&hellip; &middot; </span>
+        }
+        @if (Removing)
+        {
+            <span class="text-danger fw-semibold">tapping removes a copy &middot; </span>
+        }
+        @Cards.Count cards
+        @if (_imgFailed > 0)
+        {
+            <span class="text-danger"> · @_imgFailed art failed</span>
+        }
+    </span>
+</div>
+
+<div class="grid-wrap @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "")" @ref="_gridEl">
+    @if (Cards.Count == 0)
+    {
+        <p class="p-4 text-body-secondary">Nothing matches those filters.</p>
+    }
+    else if (ListView)
+    {
+        @* Sortable columns. The wider layout has room for information a tile cannot show, so
+           it carries type, stage and an exact count. Narrow screens keep only the two that
+           matter most — type and rarity — via CSS rather than a second code path. *@
+        @* Every cell is always present, header and rows alike: the row is a CSS grid, so a
+           conditionally-omitted cell would shift every column after it out of alignment. *@
+        <div class="card-line head @(Roomy ? "roomy" : "")">
+            <span class="c-thumb"></span>
+            <button class="c-nm" @onclick="() => SortBy(ListSort.Name)">name @Caret(ListSort.Name)</button>
+            <button class="c-id" @onclick="() => SortBy(ListSort.Number)">set @Caret(ListSort.Number)</button>
+            <button class="c-ty" @onclick="() => SortBy(ListSort.Type)">type @Caret(ListSort.Type)</button>
+            <button class="c-st" @onclick="() => SortBy(ListSort.Stage)">stage @Caret(ListSort.Stage)</button>
+            <button class="c-rr" @onclick="() => SortBy(ListSort.Rarity)">rarity @Caret(ListSort.Rarity)</button>
+            <button class="c-hp" @onclick="() => SortBy(ListSort.Health)">hp @Caret(ListSort.Health)</button>
+            <span class="c-a1">attack 1</span>
+            <span class="c-a2">attack 2</span>
+            <span class="c-ab">ability</span>
+            <span class="c-pick"></span>
+            <button class="c-ct" @onclick="() => SortBy(ListSort.Count)">have @Caret(ListSort.Count)</button>
+            <span class="c-acts"></span>
+        </div>
+
+        @* ItemSize must match the rendered row height or Virtualize mis-sizes the scrollbar
+           and the list jumps while scrolling. Both values live in app.css next to each other. *@
+        <Virtualize Items="_flat" ItemSize="@(Roomy ? 95f : 51f)" Context="card" OverscanCount="8">
+            @{
+                var idx = _indexOf.GetValueOrDefault(card.Key, -1);
+                var count = CountOf(card);
+                var rung = RungOf?.Invoke(card);
+                var picked = PickedOf?.Invoke(card) ?? 0;
+                var fact = FactOf?.Invoke(card);
+            }
+            @* Keyed so a row is never reused for a different card. Without this Virtualize
+               recycles the DOM and only rewrites data-src, which left the previous card's
+               art on screen after switching sets. The loader also detects that case, but not
+               creating it is the better fix. *@
+            <div @key="card.Key" class="card-line @(Roomy ? "roomy" : "") @(count > 0 ? "owned" : "")"
+                 data-idx="@idx">
+                @* The image is pointer-events:none so sweep hit-testing lands on the row, so
+                   the hover target has to be this wrapper rather than the image itself. *@
+                <span class="c-thumb" data-tip-img="@card.ArtUrl" data-tip="@card.Name">
+                    <img class="thumb" data-src="@card.ArtUrl" alt="" decoding="async" draggable="false" />
+                </span>
+                @* The name is the link. A tile tap means "I own one more", so detail needs its
+                   own target rather than stealing that gesture. *@
+                <span class="c-nm">
+                    <a href="card/@card.Key" title="@card.Name"
+                       @onclick:stopPropagation="true">@card.Name</a>
+                </span>
+                <span class="c-id">@card.Set&thinsp;@card.Number</span>
+                @{ var ty = TypeOf?.Invoke(card) ?? ""; }
+                <span class="c-ty">
+                    @* Icon AND label. The icon is the fast read; the word stays because it is
+                       unambiguous, searchable by eye, and the only thing a screen reader has
+                       if the SVG is missed. Trainer kinds have pips too, drawn as outlined
+                       rings so they never read as an energy. *@
+                    @if (HasPip(ty))
+                    {
+                        <EnergyPip Type="@ty" />
+                    }
+                    <span class="ty-name">@ty</span>
+                </span>
+                <span class="c-st">@(StageOf?.Invoke(card) ?? "")</span>
+                <span class="c-rr">
+                    @if (rung is not null)
+                    {
+                        <span class="glyphs @rung.GlyphClass" title="@rung.Symbol">@rung.Glyphs</span>
+                    }
+                </span>
+                <span class="c-hp">@(fact?.Health?.ToString() ?? "")</span>
+
+                @* Two attack columns, because two is the maximum a card can have. Fixed
+                   columns rather than a run of items keeps the second attack aligned down the
+                   whole list instead of starting wherever the first one happened to end. *@
+                @for (var slot = 0; slot < 2; slot++)
+                {
+                    var atk = fact is not null && fact.AttackList.Count > slot ? fact.AttackList[slot] : null;
+                    <span class="@(slot == 0 ? "c-a1" : "c-a2")">
+                        @if (atk is not null)
+                        {
+                            @* No hover tip in roomy: the row already shows what the tip
+                               would say, and a tooltip repeating visible text is noise. *@
+                            <span class="atk-item" data-tip="@(Roomy ? null : AttackTip(atk))"
+                                  aria-label="@AttackTip(atk)">
+                                <span class="atk-line">
+                                    @foreach (var sym in atk.CostSymbols)
+                                    {
+                                        <EnergyPip Type="@sym" />
+                                    }
+                                    <span class="atk-name">@atk.Name</span>
+                                        @* Printed damage, so a multiplier or bonus is not lost. *@
+                                    @if (atk.DamageLabel is { Length: > 0 } dmg)
+                                    {
+                                        <span class="atk-dmg">@dmg</span>
+                                    }
+                                </span>
+                                @* Always rendered, hidden by CSS when compact: one code path,
+                                   and the roomy toggle then costs no re-render of the tree. *@
+                                @if (!string.IsNullOrWhiteSpace(atk.Effect))
+                                {
+                                    <span class="atk-effect">@atk.Effect</span>
+                                }
+                            </span>
+                        }
+                    </span>
+                }
+
+                <span class="c-ab">
+                    @if (fact?.HasAbility == true)
+                    {
+                        <span class="atk-item ability" data-tip="@(Roomy ? null : AbilityTip(fact))"
+                              aria-label="@AbilityTip(fact)">
+                            <span class="atk-line"><span class="atk-name">@fact.Ability!.Name</span></span>
+                            @if (!string.IsNullOrWhiteSpace(fact.Ability.Effect))
+                            {
+                                <span class="atk-effect">@fact.Ability.Effect</span>
+                            }
+                        </span>
+                    }
+                </span>
+
+                <span class="c-pick">
+                    @if (picked > 0)
+                    {
+                        <span class="pick">+@picked</span>
+                    }
+                </span>
+
+                <span class="c-ct">@(count > 0 ? count.ToString() : "—")</span>
+                <span class="c-acts">
+                    <button class="btn btn-sm btn-outline-secondary py-0 px-2"
+                            @onclick="() => Bump(card, -1)" @onclick:stopPropagation="true"
+                            disabled="@(count == 0 && PickedOf is null)" aria-label="Remove one">&minus;</button>
+                    <button class="btn btn-sm btn-outline-secondary py-0 px-2"
+                            @onclick="() => Bump(card, +1)" @onclick:stopPropagation="true"
+                            aria-label="Add one">+</button>
+                </span>
+            </div>
+        </Virtualize>
+    }
+    else
+    {
+        <Virtualize Items="_rows" ItemSize="@RowHeight" Context="row" OverscanCount="3">
+            <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)">
+                @foreach (var (card, idx) in row)
+                {
+                    <CardTile @key="card.Key" Card="card" Index="idx"
+                              Count="CountOf(card)"
+                              Picked="@(PickedOf?.Invoke(card) ?? 0)"
+                              ShowInfo="@(!Sweeping)"
+                              OnHold="OpenDetail"
+                              OnActivate="Activate" />
+                }
+            </div>
+        </Virtualize>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PocketCard> Cards { get; set; } = [];
+    [Parameter, EditorRequired] public Func<PocketCard, int> CountOf { get; set; } = _ => 0;
+
+    /// <summary>Called with (card, delta). Sweeps report each card once with +1.</summary>
+    [Parameter] public EventCallback<(PocketCard Card, int Delta)> OnAdjust { get; set; }
+
+    /// <summary>
+    /// Called with the cards a drag-sweep covered and the delta to apply, so the whole sweep
+    /// is a single undo step.
+    /// </summary>
+    [Parameter] public EventCallback<(IReadOnlyList<PocketCard> Cards, int Delta)> OnSweep { get; set; }
+
+    /// <summary>Whether this grid offers a remove mode. False where tapping means something else.</summary>
+    [Parameter] public bool AllowRemove { get; set; } = true;
+
+    /// <summary>
+    /// Copies picked in the current action, shown on the tile separately from the owned
+    /// count. Used when logging a pack, where a tap means "I pulled this" rather than
+    /// "I own this".
+    /// </summary>
+    [Parameter] public Func<PocketCard, int>? PickedOf { get; set; }
+
+    /// <summary>Compact rows instead of image tiles. Persisted, so the choice sticks.</summary>
+    [Parameter] public bool ListView { get; set; }
+
+    [Parameter] public EventCallback<bool> ListViewChanged { get; set; }
+
+    /// <summary>Taller list rows carrying attack and ability text inline. List view only.</summary>
+    [Parameter] public bool Roomy { get; set; }
+
+    [Parameter] public EventCallback<bool> RoomyChanged { get; set; }
+
+    /// <summary>Rarity rung, for drawing the game's own symbols instead of a code.</summary>
+    [Parameter] public Func<PocketCard, RarityRung?>? RungOf { get; set; }
+
+    /// <summary>Energy for a Pokémon, trainer kind otherwise. Blank where data is missing.</summary>
+    [Parameter] public Func<PocketCard, string>? TypeOf { get; set; }
+
+    [Parameter] public Func<PocketCard, string>? StageOf { get; set; }
+
+    /// <summary>Printed detail — attacks, ability, HP. Null where upstream has none.</summary>
+    [Parameter] public Func<PocketCard, CardFact?>? FactOf { get; set; }
+
+    /// <summary>False while card detail is still downloading, so blanks read as "not yet".</summary>
+    [Parameter] public bool FactsReady { get; set; }
+
+    [Parameter] public int Columns { get; set; } = 6;
+    [Parameter] public RenderFragment? ToolbarExtras { get; set; }
+
+    /// <summary>
+    /// The page's filter controls, rendered at the start of the toolbar. Passed in rather than
+    /// rendered by the page above the grid so that filtering and layout share one bar — see the
+    /// comment in the markup.
+    /// </summary>
+    [Parameter] public RenderFragment? Filters { get; set; }
+
+    private List<List<(PocketCard Card, int Index)>> _rows = [];
+
+    // Sweep hit-tests by data-idx, so list rows need the same positional index the grid uses.
+    private Dictionary<string, int> _indexOf = [];
+
+    // Virtualize needs an ICollection, which IReadOnlyList is not.
+    private List<PocketCard> _flat = [];
+    private ElementReference _gridEl;
+    private IJSObjectReference? _sweep, _images;
+    private string _lastListSignature = "";
+    private DotNetObjectReference<CardGrid>? _self;
+    private bool _attached;
+    private int _imgFailed;
+    private System.Threading.Timer? _statsTimer;
+
+    private bool Sweeping { get; set; }
+
+    /// <summary>When set, a tap or sweep removes a copy instead of adding one.</summary>
+    private bool Removing { get; set; }
+
+    /// <summary>Shift still works as a one-off inversion for anyone who knows it.</summary>
+    private int DeltaFor(bool shift) => Removing ^ shift ? -1 : +1;
+
+    private float RowHeight => 1000f / Math.Max(1, Columns) * 1.42f + 8f;
+
+    protected override void OnParametersSet()
+    {
+        // Detect a wholesale change of the card list (a different set, or a new filter) so
+        // the image loader can be told to re-check rather than trusting per-element state.
+        var signature = $"{Cards.Count}|{(Cards.Count > 0 ? Cards[0].Key : "")}|" +
+                        $"{(Cards.Count > 0 ? Cards[^1].Key : "")}|{ListView}|{Roomy}";
+        _listChanged = signature != _lastListSignature;
+        _lastListSignature = signature;
+
+        Rechunk();
+    }
+
+    private bool _listChanged;
+
+    /// <summary>
+    /// A long press on a tile opens card detail. The tile detects the hold; navigating is this
+    /// component's job because the tile is deliberately ignorant of routing.
+    /// </summary>
+    private void OpenDetail(PocketCard card) => Nav.NavigateTo($"card/{card.Key}");
+
+    private Task SetList(bool on) => ListViewChanged.InvokeAsync(on);
+
+    private Task SetRoomy(bool on) => RoomyChanged.InvokeAsync(on);
+
+    public enum ListSort { None, Name, Number, Type, Stage, Rarity, Count, Health }
+
+    private ListSort _sort = ListSort.None;
+    private bool _descending;
+
+    private void SortBy(ListSort column)
+    {
+        if (_sort == column) _descending = !_descending;
+        else { _sort = column; _descending = false; }
+        Rechunk();
+    }
+
+    /// <summary>
+    /// Hover text for an attack: the name, plus its effect when it has one.
+    ///
+    /// Deliberately NOT the energy cost or the damage. Both are already on screen — the cost
+    /// as coloured pips, the damage as a number — so repeating them as
+    /// "Lightning + Lightning + Lightning · 90 damage" is bloat that buries the one thing the
+    /// row cannot show. The name is kept because the column truncates it.
+    /// </summary>
+    private static string AttackTip(CardAttack atk)
+    {
+        var name = atk.Name ?? "Attack";
+        return string.IsNullOrWhiteSpace(atk.Effect) ? name : $"{name}\n{atk.Effect}";
+    }
+
+    private static readonly HashSet<string> PipTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Grass", "Fire", "Water", "Lightning", "Psychic", "Fighting", "Darkness", "Metal",
+        // Dragon has no energy of its own in Pocket, but appears as a card's type.
+        "Dragon", "Colorless",
+        // Trainer kinds, drawn as outlined pips.
+        "Item", "Supporter", "Tool", "Stadium"
+    };
+
+    private static bool HasPip(string? type) => type is not null && PipTypes.Contains(type);
+
+    private static string AbilityTip(CardFact fact)
+    {
+        var name = fact.Ability?.Name ?? "Ability";
+        var effect = fact.Ability?.Effect;
+        return string.IsNullOrWhiteSpace(effect) ? name : $"{name}\n{effect}";
+    }
+
+    private string Caret(ListSort column) =>
+        _sort != column ? "" : _descending ? "\u25be" : "\u25b4";
+
+    /// <summary>
+    /// Cards in display order. Sorting happens here rather than in the page so both layouts
+    /// and the sweep index stay consistent with what is on screen.
+    /// </summary>
+    private List<PocketCard> Sorted()
+    {
+        if (_sort == ListSort.None) return Cards.ToList();
+
+        IEnumerable<PocketCard> q = Cards;
+        Func<PocketCard, object> key = _sort switch
+        {
+            ListSort.Name => c => c.Name,
+            ListSort.Number => c => c.Number,
+            ListSort.Type => c => TypeOf?.Invoke(c) ?? "",
+            ListSort.Stage => c => StageOf?.Invoke(c) ?? "",
+            ListSort.Rarity => c => RungOf?.Invoke(c)?.Index ?? -1,
+            ListSort.Count => c => CountOf(c),
+            ListSort.Health => c => FactOf?.Invoke(c)?.Health ?? -1,
+            _ => c => c.Number
+        };
+
+        // Set and number as the tie-break, so equal keys keep a stable, meaningful order.
+        q = _descending
+            ? q.OrderByDescending(key).ThenBy(c => c.Set).ThenBy(c => c.Number)
+            : q.OrderBy(key).ThenBy(c => c.Set).ThenBy(c => c.Number);
+
+        return q.ToList();
+    }
+
+    private Task Bump(PocketCard card, int delta) => OnAdjust.InvokeAsync((card, delta));
+
+    private void Rechunk()
+    {
+        _flat = Sorted();
+        _indexOf = new Dictionary<string, int>(_flat.Count);
+        for (var i = 0; i < _flat.Count; i++) _indexOf[_flat[i].Key] = i;
+
+        var cols = Math.Max(1, Columns);
+        var rows = new List<List<(PocketCard, int)>>((_flat.Count / cols) + 1);
+        for (var i = 0; i < _flat.Count; i += cols)
+        {
+            var row = new List<(PocketCard, int)>(cols);
+            for (var j = i; j < Math.Min(i + cols, _flat.Count); j++) row.Add((_flat[j], j));
+            rows.Add(row);
+        }
+        _rows = rows;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_attached)
+        {
+            if (_listChanged)
+            {
+                _listChanged = false;
+                await RefreshImagesAsync();
+                await PrefetchAsync();
+            }
+            return;
+        }
+        _attached = true;
+
+        _self = DotNetObjectReference.Create(this);
+        _sweep = await JS.InvokeAsync<IJSObjectReference>("import", "./js/gridsweep.js");
+        await _sweep.InvokeVoidAsync("attach", _gridEl, _self);
+
+        _images = await JS.InvokeAsync<IJSObjectReference>("import", "./js/imgloader.js");
+        await _images.InvokeVoidAsync("init", _gridEl);
+
+        await PrefetchAsync();
+
+        // Poll for image stats: a callback per image would defeat the point of the loader.
+        _statsTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                var st = await _images.InvokeAsync<ImgStats>("stats");
+                if (st.failed != _imgFailed) { _imgFailed = st.failed; await InvokeAsync(StateHasChanged); }
+            }
+            catch { /* page torn down */ }
+        }, null, 1000, 1500);
+    }
+
+    private async Task RefreshImagesAsync()
+    {
+        if (_images is null) return;
+        try { await _images.InvokeVoidAsync("refresh"); }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    /// <summary>
+    /// Warm the cache for the whole visible list, so scrolling a set never waits on the
+    /// network. Capped: "all sets" is 3,700+ cards at roughly 45 KB each, and eagerly
+    /// pulling ~170 MB to save some scrolling latency is a bad trade — especially on mobile
+    /// data. Below the cap (any single set) the entire thing is fetched.
+    /// </summary>
+    private async Task PrefetchAsync()
+    {
+        if (_images is null) return;
+
+        var urls = _flat.Count <= PrefetchLimit
+            ? _flat.Select(c => c.ArtUrl).ToArray()
+            : [];
+
+        try
+        {
+            if (urls.Length == 0) await _images.InvokeVoidAsync("cancelPrefetch");
+            else await _images.InvokeVoidAsync("prefetch", urls);
+        }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    private const int PrefetchLimit = 700;
+
+    private async Task ToggleSweep()
+    {
+        Sweeping = !Sweeping;
+        if (_sweep is not null) await _sweep.InvokeVoidAsync("setSweep", Sweeping);
+    }
+
+    private Task Activate((int Index, bool Shift) a) =>
+        a.Index >= 0 && a.Index < Cards.Count
+            ? OnAdjust.InvokeAsync((Cards[a.Index], DeltaFor(a.Shift)))
+            : Task.CompletedTask;
+
+    /// <summary>Called once by gridsweep.js when a drag is released.</summary>
+    [JSInvokable]
+    public async Task ApplySweep(int lo, int hi)
+    {
+        lo = Math.Max(0, lo);
+        hi = Math.Min(Cards.Count - 1, hi);
+        if (hi < lo) return;
+
+        var swept = new List<PocketCard>(hi - lo + 1);
+        for (var i = lo; i <= hi; i++) swept.Add(Cards[i]);
+
+        await OnSweep.InvokeAsync((swept, DeltaFor(false)));
+        StateHasChanged();   // interop callback runs outside the render loop
+    }
+
+    private sealed record ImgStats(int loaded, int failed, int queued, int inflight);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_statsTimer is not null) await _statsTimer.DisposeAsync();
+        foreach (var m in new[] { _sweep, _images })
+        {
+            if (m is null) continue;
+            try { await m.InvokeVoidAsync("dispose"); await m.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+            catch (JSException) { }
+        }
+        _self?.Dispose();
+    }
+}

@@ -1,0 +1,650 @@
+@page "/decks/new"
+@page "/decks/{Id}"
+@inject AppSession Session
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>@(_draft?.Name ?? "Deck") · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else if (_draft is null)
+{
+    <div class="p-4">
+        <p>That deck no longer exists.</p>
+        <a class="btn btn-sm btn-primary" href="decks">back to decks</a>
+    </div>
+}
+else
+{
+    <div class="page-head">
+        <a class="btn btn-sm btn-outline-secondary" href="decks">&larr; decks</a>
+        <input class="form-control form-control-sm" style="max-width:16rem"
+               value="@_draft.Name" @onchange="Rename" aria-label="Deck name" />
+
+        @* Size is the rule people break, so it reads as a fraction rather than a count. *@
+        <span class="badge @(_draft.DeckBuilderNrs.Count == GameRules.DeckSize ? "text-bg-success" : "text-bg-secondary")">
+            @_draft.DeckBuilderNrs.Count / @GameRules.DeckSize
+        </span>
+
+        @if (_draft.DeckBuilderNrs.Count > 0)
+        {
+            @if (_missingCount > 0)
+            {
+                <span class="badge text-bg-warning">@_missingCount missing</span>
+            }
+            else
+            {
+                <span class="badge text-bg-success">you own every card</span>
+            }
+        }
+
+        @* Explicit save, with the state of the draft always visible. Editing used to persist on
+           every tap, which is convenient and dishonest: there was no way to tell whether a
+           change had stuck, and no way to back out of one. *@
+        <span class="actions">
+            <span class="save-state @(Dirty ? "dirty" : "")">
+                @if (Dirty)
+                {
+                    <span class="small">unsaved changes</span>
+                }
+                else if (_justSaved)
+                {
+                    <span class="small text-success">saved</span>
+                }
+            </span>
+
+            <button class="btn btn-sm btn-primary" @onclick="Save" disabled="@(!Dirty)">save</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="Discard" disabled="@(!Dirty)">
+                @(IsNew ? "start over" : "discard")
+            </button>
+
+            @if (!IsNew)
+            {
+                <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmDelete">
+                    @(_confirmingDelete ? "really delete?" : "delete")
+                </button>
+            }
+        </span>
+    </div>
+
+    @if (_pendingUrl is not null)
+    {
+        <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 m-3 py-2">
+            <strong>This deck has unsaved changes.</strong>
+            <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">save and leave</button>
+            <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">discard and leave</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">stay here</button>
+        </div>
+    }
+
+    <div class="edit-cols p-3">
+        <div>
+            <h6>Energy <span class="small fw-normal text-body-secondary">at most @GameRules.MaxEnergyTypes</span></h6>
+            <div class="energy-chips mb-3">
+                @foreach (var energy in AllEnergies)
+                {
+                    var on = _draft.Energies.Contains(energy);
+                    <button class="energy-chip @(on ? "on" : "")" @onclick="() => ToggleEnergy(energy)"
+                            disabled="@(!on && _draft.Energies.Count >= GameRules.MaxEnergyTypes)"
+                            aria-pressed="@on">
+                        <EnergyPip Type="@energy.ToString()" />
+                        <span>@energy</span>
+                    </button>
+                }
+            </div>
+
+            <h6>Cards</h6>
+            @if (_draft.DeckBuilderNrs.Count > 0)
+            {
+                <p class="small text-body-secondary mb-1">
+                    The ★ marks the card that fronts this deck in the grid view.
+                    @if (_draft.FaceNr is null)
+                    {
+                        <span>Unset, so it uses the rarest Pokémon in the deck.</span>
+                    }
+                </p>
+            }
+            @if (_draft.DeckBuilderNrs.Count == 0)
+            {
+                <p class="small text-body-secondary">Empty. Search on the right and tap a card to add it.</p>
+            }
+            else
+            {
+                <table class="table table-sm align-middle deck-list">
+                    <tbody>
+                        @foreach (var entry in _entries)
+                        {
+                            <tr>
+                                <td style="width:2.4rem">
+                                    @if (entry.Card is not null)
+                                    {
+                                        <span class="pack-thumb deck-thumb"
+                                              data-tip-img="@entry.Card.ArtUrl" data-tip="@entry.Card.Name"
+                                              style="background-image:url('@entry.Card.ArtUrl')"></span>
+                                    }
+                                </td>
+                                <td style="width:1.8rem">
+                                    @* Which card fronts the deck in the grid. Explicit, because
+                                       rarity cannot infer it: a Crown Tool goes into many decks
+                                       while a deck is built around one Pokémon. *@
+                                    <button class="face-pick @(IsFace(entry.Nr) ? "on" : "")"
+                                            @onclick="() => SetFace(entry.Nr)"
+                                            aria-pressed="@IsFace(entry.Nr)"
+                                            title="@(IsFace(entry.Nr) ? "This is the deck's face card — tap to unset" : "Use as the deck's face card")">
+                                        ★
+                                    </button>
+                                </td>
+                                <td>
+                                    <strong>@entry.Name</strong>
+                                    <span class="small text-body-secondary ms-1">@entry.Where</span>
+                                </td>
+                                <td class="num" style="width:5.5rem">
+                                    @* Owned against needed, side by side: which rows are short
+                                       is the question this page exists to answer. *@
+                                    <span class="@(entry.Owned >= entry.Count ? "text-success" : "text-warning-emphasis")">
+                                        @entry.Owned / @entry.Count
+                                    </span>
+                                </td>
+                                <td class="text-end" style="width:6rem">
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                            @onclick="() => Remove(entry.Nr)" aria-label="Remove one">&minus;</button>
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                            @onclick="() => Add(entry.Nr)"
+                                            disabled="@(!CanAdd(entry.Nr))" aria-label="Add one">+</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            <h6 class="mt-3">Legality</h6>
+            @if (_report is null || _draft.DeckBuilderNrs.Count == 0)
+            {
+                <p class="small text-body-secondary">Nothing to check yet.</p>
+            }
+            else
+            {
+                @if (_report.Findings.Count == 0)
+                {
+                    <p class="small text-success mb-0">Legal, and every rule was checkable.</p>
+                }
+                @foreach (var finding in _report.Findings)
+                {
+                    <div class="alert @AlertClass(finding.Severity) py-1 px-2 small mb-1">
+                        <strong>@SeverityLabel(finding.Severity)</strong> @finding.Message
+                    </div>
+                }
+            }
+
+            <h6 class="mt-3">Share</h6>
+            @if (_shareSvg is null)
+            {
+                <p class="small text-body-secondary">
+                    A code needs a legal 20-card deck &mdash; the game will not scan a partial one.
+                </p>
+            }
+            else
+            {
+                <div class="share-row">
+                    @* Black on white whatever the theme: the game's scanner needs the standard
+                       polarity. *@
+                    <div class="qr">@((MarkupString)_shareSvg)</div>
+                    <div>
+                        <p class="small text-body-secondary mb-1">
+                            In the game: <em>My Decks &rarr; Build New &rarr; Scan Code</em>.
+                        </p>
+                        @* Tucked away: newer game versions no longer offer text codes at all,
+                           so this is for older clients rather than the normal route. *@
+                        <details>
+                            <summary class="small text-body-secondary">show the code as text</summary>
+                            <textarea class="form-control form-control-sm mt-1" rows="3" readonly>@_shareCode</textarea>
+                        </details>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="picker-col">
+            <CardPicker CanAdd="CanAdd" InDeck="InDeck" OnAdd="Add" />
+
+            @if (_missingCount > 0)
+            {
+                <h6 class="mt-3">What you still need</h6>
+                <p class="small text-body-secondary">
+                    Cheapest route per card. Trade and Wonder Pick are priced in their own
+                    currencies and never converted into packs, so they read as notes rather than
+                    a number to compare.
+                </p>
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr><th>card</th><th class="num">need</th><th>cheapest route</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (entry, route) in _missing)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@entry.Name</strong>
+                                    <span class="small text-body-secondary ms-1">@entry.Where</span>
+                                </td>
+                                <td class="num">@(entry.Count - entry.Owned)</td>
+                                <td class="small">@route</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <h6 class="mt-3">Best packs for this deck</h6>
+                @if (_ranked.Count == 0)
+                {
+                    <p class="small text-body-secondary">
+                        No purchasable pack supplies any of the missing cards.
+                    </p>
+                }
+                else
+                {
+                    <table class="table table-sm align-middle pack-table">
+                        <thead>
+                            <tr><th>pack</th><th class="num">chance of a hit</th><th class="num">cards it can give</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var standing in _ranked.Take(8))
+                            {
+                                <tr class="@(standing == _ranked[0] ? "table-primary" : "")">
+                                    <td>
+                                        <span class="pack-thumb"
+                                              style="background-image:url('@Session.PackArtUrl(standing.PackKey)')"></span>
+                                        <strong>@standing.PackName</strong>
+                                        <span class="small text-body-secondary">@standing.Set</span>
+                                    </td>
+                                    <td class="num">@standing.ChanceUseful.ToString("P1")</td>
+                                    <td class="num">@standing.DemandsServed</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private const int MaxResults = 60;
+
+    private static readonly EnergyType[] AllEnergies = Enum.GetValues<EnergyType>();
+    private static readonly string[] Stages = ["Basic", "Stage 1", "Stage 2"];
+
+    /// <summary>The working copy. Nothing is persisted until Save.</summary>
+    private SavedDeck? _draft;
+
+    /// <summary>What is on disk, to compare against and to restore on Discard.</summary>
+    private SavedDeck? _saved;
+
+    private LintReport? _report;
+    private string? _shareCode;
+    private string? _shareSvg;
+    private IReadOnlyList<PackStanding> _ranked = [];
+
+    private bool _confirmingDelete;
+    private bool _justSaved;
+    private IDisposable? _navGuard;
+
+    private bool IsNew => Id is null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+
+        // Leaving with unsaved edits is the one way this page can lose work, so it asks.
+        _navGuard = Nav.RegisterLocationChangingHandler(OnNavigating);
+
+        await Session.InitAsync();
+        Load();
+    }
+
+    protected override void OnParametersSet() => Load();
+
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        _navGuard?.Dispose();
+    }
+
+    private void OnChanged()
+    {
+        // An external change (a collection edit elsewhere, or card detail arriving) must not
+        // clobber an edit in progress — only the derived figures are refreshed.
+        Recalculate();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Load()
+    {
+        if (!Session.Ready) return;
+
+        if (IsNew)
+        {
+            // Unsaved until the user says so, so a mis-tap on "new deck" leaves nothing behind.
+            _saved = null;
+            _draft ??= new SavedDeck(Guid.NewGuid().ToString("n")[..10], "New deck", [], []);
+        }
+        else if (_draft?.Id != Id)
+        {
+            _saved = Session.DeckById(Id!);
+            _draft = _saved is null ? null : Clone(_saved);
+        }
+
+        Recalculate();
+    }
+
+    private static SavedDeck Clone(SavedDeck deck) =>
+        deck with { DeckBuilderNrs = [.. deck.DeckBuilderNrs], Energies = [.. deck.Energies] };
+
+    /// <summary>
+    /// True when the draft differs from what is stored. Card order is irrelevant — a deck is a
+    /// multiset — so it is compared as sorted copies rather than element-wise.
+    /// </summary>
+    private bool Dirty
+    {
+        get
+        {
+            if (_draft is null) return false;
+            if (_saved is null) return _draft.DeckBuilderNrs.Count > 0 || _draft.Energies.Count > 0
+                                     || _draft.Name != "New deck";
+
+            return _draft.Name != _saved.Name
+                   || !_draft.DeckBuilderNrs.Order().SequenceEqual(_saved.DeckBuilderNrs.Order())
+                   || !_draft.Energies.Order().SequenceEqual(_saved.Energies.Order());
+        }
+    }
+
+    /// <summary>
+    /// Blocks leaving with unsaved edits and asks, rather than either saving silently (which is
+    /// the behaviour being fixed) or discarding silently. A browser confirm dialog is avoided
+    /// deliberately: the choice is save / discard / stay, which a two-button dialog cannot ask.
+    /// </summary>
+    private ValueTask OnNavigating(LocationChangingContext context)
+    {
+        if (!Dirty || _allowNav) return ValueTask.CompletedTask;
+
+        _pendingUrl = context.TargetLocation;
+        context.PreventNavigation();
+        InvokeAsync(StateHasChanged);
+        return ValueTask.CompletedTask;
+    }
+
+    private string? _pendingUrl;
+    private bool _allowNav;
+
+    private void SaveAndLeave()
+    {
+        Save();
+        Leave();
+    }
+
+    private void DiscardAndLeave()
+    {
+        Discard();
+        Leave();
+    }
+
+    /// <summary>
+    /// Resumes the blocked navigation. The flag is what lets it through the guard, since the
+    /// draft may still differ from disk when the user chose to discard-and-leave.
+    /// </summary>
+    private void Leave()
+    {
+        var url = _pendingUrl ?? "decks";
+        _pendingUrl = null;
+        _allowNav = true;
+        Nav.NavigateTo(url);
+    }
+
+    private void Stay() => _pendingUrl = null;
+
+    private void Save()
+    {
+        if (_draft is null) return;
+
+        Session.SaveDeck(Clone(_draft));
+        _saved = Clone(_draft);
+        _justSaved = true;
+        _pendingUrl = null;
+
+        // A new deck becomes a real one, so its URL has to stop being /decks/new — otherwise a
+        // reload would hand back an empty draft and the saved deck would look lost.
+        if (IsNew)
+        {
+            _allowNav = true;
+            Nav.NavigateTo($"decks/{_draft.Id}", replace: true);
+            _allowNav = false;
+        }
+    }
+
+    private void Discard()
+    {
+        _pendingUrl = null;
+        _justSaved = false;
+
+        if (_saved is null)
+        {
+            _draft = new SavedDeck(Guid.NewGuid().ToString("n")[..10], "New deck", [], []);
+        }
+        else
+        {
+            _draft = Clone(_saved);
+        }
+
+        Recalculate();
+    }
+
+    /// <summary>
+    /// Everything derived from the draft. A deck is at most 20 cards, so unlike the
+    /// collection-wide estimates this is cheap enough to run on every edit with no overlay.
+    /// </summary>
+    private void Recalculate()
+    {
+        if (_draft is null || !Session.Ready) { _report = null; _ranked = []; RebuildEntries(); return; }
+
+        // Rows and route verdicts first: the pack ranking below depends on the missing count.
+        RebuildEntries();
+
+        _report = Session.Linter?.Lint(_draft.DeckBuilderNrs, _draft.Energies, Session.Owned);
+
+        // A code is only offered for a deck the game would accept. Encoding an 11-card deck
+        // produces something that scans and then fails, which is worse than no code at all.
+        var legal = _draft.DeckBuilderNrs.Count == GameRules.DeckSize && _report?.HasErrors != true;
+        _shareCode = legal ? DeckCodec.Create(_draft.DeckBuilderNrs, _draft.Energies) : null;
+        _shareSvg = _shareCode is null ? null : QrRender.Svg(_shareCode);
+
+        _ranked = Session.Ranker is null || _missingCount == 0
+            ? []
+            : Session.Ranker.Rank(new DeckTarget(_draft.Name, _draft.DeckBuilderNrs),
+                                  Session.Owned, Session.UnavailablePacks);
+    }
+
+    private void Edit(Func<SavedDeck, SavedDeck> change)
+    {
+        if (_draft is null) return;
+
+        _draft = change(_draft);
+        _justSaved = false;
+        Recalculate();
+    }
+
+    private sealed record Entry(int Nr, string Name, string Where, int Count, int Owned, PocketCard? Card);
+
+    /// <summary>
+    /// The deck as rows, and the missing rows with their route verdicts. Both are CACHED rather
+    /// than computed during render: the route lookup in particular prices every acquisition path
+    /// for a card, and running that per row on every render meant it ran on every keystroke in
+    /// the search box next to it.
+    /// </summary>
+    private IReadOnlyList<Entry> _entries = [];
+
+    private IReadOnlyList<(Entry Entry, string Route)> _missing = [];
+
+    private int _missingCount;
+
+    private void RebuildEntries()
+    {
+        if (_draft is null || !Session.Ready)
+        {
+            _entries = [];
+            _missing = [];
+            _missingCount = 0;
+            return;
+        }
+
+        _entries = _draft.DeckBuilderNrs
+            .GroupBy(nr => nr)
+            .Select(g =>
+            {
+                var card = Session.PrintingOf(g.Key);
+                return new Entry(g.Key, card?.Name ?? $"#{g.Key}",
+                                 card is null ? "" : $"{card.Set} {card.Number}",
+                                 g.Count(), Session.OwnedCopiesOfIdentity(g.Key), card);
+            })
+            .OrderBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        _missingCount = _entries.Sum(e => Math.Max(0, e.Count - e.Owned));
+        _missing = _entries.Where(e => e.Owned < e.Count)
+                           .Select(e => (e, RouteNote(e.Card)))
+                           .ToArray();
+    }
+
+    private int InDeck(int nr) => _draft?.DeckBuilderNrs.Count(x => x == nr) ?? 0;
+
+    /// <summary>
+    /// The copy limit is per card NAME, not per identity: two different Pikachu cards still
+    /// count against the same limit of two.
+    /// </summary>
+    private bool CanAdd(int nr)
+    {
+        if (_draft is null || _draft.DeckBuilderNrs.Count >= GameRules.DeckSize) return false;
+
+        var name = Session.PrintingOf(nr)?.Name;
+        if (name is null) return InDeck(nr) < GameRules.MaxCopiesPerName;
+
+        var byName = _draft.DeckBuilderNrs.Count(x =>
+            string.Equals(Session.PrintingOf(x)?.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        return byName < GameRules.MaxCopiesPerName;
+    }
+
+    private void Add(int nr)
+    {
+        if (!CanAdd(nr)) return;
+        Edit(d => d with { DeckBuilderNrs = [.. d.DeckBuilderNrs, nr] });
+    }
+
+    private void Remove(int nr) => Edit(d =>
+    {
+        var next = new List<int>(d.DeckBuilderNrs);
+        next.Remove(nr);                     // one copy, not every copy
+
+        // Removing the last copy of the face card clears it, so the deck does not keep pointing
+        // at a card it no longer contains.
+        var face = d.FaceNr == nr && !next.Contains(nr) ? null : d.FaceNr;
+
+        return d with { DeckBuilderNrs = next, FaceNr = face };
+    });
+
+    private bool IsFace(int nr) => _draft?.FaceNr == nr;
+
+    /// <summary>A second tap clears it, returning the deck to the rarest-Pokémon default.</summary>
+    private void SetFace(int nr) => Edit(d => d with { FaceNr = d.FaceNr == nr ? null : nr });
+
+    private void ToggleEnergy(EnergyType energy) => Edit(d =>
+    {
+        var next = new List<EnergyType>(d.Energies);
+        if (!next.Remove(energy))
+        {
+            if (next.Count >= GameRules.MaxEnergyTypes) return d;
+            next.Add(energy);
+        }
+        return d with { Energies = next };
+    });
+
+    private void Rename(ChangeEventArgs e)
+    {
+        var name = e.Value?.ToString();
+        Edit(d => d with { Name = string.IsNullOrWhiteSpace(name) ? "Untitled deck" : name.Trim() });
+    }
+
+    private void ConfirmDelete()
+    {
+        if (_draft is null || IsNew) return;
+        if (!_confirmingDelete) { _confirmingDelete = true; return; }
+
+        var id = _draft.Id;
+        _draft = null;
+        _saved = null;
+        Session.DeleteDeck(id);
+        Nav.NavigateTo("decks");
+    }
+
+    // ---- routes ------------------------------------------------------------------------
+
+    private string RouteNote(PocketCard? card)
+    {
+        if (card is null || Session.Routes is null) return "";
+
+        var routes = Session.Routes.For(card, Session.Owned);
+        var parts = new List<string>();
+
+        var cheapest = routes.Cheapest;
+        if (cheapest is null)
+        {
+            parts.Add("no pack route — this card cannot be bought or pulled");
+        }
+        else if (cheapest.Route == AcquisitionRoute.PackPoints)
+        {
+            parts.Add($"buy for {cheapest.Points} pack points ({Fmt(cheapest.PacksEquivalent)} packs' worth)");
+        }
+        else
+        {
+            parts.Add($"pull in about {Fmt(cheapest.PacksEquivalent)} packs");
+        }
+
+        var trade = routes.Options.FirstOrDefault(o => o.Route == AcquisitionRoute.Trade);
+        if (trade is { Available: true })
+            parts.Add(trade.Dust is > 0
+                ? $"or trade for {trade.Dust:N0} shinedust + 1 stamina"
+                : "or trade for free (1 stamina)");
+
+        return string.Join(" · ", parts);
+    }
+
+    private static string Fmt(double? packs) => packs switch
+    {
+        null => "—",
+        double.PositiveInfinity => "never",
+        < 10 => packs.Value.ToString("0.#"),
+        _ => packs.Value.ToString("N0")
+    };
+
+    private static string AlertClass(LintSeverity severity) => severity switch
+    {
+        LintSeverity.Error => "alert-danger",
+        LintSeverity.Warning => "alert-warning",
+        LintSeverity.Unverified => "alert-secondary",
+        _ => "alert-info"
+    };
+
+    private static string SeverityLabel(LintSeverity severity) => severity switch
+    {
+        LintSeverity.Error => "illegal:",
+        LintSeverity.Warning => "check:",
+        LintSeverity.Unverified => "cannot verify:",
+        _ => "note:"
+    };
+}

@@ -1,0 +1,759 @@
+@page "/history"
+@inject AppSession Session
+@implements IDisposable
+
+<PageTitle>History · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else
+{
+    <div class="page-head">
+        <span class="title">History</span>
+        <span class="subtitle">from the packs you have logged</span>
+    </div>
+
+    <div class="p-3 history-page" style="max-width:60rem">
+        @if (_log.Count == 0)
+        {
+            <p class="text-body-secondary">
+                Nothing logged yet. Every pack you record on
+                <a href="log">Log a pack</a> lands here, and this page also checks the odds
+                engine against what you actually pulled.
+            </p>
+        }
+        else
+        {
+            <div class="summary mb-3">
+                <div class="stat">
+                    <span class="label">packs logged</span>
+                    <span class="value">@_log.Count</span>
+                    <span class="sub">@_cards cards recorded</span>
+                </div>
+                <div class="stat">
+                    <span class="label">since</span>
+                    <span class="value">@_first.ToLocalTime().ToString("d MMM yyyy")</span>
+                    <span class="sub">@Rate()</span>
+                </div>
+                <div class="stat">
+                    <span class="label">cards per pack</span>
+                    <span class="value">@_perPack.ToString("0.0")</span>
+                    @* A pack yields 4-6 cards, so a figure well below that is not a fact about
+                       the game — it means packs were logged without all their pulls, and every
+                       number on this page derived from cards is understated. Worth saying rather
+                       than letting the reader trust it. *@
+                    <span class="sub @(_perPack < 4 && _log.Count > 2 ? "text-warning-emphasis" : "")">
+                        @(_perPack < 4 && _log.Count > 2 ? "below 4 — some pulls look unlogged" : "4 to 6 is normal")
+                    </span>
+                </div>
+                <div class="stat">
+                    <span class="label">duplicates</span>
+                    <span class="value">@_duplicateShare.ToString("P0")</span>
+                    <span class="sub">@_distinctPulled distinct card(s) pulled</span>
+                </div>
+                <div class="stat">
+                    <span class="label">streak</span>
+                    <span class="value">@_streak</span>
+                    <span class="sub">
+                        day(s) in a row@(_bestStreak > _streak ? $" · best {_bestStreak}" : "")
+                    </span>
+                </div>
+                <div class="stat">
+                    <span class="label">busiest day</span>
+                    <span class="value">@_busiest.Count</span>
+                    <span class="sub">@_busiest.Date.ToString("d MMM yyyy")</span>
+                </div>
+                <div class="stat">
+                    <span class="label">most opened</span>
+                    <span class="value fs-6">@_favouritePack</span>
+                    <span class="sub">@_favouriteCount pack(s) · @_sets set(s) touched</span>
+                </div>
+                <div class="stat">
+                    <span class="label">points earned</span>
+                    <span class="value">@((_log.Count * GameRules.PackPointsPerPack).ToString("N0"))</span>
+                    @* Earned over all time, not held: the balance after spending lives on the
+                       Which pack page, and conflating the two would misreport both. *@
+                    <span class="sub">across every set, all time</span>
+                </div>
+            </div>
+
+            @* Hits get a section rather than a number in a row of statistics. Everything else on
+               this page is accounting; this is the part worth looking at again — so it shows the
+               card, not a count of cards.
+
+               A COUNT and a rate rather than a personal best: once you pull a Crown a "best pull"
+               never moves again and stops being worth a glance. *@
+            <div class="hits-panel mb-3">
+                @if (_showcase is null)
+                {
+                    <div class="hits-empty">
+                        <span class="value">no hits yet</span>
+                        <span class="sub">
+                            @_log.Count pack(s) in. Adjust what counts below if this is too strict.
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    <a class="hit-art" href="card/@_showcase.Card.Key"
+                       style="background-image:url('@_showcase.Card.ArtUrl')"
+                       aria-label="Detail for @_showcase.Card.Name"></a>
+
+                    <div class="hit-detail">
+                        <span class="label">hits</span>
+                        <span class="value">@_hits</span>
+                        <span class="sub">@HitNote()</span>
+
+                        <div class="hit-card">
+                            <span class="glyphs @_showcase.Rung.GlyphClass"
+                                  title="@_showcase.Rung.Symbol">@_showcase.Rung.Glyphs</span>
+                            <a href="card/@_showcase.Card.Key">@_showcase.Card.Name</a>
+                            <span class="small text-body-secondary">
+                                @_showcase.Card.Set&thinsp;@_showcase.Card.Number
+                                &middot; pulled @_showcase.At.ToLocalTime().ToString("d MMM yyyy")
+                            </span>
+                        </div>
+
+                        @if (_hitList.Count > 1)
+                        {
+                            @* Explicit, not automatic. Rotating on its own would move the page
+                               under the reader, and re-rolling on every render would make it
+                               flicker on unrelated updates. *@
+                            <button class="btn btn-sm btn-outline-secondary align-self-start"
+                                    @onclick="Shuffle">show me another</button>
+                        }
+                    </div>
+
+                    @if (_hitList.Count > 1)
+                    {
+                        <div class="hit-strip">
+                            @foreach (var hit in _hitList.Take(StripShown))
+                            {
+                                <a class="thumb @(hit == _showcase ? "on" : "")"
+                                   href="card/@hit.Card.Key"
+                                   style="background-image:url('@hit.Card.ArtUrl')"
+                                   title="@hit.Card.Name — @hit.Rung.Symbol"
+                                   aria-label="@hit.Card.Name"></a>
+                            }
+                            @if (_hitList.Count > StripShown)
+                            {
+                                <span class="more small text-body-secondary">
+                                    +@(_hitList.Count - StripShown)
+                                </span>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+
+            @* What counts as a hit is the USER'S call. Someone opening thirty packs a week feels
+               nothing below 2-star; someone on the free two a day has a good week on a 1-star.
+               A set of chips rather than a "N and above" slider, so "2-star and Crown but not
+               shinies" is sayable. *@
+            <details class="mb-3">
+                <summary class="small text-body-secondary">what counts as a hit?</summary>
+                <div class="pt-2">
+                    <div class="rarity-chips mb-1">
+                        @foreach (var rung in Session.Index.Ladder.Rungs)
+                        {
+                            var on = Session.HitTiers.Contains(rung.Index);
+                            <button class="rarity-chip @(on ? "on" : "")"
+                                    @onclick="() => Session.ToggleHitTier(rung.Index)"
+                                    aria-pressed="@on" title="@rung.Symbol">
+                                <span class="glyphs @rung.GlyphClass">@rung.Glyphs</span>
+                                @rung.Symbol
+                            </button>
+                        }
+                    </div>
+                    <p class="small text-body-secondary mb-0">
+                        Defaults to everything above the diamonds. At least one must stay selected
+                        &mdash; a counter that can never move looks broken rather than chosen.
+                    </p>
+                </div>
+            </details>
+
+            <h6>Packs per day</h6>
+            <p class="small text-body-secondary">
+                Last @DaysShown days. The free allowance is
+                @GameRules.PacksPerDay(Session.Profile.Resources.Premium) a day
+                @(Session.Profile.Resources.Premium ? "with premium" : "without premium").
+            </p>
+            <div class="bars" role="img" aria-label="Packs opened per day">
+                @foreach (var day in _perDay)
+                {
+                    <div class="bar-col" data-tip="@day.Date.ToString("ddd d MMM"): @day.Count pack(s)">
+                        <div class="bar" style="height:@Height(day.Count, _perDayMax)%"></div>
+                    </div>
+                }
+            </div>
+
+            @* The axis is its own strip, with labels positioned by percentage rather than sitting
+               inside a bar column. A label is far wider than one day's column — about four
+               columns at 30 days on a phone — so inside the column it was simply clipped to
+               nothing as the screen narrowed. Out here it can overflow its tick freely.
+
+               The first and last dates are always drawn, so the range the chart covers is legible
+               even when every intermediate label has been dropped. *@
+            <div class="bars-axis">
+                @for (var i = 0; i < _perDay.Count; i++)
+                {
+                    var day = _perDay[i].Date;
+                    var edge = i == 0 || i == _perDay.Count - 1;
+                    var major = day.Day == 1;
+                    var minor = day.DayOfWeek == DayOfWeek.Monday;
+
+                    @if (edge || major || minor)
+                    {
+                        <span class="@(edge ? "edge" : major ? "major" : "minor")"
+                              style="left:@Percent(i)%">@day.ToString("d MMM")</span>
+                    }
+                }
+            </div>
+
+            <h6>Packs per set</h6>
+            <table class="table table-sm w-auto align-middle">
+                <thead>
+                    <tr>
+                        <th>set</th>
+                        <th class="num">packs</th>
+                        <th class="num">points earned</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _perSet)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@row.Set</strong>
+                                <span class="small text-body-secondary ms-1">@Session.Sets.DisplayName(row.Set)</span>
+                            </td>
+                            <td class="num">@row.Count</td>
+                            @* Earned, not held: what you have now is the balance after spending,
+                               which the points panel on Which pack owns. *@
+                            <td class="num">@((row.Count * GameRules.PackPointsPerPack).ToString("N0"))</td>
+                            <td style="width:10rem">
+                                <div class="row-bar"><span style="width:@Height(row.Count, _perSetMax)%"></span></div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <h6>Did the odds hold up?</h6>
+            <p class="small text-body-secondary">
+                What you actually pulled against what the engine predicted for exactly the packs
+                you opened. Small samples swing wildly &mdash; a handful of packs says nothing
+                about a 0.3% rarity &mdash; so treat this as a sanity check on the model, not on
+                your luck.
+            </p>
+            @if (_unpriceable > 0)
+            {
+                <div class="alert alert-secondary py-1 px-2 small">
+                    @_unpriceable logged pack(s) came from a set with no published pull rates, so
+                    they are left out of the comparison entirely rather than counted as zero.
+                </div>
+            }
+            <table class="table table-sm w-auto align-middle">
+                <thead>
+                    <tr>
+                        <th>rarity</th>
+                        <th class="num">pulled</th>
+                        <th class="num">expected</th>
+                        <th class="num">difference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _accuracy)
+                    {
+                        <tr>
+                            <td>
+                                <span class="glyphs @row.Rung.GlyphClass" title="@row.Rung.Symbol">@row.Rung.Glyphs</span>
+                                <span class="small text-body-secondary ms-1">@row.Rung.Symbol</span>
+                            </td>
+                            <td class="num">@row.Observed</td>
+                            <td class="num">@row.Expected.ToString("0.#")</td>
+                            <td class="num @DiffClass(row)">@Diff(row)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="section-head">
+                <h6 class="mb-0">Recent packs</h6>
+                <button class="btn btn-sm @(_clearingAll ? "btn-danger" : "btn-outline-danger") ms-auto"
+                        @onclick="ClearAll">
+                    @(_clearingAll ? $"really delete all {_log.Count}?" : "delete all")
+                </button>
+            </div>
+
+            @* One switch rather than two kinds of delete button. Logging a pack both records the
+               opening AND adds the cards to the collection, so undoing a mistake usually means
+               undoing both — but not always: the cards might be genuinely owned and only the log
+               entry wrong. The user says which. *@
+            <label class="form-check form-switch small mb-2">
+                <input class="form-check-input" type="checkbox" checked="@_alsoRemoveCards"
+                       @onchange="e => _alsoRemoveCards = e.Value is true" />
+                also take the cards back out of my collection when deleting
+            </label>
+            <p class="small text-body-secondary">
+                Deleting always returns the @GameRules.PackPointsPerPack pack points that opening
+                earned, floored at zero &mdash; you may already have spent them.
+                Only the date is editable: the app cannot know the clock time the game recorded,
+                and matching it to the minute is not worth the fuss.
+            </p>
+
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr><th>when</th><th>pack</th><th>cards</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in _recent)
+                    {
+                        @* Keyed on identity, not position: deleting a row shifts every row after
+                           it, and without a key the inputs would keep the previous row's value. *@
+                        <tr @key="entry">
+                            <td>
+                                <input class="form-control form-control-sm" type="date" style="width:9.5rem"
+                                       value="@entry.At.ToLocalTime().ToString("yyyy-MM-dd")"
+                                       max="@DateTime.Now.ToString("yyyy-MM-dd")"
+                                       @onchange="e => Redate(entry, e)"
+                                       aria-label="Date this pack was opened" />
+                            </td>
+                            <td>
+                                <span class="pack-thumb"
+                                      style="background-image:url('@Session.PackArtUrl($"{entry.Set}:{entry.Pack}")')"></span>
+                                <strong>@entry.Pack</strong>
+                                <span class="small text-body-secondary">@entry.Set</span>
+                            </td>
+                            <td class="small">
+                                @foreach (var card in Named(entry))
+                                {
+                                    <span class="logged-card">@card</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm @(_confirming == entry ? "btn-danger" : "btn-outline-danger") py-0 px-2"
+                                        @onclick="() => ConfirmDelete(entry)"
+                                        title="@(_confirming == entry ? "Tap again to delete" : "Delete this logged pack")">
+                                    @(_confirming == entry ? "really?" : "delete")
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (_log.Count > RecentShown)
+            {
+                <p class="small text-body-secondary">
+                    Showing the most recent @RecentShown of @_log.Count.
+                </p>
+            }
+        }
+    </div>
+}
+
+@code {
+    private const int DaysShown = 30;
+    private const int RecentShown = 25;
+
+    private IReadOnlyList<PackOpenEvent> _log = [];
+    private IReadOnlyList<PackOpenEvent> _recent = [];
+    private int _cards;
+    private const int StripShown = 14;
+
+    /// <summary>One pulled card that counted as a hit, with when it happened.</summary>
+    private sealed record Hit(PocketCard Card, RarityRung Rung, DateTimeOffset At);
+
+    private int _hits;
+
+    /// <summary>Every hit, newest first. Duplicates are kept: pulling the same card twice is two hits.</summary>
+    private IReadOnlyList<Hit> _hitList = [];
+
+    private Hit? _showcase;
+    private int _unpriceable;
+    private DateTimeOffset _first;
+
+    private double _perPack;
+    private int _distinctPulled;
+    private double _duplicateShare;
+    private int _streak;
+    private int _bestStreak;
+    private (DateTime Date, int Count) _busiest = (DateTime.Today, 0);
+    private string _favouritePack = "—";
+    private int _favouriteCount;
+    private int _sets;
+
+    private IReadOnlyList<(DateTime Date, int Count)> _perDay = [];
+    private int _perDayMax = 1;
+
+    private IReadOnlyList<(string Set, int Count)> _perSet = [];
+    private int _perSetMax = 1;
+
+    private sealed record Accuracy(RarityRung Rung, int Observed, double Expected);
+
+    private IReadOnlyList<Accuracy> _accuracy = [];
+
+    private bool _alsoRemoveCards = true;
+    private PackOpenEvent? _confirming;
+    private bool _clearingAll;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+        Build();
+    }
+
+    /// <summary>
+    /// Move a logged pack to another day, keeping its time of day so several packs on one day
+    /// keep their order. The clock time is never editable: the app cannot know what the game
+    /// recorded, and pretending otherwise invites the user to chase a number that does not
+    /// matter.
+    /// </summary>
+    private void Redate(PackOpenEvent entry, ChangeEventArgs e)
+    {
+        if (!DateTime.TryParse(e.Value?.ToString(), out var date)) return;
+
+        var local = entry.At.ToLocalTime();
+        var moved = new DateTimeOffset(
+            date.Year, date.Month, date.Day,
+            local.Hour, local.Minute, local.Second, local.Offset);
+
+        Session.Mutate(p => p with
+        {
+            PackLog = p.PackLog.Select(x => ReferenceEquals(x, entry) ? x with { At = moved } : x).ToList()
+        });
+
+        _confirming = null;
+    }
+
+    private void ConfirmDelete(PackOpenEvent entry)
+    {
+        if (!ReferenceEquals(_confirming, entry)) { _confirming = entry; return; }
+
+        _confirming = null;
+        Delete([entry]);
+    }
+
+    private void ClearAll()
+    {
+        if (!_clearingAll) { _clearingAll = true; return; }
+
+        _clearingAll = false;
+        Delete(_log.ToArray());
+    }
+
+    /// <summary>
+    /// Removes logged packs and reverses what logging them did: the pack points they earned
+    /// always, and the cards they added when the user asked for that. One Mutate, so the whole
+    /// thing is a single undo step.
+    /// </summary>
+    private void Delete(IReadOnlyList<PackOpenEvent> entries)
+    {
+        if (entries.Count == 0) return;
+
+        var doomed = entries.ToHashSet(ReferenceEqualityComparer.Instance as IEqualityComparer<PackOpenEvent>);
+        var alsoCards = _alsoRemoveCards;
+
+        Session.Mutate(p =>
+        {
+            var points = new Dictionary<string, int>(p.Resources.PackPointsBySet);
+            var collection = alsoCards ? new Dictionary<string, int>(p.Collection) : p.Collection;
+
+            foreach (var entry in entries)
+            {
+                // Floored at zero: the points may already have been spent, and a negative
+                // balance would make every downstream estimate nonsense.
+                var before = points.GetValueOrDefault(entry.Set);
+                var after = Math.Max(0, before - GameRules.PackPointsPerPack);
+                if (after > 0) points[entry.Set] = after; else points.Remove(entry.Set);
+
+                if (!alsoCards) continue;
+
+                foreach (var key in entry.OwnershipKeys)
+                {
+                    var count = collection.GetValueOrDefault(key) - 1;
+                    if (count > 0) collection[key] = count; else collection.Remove(key);
+                }
+            }
+
+            return p with
+            {
+                Collection = collection,
+                Resources = p.Resources with { PackPointsBySet = points },
+                PackLog = p.PackLog.Where(x => !doomed.Contains(x)).ToList()
+            };
+        });
+    }
+
+    public void Dispose() => Session.Changed -= OnChanged;
+
+    private void OnChanged()
+    {
+        Build();
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Everything on this page, computed once per change. Cheap even for thousands of logged
+    /// packs, because the expensive part — a pack's per-rarity expectation — is computed once
+    /// per DISTINCT pack and then multiplied by how many of it were opened.
+    /// </summary>
+    private void Build()
+    {
+        if (!Session.Ready) return;
+
+        _log = Session.Profile.PackLog;
+        if (_log.Count == 0) return;
+
+        _cards = _log.Sum(e => e.OwnershipKeys.Count);
+        BuildHits();
+        _first = _log.Min(e => e.At);
+        _recent = _log.OrderByDescending(e => e.At).Take(RecentShown).ToArray();
+
+        BuildTotals();
+        BuildPerDay();
+        BuildPerSet();
+        BuildAccuracy();
+    }
+
+    /// <summary>
+    /// Pulls at the rungs the user counts as a hit, newest first. Counted per card rather than
+    /// per pack, because a pack can contain more than one.
+    /// </summary>
+    private void BuildHits()
+    {
+        var wanted = Session.HitTiers;
+        var found = new List<Hit>();
+
+        foreach (var entry in _log.OrderByDescending(e => e.At))
+        {
+            foreach (var key in entry.OwnershipKeys)
+            {
+                var card = Session.Index.ByOwnershipKey.GetValueOrDefault(key)?.FirstOrDefault();
+                if (card is null) continue;
+
+                var rung = Rung(card.Rarity);
+                if (rung is null || !wanted.Contains(rung.Index)) continue;
+
+                found.Add(new Hit(card, rung, entry.At));
+            }
+        }
+
+        _hitList = found;
+        _hits = found.Count;
+
+        // The latest by default: it is the one the user came to look at. A previously chosen
+        // showcase is kept if it is still a hit, so changing an unrelated filter does not snatch
+        // the card away — but it must be dropped if the criteria no longer include it.
+        if (_showcase is null || !found.Contains(_showcase)) _showcase = found.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Picks another hit at random. Never repeats the one on screen, which is what makes a
+    /// two-hit collection feel like the button does something.
+    /// </summary>
+    private void Shuffle()
+    {
+        if (_hitList.Count < 2) return;
+
+        var others = _hitList.Where(h => h != _showcase).ToArray();
+        _showcase = others[Random.Shared.Next(others.Length)];
+    }
+
+    private RarityRung? Rung(string rarityCode)
+    {
+        var index = Session.Index.Ladder.IndexOf(rarityCode);
+        return index is null ? null : Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == index);
+    }
+
+    private string HitNote()
+    {
+        if (_hits == 0) return "none yet";
+
+        // The rate is the part that stays interesting: it moves with every pack, up or down. What
+        // counts as a hit is NOT repeated here — the chips just below spell it out, and saying it
+        // twice makes the line long enough to wrap for no gain.
+        var per = (double)_log.Count / _hits;
+        var rate = $"about 1 in every {per:0.#} packs";
+
+        return rate;
+    }
+
+
+
+    private void BuildTotals()
+    {
+        _perPack = (double)_cards / _log.Count;
+
+        var pulled = _log.SelectMany(e => e.OwnershipKeys).ToArray();
+        _distinctPulled = pulled.Distinct(StringComparer.Ordinal).Count();
+        _duplicateShare = pulled.Length == 0 ? 0 : 1.0 - ((double)_distinctPulled / pulled.Length);
+
+        _sets = _log.Select(e => e.Set).Distinct(StringComparer.Ordinal).Count();
+
+        var favourite = _log.GroupBy(e => $"{e.Set}:{e.Pack}")
+            .OrderByDescending(g => g.Count())
+            .First();
+        _favouritePack = favourite.Key.Split(':')[1];
+        _favouriteCount = favourite.Count();
+
+        var byDay = _log.GroupBy(e => e.At.ToLocalTime().Date)
+                        .ToDictionary(g => g.Key, g => g.Count());
+
+        var busiest = byDay.OrderByDescending(kv => kv.Value).ThenByDescending(kv => kv.Key).First();
+        _busiest = (busiest.Key, busiest.Value);
+
+        BuildStreaks(byDay.Keys.OrderBy(d => d).ToArray());
+    }
+
+    /// <summary>
+    /// Consecutive days with at least one pack logged. The current streak is measured back from
+    /// the LAST logged day, not from today: a streak that silently resets to zero overnight
+    /// punishes the user for the clock rather than reporting anything.
+    /// </summary>
+    private void BuildStreaks(DateTime[] days)
+    {
+        _streak = _bestStreak = 0;
+        if (days.Length == 0) return;
+
+        var run = 1;
+        _bestStreak = 1;
+        for (var i = 1; i < days.Length; i++)
+        {
+            run = days[i] == days[i - 1].AddDays(1) ? run + 1 : 1;
+            _bestStreak = Math.Max(_bestStreak, run);
+        }
+
+        // Still live only if the run reaches today or yesterday; otherwise it is history.
+        var last = days[^1];
+        var today = DateTime.Now.Date;
+        _streak = (today - last).TotalDays <= 1 ? run : 0;
+    }
+
+    private void BuildPerDay()
+    {
+        var counts = _log.GroupBy(e => e.At.ToLocalTime().Date)
+                         .ToDictionary(g => g.Key, g => g.Count());
+
+        // Every day in the window, including the empty ones: a bar chart that silently omits
+        // zero days compresses a gap and makes a lapse look like steady play.
+        var today = DateTime.Now.Date;
+        _perDay = Enumerable.Range(0, DaysShown)
+            .Select(i => today.AddDays(i - DaysShown + 1))
+            .Select(d => (Date: d, Count: counts.GetValueOrDefault(d)))
+            .ToArray();
+
+        _perDayMax = Math.Max(1, _perDay.Max(d => d.Count));
+    }
+
+    private void BuildPerSet()
+    {
+        _perSet = _log.GroupBy(e => e.Set)
+            .Select(g => (Set: g.Key, Count: g.Count()))
+            .OrderByDescending(r => r.Count)
+            .ToArray();
+
+        _perSetMax = Math.Max(1, _perSet.Max(r => r.Count));
+    }
+
+    private void BuildAccuracy()
+    {
+        if (Session.Odds is null) { _accuracy = []; return; }
+
+        var ladder = Session.Index.Ladder;
+        var expected = new Dictionary<int, double>();
+        var observed = new Dictionary<int, int>();
+        _unpriceable = 0;
+
+        // One expectation per distinct pack, scaled by how many were opened.
+        foreach (var group in _log.GroupBy(e => $"{e.Set}:{e.Pack}"))
+        {
+            var rates = Session.Odds.ExpectedCopies(group.Key);
+            if (rates.Count == 0)
+            {
+                // No pull rates for this set. Left out rather than counted as zero expected,
+                // which would read as the model having been wildly wrong.
+                _unpriceable += group.Count();
+                continue;
+            }
+
+            var opened = group.Count();
+            foreach (var (cardKey, rate) in rates)
+            {
+                var card = Session.Index.ByKey.GetValueOrDefault(cardKey);
+                if (card is null) continue;
+
+                var rung = ladder.IndexOf(card.Rarity);
+                if (rung is null) continue;
+
+                expected[rung.Value] = expected.GetValueOrDefault(rung.Value) + (rate * opened);
+            }
+        }
+
+        // Observed, from the cards actually recorded. Keyed by ownership key, which is what the
+        // log stores, so a reprint resolves to the same card either way.
+        var priceable = _log.Where(e => Session.Odds.ExpectedCopies($"{e.Set}:{e.Pack}").Count > 0);
+        foreach (var pulled in priceable.SelectMany(e => e.OwnershipKeys))
+        {
+            var card = Session.Index.ByOwnershipKey.GetValueOrDefault(pulled)?.FirstOrDefault();
+            if (card is null) continue;
+
+            var rung = ladder.IndexOf(card.Rarity);
+            if (rung is null) continue;
+
+            observed[rung.Value] = observed.GetValueOrDefault(rung.Value) + 1;
+        }
+
+        _accuracy = ladder.Rungs
+            .Where(r => observed.ContainsKey(r.Index) || expected.GetValueOrDefault(r.Index) > 0.05)
+            .Select(r => new Accuracy(r, observed.GetValueOrDefault(r.Index),
+                                          expected.GetValueOrDefault(r.Index)))
+            .ToArray();
+    }
+
+    private string Rate()
+    {
+        var days = Math.Max(1, (DateTimeOffset.Now - _first).TotalDays);
+        return $"{_log.Count / days:0.#} packs a day";
+    }
+
+    /// <summary>
+    /// Centre of a day's column as a percentage across the chart, so an axis label can sit over
+    /// its bar without being a child of it.
+    /// </summary>
+    private string Percent(int index) =>
+        (100.0 * (index + 0.5) / Math.Max(1, _perDay.Count)).ToString("0.##",
+            System.Globalization.CultureInfo.InvariantCulture);
+
+    private static int Height(int value, int max) =>
+        max <= 0 ? 0 : Math.Max(value > 0 ? 4 : 0, (int)Math.Round(100.0 * value / max));
+
+    private static string Diff(Accuracy row)
+    {
+        var delta = row.Observed - row.Expected;
+        return $"{(delta >= 0 ? "+" : "")}{delta:0.#}";
+    }
+
+    /// <summary>
+    /// Only flagged once the gap is large in absolute terms AND relative to what was expected.
+    /// One extra crown out of an expected 0.2 is unremarkable; colouring it red would make noise
+    /// out of small numbers, which is the usual failure of this kind of table.
+    /// </summary>
+    private static string DiffClass(Accuracy row)
+    {
+        var delta = row.Observed - row.Expected;
+        if (Math.Abs(delta) < 3 || row.Expected < 3) return "";
+
+        return delta > 0 ? "text-success" : "text-danger";
+    }
+
+    private IEnumerable<string> Named(PackOpenEvent entry) =>
+        entry.OwnershipKeys
+            .Select(k => Session.Index.ByOwnershipKey.GetValueOrDefault(k)?.FirstOrDefault()?.Name)
+            .Where(n => n is not null)
+            .Select(n => n!);
+}

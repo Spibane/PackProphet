@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PackProphet.App/PackProphet.App.csproj" />
+    <Project Path="src/PackProphet.Core/PackProphet.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PackProphet.Tests/PackProphet.Tests.csproj" />
+  </Folder>
+</Solution>

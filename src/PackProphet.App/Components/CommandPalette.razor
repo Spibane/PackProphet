@@ -1,0 +1,265 @@
+@implements IAsyncDisposable
+@inject AppSession Session
+@inject PaletteSwitch Switch
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+@* One flat surface with deep reach, instead of a menu bar that grows an item per feature.
+   This is the "simple but versatile" rule as UI: everything stays reachable in two keystrokes
+   without the nav having to name it. *@
+
+@if (_open)
+{
+    @* The backdrop closes on click, which is why it is a button: a div with a click handler is
+       invisible to the keyboard and to a screen reader. *@
+    <button class="palette-back" @onclick="Close" aria-label="Close the command palette"></button>
+
+    <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+        <input class="palette-input" @ref="_input" placeholder="Jump to a card, set, deck, or action&hellip;"
+               @bind="_query" @bind:event="oninput" @bind:after="Search"
+               @onkeydown="OnKeyDown" aria-label="Search" />
+
+        @if (_items.Count == 0)
+        {
+            <p class="palette-empty">Nothing matches &ldquo;@_query&rdquo;.</p>
+        }
+        else
+        {
+            <div class="palette-list">
+                @for (var i = 0; i < _items.Count; i++)
+                {
+                    var index = i;
+                    var item = _items[i];
+                    <button class="palette-item @(index == _selected ? "sel" : "")"
+                            @onclick="() => Run(item)"
+                            @onmouseenter="() => _selected = index">
+                        @if (item.Thumb is { Length: > 0 } art)
+                        {
+                            <span class="pack-thumb deck-thumb" style="background-image:url('@art')"></span>
+                        }
+                        else
+                        {
+                            <span class="kind">@item.Kind</span>
+                        }
+                        <span class="lbl">@item.Label</span>
+                        <span class="sub">@item.Sub</span>
+                    </button>
+                }
+            </div>
+        }
+
+        <div class="palette-foot">
+            <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> move</span>
+            <span><kbd>enter</kbd> go</span>
+            <span><kbd>esc</kbd> close</span>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>One row. A destination or an action, never both.</summary>
+    private sealed record Item(string Kind, string Label, string? Sub, string? Href, Action? Do = null, string? Thumb = null);
+
+    private bool _open;
+    private string _query = "";
+    private int _selected;
+    private List<Item> _items = [];
+    private ElementReference _input;
+
+    private DotNetObjectReference<CommandPalette>? _self;
+    private bool _focusPending;
+
+    private const int MaxPerGroup = 6;
+
+    protected override void OnInitialized() => Switch.Requested += OnRequested;
+
+    private void OnRequested() => _ = ToggleFromHotkey();
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (first)
+        {
+            _self = DotNetObjectReference.Create(this);
+            try { await JS.InvokeVoidAsync("ppPalette.register", _self); }
+            catch { /* the palette is an accelerator; the app works without it */ }
+        }
+
+        if (_focusPending && _open)
+        {
+            _focusPending = false;
+            try { await JS.InvokeVoidAsync("ppPalette.focus", _input); }
+            catch { /* nothing to do if focus is refused */ }
+        }
+    }
+
+    [JSInvokable]
+    public Task ToggleFromHotkey()
+    {
+        if (_open) Close(); else Open();
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private void Open()
+    {
+        _open = true;
+        _query = "";
+        _selected = 0;
+        _focusPending = true;
+        Search();
+    }
+
+    private void Close()
+    {
+        _open = false;
+        _items = [];
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Escape":
+                Close();
+                break;
+            case "ArrowDown":
+                if (_items.Count > 0) _selected = (_selected + 1) % _items.Count;
+                break;
+            case "ArrowUp":
+                if (_items.Count > 0) _selected = (_selected - 1 + _items.Count) % _items.Count;
+                break;
+            case "Enter":
+                if (_selected < _items.Count) Run(_items[_selected]);
+                break;
+        }
+    }
+
+    private void Run(Item item)
+    {
+        Close();
+        // Closed first, so an action that changes state renders against a dismissed palette
+        // rather than briefly showing stale results over the page it just changed.
+        if (item.Do is not null) { item.Do(); return; }
+        if (item.Href is { Length: > 0 } href) Nav.NavigateTo(href);
+    }
+
+    // ---- searching ---------------------------------------------------------------------
+
+    private void Search()
+    {
+        _selected = 0;
+        var q = _query.Trim();
+        var items = new List<Item>();
+
+        // With an empty box this is a menu, not a search: it has to show what the palette can
+        // reach, or a first-time user sees a blank box and closes it.
+        items.AddRange(Pages(q));
+        items.AddRange(Actions(q));
+
+        if (Session.Ready)
+        {
+            items.AddRange(Sets(q));
+            items.AddRange(Decks(q));
+            items.AddRange(WishlistItems(q));
+            // Cards last and only once there is something to match: 3,700 rows would bury
+            // every other kind of result.
+            if (q.Length >= 2) items.AddRange(Cards(q));
+        }
+
+        _items = items;
+    }
+
+    private static bool Matches(string text, string q) =>
+        q.Length == 0 || text.Contains(q, StringComparison.CurrentCultureIgnoreCase);
+
+    private static readonly (string Label, string Href, string Sub)[] PageList =
+    [
+        ("Log a pack", "log", "record what you just opened"),
+        ("Collection", "collection", "browse and mark what you own"),
+        ("Which pack", "packs", "the ranking"),
+        ("Decks", "decks", "saved decks and the builder"),
+        ("Wishlists", "wishlists", "cards you want, for any reason"),
+        ("History", "history", "what you have opened"),
+        ("Settings", "settings", "targets, backup, appearance"),
+    ];
+
+    private IEnumerable<Item> Pages(string q) =>
+        PageList.Where(p => Matches(p.Label, q) || Matches(p.Sub, q))
+                .Select(p => new Item("page", p.Label, p.Sub, p.Href));
+
+    private IEnumerable<Item> Actions(string q)
+    {
+        var actions = new List<Item>
+        {
+            new("action", "Import a deck from a screenshot", "scan the in-game code", "decks/import"),
+            new("action", "New deck", "build one by hand", "decks/new"),
+            new("action", "New wishlist", null, null, () => Nav.NavigateTo($"wishlists/{Session.CreateWishlist()}")),
+            new("action", $"Theme: {Session.Theme}", "switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),
+        };
+
+        if (Session.CanUndo) actions.Add(new("action", "Undo", "the last collection change", null, Session.Undo));
+        if (Session.CanRedo) actions.Add(new("action", "Redo", null, null, Session.Redo));
+
+        return actions.Where(a => Matches(a.Label, q) || Matches(a.Sub ?? "", q));
+    }
+
+    private string NextTheme() => Session.Theme switch
+    {
+        "auto" => "light",
+        "light" => "dark",
+        _ => "auto"
+    };
+
+    private IEnumerable<Item> Sets(string q) =>
+        Session.Index.BySet.Keys
+            .Where(set => Matches(set, q) || Matches(Session.Sets.DisplayName(set), q))
+            .OrderBy(set => set, StringComparer.Ordinal)
+            .Take(MaxPerGroup)
+            .Select(set => new Item("set", $"{set} — {Session.Sets.DisplayName(set)}",
+                $"{Session.Index.BySet[set].Count} cards", $"collection?set={set}"));
+
+    private IEnumerable<Item> Decks(string q) =>
+        Session.Profile.Decks
+            .Where(d => Matches(d.Name, q))
+            .Take(MaxPerGroup)
+            .Select(d => new Item("deck", d.Name, Sub(Session.MissingCount(d)), $"decks/{d.Id}"));
+
+    private static string Sub(int missing) =>
+        missing == 0 ? "buildable" : $"{missing} card(s) missing";
+
+    private IEnumerable<Item> WishlistItems(string q) =>
+        Session.Wishlists
+            .Where(w => Matches(w.Name, q))
+            .Take(MaxPerGroup)
+            .Select(w => new Item("wishlist", w.Name,
+                $"{Session.MissingInWishlist(w)} of {Session.WantedTotal(w)} still missing",
+                $"wishlists/{w.Id}"));
+
+    /// <summary>
+    /// Cards by name only. The deck builder is where rules text is searched; here the job is
+    /// to reach a card you can already name, and scanning every card's text on each keystroke
+    /// would make the palette feel slower than navigating by hand.
+    /// </summary>
+    private IEnumerable<Item> Cards(string q) =>
+        Session.Index.All
+            .Where(c => c.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase))
+            .DistinctBy(c => c.OwnershipKey)
+            .OrderBy(c => c.Name.Length)           // an exact-ish match first
+            .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Take(8)
+            .Select(c => new Item("card", c.Name,
+                $"{c.Set} {c.Number} · {Owned(c)}", $"card/{c.Key}", null, c.ArtUrl));
+
+    private string Owned(PocketCard card)
+    {
+        var n = Session.CountOf(card);
+        return n == 0 ? "not owned" : $"you own {n}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Switch.Requested -= OnRequested;
+        try { await JS.InvokeVoidAsync("ppPalette.unregister"); }
+        catch { /* the page may already be gone */ }
+        _self?.Dispose();
+    }
+}

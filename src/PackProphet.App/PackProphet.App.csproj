@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- The project file is PackProphet.App.csproj (so its globs cannot overlap the
+         sibling Core/Tests projects), but namespaces and the output assembly stay
+         PackProphet.* — matching PackProphet.Domain in Core. -->
+    <RootNamespace>PackProphet</RootNamespace>
+    <AssemblyName>PackProphet</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- InvariantGlobalization drops the ICU payload, and forces native relinking
+         (WasmBuildNative) on every build. That costs ~9s per Debug build, which we
+         accept deliberately: invariant mode changes string comparison and casing, so
+         building Debug WITHOUT it would mean card-name sorting and search behave
+         differently in dev than in production. Parity beats build speed here.
+         Relinking is also a big win at publish: dotnet.native.wasm 1169 -> 489 KB gz,
+         first paint 3.40 -> 2.76 MB gz.
+
+         Requires the wasm-tools workload, plus the `libatomic` package in a Fedora
+         distrobox (emscripten's bundled node links against libatomic.so.1).
+
+         Timezone data is deliberately KEPT: BlazorEnableTimeZoneSupport=false makes
+         the runtime UTC-only, which would shift a pack logged late at night onto the
+         wrong day in the History view. -->
+
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazor.Bootstrap" Version="3.5.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.8" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PackProphet.Core\PackProphet.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Offline support. The DEV worker is a no-op on purpose: a caching worker in development
+       serves yesterday's _framework files after a rebuild, which is indistinguishable from a
+       broken build. Only the published build gets the real one, and the SDK generates the
+       asset manifest it precaches from. -->
+  <PropertyGroup>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ServiceWorker Include="wwwroot\service-worker.js"
+                   PublishedContent="wwwroot\service-worker.published.js" />
+  </ItemGroup>
+
+
+
+
+</Project>

@@ -1,0 +1,23 @@
+@implements IDisposable
+@inject UiBusy Busy
+
+@* Deliberately blocks pointer events while visible. On a single-threaded runtime a second
+   click during a slow recompute just queues more work and makes the stall longer, so the
+   overlay both explains the wait and prevents the user from compounding it. *@
+@if (Busy.IsBusy)
+{
+    <div class="busy-veil" aria-live="polite" aria-busy="true">
+        <div class="busy-card">
+            <span class="busy-spinner" aria-hidden="true"></span>
+            <span>@Busy.Label</span>
+        </div>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => Busy.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Busy.Changed -= OnChanged;
+}

@@ -1,0 +1,10 @@
+@inherits LayoutComponentBase
+@* NavHistory is injected here, and nowhere else needs to, purely so it is constructed at
+   startup: it records navigation as it happens and cannot recover a history it did not see. *@
+@inject NavHistory History
+
+<NavMenu />
+<main>@Body</main>
+<BusyOverlay />
+@* Rendered once, above every page, because it is reachable from anywhere. *@
+<CommandPalette />

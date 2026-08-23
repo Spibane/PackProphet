@@ -1,0 +1,579 @@
+@page "/wishlists"
+@page "/wishlists/{Id}"
+@implements IDisposable
+@inject AppSession Session
+@inject UiBusy Busy
+@inject NavigationManager Nav
+
+<PageTitle>@(_list?.Name ?? "Wishlists") · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else if (Id is null)
+{
+    <div class="page-head">
+        <span class="title">Wishlists</span>
+        <span class="subtitle">@Session.Wishlists.Count saved</span>
+        <span class="actions">
+            <button class="btn btn-sm btn-primary" @onclick="NewList">new wishlist</button>
+        </span>
+    </div>
+
+    @* Same pair of views as the decks page, for the same reason: the table compares lists
+       against each other, the grid is how you recognise one. *@
+    @if (Session.Wishlists.Count > 0)
+    {
+        <div class="grid-toolbar">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
+                <button class="btn @(Session.WishGrid ? "btn-outline-secondary" : "btn-secondary")"
+                        @onclick="() => Session.SetWishGrid(false)" title="A table, for comparing">list</button>
+                <button class="btn @(Session.WishGrid ? "btn-secondary" : "btn-outline-secondary")"
+                        @onclick="() => Session.SetWishGrid(true)" title="Cards, for recognising">grid</button>
+            </div>
+        </div>
+    }
+
+    <div class="p-3">
+        @* A wishlist is the one target the app cannot derive, so the empty state has to say
+           what it is FOR rather than just that there is nothing here. *@
+        <p class="text-body-secondary small mb-3">
+            A wishlist is any set of cards you want, for any reason &mdash; the chase cards, a
+            binder page, the alternate arts of one Pokémon. The pack ranking prices it exactly
+            as it prices a rarity target, so
+            <em>&ldquo;which pack gets me these six cards&rdquo;</em> is a real answer rather
+            than a guess. Unlike a deck, a wishlist wants a particular
+            <strong>printing</strong>: wanting the alternate art is not satisfied by owning the
+            plain one.
+        </p>
+
+        @if (_lists.Count == 0)
+        {
+            <p class="text-body-secondary">No wishlists yet.</p>
+        }
+        else if (Session.WishGrid)
+        {
+            <div class="showcase-grid">
+                @foreach (var list in _lists)
+                {
+                    <div class="showcase @(list.Missing == 0 && list.Wanted > 0 ? "ready" : "")">
+                        @* The face is the rarest card still MISSING — a wishlist is a chase, so
+                           the card you have not got yet is the one that represents it. A finished
+                           list falls back to its rarest card outright. *@
+                        <a class="face" href="wishlists/@list.Id"
+                           style="background-image:url('@(list.Face?.ArtUrl)')"
+                           aria-label="Open @list.Name">
+                            @if (list.Face is null)
+                            {
+                                <span class="empty">nothing on this list</span>
+                            }
+                        </a>
+
+                        <div class="body">
+                            <a class="nm" href="wishlists/@list.Id">@list.Name</a>
+
+                            <div class="meta">
+                                <span class="small text-body-secondary">
+                                    @list.Wanted card(s) wanted
+                                </span>
+                            </div>
+
+                            <div class="badges">
+                                @if (list.Wanted == 0)
+                                {
+                                    <span class="badge text-bg-secondary">empty</span>
+                                }
+                                else if (list.Missing == 0)
+                                {
+                                    <span class="badge text-bg-success">complete</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-warning">@list.Missing missing</span>
+                                }
+
+                                @if (list.Unobtainable > 0)
+                                {
+                                    <span class="badge text-bg-secondary"
+                                          title="No pack on sale can give these — a promo, or a set with no published pull rates">
+                                        @list.Unobtainable unobtainable
+                                    </span>
+                                }
+                            </div>
+
+                            @* The next few cards still wanted, rarest first. Enough to recognise
+                               the list by, not a contents listing. *@
+                            @if (list.Strip.Count > 0)
+                            {
+                                <div class="strip">
+                                    @foreach (var card in list.Strip)
+                                    {
+                                        <span class="thumb" style="background-image:url('@card.ArtUrl')"
+                                              data-tip="@card.Name"></span>
+                                    }
+                                </div>
+                            }
+
+                            <div class="actions">
+                                <a class="btn btn-sm btn-outline-secondary" href="wishlists/@list.Id">open</a>
+                                <a class="btn btn-sm btn-outline-primary" href="packs?wish=@list.Id">rank</a>
+                                <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
+                                        @onclick="() => ConfirmDelete(list.Id)"
+                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this wishlist")">
+                                    @(_confirming == list.Id ? "really?" : "delete")
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>wishlist</th>
+                        <th class="num">cards wanted</th>
+                        <th class="num">still missing</th>
+                        <th>rarest still wanted</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var list in _lists)
+                    {
+                        <tr>
+                            <td><a href="wishlists/@list.Id"><strong>@list.Name</strong></a></td>
+                            <td class="num">@list.Wanted</td>
+                            <td class="num">
+                                @if (list.Wanted == 0)
+                                {
+                                    <span class="text-body-tertiary">&mdash;</span>
+                                }
+                                else if (list.Missing == 0)
+                                {
+                                    <span class="text-success fw-semibold">complete</span>
+                                }
+                                else
+                                {
+                                    <span>@list.Missing</span>
+                                }
+                            </td>
+                            <td>
+                                @* The chase card, named. A count of missing cards says how far
+                                   there is to go; this says what it is you are going after. *@
+                                @if (list.Face is null)
+                                {
+                                    <span class="text-body-tertiary small">&mdash;</span>
+                                }
+                                else
+                                {
+                                    <span class="pack-thumb deck-thumb"
+                                          data-tip-img="@list.Face.ArtUrl" data-tip="@list.Face.Name"
+                                          style="background-image:url('@list.Face.ArtUrl')"></span>
+                                    <span>@list.Face.Name</span>
+                                    <span class="small text-body-secondary ms-1">@list.Face.Set</span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <a class="btn btn-sm btn-outline-secondary" href="wishlists/@list.Id">open</a>
+                                <a class="btn btn-sm btn-outline-primary" href="packs?wish=@list.Id">rank</a>
+                                @* Two taps, and the confirmation is scoped to this row: a shared
+                                   flag would arm every delete button at once. *@
+                                <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
+                                        @onclick="() => ConfirmDelete(list.Id)"
+                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this wishlist")">
+                                    @(_confirming == list.Id ? "really?" : "delete")
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+else if (_list is null)
+{
+    <div class="p-4">
+        <p>That wishlist no longer exists.</p>
+        <a class="btn btn-sm btn-outline-secondary" href="wishlists">&larr; all wishlists</a>
+    </div>
+}
+else
+{
+    <div class="page-head">
+        <a class="btn btn-sm btn-outline-secondary" href="wishlists">&larr; wishlists</a>
+
+        @* Renaming in place, saved on blur rather than per keystroke: the name is persisted
+           state, and a save per character would serialise the whole profile as you type. The
+           input IS this page's title, which is why it sits where every other page's title is. *@
+        <input class="form-control form-control-sm" style="max-width:16rem"
+               value="@_list.Name" @onchange="Rename" aria-label="Wishlist name" />
+
+        <span class="actions">
+            <a class="btn btn-sm btn-outline-primary" href="packs?wish=@_list.Id">
+                rank packs for this list
+            </a>
+            @* Two taps, like the deck editor's delete: the list took work to build and there
+               is no undo prompt after the fact. *@
+            <button class="btn btn-sm @(_confirming == _list.Id ? "btn-danger" : "btn-outline-danger")"
+                    @onclick="() => ConfirmDelete(_list.Id)">
+                @(_confirming == _list.Id ? "really delete?" : "delete")
+            </button>
+        </span>
+    </div>
+
+    <div class="summary px-3 py-2">
+        <div class="stat">
+            <span class="label">cards wanted</span>
+            <span class="value">@Session.WantedTotal(_list)</span>
+        </div>
+        <div class="stat">
+            <span class="label">still missing</span>
+            <span class="value">@_missing</span>
+        </div>
+        <div class="stat">
+            <span class="label">expected packs</span>
+            <span class="value">@Fmt(_packs)</span>
+            @* Same discipline as the Packs page: an estimate never appears without saying what
+               it covers, because a card no pack sells silently changes the scope. *@
+            <span class="sub">
+                @if (_unreachable > 0)
+                {
+                    <span>
+                        covers @(_missing - _unreachable) of @_missing &mdash; @_unreachable
+                        cannot be pulled right now
+                    </span>
+                }
+                else
+                {
+                    <span>opening the best pack each time</span>
+                }
+            </span>
+        </div>
+    </div>
+
+    @* Two columns on desktop, list left and search right — the same shape as the deck builder,
+       and for the same reason: with the search below the list, adding a card grew the list and
+       pushed the search down, so adding a second copy meant hunting for the row that had just
+       moved. *@
+    <div class="edit-cols wish-edit p-3">
+        <div class="list-col">
+        @if (_cards.Count == 0)
+        {
+            <p class="text-body-secondary">
+                Nothing on this list yet. Search below and tap a card to want it.
+            </p>
+        }
+        else
+        {
+            <div class="wish-list mb-3">
+                @foreach (var (card, wanted, owned) in _cards)
+                {
+                    var rung = RungOf(card);
+                    var fact = Session.FactFor(card);
+                    <div class="wish-row @(owned >= wanted ? "got" : "")">
+                        <a class="pack-thumb deck-thumb" href="card/@card.Key"
+                           data-tip-img="@card.ArtUrl" data-tip="@card.Name"
+                           style="background-image:url('@card.ArtUrl')"
+                           aria-label="@card.Name"></a>
+
+                        <span class="nm">@card.Name</span>
+
+                        @* The element, or a Trainer's kind. Cheap to draw and it is what tells
+                           two cards of the same name apart at a glance. *@
+                        <span class="ty">
+                            @if (fact?.Subtype is { Length: > 0 } subtype)
+                            {
+                                <EnergyPip Type="@subtype" />
+                            }
+                        </span>
+
+                        <span class="rr">
+                            @if (rung is not null)
+                            {
+                                <span class="glyphs @rung.GlyphClass" title="@rung.Symbol">@rung.Glyphs</span>
+                            }
+                        </span>
+
+                        <span class="id">@card.Set&thinsp;@card.Number</span>
+
+                        @* What it will cost. This is the whole reason to keep a wishlist in a
+                           tracker rather than in a notes app, so it belongs on the row itself
+                           and it is what the flexible column carries — the name being flexible
+                           was what left a hole across the middle of a wide screen. *@
+                        <span class="rt">@_routes.GetValueOrDefault(card.OwnershipKey)</span>
+
+                        @* Owned copies only. The wanted number is already in the stepper to the
+                           right, so a "1 of 2" here said the same thing twice. *@
+                        <span class="own">
+                            @if (owned >= wanted)
+                            {
+                                <span class="done" title="You have all @wanted">&check; @owned</span>
+                            }
+                            else
+                            {
+                                <span>@(owned > 0 ? $"\u00d7{owned}" : "\u2014")</span>
+                            }
+                        </span>
+
+                        @* Stepper rather than a cycler: there is no small ceiling to wrap
+                           around, so counting up to six by tapping past a limit and back to
+                           zero would be absurd. Extra copies are the point — trade fodder and
+                           flair material are ordinary reasons to want a fourth. *@
+                        <span class="want-n">
+                            <button class="step" @onclick="() => Bump(card, -1)"
+                                    aria-label="Want one fewer @card.Name">&minus;</button>
+                            <span class="n">@wanted</span>
+                            <button class="step" @onclick="() => Bump(card, 1)"
+                                    disabled="@(wanted >= WishlistEdit.MaxCopies)"
+                                    aria-label="Want one more @card.Name">+</button>
+                        </span>
+
+                        <button class="step remove" @onclick="() => Remove(card)"
+                                title="Remove @card.Name from this list"
+                                aria-label="Remove @card.Name from this list">&times;</button>
+                    </div>
+                }
+            </div>
+        }
+
+        </div>
+
+        <div class="picker-col">
+            @* All cards by default here, the opposite of the deck builder: a wishlist is mostly
+               made of things you do not have yet. *@
+            <CardPicker ByPrinting="true" AllCardsDefault="true"
+                        Heading="Add cards to this list" PickedLabel="wanted"
+                        PickedOf="WantedOf" OnPick="Add" />
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private const int StripSize = 5;
+
+    /// <summary>
+    /// One wishlist as the list page needs it. Built once per change rather than per render:
+    /// both views walk every card on every list, and the grid reads each figure twice.
+    /// </summary>
+    private sealed record Row(
+        string Id, string Name, int Wanted, int Missing, int Unobtainable,
+        PocketCard? Face, IReadOnlyList<PocketCard> Strip);
+
+    private IReadOnlyList<Row> _lists = [];
+
+    /// <summary>Which list's delete button is armed, if any.</summary>
+    private string? _confirming;
+
+    private Wishlist? _list;
+    private IReadOnlyList<(PocketCard Card, int Wanted, int Owned)> _cards = [];
+    private int _missing;
+    private int _unreachable;
+    private double _packs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+        Reload();
+    }
+
+    protected override void OnParametersSet() => Reload();
+
+    private void OnChanged()
+    {
+        Reload();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Reload()
+    {
+        if (!Session.Ready) return;
+
+        BuildRows();
+
+        _list = Id is null ? null : Session.WishlistById(Id);
+        if (_list is null) { _cards = []; return; }
+
+        _cards = Session.WishlistCards(_list);
+        _missing = Session.MissingInWishlist(_list);
+        BuildRoutes();
+
+        // Re-priced only when the demand actually changed. Tapping through copy counts on a
+        // long list would otherwise run the completion integral on every tap.
+        var signature = $"{_list.Id}|{string.Join(',', _list.Wanted.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}:{kv.Value}"))}|{Session.CollectionRevision}|{string.Join(',', Session.UnavailablePacks)}";
+        if (signature == _pricedFor) return;
+
+        _pricedFor = signature;
+        Price();
+    }
+
+    private string _pricedFor = "";
+
+    private Dictionary<string, string> _routes = [];
+
+    /// <summary>
+    /// Cheapest-route notes, built once per reload rather than per render: pricing a card walks
+    /// every pack that sells it, and the rows re-render on every tap of a stepper.
+    /// </summary>
+    private void BuildRoutes()
+    {
+        if (Session.Routes is null) { _routes = []; return; }
+
+        _routes = _cards.ToDictionary(
+            x => x.Card.OwnershipKey,
+            x => RouteNote(x.Card),
+            StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Short by design. The Packs page spells every route out; here the row only has to answer
+    /// "roughly what does this one cost me", and the card's own page has the full verdict.
+    /// </summary>
+    private string RouteNote(PocketCard card)
+    {
+        var routes = Session.Routes!.For(card, Session.Owned);
+
+        var pull = routes.Options.FirstOrDefault(o => o.Route == AcquisitionRoute.Pull);
+        var points = routes.Options.FirstOrDefault(o => o.Route == AcquisitionRoute.PackPoints);
+
+        var parts = new List<string>();
+
+        if (pull is { Available: true, PacksEquivalent: { } packs })
+            parts.Add($"~{Fmt(packs)} packs");
+        else
+            // Said plainly rather than left blank: a promo or a rate-less set is not a cheap
+            // card, it is one no pack can give you.
+            parts.Add("no pack sells it");
+
+        if (points is { Available: true, Points: { } cost })
+            parts.Add($"{cost:N0} pts");
+
+        return string.Join(" · ", parts);
+    }
+
+    private void Price()
+    {
+        if (_list is null || Session.Ranker is null) { _packs = 0; _unreachable = 0; return; }
+
+        var target = Session.TargetForWishlist(_list);
+        var unavailable = Session.UnavailablePacks;
+
+        _unreachable = Session.Ranker.Unreachable(target, Session.Owned, unavailable).Sum(d => d.Remaining);
+        _packs = Session.Ranker.BestCasePacksToFinish(target, Session.Owned, unavailable);
+    }
+
+    private void BuildRows()
+    {
+        // Fetched once for the whole page. It is cached inside PackOdds, but the lookup still
+        // builds a key from every priceable pack, so calling it per card would do that work a
+        // few hundred times over.
+        var rates = Session.Odds?.BestRatesByCard(Session.UnavailablePacks);
+
+        _lists = Session.Wishlists.Select(list =>
+        {
+            var cards = Session.WishlistCards(list);        // already rarest-first
+
+            // Still short of what is wanted. The face and the strip are drawn from these
+            // because a wishlist is a chase: the card you have not got is the one that
+            // represents it, and a card you already own is not what you are looking at it for.
+            var outstanding = cards.Where(c => c.Owned < c.Wanted).Select(c => c.Card).ToArray();
+
+            // A finished list still needs a face, so it falls back to its rarest card outright.
+            var pool = outstanding.Length > 0
+                ? outstanding
+                : cards.Select(c => c.Card).ToArray();
+
+            return new Row(
+                list.Id, list.Name,
+                Session.WantedTotal(list),
+                Session.MissingInWishlist(list),
+                // Named separately from "missing" because it is a different problem: no amount
+                // of opening packs will move it.
+                outstanding.Count(c => !Priceable(c, rates)),
+                pool.FirstOrDefault(),
+                pool.Skip(1).Take(StripSize).ToArray());
+        }).ToArray();
+    }
+
+    /// <summary>
+    /// Whether any pack currently on sale can yield this card. False for promos, for sets with
+    /// no published pull rates, and for anything sold only in a limited-time pack marked
+    /// unavailable.
+    ///
+    /// Checked across every ENTRY sharing the card's ownership key, not just the one being
+    /// displayed: the same card can be listed in two sets, and a Deluxe reprint of a promo is
+    /// obtainable even though the promo entry is not.
+    /// </summary>
+    private bool Priceable(PocketCard card, IReadOnlyDictionary<string, double>? rates)
+    {
+        if (rates is null) return false;
+        if (!Session.Index.ByOwnershipKey.TryGetValue(card.OwnershipKey, out var entries))
+            return rates.GetValueOrDefault(card.Key) > 0;
+
+        return entries.Any(e => rates.GetValueOrDefault(e.Key) > 0);
+    }
+
+    private void ConfirmDelete(string id)
+    {
+        if (_confirming != id) { _confirming = id; return; }
+
+        _confirming = null;
+        Delete(id);
+    }
+
+    private void NewList() => Nav.NavigateTo($"wishlists/{Session.CreateWishlist()}");
+
+    private void Delete(string id)
+    {
+        Session.DeleteWishlist(id);
+        if (Id == id) Nav.NavigateTo("wishlists");
+    }
+
+    private void Rename(ChangeEventArgs e)
+    {
+        if (_list is null) return;
+        Session.RenameWishlist(_list.Id, e.Value?.ToString() ?? "");
+    }
+
+    private int WantedOf(PocketCard card) => _list?.Wanted.GetValueOrDefault(card.OwnershipKey) ?? 0;
+
+    /// <summary>
+    /// Tapping a card already on the list adds another copy rather than doing nothing, so the
+    /// search is also how you ask for a second — and, unlike a cycler, tapping repeatedly can
+    /// never wrap round and empty it.
+    /// </summary>
+    private void Add(PocketCard card) => Bump(card, 1);
+
+    private void Bump(PocketCard card, int delta)
+    {
+        if (_list is null) return;
+        Session.BumpWanted(_list.Id, card.OwnershipKey, delta);
+    }
+
+    private void Remove(PocketCard card)
+    {
+        if (_list is null) return;
+        Session.SetWanted(_list.Id, card.OwnershipKey, 0);
+    }
+
+    private RarityRung? RungOf(PocketCard card)
+    {
+        var index = Session.Index.Ladder.IndexOf(card.Rarity);
+        return index is null ? null : Session.Index.Ladder.Rungs[index.Value];
+    }
+
+    private static string Fmt(double packs) =>
+        double.IsPositiveInfinity(packs) ? "never"
+        : packs >= 10_000 ? $"{packs / 1000:N0}k"
+        : packs >= 100 ? packs.ToString("N0")
+        : packs.ToString("N1");
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

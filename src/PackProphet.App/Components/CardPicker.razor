@@ -1,0 +1,611 @@
+@inject AppSession Session
+@implements IDisposable
+
+@* The card picker, deliberately its own component.
+
+   Every keystroke re-renders the component that owns the text field. When that was the whole
+   deck page, one keypress also re-rendered the deck list, the linter output, the missing-cards
+   table (a RouteCost lookup per row) and the pack ranking — so typing dragged no matter how
+   fast the search itself got. Owning the query state here means a keystroke re-renders this
+   subtree and nothing else.
+
+   The deck-dependent bits arrive as delegates rather than as data, so the parent does not have
+   to hand over a copy of the deck on every edit. *@
+
+<h6>@Heading</h6>
+
+@* Name search alone cannot build a deck. "What puts something to Sleep", "show me
+   the Supporters" and "which Basics do I own" are the real questions — and the last
+   two need no typing at all, so the dropdowns work on their own.
+
+   Every control binds the SELECT's value rather than marking an option `selected`.
+   Blazor tracks the element's value property, but a `selected` attribute inside a
+   re-rendered option list is not reliably reapplied to the DOM's selectedIndex — so
+   the visible choice can snap back to the first option even though the filter did
+   change. Binding the select is the form that cannot drift. *@
+<div class="search-grid mb-2">
+    <input class="form-control form-control-sm" placeholder="name, or words from the card text"
+           @bind="_text" @bind:event="oninput" @bind:after="OnTyped" />
+
+    <div class="btn-group btn-group-sm" role="group" aria-label="Card pool">
+        <button class="btn @(_ownedOnly ? "btn-secondary" : "btn-outline-secondary")"
+                @onclick="() => SetPool(true)" title="Only cards you already own">
+            I own
+        </button>
+        <button class="btn @(_ownedOnly ? "btn-outline-secondary" : "btn-secondary")"
+                @onclick="() => SetPool(false)" title="Every card in the game">
+            all
+        </button>
+    </div>
+
+    @* Card type is the hinge: everything to its right narrows to what that choice
+       can actually be. Offering Supporter under Pokémon, or a stage for a Trainer,
+       is offering a filter combination that matches nothing by construction. *@
+    <select class="form-select form-select-sm" @bind="_kind" @bind:after="OnKindChanged"
+            aria-label="Card type">
+        <option value="">any card type</option>
+        <option value="Pokémon">Pokémon</option>
+        <option value="Trainer">Trainer</option>
+    </select>
+
+    <select class="form-select form-select-sm" @bind="_subtype" @bind:after="OnFilterChanged"
+            aria-label="@SubtypeLabel">
+        <option value="">@("any " + SubtypeLabel.ToLowerInvariant())</option>
+        @* Built from the data rather than hardcoded, so a new element or trainer
+           kind becomes filterable on its own. Grouped only when both kinds are in
+           play — with one chosen, the group heading would say what the dropdown to
+           the left already says. *@
+        @if (Subtypes.Count == 1)
+        {
+            @foreach (var value in Subtypes[0].Value)
+            {
+                <option value="@value">@value</option>
+            }
+        }
+        else
+        {
+            @foreach (var group in Subtypes)
+            {
+                <optgroup label="@group.Key">
+                    @foreach (var value in group.Value)
+                    {
+                        <option value="@value">@value</option>
+                    }
+                </optgroup>
+            }
+        }
+    </select>
+
+    @* Trainers have no evolution stage, so under Trainer this control is not
+       disabled-but-present, it is gone: a greyed-out box invites a click that can
+       never do anything. *@
+    @if (StageApplies)
+    {
+        <select class="form-select form-select-sm" @bind="_stage" @bind:after="OnFilterChanged"
+                aria-label="Evolution stage">
+            <option value="">any stage</option>
+            @foreach (var stage in Stages)
+            {
+                <option value="@stage">@stage</option>
+            }
+        </select>
+    }
+
+    @if (HasFilters)
+    {
+        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearFilters">clear</button>
+    }
+</div>
+
+@if (!Session.FactsReady && (_kind.Length > 0 || _subtype.Length > 0 || _stage.Length > 0))
+{
+    <div class="alert alert-secondary py-1 px-2 small">
+        Card detail is still downloading, so type and stage filters have nothing to
+        match yet. Name search works now.
+    </div>
+}
+
+@* What is actually being filtered on, spelled out. A row of dropdowns does not
+   make its own state obvious — especially the pool, which is a pair of buttons
+   rather than a labelled control. *@
+@if (!Query.IsEmpty)
+{
+    <p class="small text-body-secondary mb-1">
+        showing
+        <strong>@(_ownedOnly ? "cards you own" : "all cards")</strong>
+        @if (_kind.Length > 0) { <span>&middot; @_kind</span> }
+        @if (_subtype.Length > 0) { <span>&middot; @_subtype</span> }
+        @if (ShowStageInSummary) { <span>&middot; @_stage</span> }
+        @if (_text.Length > 0) { <span>&middot; matching &ldquo;@_text&rdquo;</span> }
+    </p>
+}
+
+@if (Query.IsEmpty)
+{
+    <p class="small text-body-secondary">
+        Pick from the dropdowns to browse &mdash; no typing needed. Or search by
+        name, or by words from a card's attack or ability: try
+        <em>asleep</em>, <em>poisoned</em> or <em>draw</em>.
+    </p>
+}
+else if (_results.Count == 0)
+{
+    @* A dead end here is nearly always the pool, not the filter: the default is
+       "cards I own", so any narrow filter can come back empty while the same filter
+       over all cards has plenty. Saying how many exist turns that into one tap
+       instead of a puzzle. *@
+    @if (_ownedOnly && _elsewhere > 0)
+    {
+        <div class="alert alert-secondary py-2 small">
+            None of the cards <strong>you own</strong> match &mdash; but
+            <strong>@_elsewhere</strong> card(s) in the game do.
+            <button class="btn btn-sm btn-outline-primary ms-1 py-0"
+                    @onclick="() => SetPool(false)">search all cards</button>
+        </div>
+    }
+    else
+    {
+        <p class="small text-body-secondary">
+            No card matches those filters.
+        </p>
+    }
+}
+else
+{
+    @* A CSS grid, not flex: with flex the cells size from their content, so the
+       columns drifted from row to row. Same lesson as the collection list.
+
+       The columns deliberately carry what the dropdowns CANNOT say — rarity, HP,
+       attack costs and damage, whether there is an ability, and how many you own —
+       so a row is readable without hovering it. Element and stage are omitted
+       precisely because they are already filters. *@
+    <div class="pick-list">
+        @foreach (var card in _results)
+        {
+            var nr = Session.Index.DeckNrOf(card)!.Value;
+            var fact = Session.FactFor(card);
+            @* Owned copies mean different things in the two modes, and the row must say the
+               one that matches what a click does: picking a printing is about that printing,
+               while filling a deck slot pools every printing of the identity. *@
+            var owned = ByPrinting ? Session.CountOf(card) : Session.OwnedCopiesOfIdentity(nr);
+            var picked = ByPrinting ? PickedOf(card) : InDeck(nr);
+            var enabled = ByPrinting ? CanPick(card) : CanAdd(nr);
+            var rung = RungOf(card);
+            <button class="pick-row @(owned == 0 ? "unowned" : "") @(picked > 0 ? "in-deck" : "")"
+                    @onclick="() => Pick(card, nr)" disabled="@(!enabled)"
+                    data-tip-img="@card.ArtUrl" data-tip="@card.Name">
+                <span class="pack-thumb deck-thumb" style="background-image:url('@card.ArtUrl')"></span>
+
+                <span class="nm">@card.Name</span>
+
+                <span class="rr">
+                    @if (rung is not null)
+                    {
+                        <span class="glyphs @rung.GlyphClass" title="@rung.Symbol">@rung.Glyphs</span>
+                    }
+                </span>
+
+                @* Unit shown because these rows have no header to label the column,
+                   and an unlabelled number sitting next to attack damage reads as
+                   part of it. *@
+                <span class="hp">
+                    @if (fact?.Health is int hp)
+                    {
+                        <span class="v">@hp</span><span class="u">HP</span>
+                    }
+                    else if (fact is { IsPokemon: false, Subtype: { Length: > 0 } pipKind })
+                    {
+                        @* A Trainer has no HP, so its kind goes in the space that would
+                           otherwise sit empty. Drawn as an outlined pip, which is how a trainer
+                           is told apart from an energy at a glance. *@
+                        <EnergyPip Type="@pipKind" />
+                    }
+                </span>
+
+                <span class="mv">
+                    @* A Trainer has no attacks, so its kind is spelled out here. The pip beside
+                       HP carries the same fact as a shape, but a word is unambiguous and is what
+                       a screen reader reads — and this column would otherwise be blank on every
+                       Trainer row. *@
+                    @if (fact is { IsPokemon: false, Subtype: { Length: > 0 } kind })
+                    {
+                        <span class="kind">@kind</span>
+                    }
+
+                    @* Ability first and as a word, because "has an ability" changes
+                       how a card plays more than its damage does. *@
+                    @if (fact?.HasAbility == true)
+                    {
+                        <span class="abl" data-tip="@AbilityTip(fact)">ability</span>
+                    }
+                    @foreach (var atk in fact?.AttackList ?? [])
+                    {
+                        <span class="atk" data-tip="@AttackTip(atk)">
+                            @foreach (var sym in atk.CostSymbols)
+                            {
+                                <EnergyPip Type="@sym" />
+                            }
+                            @* The printed damage, not the raw number: "50×" and
+                               "30+" are the difference between a card being worth
+                               a slot and not. *@
+                            @if (atk.DamageLabel is { Length: > 0 } dmg)
+                            {
+                                <span class="dmg">@dmg</span>
+                            }
+                        </span>
+                    }
+                </span>
+
+                @* Set only. The number within a set says nothing about the card and
+                   is not what anyone recognises it by. *@
+                <span class="id">@card.Set</span>
+
+                @* Owned and in-deck are different facts and both matter here: the
+                   pool can be "all cards", so a row may be one you do not have. *@
+                <span class="own" title="@(owned == 1 ? "you own 1 copy" : $"you own {owned} copies")">
+                    @(owned > 0 ? $"×{owned}" : "—")
+                </span>
+                <span class="ind">
+                    @if (picked > 0)
+                    {
+                        <span class="badge text-bg-primary">@picked @PickedLabel</span>
+                    }
+                </span>
+            </button>
+        }
+    </div>
+    @if (_more > 0)
+    {
+        <p class="small text-body-secondary mt-1 mb-0">
+            &hellip; and @_more more. Narrow the search to see them.
+        </p>
+    }
+}
+
+@code {
+    /// <summary>Whether another copy of this identity may be added, per the deck's own rules.</summary>
+    [Parameter] public Func<int, bool> CanAdd { get; set; } = _ => false;
+
+    /// <summary>Copies of this identity already in the deck.</summary>
+    [Parameter] public Func<int, int> InDeck { get; set; } = _ => 0;
+
+    [Parameter] public EventCallback<int> OnAdd { get; set; }
+
+    /// <summary>
+    /// Pick particular PRINTINGS rather than card identities: one row per artwork, and the
+    /// chosen card is handed back whole.
+    ///
+    /// The two modes exist because the two consumers mean different things by "a card". A deck
+    /// slot is filled by any printing, so rows collapse to one per identity. A wishlist is a
+    /// statement about artwork, so collapsing them would make the alternate art unpickable.
+    /// </summary>
+    [Parameter] public bool ByPrinting { get; set; }
+
+    [Parameter] public EventCallback<PocketCard> OnPick { get; set; }
+
+    /// <summary>Copies of this printing already chosen. Only used when <see cref="ByPrinting"/>.</summary>
+    [Parameter] public Func<PocketCard, int> PickedOf { get; set; } = _ => 0;
+
+    [Parameter] public Func<PocketCard, bool> CanPick { get; set; } = _ => true;
+
+    /// <summary>Word after the count on a chosen row: "in deck", "wanted".</summary>
+    [Parameter] public string PickedLabel { get; set; } = "in deck";
+
+    [Parameter] public string Heading { get; set; } = "Add cards";
+
+    /// <summary>
+    /// Start the pool at every card rather than only owned ones. A deck is usually built from
+    /// what you have; a wishlist is by definition mostly what you have not.
+    /// </summary>
+    [Parameter] public bool AllCardsDefault { get; set; }
+
+    private Task Pick(PocketCard card, int nr) =>
+        ByPrinting ? OnPick.InvokeAsync(card) : OnAdd.InvokeAsync(nr);
+
+    private const int MaxResults = 60;
+
+    private static readonly string[] Stages = ["Basic", "Stage 1", "Stage 2"];
+
+    private bool _ownedOnly = true;
+    private string _text = "";
+    private string _kind = "";
+    private string _subtype = "";
+    private string _stage = "";
+    private int _more;
+    private int _elsewhere;
+
+    private IReadOnlyList<PocketCard> _results = [];
+
+    protected override void OnInitialized()
+    {
+        _ownedOnly = !AllCardsDefault;
+        Session.Changed += OnSessionChanged;
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnSessionChanged;
+        _typing?.Cancel();
+        _typing?.Dispose();
+    }
+
+    private void OnSessionChanged()
+    {
+        // Only card detail arriving matters here: it changes what the search can match, so
+        // results computed before it landed are stale. A collection edit must NOT trigger a
+        // full re-scan.
+        if (_poolFacts == Session.Facts.Count) return;
+
+        BuildPool();
+        RunSearch();
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ---- the searchable pool -----------------------------------------------------------
+
+    /// <summary>
+    /// Cards worth searching, paired with everything the search needs, built ONCE. Resolving the
+    /// identity and the printed detail per card per keystroke was most of the original lag: two
+    /// dictionary lookups across 3,700 cards, and the WebAssembly interpreter is an order of
+    /// magnitude slower than desktop .NET at exactly that kind of work.
+    /// </summary>
+    private (PocketCard Card, int Nr, CardFact? Fact)[] _pool = [];
+
+    private int _poolFacts = -1;
+
+    /// <summary>
+    /// Lowercased rules text per pool entry, built lazily. Only a text search of three or more
+    /// characters needs it — which is exactly when typing started to drag — and building it for
+    /// 3,700 cards is a visible one-off cost in the WebAssembly interpreter, so it is not paid
+    /// by someone who only ever uses the dropdowns.
+    /// </summary>
+    private string[]? _blobs;
+
+    private void BuildPool()
+    {
+        if (!Session.Ready) return;
+        if (_pool.Length > 0 && _poolFacts == Session.Facts.Count) return;
+
+        _poolFacts = Session.Facts.Count;
+        _blobs = null;                  // card detail changed, so the text is stale
+        _pool = Session.Index.All
+            .Select(c => (Card: c, Nr: Session.Index.DeckNrOf(c) ?? 0))
+            .Where(x => x.Nr != 0)
+            .Select(x => (x.Card, x.Nr, Fact: Session.Facts.For(x.Nr)))
+            .ToArray();
+    }
+
+    private string[] Blobs()
+    {
+        if (_blobs is not null && _blobs.Length == _pool.Length) return _blobs;
+
+        var blobs = new string[_pool.Length];
+        for (var i = 0; i < _pool.Length; i++) blobs[i] = CardSearch.RulesBlob(_pool[i].Fact);
+
+        return _blobs = blobs;
+    }
+
+    // ---- searching ---------------------------------------------------------------------
+
+    private CardQuery Query => new(_text, Blank(_kind), Blank(_subtype), Blank(_stage), _ownedOnly);
+
+    private static string? Blank(string value) => value.Length == 0 ? null : value;
+
+    /// <summary>
+    /// Computed once per change rather than during render: as a property it ran twice per
+    /// render, once for the empty check and once for the loop.
+    /// </summary>
+    private void RunSearch()
+    {
+        _more = 0;
+        _elsewhere = 0;
+
+        var query = Query;
+        if (!Session.Ready || query.IsEmpty) { _results = []; return; }
+
+        BuildPool();
+
+        // Only a three-character-or-longer term reaches rules text, so the blobs are only built
+        // when one does.
+        var blobs = (query.Text?.Trim().Length ?? 0) >= 3 ? Blobs() : null;
+
+        var hits = new List<(PocketCard Card, int Nr, CardSearch.Hit Rank, int Owned)>();
+        for (var i = 0; i < _pool.Length; i++)
+        {
+            var (card, nr, fact) = _pool[i];
+
+            var owned = Session.CountOf(card);
+            if (query.OwnedOnly && owned == 0) continue;
+
+            var rank = CardSearch.Rank(card, fact, query, blobs?[i]);
+            if (rank == CardSearch.Hit.None) continue;
+
+            hits.Add((card, nr, rank, owned));
+        }
+
+        // One row per identity, keeping the copy the user owns most of so the art shown is
+        // theirs — unless printings are what is being picked, in which case collapsing them
+        // would hide the very thing being chosen.
+        var ranked = (ByPrinting
+                ? hits.DistinctBy(h => h.Card.OwnershipKey)
+                : hits.GroupBy(h => h.Nr).Select(g => g.OrderByDescending(h => h.Owned).First()))
+            .OrderByDescending(h => h.Rank)
+            .ThenBy(h => h.Card.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+
+        _more = Math.Max(0, ranked.Length - MaxResults);
+        _results = ranked.Take(MaxResults).Select(h => h.Card).ToArray();
+
+        // A second full scan, so it only runs when the owned pool actually came up empty.
+        if (_results.Count == 0 && query.OwnedOnly)
+        {
+            var wider = query with { OwnedOnly = false };
+            var count = 0;
+            for (var i = 0; i < _pool.Length; i++)
+                if (CardSearch.Rank(_pool[i].Card, _pool[i].Fact, wider, blobs?[i]) != CardSearch.Hit.None)
+                    count++;
+
+            _elsewhere = count;
+        }
+    }
+
+    // ---- input handling ----------------------------------------------------------------
+
+    /// <summary>A facet change is one deliberate action, so it searches at once.</summary>
+    private void OnFilterChanged()
+    {
+        _typing?.Cancel();
+        RunSearch();
+    }
+
+    private CancellationTokenSource? _typing;
+
+    /// <summary>
+    /// Long enough that a search does not start mid-word. A scan still costs real time in the
+    /// WebAssembly interpreter, and because it runs on the same single thread as the UI, a scan
+    /// started between two keystrokes delays the second one — which is why a short debounce
+    /// still felt like the keyboard was lagging even though the keystroke itself was cheap.
+    /// </summary>
+    private static readonly TimeSpan TypingSettle = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>
+    /// Typing never waits for the search. The keystroke renders immediately — this component is
+    /// small, so that is cheap — and the scan happens once the burst has settled. Results
+    /// lagging the caret by a moment is far better than a caret that lags the keyboard.
+    /// </summary>
+    private async Task OnTyped()
+    {
+        _typing?.Cancel();
+        _typing = new CancellationTokenSource();
+        var token = _typing.Token;
+
+        try
+        {
+            await Task.Delay(TypingSettle, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;             // superseded by a later keystroke
+        }
+
+        RunSearch();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Card type changed, so anything downstream it cannot have is dropped. A stale element or
+    /// stage would silently filter to nothing and look like a broken search.
+    /// </summary>
+    private void OnKindChanged()
+    {
+        if (_subtype.Length > 0 && !SubtypeValues.Contains(_subtype)) _subtype = "";
+        if (!StageApplies) _stage = "";
+
+        OnFilterChanged();
+    }
+
+    private void SetPool(bool ownedOnly)
+    {
+        _ownedOnly = ownedOnly;
+        OnFilterChanged();
+    }
+
+    private bool HasFilters =>
+        _text.Length > 0 || _kind.Length > 0 || _subtype.Length > 0 || _stage.Length > 0;
+
+    private void ClearFilters()
+    {
+        _text = _kind = _subtype = _stage = "";
+        OnFilterChanged();
+    }
+
+    // ---- facets ------------------------------------------------------------------------
+
+    /// <summary>Only Pokémon have an evolution stage.</summary>
+    private bool StageApplies => _kind != "Trainer";
+
+    private string SubtypeLabel => _kind switch
+    {
+        "Trainer" => "Trainer kind",
+        "Pokémon" => "Element",
+        _ => "Element or kind"
+    };
+
+    private IReadOnlySet<string> SubtypeValues =>
+        Subtypes.SelectMany(g => g.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The stage filter is hidden under Trainer, so it must not linger in the summary line
+    /// either — a filter the user cannot see or remove is worse than no filter.
+    /// </summary>
+    private bool ShowStageInSummary => StageApplies && _stage.Length > 0;
+
+    /// <summary>
+    /// Facet values taken from the loaded data, so a new element or trainer kind becomes
+    /// filterable without a code change. Cached, because it walks every known card and the
+    /// dropdown is rebuilt on every render of this component.
+    /// </summary>
+    private IReadOnlyList<KeyValuePair<string, IReadOnlyList<string>>> Subtypes
+    {
+        get
+        {
+            if (_subtypesFor == (_kind, Session.Facts.Count)) return _subtypesCache;
+
+            _subtypesFor = (_kind, Session.Facts.Count);
+            _subtypesCache = !Session.FactsReady
+                ? []
+                : Session.Facts.All
+                    .Where(f => f.Subtype is { Length: > 0 })
+                    .GroupBy(f => f.IsPokemon ? "Pokémon" : "Trainer")
+                    // Narrowed by the card-type choice, so the list can only ever offer a
+                    // combination that exists.
+                    .Where(g => _kind.Length == 0 || g.Key == _kind)
+                    .OrderBy(g => g.Key, StringComparer.Ordinal)
+                    .Select(g => new KeyValuePair<string, IReadOnlyList<string>>(
+                        g.Key,
+                        g.Select(f => f.Subtype!).Distinct(StringComparer.OrdinalIgnoreCase)
+                         .OrderBy(s => s, StringComparer.CurrentCultureIgnoreCase).ToArray()))
+                    .ToArray();
+
+            return _subtypesCache;
+        }
+    }
+
+    private (string Kind, int Facts) _subtypesFor = ("\u0000", -1);
+    private IReadOnlyList<KeyValuePair<string, IReadOnlyList<string>>> _subtypesCache = [];
+
+    // ---- row detail --------------------------------------------------------------------
+
+    /// <summary>
+    /// Rarity rungs by code. The ladder is a short list, but looking a rung up per row per
+    /// render is work with no upside.
+    /// </summary>
+    private RarityRung? RungOf(PocketCard card)
+    {
+        if (_rungs.Count == 0 && Session.Ready)
+            foreach (var rung in Session.Index.Ladder.Rungs)
+                foreach (var code in rung.Codes)
+                    _rungs[code] = rung;
+
+        return _rungs.GetValueOrDefault(card.Rarity);
+    }
+
+    private readonly Dictionary<string, RarityRung> _rungs = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Hover text for an attack. The cost is NOT repeated — it is drawn as pips right there, and
+    /// "Lightning + Lightning + Lightning" is bloat. Only the name and any special effect.
+    /// </summary>
+    private static string AttackTip(CardAttack atk)
+    {
+        var name = atk.Name ?? "Attack";
+        return string.IsNullOrWhiteSpace(atk.Effect) ? name : $"{name}\n{atk.Effect}";
+    }
+
+    private static string AbilityTip(CardFact fact)
+    {
+        var name = fact.Ability?.Name ?? "Ability";
+        var effect = fact.Ability?.Effect;
+        return string.IsNullOrWhiteSpace(effect) ? name : $"{name}\n{effect}";
+    }
+}

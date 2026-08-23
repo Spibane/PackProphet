@@ -1,0 +1,179 @@
+@page "/settings"
+@implements IDisposable
+@inject AppSession Session
+@inject LocalStorageStateStore Store
+
+<PageTitle>Settings · PackProphet</PageTitle>
+
+<div class="page-head">
+    <span class="title">Settings</span>
+    <span class="subtitle">everything here is stored in this browser only</span>
+</div>
+
+<div class="p-3" style="max-width:44rem">
+    <h5>Appearance</h5>
+    <p class="small text-body-secondary">
+        The same control sits in the top bar. <strong>Auto</strong> follows this device's
+        system setting and changes with it, including while the app is open.
+    </p>
+    <div class="btn-group btn-group-sm mb-4" role="group" aria-label="Theme">
+        @foreach (var (value, label) in Themes)
+        {
+            <button class="btn @(Session.Theme == value ? "btn-secondary" : "btn-outline-secondary")"
+                    @onclick="() => Session.SetThemeAsync(value)">@label</button>
+        }
+    </div>
+
+    <h5>Your data</h5>
+    <p class="small text-body-secondary">
+        Everything is stored in this browser only &mdash; nothing is uploaded and no account
+        exists. That also means clearing site data erases it, so export a backup.
+    </p>
+    <div class="d-flex gap-2 flex-wrap mb-4">
+        <button class="btn btn-sm btn-primary" @onclick="Export">export backup</button>
+        <label class="btn btn-sm btn-outline-primary mb-0">
+            import backup
+            <InputFile OnChange="Import" style="display:none" accept=".json" />
+        </label>
+        <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmReset">
+            @(_confirmingReset ? "really erase everything?" : "erase collection")
+        </button>
+    </div>
+
+    @if (_message is not null)
+    {
+        <div class="alert alert-info py-2 small">@_message</div>
+    }
+
+    @if (Session.Ready)
+    {
+        <h5>Card data</h5>
+        <table class="table table-sm w-auto">
+            <tbody>
+                <tr><td>source</td><td><strong>@SourceLabel</strong></td></tr>
+                <tr><td>cards</td><td>@Session.Index.All.Count entries</td></tr>
+                <tr><td>ownable cards</td><td>@Session.Index.DistinctOwnableCards</td></tr>
+                <tr><td>sets</td><td>@Session.Index.BySet.Count</td></tr>
+                <tr><td>packs we can price</td><td>@Session.Odds!.PriceablePacks.Count()</td></tr>
+                <tr>
+                    <td>packs we cannot</td>
+                    <td>
+                        @Session.Odds!.UnpriceablePacks.Count()
+                        <span class="text-body-secondary small">
+                            &mdash; no published pull rates yet
+                        </span>
+                    </td>
+                </tr>
+                @* Which sets are out but unmeasured, separately from which are not out at all.
+                   Reporting both as "cannot price" made a set whose cards drop today look
+                   identical to one nobody can have. *@
+                @if (Session.SetsAwaitingRates.Count > 0)
+                {
+                    <tr>
+                        <td>released, rates unknown</td>
+                        <td>
+                            @string.Join(", ", Session.SetsAwaitingRates)
+                            <div class="text-body-secondary small">
+                                Out now, but nobody has published their pull rates. The
+                                <a href="packs">Which pack</a> page offers to estimate them from
+                                the newest measured set.
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (Session.AssumedRates.Count > 0)
+                {
+                    <tr>
+                        <td>priced by assumption</td>
+                        <td>
+                            @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
+                            {
+                                <div>
+                                    <strong>@set</strong> using @donor's distributions
+                                    <button class="btn btn-sm btn-link p-0 align-baseline"
+                                            @onclick="() => Session.SetAssumedRates(set, null)">stop</button>
+                                </div>
+                            }
+                            <div class="text-body-secondary small">
+                                Only the slot shape is borrowed &mdash; per-card odds come from
+                                each set's own card counts.
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="small text-body-secondary">
+            Card data is fetched from the community database so new sets appear without an
+            update. If that fetch fails, a snapshot bundled with the app is used instead, and
+            this row will say so.
+        </p>
+    }
+</div>
+
+@code {
+    private static readonly (string Value, string Label)[] Themes =
+    [
+        ("auto", "auto"), ("light", "light"), ("dark", "dark")
+    ];
+
+    private string? _message;
+    private bool _confirmingReset;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private string SourceLabel => Session.Data!.Source == DataSource.Cdn
+        ? "live community database"
+        : $"bundled snapshot{(Session.Data.Version is { } v ? $" (v{v})" : "")} — CDN unreachable";
+
+    private async Task Export()
+    {
+        await Session.FlushAsync();
+        var stamp = DateTimeOffset.Now.ToString("yyyy-MM-dd");
+        await Store.ExportAsync(Session.State, $"packprophet-backup-{stamp}.json");
+        _message = "Backup downloaded.";
+    }
+
+    private async Task Import(InputFileChangeEventArgs e)
+    {
+        _message = null;
+        try
+        {
+            // 8 MB ceiling: a legitimate backup is well under 1 MB, so anything larger is a
+            // mistake and reading it would just hang the tab.
+            await using var stream = e.File.OpenReadStream(8 * 1024 * 1024);
+            using var reader = new StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+
+            var imported = StateSerializer.Deserialize(json);
+            if (imported is null)
+            {
+                _message = "That file could not be read as a PackProphet backup, so nothing changed.";
+                return;
+            }
+
+            Session.ReplaceState(imported);
+            _message = $"Imported {imported.Active.Collection.Count} owned cards.";
+        }
+        catch (IOException)
+        {
+            _message = "That file was too large to read.";
+        }
+    }
+
+    private void ConfirmReset()
+    {
+        if (!_confirmingReset) { _confirmingReset = true; return; }
+        _confirmingReset = false;
+        Session.Mutate(p => p with { Collection = new(), PackLog = [], WonderLog = [] });
+        _message = "Collection erased. Undo still works if that was a mistake.";
+    }
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

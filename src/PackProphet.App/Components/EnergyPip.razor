@@ -1,0 +1,140 @@
+@* One card-type pip: a distinct SHAPE on a distinct colour.
+
+   Covers both energies and trainer kinds. Trainers are drawn as an OUTLINED circle rather than
+   a filled one, so a trainer never reads as an energy even before you register which glyph it
+   is — the fill weight carries the category and the glyph carries the specific kind. That
+   matters because these appear side by side in the same column of a list.
+
+   Colour alone is not enough — that is WCAG 1.4.1, and with red-green colour blindness Grass
+   and Fire were previously indistinguishable. Each type therefore gets its own glyph, so the
+   pip is readable in greyscale and to a screen reader.
+
+   These are simple original shapes, not the game's official energy artwork, which is
+   trademarked. They serve the accessibility need (shape + colour + label) without reproducing
+   protected assets; swapping in official icons later is a change to this one component. *@
+
+<span class="e e-@Slug @(IsTrainer ? "e-trainer" : "")" role="img" aria-label="@Label" title="@Type">
+    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        @* Every glyph is placed by a MEASURED transform, not by trusting its coordinates.
+           Two things were wrong and both are fixed here:
+
+             centring — a hand-drawn path is centred on its own coordinates, not on its ink. A
+                        flame is wide at the base and a droplet heavier still, so both sat
+                        visibly high inside the circle.
+             size     — the shapes were drawn independently, so their ink ranged from 180 to 304
+                        units across. Side by side in a list, the small ones read as faint and
+                        the big ones as bold, which looks like misalignment even when centred.
+
+           Each glyph is rendered, its ink bounding box measured, and the transform below scales
+           it to a common size and lands its centre on the middle of the box. Regenerate these
+           numbers rather than adjusting them by hand if a glyph is redrawn. *@
+        <g transform="@Placement">
+        @switch (Type)
+        {
+            @* The original shapes, restored. An earlier pass redrew them all symmetric so that
+               being centred would be structural — which worked geometrically and read worse:
+               the symmetric leaf and fist were blander and the nut lost the spanner's meaning.
+               Symmetry is only worth it when the symbol is symmetric anyway.
+
+               Fire is the one exception kept from that pass: the old flame was a smooth teardrop,
+               indistinguishable from Water in greyscale, which defeats the point of giving each
+               type a shape at all. *@
+            case "Grass":
+                <path d="M8 2c4 2 5 6 3 9-2 3-6 3-8 1 3 0 6-2 6-6 0 3-2 5-4 5 2-3 3-6 3-9z" />
+                break;
+            case "Fire":
+                @* Jagged top, so it is not another teardrop. *@
+                <path d="M8 1.6l1.7 3.3 1.2-1.3c.9 1.7 1.4 3 1.4 4.4a4.3 4.3 0 0 1-8.6 0c0-1.4.5-2.7 1.4-4.4l1.2 1.3z" />
+                break;
+            case "Water":
+                <path d="M8 1 4 8a4 4 0 0 0 8 0z" />
+                break;
+            case "Lightning":
+                <path d="M10 1 4 9h3l-1 6 6-8H9z" />
+                break;
+            case "Psychic":
+                <circle cx="8" cy="8" r="6" fill="none" stroke-width="2" />
+                <circle cx="8" cy="8" r="2" />
+                break;
+            case "Fighting":
+                <path d="M3 6h7l3 2-3 2H3z" />
+                <path d="M4 3h4v10H4z" opacity=".55" />
+                break;
+            case "Darkness":
+                <path d="M11 2a6 6 0 1 0 0 12A7 7 0 0 1 11 2z" />
+                break;
+            case "Metal":
+                <path d="M8 1l6 3.5v7L8 15 2 11.5v-7z" />
+                break;
+            case "Dragon":
+                <path d="M2 8l4-4 2 2 2-2 4 4-4 4-2-2-2 2z" />
+                break;
+
+            @* ---- trainer kinds ---- *@
+            case "Item":
+                <path d="M6.5 2h3v2l1.5 2.5V13a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V6.5L6.5 4z"
+                      fill="none" stroke-width="1.6" />
+                <path d="M5 9.5h6" stroke-width="1.6" />
+                break;
+            case "Supporter":
+                <circle cx="8" cy="5" r="2.4" fill="none" stroke-width="1.6" />
+                <path d="M3.5 14a4.5 4.5 0 0 1 9 0" fill="none" stroke-width="1.6" />
+                break;
+            case "Tool":
+                <path d="M10.5 2a3.5 3.5 0 0 0-3 5.3L3 11.8 4.2 13l4.5-4.5A3.5 3.5 0 1 0 10.5 2z"
+                      fill="none" stroke-width="1.6" />
+                break;
+            case "Stadium":
+                <ellipse cx="8" cy="8" rx="6" ry="4" fill="none" stroke-width="1.6" />
+                <path d="M5 8h6" stroke-width="1.6" />
+                break;
+
+            default:  @* Colorless *@
+                <circle cx="8" cy="8" r="5" />
+                break;
+        }
+        </g>
+    </svg>
+</span>
+
+@code {
+    /// <summary>An energy name, or a trainer kind: Item, Supporter, Tool, Stadium.</summary>
+    [Parameter, EditorRequired] public string Type { get; set; } = "Colorless";
+
+    private static readonly HashSet<string> TrainerKinds =
+        new(StringComparer.OrdinalIgnoreCase) { "Item", "Supporter", "Tool", "Stadium" };
+
+    private bool IsTrainer => TrainerKinds.Contains(Type);
+
+    private string Slug => Type.ToLowerInvariant();
+
+    /// <summary>
+    /// Per-glyph transform: scale to a common ink size, then centre. Generated by measuring each
+    /// rendered glyph's bounding box — see the comment in the markup above.
+    /// </summary>
+    private static readonly Dictionary<string, string> Placements = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Grass"]      = "translate(2.56 2.26) scale(0.761)",
+        ["Fire"]       = "translate(1.46 2.54) scale(0.818)",
+        ["Water"]      = "translate(1.31 2.77) scale(0.836)",
+        ["Lightning"]  = "translate(2.19 2.19) scale(0.727)",
+        ["Psychic"]    = "translate(2.88 2.88) scale(0.64)",
+        ["Fighting"]   = "translate(1.5 1.66) scale(0.792)",
+        ["Darkness"]   = "translate(0.94 1.47) scale(0.816)",
+        ["Metal"]      = "translate(2.88 2.88) scale(0.64)",
+        ["Dragon"]     = "translate(1.68 1.68) scale(0.79)",
+        ["Item"]       = "translate(1.28 1.28) scale(0.84)",
+        ["Supporter"]  = "translate(1.28 1.36) scale(0.84)",
+        ["Tool"]       = "translate(1.82 2.34) scale(0.74)",
+        ["Stadium"]    = "translate(1.31 1.31) scale(0.836)",
+        ["Colorless"]  = "translate(1.55 1.55) scale(0.806)",
+    };
+
+    private string Placement => Placements.GetValueOrDefault(Type, "");
+
+    /// <summary>
+    /// "Grass energy" but just "Supporter": calling a Supporter an energy would be wrong, and a
+    /// screen reader reads this label verbatim.
+    /// </summary>
+    private string Label => IsTrainer ? Type : $"{Type} energy";
+}

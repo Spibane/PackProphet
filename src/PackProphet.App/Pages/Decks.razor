@@ -1,0 +1,288 @@
+@page "/decks"
+@inject AppSession Session
+@implements IDisposable
+
+<PageTitle>Decks · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else
+{
+    <div class="page-head">
+        <span class="title">Decks</span>
+        <span class="subtitle">@Session.Profile.Decks.Count saved</span>
+
+        <span class="actions">
+            <a class="btn btn-sm btn-outline-primary" href="decks/import">import</a>
+            <a class="btn btn-sm btn-primary" href="decks/new">new deck</a>
+        </span>
+    </div>
+
+    @* Two views because they answer different questions: the table compares decks against each
+       other, the grid lets you recognise one at a glance. It lays the same decks out either
+       way, so it belongs over the content rather than in the header. *@
+    @if (_decks.Count > 0)
+    {
+        <div class="grid-toolbar">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
+                <button class="btn @(Session.DeckGrid ? "btn-outline-secondary" : "btn-secondary")"
+                        @onclick="() => Session.SetDeckGrid(false)" title="A table, for comparing">list</button>
+                <button class="btn @(Session.DeckGrid ? "btn-secondary" : "btn-outline-secondary")"
+                        @onclick="() => Session.SetDeckGrid(true)" title="Cards, for recognising">grid</button>
+            </div>
+        </div>
+    }
+
+    @* Full width. The list is a table of decks against each other, and capping it left the
+       columns bunched at the left of a wide screen with the rest of the row empty. *@
+    <div class="p-3">
+        @if (_decks.Count == 0)
+        {
+            <p class="text-body-secondary">
+                No decks yet. <a href="decks/import">Import one</a> from the game's share code,
+                or <a href="decks/new">build one from scratch</a>.
+            </p>
+        }
+        else if (Session.DeckGrid)
+        {
+            <h6>
+                Your decks
+                <span class="small text-body-secondary fw-normal">closest to buildable first</span>
+            </h6>
+
+            <div class="showcase-grid">
+                @foreach (var deck in _decks)
+                {
+                    <div class="showcase @(deck.Missing == 0 && deck.Cards > 0 ? "ready" : "")">
+                        @* The deck's face card, chosen as its rarest — which in practice is the
+                           card the deck is named after and the one you recognise it by. *@
+                        <a class="face" href="decks/@deck.Id"
+                           style="background-image:url('@(deck.Face?.ArtUrl)')"
+                           aria-label="Open @deck.Name">
+                            @if (deck.Face is null)
+                            {
+                                <span class="empty">empty deck</span>
+                            }
+                        </a>
+
+                        <div class="body">
+                            <a class="nm" href="decks/@deck.Id">@deck.Name</a>
+
+                            <div class="meta">
+                                @foreach (var energy in deck.Energies)
+                                {
+                                    <EnergyPip Type="@energy.ToString()" />
+                                }
+                                <span class="small text-body-secondary">@deck.Cards / @GameRules.DeckSize</span>
+                            </div>
+
+                            <div class="badges">
+                                @if (deck.Cards == 0)
+                                {
+                                    <span class="badge text-bg-secondary">empty</span>
+                                }
+                                else if (deck.Missing == 0)
+                                {
+                                    <span class="badge text-bg-success">buildable</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-warning">@deck.Missing missing</span>
+                                }
+
+                                @if (deck.Report is { HasErrors: true })
+                                {
+                                    <span class="badge text-bg-danger">
+                                        @deck.Report.Of(LintSeverity.Error).Count() error(s)
+                                    </span>
+                                }
+                                else if (deck.Report is { FullyVerified: false })
+                                {
+                                    <span class="badge text-bg-secondary"
+                                          title="Some rules could not be checked — card detail is missing for this set">
+                                        unverified
+                                    </span>
+                                }
+                            </div>
+
+                            @* A few more of the deck's cards, rarest first. Enough to recognise the
+                               deck by, not a contents listing — the deck page is for that. *@
+                            @if (deck.Strip.Count > 0)
+                            {
+                                <div class="strip">
+                                    @foreach (var card in deck.Strip)
+                                    {
+                                        <span class="thumb" style="background-image:url('@card.ArtUrl')"
+                                              data-tip="@card.Name"></span>
+                                    }
+                                </div>
+                            }
+
+                            <div class="actions">
+                                <a class="btn btn-sm btn-outline-secondary" href="decks/@deck.Id">open</a>
+                                <button class="btn btn-sm @(_confirming == deck.Id ? "btn-danger" : "btn-outline-danger")"
+                                        @onclick="() => ConfirmDelete(deck.Id)"
+                                        title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete this deck")">
+                                    @(_confirming == deck.Id ? "really?" : "delete")
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            @* Closest-to-buildable order, not alphabetical: being told you are one card away is
+               the most motivating thing this app can say, so it leads. *@
+            <h6>
+                Your decks
+                <span class="small text-body-secondary fw-normal">closest to buildable first</span>
+            </h6>
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>deck</th>
+                        <th class="num">cards</th>
+                        <th class="num">missing</th>
+                        <th>legality</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var deck in _decks)
+                    {
+                        <tr>
+                            <td>
+                                <a href="decks/@deck.Id"><strong>@deck.Name</strong></a>
+                            </td>
+                            <td class="num">@deck.Cards</td>
+                            <td class="num">
+                                @if (deck.Cards == 0)
+                                {
+                                    <span class="text-body-tertiary">&mdash;</span>
+                                }
+                                else if (deck.Missing == 0)
+                                {
+                                    <span class="text-success fw-semibold">buildable</span>
+                                }
+                                else
+                                {
+                                    <span>@deck.Missing</span>
+                                }
+                            </td>
+                            <td>
+                                @if (deck.Report is null || deck.Cards == 0)
+                                {
+                                    <span class="text-body-tertiary small">&mdash;</span>
+                                }
+                                else if (deck.Report.HasErrors)
+                                {
+                                    <span class="badge text-bg-danger">
+                                        @deck.Report.Of(LintSeverity.Error).Count() error(s)
+                                    </span>
+                                }
+                                else if (!deck.Report.FullyVerified)
+                                {
+                                    <span class="badge text-bg-secondary"
+                                          title="Some rules could not be checked — card detail is missing for this set">
+                                        unverified
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-success">legal</span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <a class="btn btn-sm btn-outline-secondary" href="decks/@deck.Id">open</a>
+                                @* Two taps, and the confirmation is scoped to this row: a shared
+                                   flag would arm every delete button at once. *@
+                                <button class="btn btn-sm @(_confirming == deck.Id ? "btn-danger" : "btn-outline-danger")"
+                                        @onclick="() => ConfirmDelete(deck.Id)"
+                                        title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete this deck")">
+                                    @(_confirming == deck.Id ? "really?" : "delete")
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+
+@code {
+    private const int StripSize = 5;
+
+    /// <summary>
+    /// One deck as this page needs it. Built once per change rather than per render: the linter
+    /// and the missing count both walk the deck, and the grid renders each of them twice over.
+    /// </summary>
+    private sealed record Card(
+        string Id, string Name, int Cards, int Missing,
+        IReadOnlyList<EnergyType> Energies, LintReport? Report,
+        PocketCard? Face, IReadOnlyList<PocketCard> Strip);
+
+    private IReadOnlyList<Card> _decks = [];
+
+    /// <summary>Which deck's delete button is armed, if any.</summary>
+    private string? _confirming;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+        Build();
+    }
+
+    public void Dispose() => Session.Changed -= OnChanged;
+
+    private void OnChanged()
+    {
+        Build();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Build()
+    {
+        if (!Session.Ready) return;
+
+        _decks = Session.DecksByBuildability.Select(deck =>
+        {
+            // The face is the user's pick where they made one; AppSession owns the fallback.
+            var face = Session.FaceCardOf(deck);
+
+            // The strip continues rarest-first, minus whatever is already the face.
+            var strip = deck.DeckBuilderNrs
+                .Distinct()
+                .Select(Session.PrintingOf)
+                .Where(c => c is not null && c.Key != face?.Key)
+                .Select(c => c!)
+                .OrderByDescending(c => Session.Index.Ladder.IndexOf(c.Rarity) ?? -1)
+                .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
+                .Take(StripSize)
+                .ToArray();
+
+            return new Card(
+                deck.Id, deck.Name,
+                deck.DeckBuilderNrs.Count,
+                Session.MissingCount(deck),
+                deck.Energies,
+                Session.Linter?.Lint(deck.DeckBuilderNrs, deck.Energies, Session.Owned),
+                face,
+                strip);
+        }).ToArray();
+    }
+
+    private void ConfirmDelete(string id)
+    {
+        if (_confirming != id) { _confirming = id; return; }
+
+        _confirming = null;
+        Session.DeleteDeck(id);
+    }
+
+}

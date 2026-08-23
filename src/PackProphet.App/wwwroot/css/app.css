@@ -1,0 +1,1504 @@
+/* PackProphet styles.
+   Bootstrap supplies components and the light/dark tokens; this file holds only what it does
+   not: the card grid and list, the pack picker, and a few app-specific bars.
+
+   Organised in sections and written whole. Earlier revisions were patched by replacing slices
+   between comment markers, which silently deleted every card-grid rule when two markers were
+   the wrong way round. */
+
+/* ================================================================= framework chrome
+   Elements the Blazor template puts in index.html. #blazor-error-ui MUST be fixed and hidden
+   until Blazor unhides it, or it renders inline on every page and adds a second scrollbar. */
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; width: 100%;
+    z-index: 2000;
+    padding: .6rem 1.25rem .7rem;
+    background: var(--bs-warning-bg-subtle, lightyellow);
+    color: var(--bs-warning-text-emphasis, #533f03);
+    border-top: 1px solid var(--bs-warning-border-subtle, #e0c200);
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, .2);
+    font-size: 1rem;
+}
+#blazor-error-ui .reload { color: inherit; text-decoration: underline; cursor: pointer; }
+#blazor-error-ui .dismiss { cursor: pointer; float: right; margin-top: -.3rem; font-size: 1.4rem; line-height: 1; }
+
+.loading-progress { display: block; position: relative; width: 6rem; height: 6rem; margin: 20vh auto 1rem; }
+.loading-progress circle {
+    fill: none; stroke: var(--bs-secondary-bg, #e0e0e0); stroke-width: .5rem;
+    transform-origin: 50% 50%; transform: rotate(-90deg);
+}
+.loading-progress circle:last-child {
+    stroke: var(--bs-primary, #0d6efd);
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * .8) 500%;
+    transition: stroke-dasharray .05s ease-in-out;
+}
+.loading-progress-text { text-align: center; font-weight: 500; color: var(--bs-secondary-color, #666); }
+.loading-progress-text:after { content: var(--blazor-load-percentage-text, "Loading"); }
+
+.blazor-error-boundary {
+    padding: 1rem;
+    background: var(--bs-danger-bg-subtle, #fde7e9);
+    color: var(--bs-danger-text-emphasis, #7a1420);
+}
+
+/* ================================================================= layout
+   One scroll container, never two. The grid takes exactly the space left over rather than
+   guessing with calc(100vh - Nrem), which can never match the real chrome height. */
+
+html, body { height: 100%; margin: 0; }
+body {
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+/* Blazor renders the layout INSIDE index.html's #app div, so this element sits between body
+   and main. Unstyled it was an ordinary block of content height, which broke the flex chain:
+   main's `flex: 1 1 auto` did nothing, main's height stayed content-sized, its `overflow-y`
+   never had anything to scroll, and body's `overflow: hidden` simply clipped whatever did not
+   fit. A tall page therefore lost its bottom with no scrollbar offered. */
+#app {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 1 auto;
+    min-height: 0;          /* lets a flex child actually shrink and scroll */
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;       /* pages with no scroller of their own scroll here */
+}
+
+/* Flex items shrink by default, and a shrunk item does not make its container scroll — it
+   just squashes and lets its own content spill out of view. That is what cut the bottom off
+   the Packs page: everything below the ranking table was compressed to fit instead of pushing
+   the page taller. Anything that genuinely wants to fill the leftover space says so with its
+   own class rule (.grid-wrap), which outranks this. */
+main > * { flex-shrink: 0; }
+
+/* ================================================================= nav and bars */
+
+.app-nav {
+    display: flex; align-items: center; gap: .25rem; flex-wrap: wrap;
+    padding: .4rem .75rem;
+    background: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+.app-nav .brand { font-weight: 700; margin-right: .75rem; letter-spacing: -.01em; }
+.app-nav .nav-item {
+    padding: .3rem .6rem; border-radius: .3rem; text-decoration: none;
+    color: var(--bs-body-color); font-size: 1rem;
+}
+.app-nav .nav-item:hover { background: var(--bs-secondary-bg); }
+.app-nav .nav-item.active { background: var(--bs-primary); color: #fff; }
+
+/* Theme cycler. Pushed to the far end by ms-auto in the markup; the word collapses on narrow
+   screens so the glyph alone survives beside the nav links. */
+.app-nav .theme-btn {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .25rem .55rem; border-radius: .3rem;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .95rem; line-height: 1.2; cursor: pointer;
+}
+.app-nav .theme-btn:hover { border-color: var(--bs-primary); }
+.app-nav .theme-btn .theme-label { text-transform: lowercase; }
+.app-nav .theme-btn .glyph { display: inline-flex; align-items: center; }
+.app-nav .theme-btn svg { display: block; }
+@media (max-width: 700px) { .app-nav .theme-btn .theme-label { display: none; } }
+
+/* ================================================================= light-mode structure
+
+   Bootstrap's light palette draws every line in #dee2e6 on a #fff body — about 1.3:1, which is
+   visible on a calibrated monitor in a dark room and essentially invisible on a phone outdoors.
+   The app leans on those lines heavily (bars, table rows, list rows, card outlines), so the
+   whole layout went soft in light mode while dark mode, whose borders sit at #495057 against
+   #212529, read fine.
+
+   Two changes rather than one, because darkening the lines alone would have made a page of
+   tables look like a spreadsheet:
+     - structural lines get real contrast, and
+     - the chrome bars get a FILL, so a header or toolbar is separated by its background rather
+       than by a hairline. That is what lets the row lines inside tables stay light.
+
+   theme.js always stamps an explicit data-bs-theme before first paint, so the attribute is
+   reliable; the :not() is only a safety net for the frame before it runs. Dark mode is left
+   exactly as Bootstrap ships it. */
+[data-bs-theme="light"], :root:not([data-bs-theme="dark"]) {
+    /* Boundaries between AREAS: bars, panels, card outlines, the grid's edges. Measured at
+       2.9:1 against the body background, i.e. it clears the 3:1 WCAG guideline for a meaningful
+       non-text boundary where the old #dee2e6 managed 1.3:1. */
+    --bs-border-color: #8f98a3;
+    --bs-border-color-translucent: rgba(18, 24, 33, .28);
+
+    /* Rows WITHIN a table are a lighter weight on purpose: at the same strength as the area
+       borders, thirty of them stacked read as a cage. */
+    --bs-table-border-color: #d4dae1;
+
+    /* Chrome. Distinct enough from the body to mark "this is a control bar" on its own. */
+    --bs-tertiary-bg: #edf0f4;
+    --bs-secondary-bg: #e2e7ec;
+}
+
+/* ================================================================= page chrome
+
+   One contract, because the headers had drifted into ten different shapes: some pages opened
+   with a title, some with a dropdown, some with nothing at all, and each bar was as tall as
+   whatever control happened to be in it — so every navigation nudged the content up or down.
+
+   Which bar a control belongs in is decided by WHAT KIND of thing it is, not by how many
+   controls a page happens to have. In order down the page:
+
+   .page-head    — where you are and what you can do here. Optional back link, the title, a
+                   quiet subtitle, then primary actions pushed right. ALWAYS present, always
+                   exactly one row, fixed height, so content never shifts between pages.
+   .page-tools   — what you are looking at: the scope, and the assumptions that define it
+                   (which set, which target, whether a limited pack is on sale). Change one of
+                   these and every figure below means something different.
+   .grid-toolbar — the content's own bar, directly above it: filters on the left (narrowing what
+                   is in scope) and layout on the right (list or grid, columns, density), split
+                   by a .bar-sep. These were two bars once, which was tidier in principle and
+                   worse in practice — Collection then put a nav, a header, the set tabs, a
+                   filter row and a control row above the first card. Never in the header: this
+                   is the only bar whose right half changes nothing about WHICH cards show.
+
+   Pages carry only the bars they need, and the order never changes. The split is also what
+   keeps the header's height fixed: a single bar holding a title and six controls cannot be one
+   row at every width, and the moment it wraps it is a different height. */
+.page-head, .page-tools, .grid-toolbar {
+    display: flex; align-items: center; gap: .5rem;
+    flex: none;
+    padding: .35rem .75rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+.page-head {
+    background: var(--bs-tertiary-bg);
+    /* Matches a btn-sm or a form-control-sm plus the padding above, so a header with a control
+       in it is exactly as tall as one with only a title. */
+    min-height: 3rem;
+    flex-wrap: nowrap;
+    /* A long deck name shortens rather than pushing the actions off the row. */
+    overflow: hidden;
+}
+.page-tools, .grid-toolbar { flex-wrap: wrap; }
+
+/* Divides the two halves of a shared control bar: what is shown, then how. Without it the
+   filters and the layout buttons read as one undifferentiated row of eight controls. */
+.bar-sep {
+    width: 1px; align-self: stretch; margin: 0 .1rem;
+    background: var(--bs-border-color);
+}
+
+/* The title is the one thing every header has, so it gets one definition rather than a <strong>
+   styled slightly differently on each page. */
+.page-head .title {
+    font-weight: 700; font-size: 1.05rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.page-head .subtitle {
+    font-size: .85rem; color: var(--bs-secondary-color);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+/* Actions never shrink; the title and subtitle give way instead. Stated as a rule for every
+   child rather than per page, because the failure it prevents is a squashed button rather than
+   a shortened word — a badge or a save button compressed to nothing is unusable, while a
+   truncated deck name is still perfectly readable. */
+.page-head > * { flex: none; }
+.page-head .title, .page-head .subtitle { flex: 0 1 auto; min-width: 0; }
+.page-head input { flex: 0 1 auto; min-width: 6rem; }
+.page-head .actions {
+    display: flex; align-items: center; gap: .4rem; flex: none; margin-left: auto;
+}
+@media (max-width: 560px) {
+    /* The subtitle is explanatory, and a phone header has room for the title and the buttons
+       or for prose, not both. */
+    .page-head .subtitle { display: none; }
+}
+
+.set-tabs { display: flex; gap: .25rem; overflow-x: auto; }
+.set-tab {
+    border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-radius: .3rem; padding: .2rem .5rem; font-size: .9rem; white-space: nowrap;
+    display: flex; flex-direction: column; line-height: 1.15;
+}
+.set-tab.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
+.set-tab .pct { font-size: .82rem; opacity: .75; }
+
+/* A grid, not a flex row: with eight statistics the flex version wrapped into ragged rows whose
+   columns did not line up. auto-fill keeps them aligned at any width without breakpoints. */
+.summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: .5rem;
+    padding: 0;
+}
+
+/* Each figure in its own box. Whitespace alone was not enough separation once there were eight
+   of them: a label sat as close to the value above it as to its own, so the eye grouped them
+   wrongly. The border does the grouping instead. */
+.summary .stat {
+    display: flex; flex-direction: column;
+    gap: .1rem;
+    padding: .55rem .65rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .4rem;
+    background: var(--bs-tertiary-bg);
+    min-width: 0;
+}
+/* Only the headline value is clipped — that is the one that can be a long pack name and must
+   not widen its box past its share of the row. The sub-line is allowed to wrap, because on the
+   pack ranking it is a full sentence explaining what the figure covers. */
+.summary .value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary .label { font-size: .86rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bs-secondary-color); }
+.summary .value { font-size: 1.6rem; font-weight: 600; line-height: 1.1; }
+/* A pack name is text, not a number, so it cannot take the numeral size. */
+.summary .value.fs-6 { font-size: 1.05rem !important; font-weight: 700; }
+.summary .sub { font-size: .86rem; color: var(--bs-secondary-color); }
+
+/* ================================================================= rarity selection */
+
+.rarity-chips { display: flex; gap: .2rem; flex-wrap: wrap; }
+.rarity-chip {
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg);
+    color: var(--bs-secondary-color);
+    border-radius: .3rem; padding: .15rem .4rem;
+    font-size: .9rem; line-height: 1.2; white-space: nowrap;
+}
+.rarity-chip.on { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; font-weight: 600; }
+.rarity-chip:disabled { opacity: .5; }
+
+.chip-pending {
+    font-size: .86rem; align-self: center;
+    color: var(--bs-warning-text-emphasis);
+    background: var(--bs-warning-bg-subtle);
+    border-radius: .3rem; padding: .15rem .4rem;
+}
+
+/* ================================================================= card grid (tiles) */
+
+.grid-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.card-row { display: grid; gap: 4px; padding: 2px 4px; }
+
+.card-tile {
+    position: relative;
+    aspect-ratio: 367 / 512;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #2a2a2a;
+    outline: 1px solid var(--bs-border-color);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    opacity: .45;                       /* unowned cards recede */
+    transition: opacity .08s linear;
+}
+.card-tile.owned { opacity: 1; }
+.card-tile.sel { outline: 3px solid var(--bs-primary); }
+.card-tile.picked { outline: 3px solid var(--bs-success); opacity: 1; }
+
+.card-tile img { width: 100%; height: 100%; display: block; object-fit: cover; background: #333; }
+.card-tile img.img-failed { opacity: .25; }
+
+.card-tile .rar {
+    position: absolute; left: 3px; top: 3px;
+    font-size: .72rem; line-height: 1; padding: 2px 4px;
+    background: rgba(0, 0, 0, .65); color: #fff; border-radius: 3px;
+}
+/* Info button, bottom-centre. Every corner of a card carries something worth seeing — the
+   rarity mark, the set number, the illustrator — while the middle of the lower edge is flavour
+   text, so a button there covers the least. Sized as a real target rather than a decoration:
+   the first attempt was a 1.1rem corner dot and was effectively invisible. */
+.card-tile .info {
+    position: absolute; left: 50%; bottom: 4px;
+    transform: translateX(-50%);
+    /* Sized in percentages of the tile, not fixed rem: the grid runs from 3 to 10 columns, so a
+       fixed button is oversized at 3 and a speck at 10. */
+    min-width: 46%; height: 22%;
+    min-height: 1.5rem; max-height: 2.1rem;
+    padding: 0 .5rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .88rem; font-weight: 700; line-height: 1;
+    text-decoration: none; white-space: nowrap;
+    border-radius: .75rem;
+    background: rgba(0, 0, 0, .68); color: #fff;
+    border: 1px solid rgba(255, 255, 255, .35);
+    opacity: .8;
+    transition: opacity .08s linear, background-color .08s linear;
+}
+.card-tile:hover .info { opacity: 1; }
+.card-tile .info:hover { background: var(--bs-primary); color: #fff; }
+
+/* Hidden entirely on a touch screen. The long press IS the mobile affordance, so a permanent
+   button would sit on top of every tile in the grid covering art for nothing — and it cannot
+   even hide on hover there, because there is no hover to hide behind. */
+@media (hover: none) {
+    .card-tile .info { display: none; }
+}
+
+.card-tile .cnt {
+    position: absolute; right: 3px; bottom: 3px;
+    min-width: 1.1rem; text-align: center;
+    font-size: .82rem; font-weight: 700; line-height: 1.1; padding: 2px 4px;
+    background: var(--bs-primary); color: #fff; border-radius: 3px;
+}
+.card-tile .pick {
+    position: absolute; left: 3px; bottom: 3px;
+    min-width: 1.1rem; text-align: center;
+    font-size: .86rem; font-weight: 700; line-height: 1.1; padding: 2px 5px;
+    background: var(--bs-success); color: #fff; border-radius: 3px;
+}
+
+/* Sweep mode suppresses the browser's own touch gestures so a drag selects instead of
+   scrolling. Only while armed. */
+.grid-wrap.sweeping, .grid-wrap.sweeping .card-tile { touch-action: none; }
+
+/* Remove mode must be unmistakable: the same tap that was adding a moment ago now subtracts. */
+.grid-wrap.removing { box-shadow: inset 0 0 0 2px var(--bs-danger); }
+.grid-wrap.removing .card-tile.owned:hover { outline: 2px solid var(--bs-danger); }
+.grid-wrap.removing .card-tile .cnt { background: var(--bs-danger); }
+
+/* iOS raises the selection magnifier on a long press unless BOTH the callout and selection are
+   refused, and it has to be refused on the descendants too — the count and rarity badges are
+   text nodes, and a press landing on one of them selects it even when the tile says not to. */
+.card-tile, .card-tile * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Card art is never draggable: a mouse sweep would otherwise drag a ghost of the image
+   instead of selecting. pointer-events:none also makes elementFromPoint land on the tile. */
+.card-tile img, .card-line .thumb {
+    -webkit-user-drag: none;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+}
+
+/* ================================================================= card list (rows)
+   A CSS grid, not flex. Alignment is then guaranteed by construction: header and data rows
+   share one column definition, so they cannot drift. With flex they DID drift, because
+   `flex: 1 1 auto` sizes from content and a header label is not as wide as a card name.
+
+   Every cell is always rendered, even when empty — omitting one would shift every column
+   after it. Hiding a column responsively therefore also means redefining the template, which
+   is done explicitly at the bottom of this file. */
+
+.card-line {
+    display: grid;
+    grid-template-columns:
+        var(--art-w)         /* art          */
+        minmax(6rem, 1fr)    /* name         */
+        4.6rem               /* set + number */
+        5.4rem               /* type         */
+        4rem                 /* stage        */
+        4.6rem               /* rarity       */
+        2.4rem               /* hp           */
+        minmax(7rem, 1fr)    /* attack 1     */
+        minmax(7rem, 1fr)    /* attack 2     */
+        minmax(6rem, .8fr)   /* ability      */
+        1.8rem               /* picked       */
+        2.4rem               /* have         */
+        4.2rem;              /* +/- buttons  */
+    /* The art track is a variable because roomy widens it, and restating four responsive
+       templates just to change one track is how they drift out of sync. */
+    --art-w: 32px;
+    --art-h: 45px;
+    align-items: center;
+    gap: .45rem;
+    height: 50px;
+    padding: .25rem .6rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    user-select: none;
+}
+.card-line.owned { background: color-mix(in srgb, var(--bs-primary) 7%, transparent); }
+
+/* The name is what you scan a list FOR, so it gets a step over its row and a heavier weight.
+   Everything around it is supporting detail and can stay quieter. */
+.card-line .c-nm { font-size: 1rem; font-weight: 600; }
+
+/* The card name links to its detail page, but must not look like a link in a dense list. */
+.card-line .c-nm a { color: inherit; text-decoration: none; }
+.card-line .c-nm a:hover { text-decoration: underline; }
+
+/* Every cell clips rather than wrapping: a row is a fixed height, so overflow would spill. */
+.card-line > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.card-line .thumb, .card-line .c-thumb {
+    width: var(--art-w); height: var(--art-h);
+    object-fit: cover; border-radius: 2px; background: #333;
+}
+.card-line .c-id,
+.card-line .c-ty,
+.card-line .c-st { font-size: .88rem; color: var(--bs-secondary-color); }
+.card-line .c-id { font-variant-numeric: tabular-nums; }
+.card-line .c-ty { text-transform: capitalize; }
+.card-line .c-hp,
+.card-line .c-ct { text-align: right; font-variant-numeric: tabular-nums; }
+.card-line .c-hp { font-size: .88rem; color: var(--bs-secondary-color); }
+
+/* HP and attack damage are both bare numbers sitting side by side, so they read as one value.
+   A rule at the start of the moves group makes the boundary explicit — cheaper than a label on
+   every row, and it also separates the two attacks from each other and from the ability. */
+.card-line .c-a1,
+.card-line .c-a2,
+.card-line .c-ab { border-left: 1px solid var(--bs-border-color); padding-left: .45rem; }
+.card-line.head .c-a1,
+.card-line.head .c-a2,
+.card-line.head .c-ab { border-left-color: transparent; }
+.card-line .c-ct { font-weight: 600; }
+.card-line .c-acts { display: flex; gap: .2rem; justify-content: flex-end; }
+.card-line .pick {
+    font-size: .82rem; font-weight: 700; padding: 1px 5px;
+    border-radius: 3px; background: var(--bs-success); color: #fff;
+}
+
+.card-line.head .c-nm { font-size: inherit; font-weight: inherit; }
+.card-line.head {
+    position: sticky; top: 0; z-index: 5;
+    height: 38px;
+    background: var(--bs-tertiary-bg);
+    font-size: .84rem; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--bs-secondary-color);
+}
+.card-line.head > button {
+    background: none; border: 0; padding: 0;
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+}
+.card-line.head > button:hover { color: var(--bs-body-color); }
+.card-line.head .c-hp, .card-line.head .c-ct { text-align: right; }
+
+/* Rarity as the game draws it. Colour carries the family, the glyph count the tier. */
+.card-line .glyphs { font-size: 1.05rem; letter-spacing: -.04em; white-space: nowrap; }
+/* Two sets of values, because a rarity glyph is the ONLY rarity indicator in a list row, so
+   it has to stay legible in both themes. The light-theme values are darkened for contrast
+   against white; dark theme takes the lighter originals. The glyph SHAPE and count carry the
+   tier regardless, so colour is reinforcement rather than the sole channel. */
+.glyphs.diamond { color: #55738f; }
+.glyphs.star    { color: #9a7005; }
+.glyphs.shiny   { color: #18726f; }
+.glyphs.crown   { color: #8038a3; }
+
+[data-bs-theme="dark"] .glyphs.diamond { color: #9fbad2; }
+[data-bs-theme="dark"] .glyphs.star    { color: #e3b334; }
+[data-bs-theme="dark"] .glyphs.shiny   { color: #3fbdbd; }
+[data-bs-theme="dark"] .glyphs.crown   { color: #c288dd; }
+
+/* ---- row density -------------------------------------------------------------------
+   Two heights, and the number MUST agree with Virtualize's ItemSize in CardGrid.razor or the
+   scrollbar mis-sizes and the list jumps while scrolling:
+
+       compact  50px + 1px border = 51   -> ItemSize 51
+       roomy    94px + 1px border = 95   -> ItemSize 95
+
+   Roomy exists because the compact row can only show an attack's effect on hover. Given the
+   height it shows the text outright, which is also the accessible answer: hover-only content
+   is unreachable by keyboard and awkward on touch. */
+
+/* The header carries the roomy class ONLY to pick up the wider art track, so the columns
+   still line up with the rows. Everything else about roomy is scoped away from it with
+   :not(.head): a taller row and wrapping text are for data, and letting a header label wrap
+   inside its own fixed 34px height is what broke it the first time. */
+.card-line.roomy { --art-w: 58px; --art-h: 81px; }
+
+.card-line.roomy:not(.head) {
+    height: 94px;
+    align-items: start;
+    padding: .5rem .6rem;
+}
+/* Text may wrap in roomy — that is the entire point — but still clips at the cell, so a very
+   long effect cannot push the row past its declared height. */
+.card-line.roomy:not(.head) > * { white-space: normal; }
+.card-line.roomy:not(.head) .c-nm {
+    font-weight: 600;
+    white-space: normal;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+
+/* Attacks and abilities. Energy costs are coloured pips: a row of dots reads faster than
+   "Grass, Colorless, Colorless" and takes a fraction of the width. */
+.atk-item { display: flex; flex-direction: column; gap: .1rem; font-size: .84rem; min-width: 0; }
+.atk-item .atk-line { display: flex; align-items: center; gap: .15rem; min-width: 0; }
+.atk-item .atk-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atk-item .atk-dmg { font-weight: 700; font-variant-numeric: tabular-nums; flex: none; }
+.atk-item.ability .atk-name { font-style: italic; }
+
+/* Compact hides the effect text and marks the name as having more behind it; roomy shows the
+   text and drops the dotted underline, since there is no longer a tooltip to advertise. */
+.atk-effect { display: none; }
+.card-line:not(.roomy) .atk-item.ability .atk-name {
+    border-bottom: 1px dotted var(--bs-secondary-color);
+}
+.card-line.roomy .atk-effect {
+    display: -webkit-box;
+    -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: .8rem; line-height: 1.25;
+    color: var(--bs-secondary-color);
+}
+
+/* Energy symbols carry a SHAPE as well as a colour, so they survive greyscale and colour
+   blindness. Colour alone would fail WCAG 1.4.1 — Grass and Fire are indistinguishable to a
+   red-green colour-blind reader. Slightly larger than the old flat pips, because a glyph has
+   to be legible where a plain dot did not. */
+.e {
+    width: 1.05rem; height: 1.05rem;
+    flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, .3);
+
+    /* An inline-flex box aligns on the TEXT BASELINE by default, and because its SVG child is a
+       block the baseline lands at the pip's bottom edge. The pip therefore rode above the text
+       by an amount that varied with each context's font size — which is why they looked "all
+       over the place" across the deck rows and the collection list, even once the glyphs
+       themselves were centred. Middle alignment is independent of the surrounding text. */
+    vertical-align: middle;
+    line-height: 1;
+    box-sizing: border-box;
+}
+/* The SVG fills the pip exactly — no percentage smaller than the box, and no reliance on flex
+   centring. Both were the actual bug: Firefox resolves a percentage-sized inline SVG inside a
+   flex item differently from Chromium, so the glyph landed off-centre there while looking fine
+   in Edge. With the SVG at 100% the only geometry left is the viewBox, which every engine
+   resolves identically. The breathing room inside the ring is baked into the glyph transforms
+   instead. */
+.e svg { width: 100%; height: 100%; display: block; }
+.e svg path, .e svg circle, .e svg ellipse { fill: currentColor; stroke: currentColor; }
+/* An explicit fill="none" in the markup means the shape is drawn as an outline. */
+.e svg [fill="none"] { fill: none; }
+
+/* Dark glyph on light fills, light glyph on dark ones, so the shape always reads. */
+.e-grass     { background: #63bc5a; color: #10310d; }
+.e-fire      { background: #ff9c54; color: #4a1e00; }
+.e-water     { background: #4d90d5; color: #04203c; }
+.e-lightning { background: #f3d23b; color: #423600; }
+.e-psychic   { background: #d86ec4; color: #3d0733; }
+.e-fighting  { background: #ce7040; color: #3a1503; }
+.e-darkness  { background: #4a4455; color: #e7e3ee; }
+.e-metal     { background: #9aa4ae; color: #1b2329; }
+.e-dragon    { background: #c8a63a; color: #3a2c00; }
+.e-colorless { background: #e8e4dc; color: #3a352c; }
+
+/* Trainers: an OUTLINED pip, so the category reads before the glyph does. A trainer is not an
+   energy, and in a list the two sit in the same column — a filled pip would make them look like
+   siblings. The ring carries the kind's colour so it still groups at a glance. */
+.e-trainer {
+    background: transparent;
+    border-width: 1.5px;
+}
+.e-item      { border-color: #4d90d5; color: #4d90d5; }
+.e-supporter { border-color: #d8683f; color: #d8683f; }
+.e-tool      { border-color: #7a8b99; color: #64757f; }
+.e-stadium   { border-color: #55a06a; color: #4a8f5e; }
+
+/* The outline colours are chosen against a light background; on dark they need lifting or the
+   ring disappears into the row. */
+[data-bs-theme="dark"] .e-item      { border-color: #6fa9e2; color: #8fbdea; }
+[data-bs-theme="dark"] .e-supporter { border-color: #e8865f; color: #f0a183; }
+[data-bs-theme="dark"] .e-tool      { border-color: #9aabb7; color: #adbcc6; }
+[data-bs-theme="dark"] .e-stadium   { border-color: #6cbd85; color: #86cd9b; }
+
+/* Type cell: icon then label, with the label first to be sacrificed on narrow screens. */
+.card-line .c-ty { display: flex; align-items: center; gap: .25rem; }
+.card-line .ty-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .card-line .ty-name { display: none; } }
+
+/* ================================================================= pack picker and table */
+
+/* Column count is chosen by the user, as in the collection grid, rather than fixed by an
+   auto-fill guess — a booster is worth seeing at a decent size. */
+.pack-picker { display: grid; gap: .5rem; grid-template-columns: repeat(4, 1fr); }
+.pack-choice {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; gap: .2rem;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    border-radius: .4rem; padding: .4rem .35rem .45rem;
+    text-align: center;
+}
+.pack-choice:hover:not(:disabled) { border-color: var(--bs-primary); }
+.pack-choice:disabled { opacity: .55; }
+
+/* Set logo strip above the booster. Its own element so nothing overlaps: the two were
+   briefly layered in one box, and because booster art is sized to `contain`, the logo showed
+   through around it. */
+.pack-choice .logo {
+    /* Set logos are 256x113 — wide and short — and 256 is the ONLY resolution published
+       (unlike booster art, which comes in three sizes). So the logo matches the booster's
+       width, which is the tile width, and derives its height from the real ratio.
+       `max-width` is the one exception: past ~1.25x native it visibly blurs, and at 2
+       columns a tile is far wider than 256px, so there it stays narrower than the booster
+       rather than upscaling into mush. */
+    width: 100%;
+    max-width: 320px;
+    aspect-ratio: 256 / 113;
+    background-size: contain; background-position: center; background-repeat: no-repeat;
+    opacity: .9;
+}
+
+/* The booster. The box ratio MUST match the art, because `cover` is what keeps the drawn
+   placeholder hidden — and any mismatch crops instead. The high-resolution boosters are
+   consistently about 0.516 wide-to-tall (258x500, 334x644, 413x800); the box was briefly
+   0.625, left over from the older 160x256 art, which cropped the top and bottom off every
+   pack. */
+.pack-choice .art {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 258 / 500;
+    border-radius: .25rem;
+    overflow: hidden;
+
+    /* Drawn placeholder, visible only when no art loads on top of it: a faint booster
+       outline on a subtle diagonal weave, so a missing image reads as "no art" rather than
+       as a broken tile. */
+    background-color: var(--bs-secondary-bg);
+    background-image:
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 100'><g fill='none' stroke='%23888' stroke-width='2.5' opacity='.55'><rect x='8' y='8' width='36' height='84' rx='4'/><path d='M8 26h36'/></g><circle cx='26' cy='58' r='8' fill='%23888' opacity='.28'/></svg>"),
+        repeating-linear-gradient(45deg, rgba(128,128,128,.10) 0 4px, transparent 4px 8px);
+    background-size: 60% auto, auto;
+    background-position: center, center;
+    background-repeat: no-repeat, repeat;
+}
+.pack-choice .art-img {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+}
+
+.pack-choice .nm {
+    font-size: .9rem; line-height: 1.15;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.pack-choice .st { font-size: .82rem; color: var(--bs-secondary-color); }
+.pack-choice .ltd {
+    position: absolute; top: .2rem; right: .2rem;
+    font-size: .74rem; padding: 0 .25rem; border-radius: .2rem;
+    background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);
+}
+
+/* Expandable pack rows. The whole row is the hit target, not a small caret: this is used on
+   a phone beside the game. */
+.pack-row-click { cursor: pointer; }
+.pack-row-click:hover { background: var(--bs-secondary-bg); }
+.pack-row-click .expander { display: inline-block; width: 1rem; color: var(--bs-secondary-color); }
+
+.pack-detail > td { background: var(--bs-tertiary-bg); }
+.supplied { display: grid; gap: .15rem; }
+.supplied-row {
+    display: grid;
+    grid-template-columns: 1.7rem minmax(7rem, 14rem) 3.5rem minmax(0, 1fr);
+    align-items: center; gap: .5rem;
+    font-size: .88rem;
+}
+.supplied-row .nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.supplied-row .rt { color: var(--bs-secondary-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) {
+    /* The route note wraps under the name rather than being clipped to nothing. */
+    .supplied-row { grid-template-columns: 1.7rem minmax(0, 1fr) 3.5rem; }
+    .supplied-row .rt { grid-column: 2 / -1; white-space: normal; }
+}
+
+.pack-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.pack-table th.num { text-align: right; }
+.pack-thumb {
+    display: inline-block;
+    width: 1.6rem; height: 2.2rem;
+    vertical-align: middle; margin-right: .4rem; border-radius: .15rem;
+    background-color: var(--bs-secondary-bg);
+    background-size: contain; background-position: center; background-repeat: no-repeat;
+}
+
+/* ================================================================= history sections
+
+   Each section is fenced by a rule above its heading. Without it the page was one continuous
+   run of tables and headings at nearly the same weight, and "Packs per set" read as a caption
+   on the chart above it rather than as a new thing. The heading also steps up in size, so the
+   hierarchy is carried by two signals rather than by whitespace alone. */
+
+.history-page > h6,
+.history-page > .section-head {
+    margin: 2.1rem 0 .6rem;
+    padding-top: 1rem;
+    /* Deliberately heavier than an ordinary area boundary: this separates SECTIONS of a long
+       page, and at the same weight as the boxes inside them it stopped reading as a break at
+       all. Mixed against the body colour so one rule covers both themes. */
+    border-top: 2px solid color-mix(in srgb, var(--bs-body-color) 32%, transparent);
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+.history-page > .section-head {
+    display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
+}
+
+/* The first section follows the hits panel, which is already fenced by its own border. */
+.history-page > h6:first-of-type { margin-top: .5rem; padding-top: 0; border-top: 0; }
+
+/* Explanatory text belongs to the heading above it, so it sits closer to that than to the
+   table below. */
+.history-page > h6 + p { margin-bottom: .7rem; }
+
+/* ================================================================= hits
+
+   The one part of History that is not accounting. It shows the card rather than a count, so it
+   is laid out like a display case: the chosen hit large on the left, the numbers beside it, and
+   the rest as a strip underneath. Collapses to a single column on a phone with the art first. */
+
+.hits-panel {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: .9rem;
+    padding: .9rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .5rem;
+    /* A faint warm wash, so the section reads as the celebratory one without shouting. */
+    background:
+        linear-gradient(135deg,
+            color-mix(in srgb, var(--bs-warning) 8%, transparent),
+            transparent 60%),
+        var(--bs-tertiary-bg);
+}
+@media (max-width: 640px) { .hits-panel { grid-template-columns: minmax(0, 1fr); } }
+
+/* Ratio matched to the art so nothing is cropped. */
+.hits-panel .hit-art {
+    display: block;
+    width: 9rem;
+    aspect-ratio: 367 / 512;
+    border-radius: .4rem;
+    background-color: var(--bs-secondary-bg);
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+}
+@media (max-width: 640px) { .hits-panel .hit-art { width: 7.5rem; } }
+
+.hits-panel .hit-detail { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.hits-panel .label { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bs-secondary-color); }
+.hits-panel .value { font-size: 2rem; font-weight: 700; line-height: 1; }
+.hits-panel .sub { font-size: .86rem; color: var(--bs-secondary-color); }
+.hits-panel .hit-card { display: flex; flex-direction: column; margin: .5rem 0 .6rem; min-width: 0; }
+.hits-panel .hit-card a { font-weight: 600; color: inherit; text-decoration: none; }
+.hits-panel .hit-card a:hover { text-decoration: underline; }
+
+/* Spans both columns and scrolls sideways rather than wrapping: it is a filmstrip, and a
+   wrapping grid of tiny cards would take over the page. */
+.hits-panel .hit-strip {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: .3rem;
+    overflow-x: auto;
+    padding-bottom: .2rem;
+}
+.hits-panel .hit-strip .thumb {
+    flex: none;
+    width: 2.3rem; aspect-ratio: 367 / 512;
+    border-radius: .2rem;
+    background-color: var(--bs-secondary-bg);
+    background-size: cover; background-position: center;
+    opacity: .6;
+    outline: 1px solid transparent;
+}
+.hits-panel .hit-strip .thumb:hover { opacity: 1; }
+.hits-panel .hit-strip .thumb.on { opacity: 1; outline-color: var(--bs-primary); outline-width: 2px; }
+
+.hits-empty { grid-column: 1 / -1; display: flex; flex-direction: column; }
+.hits-empty .value { font-size: 1.2rem; font-weight: 600; }
+.hits-empty .sub { font-size: .86rem; color: var(--bs-secondary-color); }
+
+/* ================================================================= history
+
+   Bars drawn in CSS rather than with a charting library. The shapes needed here are a daily
+   count and a per-set count; Chart.js would add weight to the first paint of every page for two
+   of them, and neither needs axes, legends or interaction beyond a tooltip. */
+
+.bars {
+    display: flex; align-items: flex-end; gap: 2px;
+    height: 6rem;
+    /* A bounded plot area rather than a lone baseline rule. The bare bottom border was
+       ambiguous in both themes: too faint to see in light, and in dark it read as the section
+       divider below rather than as the chart's own axis. */
+    /* On the shared border token, so tuning structure tunes the chart with it. */
+    padding: .5rem .5rem 0;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .35rem;
+    background: var(--bs-body-bg);
+}
+/* A day with nothing logged still occupies its slot, so a gap reads as a gap. */
+.bar-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.bar-col .bar {
+    background: var(--bs-primary);
+    border-radius: 2px 2px 0 0;
+    min-height: 0;
+}
+
+/* Axis labels live outside the bars and are positioned by percentage, so each one is free to be
+   wider than the single day it marks. */
+.bars-axis {
+    position: relative;
+    height: 1.1rem;
+    margin: .2rem .5rem 0;
+    font-size: .72rem;
+    color: var(--bs-secondary-color);
+}
+.bars-axis span {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+/* The two ends are pulled inside the chart rather than hanging off it. */
+.bars-axis .edge:first-of-type { transform: none; left: 0 !important; }
+.bars-axis span.edge:last-of-type { transform: translateX(-100%); }
+
+/* Density drops as the chart narrows: weekly marks go first, then month starts, and the two end
+   dates always survive so the range is still readable. */
+@media (max-width: 900px) { .bars-axis .minor { display: none; } }
+@media (max-width: 560px) { .bars-axis .major { display: none; } }
+
+/* The empty part of the track has to be visible, or a set with little progress looks like no
+   bar at all rather than a nearly empty one. */
+.row-bar { background: var(--bs-secondary-bg); border-radius: .2rem; height: .55rem; }
+.row-bar span { display: block; height: 100%; border-radius: .2rem; background: var(--bs-primary); }
+
+.logged-card:not(:last-child)::after { content: " · "; color: var(--bs-secondary-color); }
+
+/* ================================================================= card detail
+
+   Three columns on a wide screen: the art with its ownership control, the printed card, and how
+   to get it. Collapses to one column on a phone, art first. */
+
+.card-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+@media (max-width: 1100px) { .card-detail { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); } }
+@media (max-width: 760px)  { .card-detail { grid-template-columns: minmax(0, 1fr); } }
+
+/* Ratio matched to the art so `contain` and `cover` coincide and nothing is cropped. */
+.card-detail .big-art {
+    width: 100%;
+    aspect-ratio: 367 / 512;
+    border-radius: .5rem;
+    background-color: var(--bs-secondary-bg);
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+}
+.card-detail .own-row { display: flex; align-items: center; gap: .5rem; margin: .6rem 0 .4rem; }
+.card-detail .own-row .label { font-size: .9rem; color: var(--bs-secondary-color); }
+.card-detail .own-row .count { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 1.2rem; text-align: center; }
+
+/* Wraps, unlike the owned counter beside it: the number of wishlists is up to the user, and
+   a row of them must not push the art column out of shape. */
+.card-detail .want-row { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; margin: .2rem 0 .5rem; }
+.card-detail .want-row .label { font-size: .9rem; color: var(--bs-secondary-color); }
+/* The list button and its remove stay glued together, so a row of several wishlists cannot
+   wrap between a name and the minus that belongs to it. */
+.card-detail .want-pair { display: inline-flex; align-items: center; gap: .15rem; }
+
+.card-detail .attack { padding: .35rem 0; border-top: 1px solid var(--bs-border-color); }
+.card-detail .attack .cost { display: inline-flex; gap: .1rem; margin-right: .35rem; }
+.card-detail .attack .dmg { font-weight: 700; margin-left: .35rem; font-variant-numeric: tabular-nums; }
+.card-detail .attack .effect { margin-top: .15rem; }
+
+.pack-links { display: flex; flex-direction: column; gap: .3rem; }
+.pack-link { display: flex; align-items: center; gap: .4rem; font-size: .95rem; }
+
+/* ================================================================= deck grid
+
+   Showcase cards, the same idea as the hits panel: the deck's face card large, its details
+   beside it, and a few more of its cards as a strip. Auto-fill rather than a fixed column count
+   — the cards have a natural minimum width, and letting the browser decide how many fit needs no
+   column picker and no breakpoints. */
+
+/* Showcase cards: a face card, then the facts, laid out in a responsive grid. Shared by the
+   decks page and the wishlists page — the two answer different questions but the shape is the
+   same, so it is named for the shape rather than for whichever page had it first. */
+.showcase-grid {
+    display: grid;
+    /* 19rem, not 17: a card holds a portrait face plus a name, badges and a row of buttons, and
+       at 17 the buttons had nowhere to go. Wider columns mean fewer per row and a card that is
+       actually readable. */
+    grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+    gap: .8rem;
+}
+
+.showcase {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: .7rem;
+    padding: .7rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .5rem;
+    background: var(--bs-tertiary-bg);
+}
+/* A deck you can build today is the one worth spotting, so it is marked on the container rather
+   than only by a badge in the corner. */
+.showcase.ready {
+    border-color: color-mix(in srgb, var(--bs-success) 55%, transparent);
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--bs-success) 7%, transparent), transparent 60%),
+        var(--bs-tertiary-bg);
+}
+
+/* Full height of the card, with the width derived from the art's ratio so `cover` cannot crop
+   it. Height-driven rather than width-driven: a fixed-width face left dead space beside the
+   badges on taller cards, and matching the showcase's own height is what makes the row read as
+   one object. */
+.showcase .face {
+    display: block;
+    align-self: stretch;
+    height: 100%;
+    width: auto;
+    aspect-ratio: 367 / 512;
+    min-height: 7.5rem;
+    border-radius: .3rem;
+    background-color: var(--bs-secondary-bg);
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, .25);
+    position: relative;
+}
+.showcase .face .empty {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .72rem; text-align: center; padding: .3rem;
+    color: var(--bs-secondary-color);
+}
+
+.showcase .body { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+.showcase .nm {
+    font-weight: 600; font-size: 1rem; line-height: 1.2;
+    color: inherit; text-decoration: none;
+    /* Two lines then clip: deck names are user-written and some are long. */
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.showcase .nm:hover { text-decoration: underline; }
+.showcase .meta { display: flex; align-items: center; gap: .25rem; flex-wrap: wrap; }
+.showcase .badges { display: flex; gap: .25rem; flex-wrap: wrap; }
+.showcase .strip { display: flex; gap: .2rem; }
+.showcase .strip .thumb {
+    flex: none;
+    width: 1.6rem; aspect-ratio: 367 / 512;
+    border-radius: .15rem;
+    background-color: var(--bs-secondary-bg);
+    background-size: cover; background-position: center;
+    opacity: .85;
+}
+/* Wraps. The wishlist card carries three buttons where a deck carries two, and at the grid's
+   narrowest column that third one ran off the right edge. */
+.showcase .actions {
+    display: flex; flex-wrap: wrap; gap: .3rem;
+    margin-top: auto; padding-top: .2rem;
+}
+
+/* ================================================================= decks
+
+   Two columns on a wide screen: the deck itself on the left, the things you do TO it on the
+   right (search, what is missing, which packs help). One column below 1000px, deck first —
+   on a phone the deck is what you came to look at. */
+
+/* Editor layout: what you are building on the left, the card search on the right. Shared by the
+   deck builder and the wishlist editor — named for the job rather than for the deck page, since
+   both do the same thing.
+
+   The split is not only about using the width. With the search BELOW the list, every card added
+   made the list taller and pushed the search and its results down the page, so adding a second
+   copy of something meant chasing the row that had just moved. Side by side, adding a card
+   cannot move the search at all. */
+.edit-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+/* Keeps the search in view while a long list scrolls past it. Safe because the picker caps its
+   own results at 22rem, so the column can never be taller than the viewport. */
+.edit-cols .picker-col { position: sticky; top: .5rem; }
+
+@media (max-width: 1000px) {
+    .edit-cols { grid-template-columns: minmax(0, 1fr); }
+    .edit-cols .picker-col { position: static; }
+}
+
+.deck-list td { vertical-align: middle; }
+
+/* Face-card star. Faint until set or hovered: it appears on every row of the deck, and only one
+   row can ever be the answer. */
+.face-pick {
+    border: 0; background: none; padding: 0 .15rem;
+    font-size: 1.05rem; line-height: 1; cursor: pointer;
+    color: var(--bs-secondary-color);
+    opacity: .35;
+}
+.face-pick:hover { opacity: 1; }
+.face-pick.on { opacity: 1; color: #d9a520; }
+.deck-thumb { width: 1.7rem; height: 2.35rem; margin: 0; }
+
+.energy-chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+.energy-chip {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .2rem .5rem; border-radius: 1rem;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .9rem; cursor: pointer;
+}
+.energy-chip.on { border-color: var(--bs-primary); background: var(--bs-primary-bg-subtle); }
+.energy-chip:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Search results. Scrolls internally so a broad search cannot push the rest of the page out
+   of reach — the columns beside it are the point of the layout. */
+/* Filter row. Wraps rather than scrolling: on a phone these stack, and a horizontally
+   scrolling filter bar hides controls the user does not know are there. */
+.search-grid { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.search-grid > input[type="text"], .search-grid > input:not([type]) { flex: 1 1 12rem; min-width: 0; }
+.search-grid > select { flex: 0 1 9.5rem; }
+
+/* Draft state. Reads as plain text until something is actually unsaved, so it is not one more
+   badge competing for attention on a clean deck. */
+.save-state { min-width: 7rem; text-align: right; color: var(--bs-secondary-color); }
+.save-state.dirty { color: var(--bs-warning-text-emphasis); font-weight: 600; }
+
+.pick-list { max-height: 22rem; overflow-y: auto; border: 1px solid var(--bs-border-color); border-radius: .3rem; }
+/* A grid, not flex. With flex every cell sized from its own content, so the columns wandered
+   from row to row — the same drift the collection list had before it moved to a grid. Every
+   cell is always rendered, even when empty, or the columns after it shift.
+
+   What the columns carry is chosen against the filters: element and stage are deliberately
+   ABSENT because the dropdowns above already say them. Rarity, HP, attack cost and damage,
+   whether there is an ability, and how many you own are the facts a filter cannot tell you and
+   that decide whether the card belongs in the deck. */
+.pick-row {
+    display: grid;
+    grid-template-columns:
+        1.7rem              /* art        */
+        minmax(6rem, 1.2fr) /* name       */
+        3.2rem              /* rarity     */
+        3rem                /* hp + unit  */
+        minmax(0, 1.5fr)    /* ability + attacks */
+        2.8rem              /* set        */
+        2.2rem              /* owned      */
+        4.6rem;             /* in deck    */
+    align-items: center; gap: .45rem; width: 100%;
+    padding: .25rem .5rem; border: 0; border-bottom: 1px solid var(--bs-border-color);
+    background: none; color: var(--bs-body-color); text-align: left; font-size: .92rem;
+}
+.pick-row > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-row:last-child { border-bottom: 0; }
+.pick-row:hover:not(:disabled) { background: var(--bs-secondary-bg); }
+.pick-row:disabled { opacity: .45; }
+
+.pick-row .nm { font-size: .98rem; font-weight: 600; }
+.pick-row .hp { text-align: right; color: var(--bs-secondary-color); }
+.pick-row .hp .v { font-variant-numeric: tabular-nums; }
+/* A small unit rather than a bare number: with no header row above these, "120" next to an
+   attack's "30+" reads as part of the same figure. */
+.pick-row .hp .u { font-size: .74rem; opacity: .7; margin-left: .1rem; }
+.pick-row .id { color: var(--bs-secondary-color); font-variant-numeric: tabular-nums; }
+.pick-row .own { text-align: right; font-variant-numeric: tabular-nums; }
+.pick-row .ind { text-align: right; }
+.pick-row .ind .badge { font-size: .74rem; }
+
+/* A card you do not own is dimmed rather than hidden: with the pool set to "all" you still
+   want to see it, but the difference has to be visible without reading the count. */
+.pick-row.unowned .nm { color: var(--bs-secondary-color); }
+.pick-row.unowned .pack-thumb { opacity: .5; }
+.pick-row.in-deck { background: color-mix(in srgb, var(--bs-primary) 6%, transparent); }
+
+/* Moves: the ability marker then each attack as its cost pips plus damage. */
+.pick-row .mv {
+    display: flex; align-items: center; gap: .5rem;
+    /* Same boundary as the collection list: the moves group is fenced off from HP. */
+    border-left: 1px solid var(--bs-border-color);
+    padding-left: .5rem;
+}
+.pick-row .atk { display: inline-flex; align-items: center; gap: .1rem; }
+.pick-row .atk .dmg { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: .1rem; }
+.pick-row .kind { font-weight: 500; }
+.pick-row .abl {
+    flex: none;
+    font-size: .74rem; text-transform: uppercase; letter-spacing: .02em;
+    padding: 0 .25rem; border-radius: .2rem;
+    background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis);
+    border-bottom: 1px dotted currentColor;
+}
+
+@media (max-width: 900px) {
+    /* HP and the set number are the first to go: both are reference detail rather than the
+       reason to pick a card. */
+    /* HP goes before the set code: which set a printing is from still distinguishes rows,
+       whereas HP is reference detail. */
+    .pick-row { grid-template-columns: 1.7rem minmax(5rem, 1.2fr) 3.2rem minmax(0, 1.4fr) 2.8rem 2.2rem 4.6rem; }
+    .pick-row .hp { display: none; }
+}
+@media (max-width: 560px) {
+    .pick-row { grid-template-columns: 1.7rem minmax(0, 1fr) minmax(0, 1.1fr) 2.2rem; }
+    .pick-row .rr, .pick-row .ind { display: none; }
+}
+
+/* The QR must stay square and never inherit a dark background — a scanner needs the standard
+   black-on-white polarity, so the SVG paints its own white ground. */
+.share-row { display: flex; gap: .75rem; align-items: flex-start; flex-wrap: wrap; }
+.share-row .qr { width: 11rem; flex: none; }
+.share-row .qr svg { display: block; width: 100%; height: auto; border-radius: .25rem; }
+.share-row > div:last-child { flex: 1 1 14rem; min-width: 0; }
+
+.picked-strip {
+    display: flex; gap: .35rem; flex-wrap: wrap;
+    padding: .5rem .75rem;
+    background: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+.picked-chip {
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    border-radius: 1rem; padding: .15rem .55rem; font-size: .9rem;
+}
+.picked-chip .rar { opacity: .6; font-size: .82rem; }
+
+/* ================================================================= busy overlay */
+
+.busy-veil {
+    position: fixed; inset: 0; z-index: 3000;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 25vh;
+    background: color-mix(in srgb, var(--bs-body-bg) 55%, transparent);
+    cursor: progress;      /* also blocks clicks: a second click just lengthens the stall */
+}
+.busy-card {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .6rem 1rem;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: .5rem;
+    box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .18);
+    font-size: 1rem;
+}
+.busy-spinner {
+    width: 1rem; height: 1rem; flex: none;
+    border: 2px solid var(--bs-secondary-bg);
+    border-top-color: var(--bs-primary);
+    border-radius: 50%;
+    animation: busy-spin .6s linear infinite;
+}
+@keyframes busy-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .busy-spinner { animation-duration: 2s; } }
+
+/* ================================================================= diagnostics
+   A phone has no console, and Blazor's own banner discards the exception detail. */
+
+#diag {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999;
+    max-height: 45vh; overflow-y: auto;
+    background: #2b0000; color: #ffd7d7;
+    font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+    border-top: 2px solid #ff5c5c;
+}
+#diag .diag-bar {
+    position: sticky; top: 0;
+    display: flex; gap: .5rem; align-items: center;
+    padding: .35rem .5rem;
+    background: #3d0000; border-bottom: 1px solid #ff5c5c;
+}
+#diag .diag-bar strong { margin-right: auto; color: #ff9c9c; }
+#diag .diag-bar button { font: inherit; padding: 0 .4rem; }
+#diag .diag-row { padding: .35rem .5rem; border-bottom: 1px solid #521; white-space: pre-wrap; }
+
+/* ================================================================= narrow screens
+   Hiding a cell in a grid requires restating the template, or the remaining cells keep the
+   old track sizes. Attacks, ability and HP go first: they are reference detail, not what you
+   scan a collection by. Type and rarity survive to the smallest size. */
+
+@media (max-width: 1100px) {
+    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem 4.6rem 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) 1.8rem 2.4rem 4.2rem; }
+    .card-line .c-a2 { display: none; }
+}
+@media (max-width: 900px) {
+    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem 4.6rem 1.8rem 2.4rem 4.2rem; }
+    .card-line .c-a1, .card-line .c-a2, .card-line .c-ab, .card-line .c-hp { display: none; }
+}
+@media (max-width: 560px) {
+    .card-line { grid-template-columns: var(--art-w) minmax(5rem,1fr) 4.2rem 3.6rem 1.8rem 2.2rem 4rem; }
+    .card-line .c-id, .card-line .c-st { display: none; }
+    .card-line .c-ty { font-size: .84rem; }
+}
+
+/* ================================================================= hover detail
+   One shared tooltip element, appended to <body> so a row's `overflow: hidden` cannot clip
+   it. Fixed image height rather than a max: the element is measured to position it, and an
+   image that has not loaded yet would measure as zero and place the tooltip wrongly. */
+
+#tip {
+    display: none;
+    position: fixed;
+    z-index: 4000;
+    max-width: min(22rem, 90vw);
+    padding: .4rem;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border: 1px solid var(--bs-border-color);
+    border-radius: .4rem;
+    box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .3);
+    font-size: .9rem;
+    pointer-events: none;          /* never steals the hover that opened it */
+}
+#tip img {
+    display: block;
+    height: 22rem;
+    width: auto;
+    max-width: 100%;
+    border-radius: .25rem;
+    background: #333;
+}
+#tip .tip-text {
+    white-space: pre-line;          /* the effect text is written as lines */
+    line-height: 1.35;
+    padding: .3rem .15rem .1rem;
+}
+#tip img + .tip-text { border-top: 1px solid var(--bs-border-color); margin-top: .35rem; }
+
+@media (max-height: 700px) { #tip img { height: 15rem; } }
+@media (max-width: 560px)  { #tip img { height: 13rem; } }
+
+/* The list thumbnail is a hover target, so it needs to sit in the grid like the image did. */
+.card-line .c-thumb { display: block; width: var(--art-w); height: var(--art-h); }
+
+/* Spacer only: the header's art cell has no image in it, so giving it the art height made it
+   a dark rectangle taller than the header row itself — glaring once roomy took the art to
+   73px. It keeps the column WIDTH and nothing else. */
+.card-line.head .c-thumb { height: 0; background: none; }
+
+/* ---- wishlists -------------------------------------------------------------------------
+   A grid for the same reason every other row list here is one: the columns have to line up
+   down the list, and flex sizes each cell from its own content.
+
+   The FLEXIBLE column is the route note, not the name. With the name flexible, a wide screen
+   gave it a huge cell and pushed everything else to the far right with nothing in between —
+   which is what made the row read as empty. Text that can use the space goes in the space. */
+.wish-list { border: 1px solid var(--bs-border-color); border-radius: .3rem; overflow: hidden; }
+.wish-row {
+    display: grid;
+    grid-template-columns:
+        1.7rem              /* art           */
+        minmax(6rem, 12rem) /* name          */
+        1.4rem              /* element pip   */
+        3.2rem              /* rarity        */
+        4.2rem              /* set + number  */
+        minmax(0, 1fr)      /* what it costs */
+        3rem                /* owned         */
+        5.4rem              /* want stepper  */
+        1.8rem;             /* remove        */
+    align-items: center; gap: .45rem;
+    padding: .2rem .5rem; border-bottom: 1px solid var(--bs-border-color);
+    font-size: .92rem;
+}
+.wish-row > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wish-row:last-child { border-bottom: 0; }
+.wish-row:hover { background: var(--bs-secondary-bg); }
+.wish-row .nm { font-size: .98rem; font-weight: 600; }
+.wish-row .ty { display: inline-flex; align-items: center; }
+.wish-row .id, .wish-row .rt { color: var(--bs-secondary-color); }
+.wish-row .id { font-variant-numeric: tabular-nums; font-size: .86rem; }
+.wish-row .rt { font-size: .88rem; }
+.wish-row .own { text-align: right; font-variant-numeric: tabular-nums; }
+.wish-row .own .done { color: var(--bs-success); font-weight: 600; }
+.wish-row .pack-thumb { display: block; }
+/* A card you already have enough of is tinted rather than removed: it is still on the list,
+   and seeing it fill in is how the list reads as progress. */
+.wish-row.got { background: color-mix(in srgb, var(--bs-success) 7%, transparent); }
+.wish-row.got:hover { background: color-mix(in srgb, var(--bs-success) 12%, transparent); }
+
+/* The stepper's own buttons rather than btn-sm: Bootstrap's padding made three controls in a
+   row taller than the art beside them, which is what set the row height and left the whole
+   list looking loosely spaced. These are square, so - + and x line up with each other. */
+.wish-row .step {
+    width: 1.5rem; height: 1.5rem; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--bs-border-color); border-radius: .2rem;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .95rem; line-height: 1; padding: 0; cursor: pointer;
+}
+.wish-row .step:hover:not(:disabled) { border-color: var(--bs-primary); color: var(--bs-primary); }
+.wish-row .step:disabled { opacity: .35; cursor: default; }
+.wish-row .step.remove { color: var(--bs-secondary-color); }
+.wish-row .step.remove:hover { border-color: var(--bs-danger); color: var(--bs-danger); }
+
+/* The count sits between the two buttons, so it must not size from its content — a jump from
+   9 to 10 would otherwise move the + button out from under the finger about to tap it. */
+.wish-row .want-n { display: inline-flex; align-items: center; gap: .15rem; }
+.wish-row .want-n .n {
+    min-width: 1.5rem; text-align: center;
+    font-weight: 600; font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 820px) {
+    /* The cost note is the first to go, not the last: it is the longest thing here and the
+       card's own page still carries it. */
+    .wish-row {
+        grid-template-columns:
+            1.7rem minmax(5rem, 1fr) 1.4rem 3.2rem 4.2rem 3rem 5.4rem 1.8rem;
+    }
+    .wish-row .rt { display: none; }
+}
+
+@media (max-width: 560px) {
+    .wish-row {
+        grid-template-columns: 1.7rem minmax(4rem, 1fr) 1.4rem 3.2rem 2.6rem 5.4rem 1.8rem;
+    }
+    .wish-row .id { display: none; }
+}
+
+/* ---- command palette ------------------------------------------------------------------- */
+.app-nav .palette-btn {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .25rem .55rem; border-radius: .3rem;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); color: var(--bs-secondary-color);
+    font-size: .95rem; line-height: 1.2; cursor: pointer;
+}
+.app-nav .palette-btn:hover { border-color: var(--bs-primary); color: var(--bs-body-color); }
+.app-nav .palette-btn .glyph { display: inline-flex; align-items: center; }
+.app-nav .palette-btn .hint {
+    font-size: .78rem; text-transform: uppercase; letter-spacing: .03em;
+    font-variant-numeric: tabular-nums;
+}
+/* The printed shortcut goes first on a narrow screen: there is no Ctrl+K on a phone, so it is
+   the one part of the button that means nothing there. */
+@media (max-width: 700px) { .app-nav .palette-btn .hint { display: none; } }
+
+/* A button, not a div, so it is reachable by keyboard and announced — see the markup. */
+.palette-back {
+    position: fixed; inset: 0; z-index: 1080;
+    border: 0; padding: 0;
+    background: rgba(0, 0, 0, .45);
+}
+
+.palette {
+    position: fixed; z-index: 1081;
+    /* Anchored near the top rather than centred: the list grows downwards, and a centred box
+       would move its own input as results arrive. */
+    top: 4rem; left: 50%; transform: translateX(-50%);
+    width: min(38rem, calc(100vw - 1.5rem));
+    display: flex; flex-direction: column;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    border: 1px solid var(--bs-border-color); border-radius: .5rem;
+    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, .35);
+    overflow: hidden;
+}
+
+.palette-input {
+    border: 0; border-bottom: 1px solid var(--bs-border-color);
+    background: none; color: inherit;
+    padding: .7rem .9rem; font-size: 1.05rem; width: 100%;
+}
+.palette-input:focus { outline: none; }
+
+.palette-list { overflow-y: auto; max-height: min(26rem, 60vh); }
+.palette-empty { padding: .9rem; margin: 0; color: var(--bs-secondary-color); }
+
+.palette-item {
+    display: grid;
+    grid-template-columns: 3.6rem minmax(0, 1fr) minmax(0, auto);
+    align-items: center; gap: .6rem; width: 100%;
+    padding: .35rem .9rem; border: 0; background: none; color: inherit;
+    text-align: left; font-size: .95rem;
+}
+.palette-item > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Highlight follows the keyboard selection, and hover moves that selection rather than adding a
+   second highlight — two visible "current" rows is worse than none. */
+.palette-item.sel { background: var(--bs-primary); color: #fff; }
+.palette-item.sel .sub, .palette-item.sel .kind { color: rgba(255, 255, 255, .8); }
+.palette-item .kind {
+    font-size: .74rem; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--bs-secondary-color);
+}
+.palette-item .lbl { font-weight: 600; }
+.palette-item .sub { color: var(--bs-secondary-color); font-size: .88rem; text-align: right; }
+.palette-item .pack-thumb { width: 1.6rem; height: 2.24rem; }
+
+.palette-foot {
+    display: flex; gap: 1rem; padding: .35rem .9rem;
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+    font-size: .8rem; color: var(--bs-secondary-color);
+}
+.palette-foot kbd {
+    background: var(--bs-body-bg); color: inherit;
+    border: 1px solid var(--bs-border-color); border-radius: .2rem;
+    padding: 0 .25rem; margin-right: .15rem; font-size: .78rem;
+}
+@media (max-width: 560px) {
+    /* The keyboard legend is meaningless on a touch device. */
+    .palette-foot { display: none; }
+    .palette { top: 1.5rem; }
+}
+
+/* Which plan the rarity chips are editing. Sits with the chips rather than above them: the
+   same row means the default or one set's override depending on the scope, and that has to be
+   readable without moving your eyes off the control. */
+.chip-scope {
+    display: inline-flex; align-items: center; gap: .3rem;
+    margin-right: .35rem; padding-right: .45rem;
+    border-right: 1px solid var(--bs-border-color);
+    font-size: .82rem; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--bs-secondary-color);
+}
+.chip-link {
+    border: 0; background: none; padding: 0;
+    color: var(--bs-primary); text-transform: none; letter-spacing: 0;
+    font-size: .85rem; text-decoration: underline; cursor: pointer;
+}
+
+/* Limited-time pack availability. A chip that states its own setting, because the assumption it
+   carries silently changes every estimate on the Packs page: off sale means the pack is left
+   out of the ranking and its exclusive cards count as unobtainable. */
+.avail { display: inline-flex; align-items: center; gap: .35rem; }
+.avail .ttl {
+    font-size: .82rem; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--bs-secondary-color);
+}
+.avail-chip {
+    display: inline-flex; align-items: baseline; gap: .35rem;
+    padding: .2rem .5rem; border-radius: 1rem;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .9rem; line-height: 1.2; cursor: pointer;
+}
+.avail-chip .nm { font-weight: 600; }
+.avail-chip .st { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+/* On sale is the exceptional state, so it is the one that is coloured — a Deluxe pack is absent
+   far more often than it is present. */
+.avail-chip.on { border-color: var(--bs-success); background: var(--bs-success-bg-subtle); }
+.avail-chip.on .st { color: var(--bs-success-text-emphasis); }
+.avail-chip.off .st { color: var(--bs-secondary-color); }
+.avail-chip:hover { border-color: var(--bs-primary); }
+
+@media (max-width: 1000px) {
+    /* Stacked, the wishlist's search goes FIRST. Otherwise the original complaint comes straight
+       back on a phone: a list above the search still pushes it down every time a card is added.
+       With the search on top, the list grows below it and nothing under your finger moves.
+
+       Only the wishlist. The deck builder's left column opens with energy selection and the
+       deck's own card list, which is what you came to that page to see. */
+    .wish-edit .picker-col { order: -1; }
+}
+
+/* A pack that is listed but excluded from the estimate: off sale, or with no published rates.
+   Dimmed rather than hidden — it is still the answer to "which pack has this card", and its
+   badge says why it is not counted. */
+.pack-row-muted td { opacity: .68; }
+.pack-row-muted .badge { opacity: 1; }

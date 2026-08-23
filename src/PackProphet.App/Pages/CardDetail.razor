@@ -1,0 +1,412 @@
+@page "/card/{Key}"
+@inject AppSession Session
+@inject NavigationManager Nav
+@inject NavHistory History
+@implements IDisposable
+
+<PageTitle>@(_card?.Name ?? "Card") · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else if (_card is null)
+{
+    <div class="p-4">
+        <p>No card with the code <code>@Key</code>.</p>
+        <a class="btn btn-sm btn-primary" href="collection">back to the collection</a>
+    </div>
+}
+else
+{
+    <div class="page-head">
+        <button class="btn btn-sm btn-outline-secondary" @onclick="Back">&larr; back</button>
+        <span class="title">@_card.Name</span>
+        <span class="subtitle">@_card.Set&thinsp;@_card.Number</span>
+        <span class="actions">
+            @if (_rung is not null)
+            {
+                <span class="glyphs @_rung.GlyphClass" title="@_rung.Symbol">@_rung.Glyphs</span>
+            }
+            @if (_card.IsPromo)
+            {
+                <span class="badge text-bg-secondary">promo</span>
+            }
+        </span>
+    </div>
+
+    <div class="card-detail p-3">
+        <div class="art">
+            @* Background rather than <img>: a failed load leaves the placeholder instead of a
+               broken-image gap, with no error handling needed. *@
+            <div class="big-art" style="background-image:url('@_card.ArtUrl')"
+                 role="img" aria-label="@_card.Name"></div>
+
+            <div class="own-row">
+                <span class="label">you own</span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => Bump(-1)"
+                        disabled="@(_owned == 0)" aria-label="Remove one">&minus;</button>
+                <span class="count">@_owned</span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => Bump(1)"
+                        aria-label="Add one">+</button>
+            </div>
+
+            @* Wanting a card is a separate fact from owning it, and this is the one screen
+               that has the card in hand — so the wishlists live here rather than making the
+               user go and search for the card again from the list side. *@
+            <div class="want-row">
+                <span class="label">want it</span>
+                @if (Session.Wishlists.Count == 0)
+                {
+                    <button class="btn btn-sm btn-outline-primary" @onclick="WantOnNewList">
+                        start a wishlist with this card
+                    </button>
+                }
+                else
+                {
+                    @foreach (var list in Session.Wishlists)
+                    {
+                        var wanted = list.Wanted.GetValueOrDefault(_card.OwnershipKey);
+                        @* Each tap adds a copy, so wanting four is four taps. The separate
+                           remove exists because there is no ceiling to cycle past any more —
+                           a count with no way down would be a trap. *@
+                        <span class="want-pair">
+                            <button class="btn btn-sm @(wanted > 0 ? "btn-primary" : "btn-outline-secondary")"
+                                    @onclick="() => Session.BumpWanted(list.Id, _card.OwnershipKey, 1)"
+                                    title="@(wanted == 0 ? $"Add to {list.Name}" : $"Wanting {wanted} on {list.Name} — tap for one more")">
+                                @list.Name@(wanted > 0 ? $" ×{wanted}" : "")
+                            </button>
+                            @if (wanted > 0)
+                            {
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        @onclick="() => Session.BumpWanted(list.Id, _card.OwnershipKey, -1)"
+                                        title="Want one fewer on @list.Name"
+                                        aria-label="Want one fewer on @list.Name">&minus;</button>
+                            }
+                        </span>
+                    }
+                }
+            </div>
+
+            @* Owning one copy counts for every set it appears in, so a reprint is not a second
+               card to chase. Said out loud here because the number above would otherwise look
+               wrong on a card listed in two sets. *@
+            @if (_reprints.Count > 1)
+            {
+                <p class="small text-body-secondary mb-0">
+                    Also listed as
+                    @string.Join(", ", _reprints.Where(c => c.Key != _card.Key).Select(c => $"{c.Set} {c.Number}")).
+                    One copy counts for all of them.
+                </p>
+            }
+        </div>
+
+        <div>
+            @if (_fact is null)
+            {
+                <p class="text-body-secondary">
+                    @if (!Session.FactsReady)
+                    {
+                        <span>Card detail is still downloading&hellip;</span>
+                    }
+                    else
+                    {
+                        @* Never a dead end: art, rarity, packs and routes are all still shown. *@
+                        <span>No printed detail published for this card yet.</span>
+                    }
+                </p>
+            }
+            else
+            {
+                <h6>@(_fact.IsPokemon ? "Pokémon" : "Trainer")</h6>
+                <table class="table table-sm w-auto">
+                    <tbody>
+                        @if (_fact.Subtype is { Length: > 0 } sub)
+                        {
+                            <tr>
+                                <td>type</td>
+                                <td>
+                                    @if (HasPip(sub))
+                                    {
+                                        <EnergyPip Type="@sub" />
+                                    }
+                                    @sub
+                                </td>
+                            </tr>
+                        }
+                        @if (_fact.Stage is { Length: > 0 } stage)
+                        {
+                            <tr>
+                                <td>stage</td>
+                                <td>
+                                    @stage
+                                    @if (_fact.EvolvesFrom is { Length: > 0 } from)
+                                    {
+                                        <span class="text-body-secondary">&mdash; evolves from @from</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        @if (_fact.Health is int hp)
+                        {
+                            <tr><td>HP</td><td>@hp</td></tr>
+                        }
+                        @if (_fact.Weakness is { Length: > 0 } weak)
+                        {
+                            <tr><td>weakness</td><td>@weak</td></tr>
+                        }
+                        @if (_fact.Retreat is int retreat)
+                        {
+                            <tr><td>retreat</td><td>@retreat</td></tr>
+                        }
+                        @if (_fact.Artist is { Length: > 0 } artist)
+                        {
+                            <tr><td>illustrator</td><td>@artist</td></tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (_fact.HasAbility)
+                {
+                    <h6>Ability &mdash; @_fact.Ability!.Name</h6>
+                    <p class="small">@(_fact.Ability.Effect ?? "")</p>
+                }
+
+                @if (_fact.AttackList.Count > 0)
+                {
+                    <h6>Attacks</h6>
+                    @foreach (var atk in _fact.AttackList)
+                    {
+                        <div class="attack">
+                            <span class="cost">
+                                @foreach (var sym in atk.CostSymbols)
+                                {
+                                    <EnergyPip Type="@sym" />
+                                }
+                            </span>
+                            <strong>@atk.Name</strong>
+                            @* Printed damage, so a multiplier or bonus is not lost. *@
+                            @if (atk.DamageLabel is { Length: > 0 } dmg)
+                            {
+                                <span class="dmg">@dmg</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(atk.Effect))
+                            {
+                                <div class="effect small text-body-secondary">@atk.Effect</div>
+                            }
+                        </div>
+                    }
+                }
+
+                @if (_fact.CardText is { Length: > 0 } text)
+                {
+                    <h6>Card text</h6>
+                    <p class="small">@text</p>
+                }
+            }
+        </div>
+
+        <div>
+            <h6>How to get it</h6>
+            @* All four routes, including the ones that do not exist for this rarity. Omitting
+               them would leave the user wondering; naming the block answers it. *@
+            <table class="table table-sm align-middle">
+                <tbody>
+                    @foreach (var option in _routes?.Options ?? [])
+                    {
+                        <tr class="@(option == _routes?.Cheapest ? "table-primary" : "")">
+                            <td style="width:7rem">
+                                <strong>@RouteName(option.Route)</strong>
+                            </td>
+                            <td>
+                                @if (!option.Available)
+                                {
+                                    <span class="text-body-secondary">unavailable</span>
+                                }
+                                else
+                                {
+                                    @if (option.PacksEquivalent is double packs)
+                                    {
+                                        <span class="fw-semibold">@Fmt(packs) packs</span>
+                                    }
+                                    @if (option.Dust is int dust)
+                                    {
+                                        <span class="fw-semibold">@dust.ToString("N0") shinedust</span>
+                                    }
+                                    @if (option.Stamina is int stamina)
+                                    {
+                                        <span class="text-body-secondary">
+                                            @(option.Dust is null ? "" : "+ ")@stamina stamina
+                                        </span>
+                                    }
+                                }
+                                @if (option.Note is { Length: > 0 } note)
+                                {
+                                    <div class="small text-body-secondary">@note</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <p class="small text-body-secondary">
+                Only <strong>pull</strong> and <strong>pack points</strong> are priced in packs,
+                because both genuinely are packs. Shinedust and stamina are separate currencies
+                with no exchange rate, so they are never converted into a comparable number.
+            </p>
+
+            <h6 class="mt-3">Packs that can give it</h6>
+            @if (_packs.Count == 0)
+            {
+                <p class="small text-body-secondary">
+                    None &mdash; @(_card.IsPromo ? "promos come from events, not packs." : "this card is not sold in packs.")
+                </p>
+            }
+            else
+            {
+                <div class="pack-links">
+                    @foreach (var packKey in _packs)
+                    {
+                        <span class="pack-link">
+                            <span class="pack-thumb"
+                                  style="background-image:url('@Session.PackArtUrl(packKey)')"></span>
+                            <span>
+                                @packKey.Split(':')[1]
+                                <span class="small text-body-secondary">@packKey.Split(':')[0]</span>
+                                @if (Session.UnavailablePacks.Contains(packKey))
+                                {
+                                    <span class="badge text-bg-warning">not on sale</span>
+                                }
+                            </span>
+                        </span>
+                    }
+                </div>
+            }
+
+            @if (_printingPoints is int printPoints)
+            {
+                <p class="small text-body-secondary mt-2 mb-0">
+                    This printing costs <strong>@printPoints.ToString("N0")</strong> pack points.
+                    Alternate arts are priced far above their base card, which is why this is read
+                    per printing rather than per card.
+                </p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Key { get; set; } = "";
+
+    private PocketCard? _card;
+    private CardFact? _fact;
+    private CardRoutes? _routes;
+    private RarityRung? _rung;
+    private IReadOnlyList<string> _packs = [];
+    private IReadOnlyList<PocketCard> _reprints = [];
+    private int? _printingPoints;
+    private int _owned;
+
+    /// <summary>
+    /// Everything EnergyPip can draw: the energies, plus the trainer kinds it renders as
+    /// outlined rings.
+    /// </summary>
+    private static readonly HashSet<string> PipTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Grass", "Fire", "Water", "Lightning", "Psychic", "Fighting", "Darkness", "Metal",
+        "Dragon", "Colorless", "Item", "Supporter", "Tool", "Stadium"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+        Load();
+    }
+
+    protected override void OnParametersSet() => Load();
+
+    public void Dispose() => Session.Changed -= OnChanged;
+
+    private void OnChanged()
+    {
+        Load();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Load()
+    {
+        if (!Session.Ready) return;
+
+        _card = Session.Index.ByKey.GetValueOrDefault(Key);
+        if (_card is null) return;
+
+        _owned = Session.CountOf(_card);
+        _fact = Session.FactFor(_card);
+        _rung = RungOf(_card);
+        _routes = Session.Routes?.For(_card, Session.Owned);
+
+        // Only openable packs: a promo's "Vol. 3" grouping records how it was handed out at an
+        // event, not something anyone can choose to open.
+        var openable = Session.Index.OpenablePackKeys.ToHashSet(StringComparer.Ordinal);
+        _packs = Session.Index.PacksYielding(_card.OwnershipKey)
+            .Where(openable.Contains)
+            .OrderBy(p => p, StringComparer.Ordinal)
+            .ToArray();
+
+        _reprints = Session.Index.ByOwnershipKey.GetValueOrDefault(_card.OwnershipKey) ?? [];
+
+        // Per PRINTING, not per identity: an art rare and its base card share attacks and stage
+        // but not price, so an identity lookup would report the base card's.
+        _printingPoints = Session.Facts.ForPrinting(_card)?.PackPoints;
+    }
+
+    private RarityRung? RungOf(PocketCard card)
+    {
+        var index = Session.Index.Ladder.IndexOf(card.Rarity);
+        return index is null ? null : Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == index);
+    }
+
+    private void Bump(int delta)
+    {
+        if (_card is null) return;
+        Session.SetCount(_card, Math.Max(0, _owned + delta));
+    }
+
+    /// <summary>
+    /// Returns to whichever page opened this one — the collection, a deck, the pack ranking, or
+    /// History. Falls back to the collection on a deep link, where there is nothing to return to.
+    /// </summary>
+    private void Back() => Nav.NavigateTo(History.LastListPage);
+
+    /// <summary>
+    /// First wishlist and first card in one tap. Naming the list can wait — the point of
+    /// being on this screen is that you want THIS card, and stopping to name something is
+    /// exactly the friction that stops a feature being used.
+    /// </summary>
+    private void WantOnNewList()
+    {
+        if (_card is null) return;
+
+        var id = Session.CreateWishlist();
+        Session.SetWanted(id, _card.OwnershipKey, 1);
+    }
+
+    private static bool HasPip(string subtype) => PipTypes.Contains(subtype);
+
+    private static string RouteName(AcquisitionRoute route) => route switch
+    {
+        AcquisitionRoute.Pull => "open packs",
+        AcquisitionRoute.PackPoints => "pack points",
+        AcquisitionRoute.Trade => "trade",
+        _ => "wonder pick"
+    };
+
+    private static string Fmt(double packs) => packs switch
+    {
+        double.PositiveInfinity => "never",
+        < 10 => packs.ToString("0.#"),
+        _ => packs.ToString("N0")
+    };
+}

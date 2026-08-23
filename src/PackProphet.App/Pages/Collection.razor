@@ -1,0 +1,407 @@
+@page "/collection"
+@page "/"
+@implements IDisposable
+@inject AppSession Session
+@inject UiBusy Busy
+
+<PageTitle>Collection · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else
+{
+    <div class="page-head">
+        <span class="title">Collection</span>
+        @* Where you are and how far along, in the header rather than tucked in with the
+           filters: it is the answer the page exists to give, and the filters bar is where you
+           look to change something, not to read a total. *@
+        <span class="subtitle" title="Cards you own here, and progress against the rarities you have chosen to collect">
+            @Label(_set) &middot; @OwnedInSet of @TotalInSet owned
+            &middot; target @TargetOwned / @TargetTotal
+        </span>
+        <span class="actions">
+            <button class="btn btn-sm btn-outline-secondary" disabled="@(!Session.CanUndo)"
+                    @onclick="Session.Undo" title="Undo">&#8630;</button>
+            <button class="btn btn-sm btn-outline-secondary" disabled="@(!Session.CanRedo)"
+                    @onclick="Session.Redo" title="Redo">&#8631;</button>
+        </span>
+    </div>
+
+    @* The set tabs are the page's main control, but they are TALL — two lines per tab, since
+       each carries its own progress — so they cannot live in the header without making it a
+       different height from every other page's. *@
+    <div class="page-tools">
+        @* A series at a time. One row of every set ever printed already wraps to three lines
+           and only gets worse; grouping keeps it to one row per series indefinitely. *@
+        <select class="form-select form-select-sm" style="max-width:9rem" @onchange="OnSeries">
+            <option value="@AllSets" selected="@(_series == AllSets)">every series</option>
+            @foreach (var series in Session.Sets.Series)
+            {
+                <option value="@series" selected="@(_series == series)">series @series</option>
+            }
+        </select>
+
+        <div class="set-tabs">
+            @if (_series == AllSets)
+            {
+                <button class="set-tab @(_set == AllSets ? "active" : "")"
+                        @onclick="() => SelectSet(AllSets)" disabled="@Busy.IsBusy"
+                        title="Every card from every series">
+                    All cards
+                    <span class="pct">@ProgressOf(_allCards).ToString("P0")</span>
+                </button>
+            }
+            else
+            {
+                <button class="set-tab @(_set == SeriesAll ? "active" : "")"
+                        @onclick="() => SelectSet(SeriesAll)" disabled="@Busy.IsBusy"
+                        title="Every card in series @_series">
+                    All @_series
+                    <span class="pct">@ProgressOf(SeriesCards).ToString("P0")</span>
+                </button>
+                @foreach (var set in Session.Sets.SetsIn(_series))
+                {
+                    <button class="set-tab @(set == _set ? "active" : "")"
+                            @onclick="() => SelectSet(set)" disabled="@Busy.IsBusy"
+                            title="@Session.Sets.DisplayName(set)">
+                        @set
+                        <span class="pct">@Progress(set).ToString("P0")</span>
+                    </button>
+                }
+            }
+        </div>
+    </div>
+
+    <CardGrid Cards="Filtered" CountOf="Session.CountOf" Columns="Session.GridColumns"
+              OnAdjust="OnAdjust" OnSweep="OnSweep"
+              ListView="Session.ListView" ListViewChanged="Session.SetListView"
+              Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
+              RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
+              FactOf="Session.FactFor" FactsReady="Session.FactsReady">
+        @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
+           header, the set tabs, a filter row and a control row, this page put five bars above
+           the first card; sharing one bar halves that without hiding anything. *@
+        <Filters>
+            <input class="form-control form-control-sm" style="max-width:14rem"
+                   placeholder="search name" value="@_search" @oninput="OnSearch" />
+
+            <select class="form-select form-select-sm" style="max-width:11rem" @onchange="OnOwnFilter">
+                <option value="all">all cards</option>
+                <option value="missing">missing only</option>
+                <option value="owned">owned only</option>
+                <option value="dupes">duplicates</option>
+                <option value="needed">short of target</option>
+            </select>
+
+            <select class="form-select form-select-sm" style="max-width:10rem" @onchange="OnRarityFilter">
+                <option value="">all rarities</option>
+                @foreach (var rung in Session.Index.Ladder.Rungs)
+                {
+                    <option value="@rung.Index">@rung.Symbol</option>
+                }
+            </select>
+
+            @* No pack filter for promo sets: their "Vol. N" groupings record how a promo was
+               given away, not packs you can open, so filtering by them tells you nothing. *@
+            @if (!ViewingAll && !CardIndex.IsPromoSet(_set))
+            {
+                <select class="form-select form-select-sm" style="max-width:12rem" @onchange="OnPackFilter">
+                    <option value="">all packs</option>
+                    @foreach (var p in PacksInSet)
+                    {
+                        <option value="@p">@p</option>
+                    }
+                </select>
+            }
+
+    
+        </Filters>
+        <ToolbarExtras>
+            @* Columns only mean something in the grid layout. *@
+            <select class="form-select form-select-sm" style="max-width:6rem" @onchange="OnColumns"
+                    hidden="@Session.ListView">
+                @foreach (var n in new[] { 3, 4, 5, 6, 8, 10 })
+                {
+                    <option value="@n" selected="@(n == Session.GridColumns)">@n cols</option>
+                }
+            </select>
+            @* Both act on one set. Across every set they would be indiscriminate, and
+               "erase everything" already lives in Settings where it belongs. *@
+            @if (!ViewingAll)
+            {
+                <button class="btn btn-sm btn-outline-secondary" @onclick="MarkTargetOwned"
+                        disabled="@Busy.IsBusy"
+                        title="Mark every card this set's plan wants as owned">
+                    fill target
+                </button>
+                <button class="btn btn-sm btn-outline-danger" @onclick="ClearSet"
+                        disabled="@Busy.IsBusy"
+                        title="Set every card in this set back to zero. Undo works.">
+                    @(_confirmClear ? "clear — sure?" : "clear set")
+                </button>
+            }
+        </ToolbarExtras>
+    </CardGrid>
+}
+
+@code {
+    /// <summary>Sentinels for the aggregate views. Not real set codes, so they cannot collide.</summary>
+    private const string AllSets = "*";
+    private const string SeriesAll = "*series";
+
+    private string _set = "A1";
+    private string _series = "A";
+    private string _search = "";
+    private string _own = "all";
+    private string _rarity = "";
+    private string _pack = "";
+
+    private string[] _sets = [];
+
+    /// <summary>
+    /// Which set to open on, so a link can land on one. The command palette needs it, and it
+    /// also makes a particular set shareable and bookmarkable — the tab bar alone cannot be
+    /// linked to.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "set")] public string? SetParam { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        Busy.Changed += OnChanged;   // buttons disable while work is in flight
+        await Session.InitAsync();
+        if (Session.Ready)
+        {
+            _sets = Session.Index.BySet.Keys.OrderBy(SetOrder).ToArray();
+            // An unknown set in the URL is ignored rather than shown as an empty tab: a stale
+            // bookmark should land on something.
+            _set = SetParam is { Length: > 0 } wanted && _sets.Contains(wanted)
+                ? wanted
+                : _sets.FirstOrDefault() ?? "A1";
+            _series = Session.Sets.SeriesOf(_set);
+            _allCards = Session.Index.All
+                .DistinctBy(c => c.OwnershipKey)
+                .OrderBy(c => SetOrder(c.Set), StringComparer.Ordinal)
+                .ThenBy(c => c.Number)
+                .ToArray();
+        }
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>
+    /// The page is already mounted when a link changes only the query string, so the set has
+    /// to follow the parameter here as well — otherwise jumping to a set from the palette
+    /// while on this page would change the URL and nothing else.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        if (!Session.Ready || SetParam is not { Length: > 0 } wanted) return;
+        if (wanted == _set || !_sets.Contains(wanted)) return;
+
+        _set = wanted;
+        _series = Session.Sets.SeriesOf(_set);
+        _pack = "";
+    }
+
+    // Promo sets last; otherwise the natural release order the codes already imply.
+    private static string SetOrder(string set) => set.StartsWith("PROMO") ? "zz" + set : set;
+
+    private Task SelectSet(string set, string? series = null)
+    {
+        _confirmClear = false;
+        if (series is not null) _series = series;
+        return SelectSetCore(set);
+    }
+
+    private Task SelectSetCore(string set) =>
+        // Switching sets re-filters and re-chunks up to a few hundred tiles, which is slow
+        // enough on a phone to look like a stall without a hint that work is happening.
+        Busy.RunAsync($"Loading {Label(set)}\u2026", () => { _set = set; _pack = ""; });
+
+    private string Label(string set) => set switch
+    {
+        AllSets => "all cards",
+        SeriesAll => $"series {_series}",
+        _ => set
+    };
+
+    private static string Text(ChangeEventArgs e) => e.Value?.ToString() ?? "";
+
+    private Task OnSeries(ChangeEventArgs e)
+    {
+        var chosen = Text(e);
+        // Land on the aggregate view for the chosen scope rather than an arbitrary set, so
+        // switching series never silently shows a set you did not ask for.
+        return SelectSet(chosen == AllSets ? AllSets : SeriesAll, chosen);
+    }
+
+    private void OnSearch(ChangeEventArgs e) => _search = Text(e);
+    private void OnOwnFilter(ChangeEventArgs e) => _own = Text(e) is { Length: > 0 } v ? v : "all";
+    private void OnRarityFilter(ChangeEventArgs e) => _rarity = Text(e);
+    private void OnPackFilter(ChangeEventArgs e) => _pack = Text(e);
+    private void OnColumns(ChangeEventArgs e)
+    {
+        if (int.TryParse(Text(e), out var n)) Session.SetGridColumns(n);
+    }
+
+    /// <summary>True for either aggregate view, where per-set actions do not apply.</summary>
+    private bool ViewingAll => _set is AllSets or SeriesAll;
+
+    private IReadOnlyList<PocketCard> InSet => _set switch
+    {
+        // De-duplicated by ownable card: a reprint is ONE card you either own or do not, so
+        // listing it once per set would double-count it and make progress misleading.
+        AllSets => _allCards,
+        SeriesAll => SeriesCards,
+        _ => Session.Index.BySet.TryGetValue(_set, out var c) ? c : []
+    };
+
+    private IReadOnlyList<PocketCard> _allCards = [];
+
+    private IReadOnlyList<PocketCard> SeriesCards =>
+        Session.Sets.SetsIn(_series)
+            .SelectMany(s => Session.Index.BySet.TryGetValue(s, out var c) ? c : [])
+            .DistinctBy(c => c.OwnershipKey)
+            .OrderBy(c => c.Set, StringComparer.Ordinal)
+            .ThenBy(c => c.Number)
+            .ToArray();
+
+    private double ProgressOf(IReadOnlyList<PocketCard> cards) =>
+        cards.Count == 0 ? 0 : (double)cards.Count(c => Session.CountOf(c) > 0) / cards.Count;
+
+    private IEnumerable<string> PacksInSet =>
+        InSet.Where(c => c.IsPackObtainable).SelectMany(c => c.Packs!)
+             .Distinct().OrderBy(p => p, StringComparer.Ordinal);
+
+    private int TotalInSet => InSet.DistinctBy(c => c.OwnershipKey).Count();
+    private int OwnedInSet => InSet.DistinctBy(c => c.OwnershipKey).Count(c => Session.CountOf(c) > 0);
+
+    // Progress against the chosen rarities, which is usually the number that matters: "42 of
+    // 120 owned" is discouraging if 900 of the set are rarities you never wanted.
+    private IEnumerable<string> TargetSets => _set switch
+    {
+        AllSets => Session.Index.OpenableSets,
+        SeriesAll => Session.Sets.SetsIn(_series).Where(s => !CardIndex.IsPromoSet(s)),
+        _ => [_set]
+    };
+
+    private IEnumerable<PocketCard> TargetCards =>
+        TargetSets
+            .SelectMany(s => Session.Index.WantedInSet(s, Session.Plan(s).WantedTiers))
+            .DistinctBy(c => c.OwnershipKey);
+
+    private int TargetTotal => TargetCards.Count();
+
+    private int TargetOwned => TargetCards.Count(c =>
+        Session.CountOf(c) >= Session.Plan(ViewingAll ? null : _set)
+                                     .Copies(Session.Index.Ladder.IndexOf(c.Rarity) ?? 0));
+
+    private double Progress(string set)
+    {
+        if (!Session.Index.BySet.TryGetValue(set, out var cards)) return 0;
+        var distinct = cards.DistinctBy(c => c.OwnershipKey).ToList();
+        return distinct.Count == 0 ? 0 : (double)distinct.Count(c => Session.CountOf(c) > 0) / distinct.Count;
+    }
+
+    private IReadOnlyList<PocketCard> Filtered
+    {
+        get
+        {
+            var plan = Session.Plan(ViewingAll ? null : _set);
+            var q = InSet.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(_search))
+                q = q.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
+
+            if (int.TryParse(_rarity, out var tier))
+                q = q.Where(c => Session.Index.Ladder.IndexOf(c.Rarity) == tier);
+
+            if (!string.IsNullOrEmpty(_pack))
+                q = q.Where(c => c.Packs is not null && c.Packs.Contains(_pack));
+
+            q = _own switch
+            {
+                "missing" => q.Where(c => Session.CountOf(c) == 0),
+                "owned" => q.Where(c => Session.CountOf(c) > 0),
+                "dupes" => q.Where(c => Session.CountOf(c) > 1),
+                // "Short of target" must respect WHICH rarities are wanted, not just the
+                // copy count — otherwise a rarity you deliberately ignore still shows as
+                // outstanding work.
+                "needed" => q.Where(c =>
+                {
+                    var t = Session.Index.Ladder.IndexOf(c.Rarity);
+                    return t is not null && Session.CountOf(c) < plan.Copies(t.Value);
+                }),
+                _ => q
+            };
+
+            return q.OrderBy(c => c.Number).ToArray();
+        }
+    }
+
+    private void OnAdjust((PocketCard Card, int Delta) e) =>
+        Session.Adjust([e.Card.OwnershipKey], e.Delta);
+
+    // One undo step for the whole sweep, which is the point of doing it in one call.
+    private void OnSweep((IReadOnlyList<PocketCard> Cards, int Delta) e) =>
+        Session.Adjust(e.Cards.Select(c => c.OwnershipKey), e.Delta);
+
+    private Task MarkTargetOwned()
+    {
+        _confirmClear = false;
+        return Busy.RunAsync($"Filling {_set}\u2026", FillTarget);
+    }
+
+    private bool _confirmClear;
+
+    /// <summary>
+    /// The inverse of "fill target". Two-step because it can wipe hundreds of entries — and
+    /// even though undo covers it, an accidental wipe is alarming enough to be worth a pause.
+    /// </summary>
+    private Task ClearSet()
+    {
+        if (!_confirmClear) { _confirmClear = true; return Task.CompletedTask; }
+        _confirmClear = false;
+
+        return Busy.RunAsync($"Clearing {_set}\u2026", () =>
+        {
+            var keys = InSet.Select(c => c.OwnershipKey).Distinct().ToArray();
+            Session.Mutate(p =>
+            {
+                var next = new Dictionary<string, int>(p.Collection);
+                foreach (var key in keys) next.Remove(key);
+                return p with { Collection = next };
+            });
+        });
+    }
+
+    private void FillTarget()
+    {
+        var target = Session.TargetForSet(_set);
+        var outstanding = target.Outstanding(Session.Index, Session.Owned);
+        if (outstanding.Count == 0) return;
+
+        Session.Mutate(p =>
+        {
+            var next = new Dictionary<string, int>(p.Collection);
+            foreach (var d in outstanding)
+                next[d.Key] = (next.TryGetValue(d.Key, out var c) ? c : 0) + d.Remaining;
+            return p with { Collection = next };
+        });
+    }
+
+    private RarityRung? RungOf(PocketCard card)
+    {
+        var i = Session.Index.Ladder.IndexOf(card.Rarity);
+        return i is null ? null : Session.Index.Ladder.Rungs[i.Value];
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Busy.Changed -= OnChanged;
+    }
+}

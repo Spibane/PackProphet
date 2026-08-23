@@ -1,0 +1,15 @@
+# .NET build output
+bin/
+obj/
+*.user
+*.swp
+
+# Publish output
+publish/
+dist/
+
+# Tooling
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/

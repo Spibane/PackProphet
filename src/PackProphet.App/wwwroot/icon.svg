@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- App icon. Vector is the source of truth; the PNGs beside it are rendered from this file,
+     so the icon can be resized without going soft.
+
+     A booster pack with a rarity diamond on it: the app's whole question is which pack to open
+     next, and the diamond is the game's own symbol for what you are hoping falls out. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#4338ca"/>
+
+  <!-- The pack, tilted slightly so it reads as an object rather than a rectangle. -->
+  <g transform="rotate(-8 256 256)">
+    <rect x="164" y="92" width="184" height="328" rx="20" fill="#f8fafc"/>
+    <!-- Tear strip along the top, the detail that makes the shape read as a pack. -->
+    <path d="M164 112a20 20 0 0 1 20-20h144a20 20 0 0 1 20 20v40H164z" fill="#a5b4fc"/>
+    <path d="M164 152h184" stroke="#4338ca" stroke-width="7" stroke-dasharray="16 12" stroke-linecap="round"/>
+
+    <!-- Rarity diamond. -->
+    <path d="M256 216l58 58-58 58-58-58z" fill="#f59e0b"/>
+    <path d="M256 216l58 58-58 58-58-58z" fill="none" stroke="#b45309" stroke-width="6"/>
+  </g>
+</svg>

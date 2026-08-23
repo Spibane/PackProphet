@@ -1,0 +1,313 @@
+@page "/log"
+@implements IDisposable
+@inject AppSession Session
+@inject UiBusy Busy
+
+<PageTitle>Log a pack · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else if (_pack is null)
+{
+    <div class="page-head">
+        <span class="title">Log a pack</span>
+        <span class="subtitle">which pack did you open?</span>
+    </div>
+
+    @* Grouped by series, then by set. A flat list of every pack ever sold is already long
+       and only grows; a set heading also answers "which set is this pack from", which a
+       pack name like "Mewtwo" does not. Defaults to the newest series, since that is
+       where packs are usually being opened. *@
+    <div class="page-tools">
+        <select class="form-select form-select-sm" style="max-width:11rem" @onchange="OnSeries">
+            @foreach (var series in Session.Sets.Series)
+            {
+                <option value="@series" selected="@(_series == series)">series @series</option>
+            }
+        </select>
+
+        @* The same setting as on the Packs page — there is one answer to "is Deluxe on sale",
+           not one per screen — and it belongs here as well because this is the page you are on
+           when you find out. It never filters the picker, though: you can always log a pack you
+           actually opened, whatever the app assumed about the shelf. *@
+        @if (Session.LimitedPacks.Count > 0)
+        {
+            <span class="avail ms-auto">
+                <span class="ttl">limited-time</span>
+                @foreach (var pack in Session.LimitedPacks)
+                {
+                    var on = Session.IsLimitedPackAvailable(pack);
+                    <button class="avail-chip @(on ? "on" : "off")"
+                            @onclick="() => Session.SetLimitedPackAvailable(pack, !on)"
+                            title="@(pack.Split(':')[1]) packs come and go. This only affects which packs get RECOMMENDED on the Which pack page — you can log one either way.">
+                        <span class="nm">@pack.Split(':')[1]</span>
+                        <span class="st">@(on ? "on sale" : "off sale")</span>
+                    </button>
+                }
+            </span>
+        }
+    </div>
+
+    @* Column count sits with the grid it lays out, the same as it does over the card grid —
+       it changes nothing about which packs are shown. *@
+    <div class="grid-toolbar">
+        <span class="small text-body-secondary me-auto">
+            Picking the pack narrows the choices to the ~100 cards it can contain, so logging
+            five cards takes seconds instead of hunting through 3,761.
+        </span>
+
+        <select class="form-select form-select-sm" style="max-width:7rem" @onchange="OnCols">
+            @foreach (var n in new[] { 2, 3, 4, 5, 6, 8 })
+            {
+                <option value="@n" selected="@(n == Session.PackColumns)">@n cols</option>
+            }
+        </select>
+    </div>
+
+    <div class="p-3">
+
+        @* One flat grid, not a group per set. The per-set headings cost more vertical space
+           than the tiles they labelled — eleven sets meant roughly thirty rem of headings and
+           margins — so the set code lives on the tile instead. *@
+        <div class="pack-picker" style="grid-template-columns:repeat(@Session.PackColumns,1fr)">
+            @foreach (var pack in PacksInSeries())
+            {
+                var name = pack.Split(':')[1];
+                var set = pack.Split(':')[0];
+                <button class="pack-choice" @onclick="() => Choose(pack)" disabled="@Busy.IsBusy"
+                        title="@name — @set @Session.Sets.DisplayName(set)">
+                    @* Stacked, not layered. Set logo above, booster below. Layering them in
+                       one box looked wrong because the art is sized to `contain`, so the logo
+                       bled out around its edges.
+
+                       The booster is a `cover` background over a drawn placeholder: when the
+                       art exists it fills the box completely and the placeholder is invisible;
+                       when it does not (Paradox Drive has none) the placeholder shows. No
+                       error handling and no state to get stuck in, unlike an <img> with
+                       onerror, which hid a tile permanently after one aborted request. *@
+                    <span class="logo" style="background-image:url('@PocketCard.SetLogoUrl(set)')"
+                          aria-hidden="true"></span>
+                    <span class="art">
+                        <span class="art-img"
+                              style="background-image:url('@Session.PackArtUrl(pack)')"></span>
+                    </span>
+                    <span class="nm">@name</span>
+                    <span class="st">@set</span>
+                    @if (GameRules.IsLimitedTimePack(name))
+                    {
+                        <span class="ltd">ltd</span>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="page-head">
+        <button class="btn btn-sm btn-outline-secondary" @onclick="Reset">&larr; change pack</button>
+        <span class="title">@_pack.Split(':')[1]</span>
+        <span class="subtitle">@_pack.Split(':')[0] &middot; tap each card that came out</span>
+        <span class="actions">
+            <span class="small">picked @_picked.Count</span>
+            <button class="btn btn-sm btn-success" disabled="@(_picked.Count == 0 || Busy.IsBusy)" @onclick="Commit">
+                add @_picked.Count to collection
+            </button>
+        </span>
+    </div>
+
+    @if (_picked.Count > 0)
+    {
+        <div class="picked-strip">
+            @foreach (var card in _picked)
+            {
+                <button class="picked-chip" @onclick="() => Unpick(card)" title="Remove">
+                    @card.Name <span class="rar">@card.Rarity</span> &times;
+                </button>
+            }
+        </div>
+    }
+
+    @if (_justLogged is not null)
+    {
+        <div class="alert alert-success mx-3 my-2 py-2 small">
+            Logged @_justLogged.Value.cards cards.
+            Pack points for @_justLogged.Value.set: <strong>@_justLogged.Value.points</strong>
+            @if (_justLogged.Value.capped)
+            {
+                <span class="text-danger">
+                    &mdash; at the @GameRules.PackPointsCap cap, so further packs of this set earn nothing. Spend before opening.
+                </span>
+            }
+
+            @* Having just opened one is the best evidence there is that it is on the shelf, and
+               the app assumes otherwise by default — so it asks rather than leaving the ranking
+               quietly excluding a pack you can demonstrably buy. *@
+            @if (_pack is not null && GameRules.IsLimitedTimePack(_pack.Split(':')[1])
+                 && !Session.IsLimitedPackAvailable(_pack))
+            {
+                <div class="mt-1">
+                    You just opened a limited-time pack that the ranking is leaving out.
+                    <button class="btn btn-sm btn-outline-success py-0 ms-1"
+                            @onclick="MarkPackOnSale">mark @(_pack.Split(':')[1]) on sale</button>
+                </div>
+            }
+        </div>
+    }
+
+    @* No remove mode here: a tap means "this came out of the pack", and the picked strip
+       above is how you take one back. *@
+    <CardGrid Cards="_inPack" CountOf="Session.CountOf" Columns="Session.GridColumns"
+              OnAdjust="OnTap" OnSweep="OnSweep" AllowRemove="false"
+              PickedOf="PickedCount"
+              ListView="Session.ListView" ListViewChanged="Session.SetListView"
+              Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
+              RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
+              FactOf="Session.FactFor" FactsReady="Session.FactsReady" />
+}
+
+@code {
+    private string[] _packs = [];
+    private string _series = "";
+    private string? _pack;
+    private IReadOnlyList<PocketCard> _inPack = [];
+    private readonly List<PocketCard> _picked = [];
+    private (int cards, string set, int points, bool capped)? _justLogged;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        Busy.Changed += OnChanged;   // buttons disable while work is in flight
+        await Session.InitAsync();
+        if (Session.Ready)
+            // Openable packs only. Promo "Vol. N" groupings describe how a promo was given
+            // away, not something you can decide to open.
+            _packs = Session.Index.OpenablePackKeys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
+            // Newest series first: that is where packs are actually being opened.
+            _series = Session.Sets.Series.LastOrDefault() ?? "A";
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>Packs of the chosen series, in set release order.</summary>
+    private IReadOnlyList<string> PacksInSeries()
+    {
+        var order = Session.Sets.SetsIn(_series)
+            .Select((code, i) => (code, i))
+            .ToDictionary(x => x.code, x => x.i, StringComparer.OrdinalIgnoreCase);
+
+        return _packs
+            .Where(p => order.ContainsKey(p.Split(':')[0]))
+            .OrderBy(p => order[p.Split(':')[0]])
+            .ThenBy(p => p, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private void OnSeries(ChangeEventArgs e) => _series = e.Value?.ToString() ?? _series;
+
+    private void OnCols(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n)) Session.SetPackColumns(n);
+    }
+
+    private Task Choose(string pack) =>
+        Busy.RunAsync($"Loading {pack.Split(':')[1]}\u2026", () => ChooseCore(pack));
+
+    private void ChooseCore(string pack)
+    {
+        _pack = pack;
+        _justLogged = null;
+        _picked.Clear();
+        _inPack = Session.Index.ByPack.TryGetValue(pack, out var cards)
+            ? cards.OrderBy(c => c.Number).ToArray()
+            : [];
+    }
+
+    private void Reset() { _pack = null; _picked.Clear(); _justLogged = null; }
+
+    // Tapping a card in this view means "this came out of the pack", not "+1 owned" — the
+    // collection is only touched once the pack is committed, so a mis-tap costs nothing.
+    private void OnTap((PocketCard Card, int Delta) e)
+    {
+        if (e.Delta < 0) { Unpick(e.Card); return; }
+        _picked.Add(e.Card);
+    }
+
+    private void OnSweep((IReadOnlyList<PocketCard> Cards, int Delta) e)
+    {
+        if (e.Delta < 0) { foreach (var c in e.Cards) Unpick(c); return; }
+        _picked.AddRange(e.Cards);
+    }
+
+    private int PickedCount(PocketCard card) => _picked.Count(c => c.Key == card.Key);
+
+    private void Unpick(PocketCard card)
+    {
+        var i = _picked.FindLastIndex(c => c.Key == card.Key);
+        if (i >= 0) _picked.RemoveAt(i);
+    }
+
+    private Task Commit() =>
+        _pack is null || _picked.Count == 0 ? Task.CompletedTask
+        : Busy.RunAsync($"Adding {_picked.Count} cards\u2026", CommitCore);
+
+    private void CommitCore()
+    {
+        if (_pack is null || _picked.Count == 0) return;
+
+        var parts = _pack.Split(':');
+        var set = parts[0];
+        var keys = _picked.Select(c => c.OwnershipKey).ToList();
+        var count = _picked.Count;
+
+        Session.Mutate(p =>
+        {
+            var collection = new Dictionary<string, int>(p.Collection);
+            foreach (var key in keys)
+                collection[key] = (collection.TryGetValue(key, out var c) ? c : 0) + 1;
+
+            // Pack points accrue per set and stop dead at the cap: packs opened while capped
+            // earn nothing at all, which is worth telling the user about.
+            var points = new Dictionary<string, int>(p.Resources.PackPointsBySet);
+            var before = points.TryGetValue(set, out var pts) ? pts : 0;
+            var after = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
+            points[set] = after;
+
+            var log = new List<PackOpenEvent>(p.PackLog)
+            {
+                // Variant is unknown from the user's point of view; they just opened "a pack".
+                new(DateTimeOffset.Now, set, parts[1], "unknown", keys)
+            };
+
+            return p with
+            {
+                Collection = collection,
+                Resources = p.Resources with { PackPointsBySet = points },
+                PackLog = log
+            };
+        });
+
+        var nowPoints = Session.Profile.Resources.PackPointsBySet.GetValueOrDefault(set);
+        _justLogged = (count, set, nowPoints, nowPoints >= GameRules.PackPointsCap);
+        _picked.Clear();
+    }
+
+    private void MarkPackOnSale()
+    {
+        if (_pack is not null) Session.SetLimitedPackAvailable(_pack, true);
+    }
+
+    private RarityRung? RungOf(PocketCard card)
+    {
+        var i = Session.Index.Ladder.IndexOf(card.Rarity);
+        return i is null ? null : Session.Index.Ladder.Rungs[i.Value];
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Busy.Changed -= OnChanged;
+    }
+}

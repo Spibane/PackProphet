@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PackProphet</title>
+    <base href="/" />
+    <link rel="preload" id="webassembly" />
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="_content/Blazor.Bootstrap/blazor.bootstrap.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+    <!-- Colours the browser chrome and the splash screen of an installed copy. -->
+    <meta name="theme-color" content="#4338ca" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="PackProphet" />
+    <link href="PackProphet.styles.css" rel="stylesheet" />
+    <script type="importmap"></script>
+    <!-- Loaded in the head, before anything paints: it reads the saved theme and stamps
+         data-bs-theme on the root element so a dark-mode user never sees a white flash on
+         cold start. -->
+    <script src="js/theme.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred. The details are in the red panel at the bottom.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+    <script src="js/diag.js"></script>
+    <script src="js/tooltip.js"></script>
+    <script src="js/palette.js"></script>
+    <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script src="_content/Blazor.Bootstrap/blazor.bootstrap.js"></script>
+    <!-- Resolved against the BASE href, not the current URL. A deep link like /packs is served
+         index.html by the Pages 404 fallback, so a bare relative path would register
+         /packs/service-worker.js — a 404, and a scope that covers nothing. -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register(new URL('service-worker.js', document.baseURI))
+                .catch(err => console.warn('Service worker registration failed', err));
+        }
+    </script>
+</body>
+
+</html>

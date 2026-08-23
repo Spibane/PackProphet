@@ -1,0 +1,157 @@
+namespace PackProphet.Engine;
+
+using PackProphet.Data;
+using PackProphet.Domain;
+
+/// <summary>
+/// "Finish these rarities in this set, N copies each." The everyday target.
+///
+/// The rarities are an arbitrary SET, not a threshold. Collectors genuinely want shapes a
+/// threshold cannot express — stars and crowns but no diamonds, or all diamonds plus 3-star
+/// and nothing in between — and forcing those into "up to tier N" would silently demand cards
+/// they never wanted.
+/// </summary>
+public sealed class RarityLadderTarget : ICompletionTarget
+{
+    private readonly string _set;
+    private readonly RarityPlan _plan;
+
+    public RarityLadderTarget(string set, RarityPlan plan)
+    {
+        _set = set;
+        _plan = plan;
+    }
+
+    /// <summary>Builds the "everything up to here" shape. A convenience, not the model.</summary>
+    public static RarityLadderTarget UpTo(string set, int topTierIndex, CardIndex index, int copies = 1) =>
+        new(set, RarityPlan.UpTo(index.Ladder, topTierIndex, copies));
+
+    public string Describe() => $"{_set}, {_plan.WantedTiers.Count} rarity tier(s)";
+
+    public IReadOnlyList<Demand> Outstanding(CardIndex index, Collection owned)
+    {
+        var result = new List<Demand>();
+        // WantedInSet already de-duplicates by ownership key and excludes cards no pack can
+        // yield, so a reprint is demanded once and promos never appear as "missing".
+        foreach (var card in index.WantedInSet(_set, _plan.WantedTiers))
+        {
+            var tier = index.Ladder.IndexOf(card.Rarity);
+            if (tier is null) continue;
+
+            var required = _plan.Copies(tier.Value);
+            if (required <= 0) continue;
+
+            var remaining = required - owned.Of(card);
+            if (remaining <= 0) continue;
+
+            // Every entry listing this card, so its pack rates pool across sets: a Deluxe
+            // reprint is obtainable from both its original set's packs and A4b's.
+            var suppliers = index.ByOwnershipKey[card.OwnershipKey];
+            result.Add(new Demand(card.OwnershipKey, remaining, suppliers));
+        }
+        return result;
+    }
+}
+
+/// <summary>
+/// Several targets at once — "finish everything I care about". Demands are merged by key,
+/// taking the largest requirement, so overlapping targets never double-count a card.
+/// </summary>
+public sealed class CompositeTarget : ICompletionTarget
+{
+    private readonly IReadOnlyList<ICompletionTarget> _parts;
+    private readonly string _label;
+
+    public CompositeTarget(IReadOnlyList<ICompletionTarget> parts, string label = "everything")
+    {
+        _parts = parts;
+        _label = label;
+    }
+
+    public string Describe() => _label;
+
+    public IReadOnlyList<Demand> Outstanding(CardIndex index, Collection owned)
+    {
+        var merged = new Dictionary<string, Demand>();
+        foreach (var part in _parts)
+        foreach (var d in part.Outstanding(index, owned))
+        {
+            // Max, not sum: two targets both wanting one copy still need only one copy.
+            if (!merged.TryGetValue(d.Key, out var existing) || d.Remaining > existing.Remaining)
+                merged[d.Key] = d;
+        }
+        return merged.Values.ToArray();
+    }
+}
+
+/// <summary>
+/// The cards a specific deck needs. Demand is per card IDENTITY with multiplicity: any
+/// printing fills a slot, and two copies of one printing work as well as two different
+/// printings, so all printings' rates pool into a single demand.
+/// </summary>
+public sealed class DeckTarget : ICompletionTarget
+{
+    private readonly string _name;
+    private readonly IReadOnlyList<int> _deckBuilderNrs;
+
+    /// <param name="deckBuilderNrs">One entry per copy, exactly as a deck code lists them.</param>
+    public DeckTarget(string name, IReadOnlyList<int> deckBuilderNrs)
+    {
+        _name = name;
+        _deckBuilderNrs = deckBuilderNrs;
+    }
+
+    public string Describe() => $"deck \"{_name}\"";
+
+    public IReadOnlyList<Demand> Outstanding(CardIndex index, Collection owned)
+    {
+        var result = new List<Demand>();
+        foreach (var group in _deckBuilderNrs.GroupBy(nr => nr))
+        {
+            if (!index.ByDeckBuilderNr.TryGetValue(group.Key, out var printings)) continue;
+
+            // De-duplicate by ownership key: a card reprinted in another set is one card.
+            var suppliers = printings.DistinctBy(p => p.OwnershipKey).ToArray();
+
+            var remaining = group.Count() - owned.OfIdentity(suppliers);
+            if (remaining <= 0) continue;
+
+            result.Add(new Demand($"nr:{group.Key}", remaining, suppliers));
+        }
+        return result;
+    }
+}
+
+/// <summary>
+/// An arbitrary list of wanted cards. The main lever for versatility: the same engine
+/// prices "the cards I think are cool" with no new machinery.
+/// </summary>
+public sealed class WishlistTarget : ICompletionTarget
+{
+    private readonly string _name;
+    private readonly IReadOnlyDictionary<string, int> _wanted;
+
+    /// <param name="wanted">Ownership key to desired copies.</param>
+    public WishlistTarget(string name, IReadOnlyDictionary<string, int> wanted)
+    {
+        _name = name;
+        _wanted = wanted;
+    }
+
+    public string Describe() => $"wishlist \"{_name}\"";
+
+    public IReadOnlyList<Demand> Outstanding(CardIndex index, Collection owned)
+    {
+        var result = new List<Demand>();
+        foreach (var (key, want) in _wanted)
+        {
+            if (!index.ByOwnershipKey.TryGetValue(key, out var suppliers)) continue;
+
+            var remaining = want - owned[key];
+            if (remaining <= 0) continue;
+
+            result.Add(new Demand(key, remaining, suppliers));
+        }
+        return result;
+    }
+}

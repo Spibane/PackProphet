@@ -1,0 +1,1179 @@
+@page "/packs"
+@implements IAsyncDisposable
+@inject AppSession Session
+@inject UiBusy Busy
+
+<PageTitle>Which pack · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else
+{
+    <div class="page-head">
+        <span class="title">Which pack</span>
+        <span class="subtitle">ranked for @ScopeLabel</span>
+    </div>
+
+    <div class="page-tools">
+        @* Scope, target and availability all sit together because they are the same kind of
+           control: each one changes what the ranking is OF, so every figure below means
+           something different afterwards. *@
+        @* Grouped by series so this stays usable as sets accumulate. *@
+        <select class="form-select form-select-sm" style="max-width:16rem" @onchange="OnScope">
+            <option value="everything">everything I collect</option>
+            @* Wishlists sit in the same control as sets because they are the same kind of
+               thing to the engine: a target. A separate "wishlist mode" would imply the
+               ranking works differently for them, and it does not. *@
+            @if (Session.Wishlists.Count > 0)
+            {
+                <optgroup label="wishlists">
+                    @* Every list at once, merged. Demands overlapping between lists count once,
+                       so two lists that both want the same card do not double its price. *@
+                    @if (Session.Wishlists.Count > 1)
+                    {
+                        <option value="wishes" selected="@(_scope == "wishes")">
+                            all wishlists together
+                        </option>
+                    }
+                    @foreach (var list in Session.Wishlists)
+                    {
+                        <option value="wish:@list.Id" selected="@(_scope == $"wish:{list.Id}")">
+                            @list.Name
+                        </option>
+                    }
+                </optgroup>
+            }
+            @foreach (var series in Session.Sets.Series)
+            {
+                <optgroup label="series @series">
+                    @* A whole series is a scope people actually think in — "am I done with the
+                       A sets" — and it sits above its own sets rather than in a separate list,
+                       so the dropdown reads as one hierarchy. *@
+                    <option value="series:@series" selected="@(_scope == $"series:{series}")">
+                        every set in series @series
+                    </option>
+                    @foreach (var set in Session.Sets.SetsIn(series).Where(s => _sets.Contains(s)))
+                    {
+                        <option value="@set" selected="@(_scope == set)">
+                            @set &mdash; @Session.Sets.DisplayName(set)
+                        </option>
+                    }
+                </optgroup>
+            }
+        </select>
+
+        <label class="form-check form-switch small mb-0"
+               title="Premium is a +50% pack rate, so it changes every timeline on this page">
+            <input class="form-check-input" type="checkbox" checked="@Premium" @onchange="OnPremium" />
+            premium
+        </label>
+
+        @* One chip per rarity, carrying its own copy count. Selection and quantity are the
+           same fact — a rarity you want zero of is one you ignore — so a single control says
+           both, and "two of each diamond, one of the stars" is a few taps. Tap to cycle
+           none / 1 / 2. *@
+        @* The rarity chips edit the completion plan, which a wishlist target does not consult
+           — so under a wishlist scope they are hidden rather than shown doing nothing. *@
+        @if (!IsWishScope)
+        {
+        <span class="rarity-chips">
+            @* Which plan the chips are editing, stated rather than implied. The same row of
+               chips means two different things depending on the scope, and silently editing
+               the global default while a set is selected is the kind of surprise that makes a
+               user distrust every number on the page. *@
+            <span class="chip-scope">
+                @if (ScopedSet is null)
+                {
+                    <span title="Applies to every set without its own plan">default</span>
+                }
+                else if (PlanScope is not null)
+                {
+                    <span title="@ScopedSet has its own plan, so the default does not apply to it">
+                        @ScopedSet only
+                    </span>
+                    <button class="chip-link" @onclick="ClearOverride"
+                            title="Follow the default plan again">use default</button>
+                }
+                else
+                {
+                    <span title="@ScopedSet follows the default plan">default</span>
+                    <button class="chip-link" @onclick="StartOverride"
+                            title="Give @ScopedSet its own plan, starting from the default">
+                        just @ScopedSet
+                    </button>
+                }
+            </span>
+
+            @foreach (var rung in Session.Index.Ladder.Rungs)
+            {
+                var want = Draft.Copies(rung.Index);
+                <button class="rarity-chip @(want > 0 ? "on" : "")"
+                        title="@(want == 0 ? $"Not collecting {rung.Symbol}" : $"Collecting {want} of each {rung.Symbol}") — tap to change"
+                        @onclick="() => CycleTier(rung.Index)">
+                    @rung.Symbol@(want > 1 ? $" x{want}" : "")
+                </button>
+            }
+            @if (_pending)
+            {
+                <span class="chip-pending" title="Applying shortly — keep tapping to make more changes">
+                    updating&hellip;
+                </span>
+            }
+        </span>
+        }
+
+        @* Limited-time packs get a labelled control that SAYS which way it is set, not a bare
+           switch. This one is load-bearing: availability is a live fact no dataset records, the
+           app assumes off sale, and a Deluxe pack is otherwise the standout pick for a
+           4-diamond target — so an assumption left invisible quietly changes every figure on
+           the page. It was a form-switch at the end of the header's wrap row, which is to say
+           it was invisible. *@
+        @if (Session.LimitedPacks.Count > 0)
+        {
+            @* Inside the condition, so there is no divider dangling at the end of the bar when
+               there are no limited-time packs to separate. *@
+            <span class="bar-sep" aria-hidden="true"></span>
+            <span class="avail">
+                <span class="ttl">limited-time</span>
+                @foreach (var pack in Session.LimitedPacks)
+                {
+                    var on = Session.IsLimitedPackAvailable(pack);
+                    <button class="avail-chip @(on ? "on" : "off")"
+                            @onclick="() => ToggleLimited(pack, !on)"
+                            title="@(pack.Split(':')[1]) packs come and go. @(on
+                                ? "Counted in the ranking. Tap if they are not on sale."
+                                : "Left out of the ranking, and their exclusive cards count as unobtainable. Tap when they are on sale.")">
+                        <span class="nm">@pack.Split(':')[1]</span>
+                        <span class="st">@(on ? "on sale" : "off sale")</span>
+                    </button>
+                }
+            </span>
+        }
+    </div>
+
+    @if (_outstanding == 0)
+    {
+        <div class="alert alert-success m-3">
+            Nothing outstanding for this target. Raise the rarity or copies to aim higher.
+        </div>
+    }
+    else
+    {
+        <div class="summary px-3 py-2">
+            <div class="stat">
+                <span class="label">cards still needed</span>
+                <span class="value">@_outstanding</span>
+            </div>
+            <div class="stat">
+                <span class="label">expected packs</span>
+                <span class="value">@Fmt(_bestCase)</span>
+                <span class="sub">
+                    @* Always say what the number covers. When a pack is unavailable its
+                       exclusive cards leave the estimate, so the figure can FALL even though
+                       the situation got worse — shown bare, that reads as "cheaper". *@
+                    to finish @_priceable of @_outstanding, opening the best pack each time
+                </span>
+            </div>
+            @if (Session.AssumedRates.Count > 0)
+            {
+                <div class="stat">
+                    <span class="label">assumed rates</span>
+                    <span class="value">@Session.AssumedRates.Count set(s)</span>
+                    <span class="sub">
+                        @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
+                        {
+                            <span class="d-block">
+                                @set priced from @donor
+                                <button class="btn btn-sm btn-link p-0 align-baseline"
+                                        @onclick="() => StopAssuming(set)">stop</button>
+                            </span>
+                        }
+                    </span>
+                </div>
+            }
+
+            <div class="stat">
+                <span class="label">time at your rate</span>
+                <span class="value">@Days(_bestCase, Premium)</span>
+                <span class="sub">@RateNote()</span>
+            </div>
+        </div>
+
+        @if (_unreachable.Count > 0)
+        {
+            <div class="alert alert-warning mx-3">
+                <strong>@_unreachable.Sum(d => d.Remaining) card(s) cannot be obtained right now.</strong>
+                They are left out of the estimate above rather than silently counted &mdash; so
+                that figure covers @_priceable cards, not all @_outstanding. The packs that would
+                sell them are still listed below, each marked with why it cannot be counted:
+                <strong>off sale</strong> means it is coming back, <strong>rates unknown</strong>
+                means the set is out and its odds have not been published yet, and
+                <strong>not out yet</strong> means nobody has these cards.
+            </div>
+        }
+
+        @if (_neverInPack.Count > 0)
+        {
+            @* These have no pack row to appear in, because no pack has ever sold them. The only
+               routes are a trade or another event, so they are called out rather than left to be
+               inferred from an empty ranking. *@
+            <div class="alert alert-secondary mx-3">
+                <strong>@_neverInPack.Count card(s) never came from a pack.</strong>
+                An event or a promo only &mdash; opening packs will never produce them.
+                <div class="supplied mt-2">
+                    @foreach (var (card, remaining) in _neverInPack.Take(UnreachableShown))
+                    {
+                        <div class="supplied-row">
+                            <a class="pack-thumb deck-thumb" href="card/@card.Key"
+                               data-tip-img="@card.ArtUrl" data-tip="@card.Name"
+                               style="background-image:url('@card.ArtUrl')"
+                               aria-label="@card.Name"></a>
+                            <span class="nm">
+                                @card.Name
+                                @if (remaining > 1)
+                                {
+                                    <span class="text-body-secondary">&times;@remaining</span>
+                                }
+                            </span>
+                            <span class="rr">@(RungOf(card)?.Symbol ?? card.Rarity)</span>
+                            <span class="rt">trade only</span>
+                        </div>
+                    }
+                </div>
+                @if (_neverInPack.Count > UnreachableShown)
+                {
+                    <div class="small mt-1">&hellip; and @(_neverInPack.Count - UnreachableShown) more.</div>
+                }
+            </div>
+        }
+
+        <table class="table table-sm align-middle pack-table">
+            <thead>
+                <tr>
+                    <th>pack</th>
+                    <th class="num">chance of a hit</th>
+                    <th class="num">packs per new card</th>
+                    <th class="num">to finish its share</th>
+                    <th class="num">cards it can give</th>
+                </tr>
+            </thead>
+            <tbody>
+                @* Every pack that could serve the target, INCLUDING the ones that cannot be
+                   bought or priced today. Those sit in the table like any other pack, marked,
+                   rather than off in a warning: a pack you are waiting on is still part of the
+                   answer to "which pack", and it belongs beside its rivals where its numbers can
+                   be compared. What they are excluded from is the estimate, not the list. *@
+                @foreach (var row in _rows)
+                {
+                    var s = row.Standing;
+                    @* Compared by KEY, not by value. PackStanding is a record, so two packs
+                       with identical odds — which happens, since the three A1 packs share most
+                       of their contents — would both compare equal to the winner and both light
+                       up as "the best". *@
+                    <tr class="@(row.Best ? "table-primary" : "") @(row.Mark is null ? "" : "pack-row-muted") pack-row-click"
+                        @onclick="() => ToggleExpanded(row.PackKey)">
+                        <td>
+                            <span class="expander" aria-hidden="true">@(_expanded == row.PackKey ? "▾" : "▸")</span>
+                            @* Background, not <img>: a failed load reveals the placeholder
+                               instead of leaving a broken-image gap, with no error handling. *@
+                            <span class="pack-thumb"
+                                  style="background-image:url('@Session.PackArtUrl(row.PackKey)')"></span>
+                            <strong>@row.PackName</strong>
+                            <span class="text-body-secondary small">@row.Set</span>
+                            @* The top row is tinted, and a tint with nothing to explain it reads
+                               as a stray selection rather than as the answer to the page's
+                               question. *@
+                            @if (row.Best)
+                            {
+                                <span class="badge text-bg-primary ms-1"
+                                      title="Best pack for @ScopeLabel right now">open this</span>
+                            }
+                            @if (row.Mark is { Length: > 0 } mark)
+                            {
+                                <span class="badge text-bg-warning ms-1" title="@row.MarkTitle">@mark</span>
+                            }
+                            @* A borrowed distribution is a good estimate and still an assumption,
+                               so every row it prices says so. An assumption presented as measured
+                               data is how a tool loses trust the first time it is wrong. *@
+                            @if (Session.AssumedRates.TryGetValue(row.Set, out var donor))
+                            {
+                                <span class="badge text-bg-secondary ms-1"
+                                      title="@row.Set has no published pull rates, so these odds use @donor's distributions applied to @row.Set's own contents">
+                                    rates assumed from @donor
+                                </span>
+                            }
+                            @* Offered right where the problem is visible. A released set with no
+                               published rates is otherwise reported as unpullable, which is
+                               literally true and useless: the cards drop, and the standard
+                               five-card distribution has barely changed in two years. *@
+                            @if (row.CanAssume && Session.StandardRateDonor is { } standard)
+                            {
+                                <button class="btn btn-sm btn-outline-primary py-0 ms-2"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="() => Assume(row.Set, standard)"
+                                        title="Price @row.Set using @standard's pull rates, applied to @row.Set's own card counts">
+                                    estimate with @standard's rates
+                                </button>
+                            }
+                            @if (row.Set == "A4b")
+                            {
+                                <span class="badge text-bg-info ms-1"
+                                      title="Every Deluxe pack yields a 4-diamond card">
+                                    guaranteed 4&#9670;
+                                </span>
+                            }
+                        </td>
+                        @* Dashes rather than zeroes where a pack has no published rates. A zero
+                           would say "this pack cannot help", and the truth is that nobody knows
+                           the odds yet — the cards are in there. *@
+                        <td class="num">@(s is null ? "—" : s.ChanceUseful.ToString("P1"))</td>
+                        <td class="num">@(s is null ? "—" : Fmt(s.PacksToNextUseful))</td>
+                        <td class="num">@(s is null ? "—" : Fmt(s.PacksToFinishItsShare))</td>
+                        <td class="num">@(s?.DemandsServed ?? row.CardsServed)</td>
+                    </tr>
+
+                    @* Which cards, not just how many. The count alone cannot tell you whether
+                       a pack is worth opening: five commons and one Crown rank the same. *@
+                    @if (_expanded == row.PackKey)
+                    {
+                        <tr class="pack-detail">
+                            <td colspan="5">
+                                @{ var supplied = SuppliedBy(row.PackKey); }
+                                @if (supplied.Count == 0)
+                                {
+                                    <p class="small text-body-secondary mb-0">
+                                        Nothing outstanding &mdash; the ranking is stale, reopen the page.
+                                    </p>
+                                }
+                                else
+                                {
+                                    <div class="small text-body-secondary mb-1">
+                                        @supplied.Count card(s) you still need, cheapest route each.
+                                        Trade and Wonder Pick are priced in their own currencies
+                                        and never converted into packs.
+                                    </div>
+                                    <div class="supplied">
+                                        @foreach (var (card, remaining) in supplied.Take(40))
+                                        {
+                                            <div class="supplied-row">
+                                                <span class="pack-thumb deck-thumb"
+                                                      data-tip-img="@card.ArtUrl" data-tip="@card.Name"
+                                                      style="background-image:url('@card.ArtUrl')"></span>
+                                                <span class="nm">
+                                                    @card.Name
+                                                    @if (remaining > 1)
+                                                    {
+                                                        <span class="text-body-secondary">&times;@remaining</span>
+                                                    }
+                                                </span>
+                                                <span class="rr">@(RungOf(card)?.Symbol ?? card.Rarity)</span>
+                                                <span class="rt">@RouteNote(card)</span>
+                                            </div>
+                                        }
+                                    </div>
+                                    @if (supplied.Count > 40)
+                                    {
+                                        <div class="small text-body-secondary mt-1">
+                                            &hellip; and @(supplied.Count - 40) more.
+                                        </div>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <div class="px-3 pb-4">
+            @* Computed on demand. Pricing every rung at both copy policies is by far the
+               heaviest thing on the page, and it is reference material rather than something
+               needed on every edit — so it must not run when a filter or toggle changes. *@
+            @* Hidden under a wishlist scope: the advisor prices rarity RUNGS, which says
+               nothing about a hand-picked list of cards, and showing it there would put an
+               unrelated table under a wishlist heading. *@
+            @if (!IsWishScope)
+            {
+            <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="ToggleAdvisor">
+                @(_advisorOpen ? "hide" : "show") what each rarity would cost
+            </button>
+            }
+
+            @if (_advisorOpen && !IsWishScope)
+            {
+            <table class="table table-sm w-auto">
+                <thead>
+                    <tr><th>rarity</th><th class="num">1 copy</th><th class="num">2 copies</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var (rung, one, two) in _advisor)
+                    {
+                        <tr class="@(Draft.Wants(rung.Index) ? "table-active" : "")">
+                            <td>@rung.Symbol @(Draft.Wants(rung.Index) ? $"(x{Draft.Copies(rung.Index)})" : "")</td>
+                            <td class="num">@Fmt(one)</td>
+                            <td class="num">@Fmt(two)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p class="small text-body-secondary mb-0">
+                Expected packs to finish <em>that rarity alone</em>, opening the best available
+                pack each time &mdash; so it reads as the cost of adding a rarity to your
+                selection. People set impossible targets because nobody ever priced them.
+            </p>
+            }
+
+            <hr />
+
+            @* Pack points are a byproduct of opening rather than an alternative to it: you
+               earn five per pack whatever you do. So this panel never asks "buy or pull?" —
+               it asks which cards deserve a limited, per-set budget. *@
+            <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="TogglePoints">
+                @(_pointsOpen ? "hide" : "show") pack points
+            </button>
+
+            @if (_pointsOpen)
+            {
+                <p class="small text-body-secondary">
+                    Points are earned at @GameRules.PackPointsPerPack per pack and are spendable
+                    <strong>only within the set whose packs earned them</strong> &mdash; there is
+                    no cross-funding. They stop accruing at @GameRules.PackPointsCap.
+                    Logging packs adds them automatically; set a starting balance here if you
+                    were already playing.
+                </p>
+
+                @if (_capWarnings.Count > 0)
+                {
+                    <div class="alert alert-warning py-2 small">
+                        @foreach (var warning in _capWarnings)
+                        {
+                            <div>
+                                <strong>@warning.Set</strong>
+                                @if (warning.AtCap)
+                                {
+                                    <span>
+                                        is at the cap &mdash; every further pack of this set earns
+                                        <strong>nothing</strong>. Spend before you open.
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>reaches the cap in @warning.PacksUntilCap more pack(s).</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                <table class="table table-sm align-middle w-auto">
+                    <thead>
+                        <tr>
+                            <th>set</th>
+                            <th class="num">balance</th>
+                            <th class="num">packs to cap</th>
+                            <th>could buy now</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _pointRows)
+                        {
+                            <tr class="@(row.AtCap ? "table-warning" : "")">
+                                <td>
+                                    <strong>@row.Set</strong>
+                                    <span class="small text-body-secondary ms-1">@Session.Sets.DisplayName(row.Set)</span>
+                                </td>
+                                <td class="num">
+                                    <input class="form-control form-control-sm text-end" style="width:5.5rem"
+                                           type="number" min="0" max="@GameRules.PackPointsCap" step="5"
+                                           value="@row.Balance"
+                                           @onchange="e => SetBalance(row.Set, e)"
+                                           aria-label="@($"Pack points in {row.Set}")" />
+                                </td>
+                                <td class="num">@(row.AtCap ? "—" : row.PacksUntilCap.ToString())</td>
+                                <td class="small">
+                                    @if (row.AffordableNow.Count == 0)
+                                    {
+                                        <span class="text-body-tertiary">nothing you still need</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@row.AffordableNow.Count card(s)</span>
+                                        <span class="text-body-secondary">
+                                            &mdash; dearest: @row.AffordableNow[0].Name
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <h6 class="mt-3">Where points are worth spending</h6>
+                @if (_pointsShop.Count == 0)
+                {
+                    <p class="small text-body-secondary mb-0">
+                        Nothing you still need is better bought than pulled, at this scope.
+                    </p>
+                }
+                else
+                {
+                    <p class="small text-body-secondary">
+                        Ranked by <em>packs saved per pack's worth of points</em> &mdash; not by
+                        price. Almost every card looks cheaper by points, which is true and
+                        misleading: a Crown returns about 2.5 packs saved per pack of points
+                        while an Immersive returns 0.3, so ranking by price alone recommends
+                        precisely the worst purchases. Anything at or below 1.0 is left out.
+                    </p>
+                    <table class="table table-sm align-middle w-auto">
+                        <thead>
+                            <tr>
+                                <th>card</th>
+                                <th class="num">pull</th>
+                                <th class="num">points</th>
+                                <th class="num">packs saved per pack of points</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in _pointsShop.Take(12))
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="pack-thumb deck-thumb"
+                                              data-tip-img="@row.Card.ArtUrl" data-tip="@row.Card.Name"
+                                              style="background-image:url('@row.Card.ArtUrl')"></span>
+                                        <strong>@row.Card.Name</strong>
+                                        <span class="small text-body-secondary ms-1">@row.Card.Set&thinsp;@row.Card.Number</span>
+                                    </td>
+                                    <td class="num">@Fmt(row.PullPacks)</td>
+                                    <td class="num">@Fmt(row.PointsPacks)</td>
+                                    <td class="num fw-semibold">@row.Value.ToString("0.0")&times;</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            }
+        </div>
+    }
+}
+
+@code {
+    private string _scope = "everything";
+    private string[] _sets = [];
+
+    /// <summary>
+    /// Arriving from a wishlist's "rank packs for this list" button. A query parameter rather
+    /// than page state so the link is shareable and survives a reload.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "wish")] public string? Wish { get; set; }
+
+    private IReadOnlyList<PackStanding> _ranked = [];
+
+    /// <summary>
+    /// One row of the ranking table. A row is not the same thing as a standing: a pack with no
+    /// published rates has no standing at all and still deserves a row, because the cards are
+    /// demonstrably in it and the user is entitled to know that.
+    /// </summary>
+    /// <param name="Standing">Null when the pack cannot be priced, which is what draws dashes.</param>
+    /// <param name="Mark">Badge text, or null for an ordinary available pack.</param>
+    /// <param name="CardsServed">Used only when there is no standing to take the count from.</param>
+    /// <param name="CanAssume">
+    /// True for a released set with no published rates: the one case where borrowing another
+    /// set's distributions is a reasonable offer rather than a fiction.
+    /// </param>
+    private sealed record PackRow(
+        string PackKey, PackStanding? Standing, bool Best,
+        string? Mark, string? MarkTitle, int CardsServed, bool CanAssume = false)
+    {
+        public string Set => PackKey.Split(':')[0];
+        public string PackName => PackKey.Split(':')[1];
+    }
+
+    private IReadOnlyList<PackRow> _rows = [];
+
+    private IReadOnlyList<(PocketCard Card, int Remaining)> _neverInPack = [];
+    private IReadOnlyList<Demand> _unreachable = [];
+    private int _outstanding;
+    private int _priceable;
+    private double _bestCase;
+    private List<(RarityRung Rung, double One, double Two)> _advisor = [];
+    private bool _advisorOpen;
+
+    private string? _expanded;
+
+    /// <summary>
+    /// Outstanding demand for the current scope, kept so the expander can name the cards
+    /// rather than recompute the whole target per row.
+    /// </summary>
+    private IReadOnlyList<Demand> _outstandingDemands = [];
+
+    private bool _pointsOpen;
+    private IReadOnlyList<SetPoints> _pointRows = [];
+    private IReadOnlyList<SetPoints> _capWarnings = [];
+    private IReadOnlyList<RouteCost.PointsValue> _pointsShop = [];
+
+    /// <summary>
+    /// Any wishlist scope, one list or all of them. The rarity chips and the rarity advisor are
+    /// hidden under it: both talk about rungs, which a hand-picked list of cards does not.
+    /// </summary>
+    private bool IsWishScope =>
+        _scope == "wishes" || _scope.StartsWith("wish:", StringComparison.Ordinal);
+
+    /// <summary>
+    /// What the header says the page is ranking for. The scope control moved down to the tools
+    /// bar, so the header has to name the choice — otherwise the page's own subject would only
+    /// be legible from a dropdown further down.
+    /// </summary>
+    private string ScopeLabel =>
+        _scope == "wishes" ? "all wishlists"
+        : _scope.StartsWith("wish:", StringComparison.Ordinal)
+            ? Session.WishlistById(_scope[5..])?.Name ?? "a wishlist"
+        : _scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {_scope[7..]}"
+        : _scope == "everything" ? "everything you collect"
+        : $"{_scope} — {Session.Sets.DisplayName(_scope)}";
+
+    /// <summary>
+    /// Which plan the chips edit: one set's, or the default that the rest follow. A set only
+    /// gets its own once the user asks for one, so scoping to a set does not by itself create
+    /// an override — that would fork every set the moment it was looked at.
+    /// </summary>
+    /// <summary>The scoped set, if the scope is one at all. Null for "everything" and wishlists.</summary>
+    private string? ScopedSet => !IsWishScope && _sets.Contains(_scope) ? _scope : null;
+
+    private string? PlanScope =>
+        ScopedSet is { } set && Session.HasPlanOverride(set) ? set : null;
+
+    private RarityPlan Plan => Session.Plan(PlanScope);
+
+    /// <summary>
+    /// The chips edit a local draft, not the saved plan. Re-ranking on every tap made
+    /// adjusting several rarities miserable, so taps are collected and applied once the user
+    /// stops — instant visual feedback, one recompute.
+    /// </summary>
+    private RarityPlan? _draft;
+    private RarityPlan Draft => _draft ?? Plan;
+
+    private bool _pending;
+    private CancellationTokenSource? _debounce;
+
+    private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(700);
+    private bool Premium => Session.Profile.Resources.Premium;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        Busy.Changed += OnBusyChanged;
+
+        await Session.InitAsync();
+        if (!Session.Ready) return;
+
+        _sets = Session.Index.OpenableSets.ToArray();
+        if (Wish is { Length: > 0 } id && Session.WishlistById(id) is not null) _scope = $"wish:{id}";
+
+        // Arriving from another page still costs a full ranking, so it needs the same
+        // indicator as changing a filter does — otherwise navigation looks like a hang.
+        await Busy.RunAsync("Ranking packs\u2026", Recompute);
+    }
+
+    private void OnBusyChanged() => InvokeAsync(StateHasChanged);
+
+    // The ranking must refresh when the collection or target changes, but NOT for unrelated
+    // settings. The premium flag only affects how packs are converted to calendar time, so
+    // re-ranking for it would burn a second or two to produce an identical table.
+    private void OnChanged()
+    {
+        if (RankSignature() != _rankedFor) Recompute();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string _rankedFor = "";
+
+    private string RankSignature() =>
+        $"{_scope}|{PlanScope}|{string.Join('.', Plan.CopiesByTier.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}:{kv.Value}"))}|" +
+        $"{Session.CollectionRevision}|{string.Join(',', Session.UnavailablePacks)}|" +
+        // Borrowed rates change every number, so they belong in the signature — otherwise
+        // arriving back on the page after assuming a set's rates would show the old ranking.
+        $"{string.Join(',', Session.AssumedRates.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}<{kv.Value}"))}";
+
+    private async Task ToggleAdvisor()
+    {
+        _advisorOpen = !_advisorOpen;
+        if (!_advisorOpen) return;
+        if (_advisorFor == Signature() && _advisor.Count > 0) return;
+
+        await Busy.RunAsync("Pricing every rarity\u2026", BuildAdvisor);
+    }
+
+    private string Signature() => $"{_scope}|{string.Join(',', Session.UnavailablePacks)}";
+
+    private async Task TogglePoints()
+    {
+        _pointsOpen = !_pointsOpen;
+        if (!_pointsOpen) return;
+
+        // Same reasoning as the advisor: pricing every outstanding card by two routes is not
+        // something to run on every filter change.
+        await Busy.RunAsync("Pricing the point shop…", BuildPoints);
+    }
+
+    private void BuildPoints()
+    {
+        if (Session.Points is null || Session.Routes is null) return;
+
+        var balances = Session.Profile.Resources.PackPointsBySet;
+        var copies = Plan.CopiesByTier.Count == 0 ? 1 : Plan.CopiesByTier.Values.Max();
+
+        _pointRows = _sets
+            .Select(set => Session.Points.Describe(set, balances.GetValueOrDefault(set), Session.Owned, copies))
+            .OrderByDescending(r => r.Balance)
+            .ThenBy(r => r.Set, StringComparer.Ordinal)
+            .ToArray();
+
+        _capWarnings = Session.Points.Warnings(balances, Session.Owned, copies);
+
+        var outstanding = CurrentTarget().Outstanding(Session.Index, Session.Owned);
+        _pointsShop = Session.Routes.PointsShopRanking(outstanding, Session.Owned);
+    }
+
+    /// <summary>One row open at a time: two open expanders push the ranking off the screen.</summary>
+    private void ToggleExpanded(string packKey) =>
+        _expanded = _expanded == packKey ? null : packKey;
+
+    /// <summary>
+    /// The outstanding cards this pack can actually give, with copies still needed.
+    /// Computed on expand rather than for every row: it is a scan of the pack's ~80 cards
+    /// against outstanding demand, which is wasted work for the 20-odd rows nobody opens.
+    /// </summary>
+    private IReadOnlyList<(PocketCard Card, int Remaining)> SuppliedBy(string packKey)
+    {
+        if (!Session.Index.ByPack.TryGetValue(packKey, out var inPack)) return [];
+
+        var keys = inPack.Select(c => c.OwnershipKey).ToHashSet(StringComparer.Ordinal);
+
+        return _outstandingDemands
+            .Select(d => (Card: d.SuppliedBy.FirstOrDefault(c => keys.Contains(c.OwnershipKey)), d.Remaining))
+            .Where(x => x.Card is not null)
+            .Select(x => (x.Card!, x.Remaining))
+            .OrderByDescending(x => RungOf(x.Item1)?.Index ?? -1)
+            .ThenBy(x => x.Item1.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+    }
+
+    private const int UnreachableShown = 24;
+
+    /// <summary>
+    /// Wanted cards that no pack has ever sold — event and promo cards. They have no pack row to
+    /// appear in, so they are the one thing that still has to be called out separately; a trade
+    /// is the only route and no amount of opening changes that.
+    ///
+    /// Only wishlists reach this: a rarity target is built from pack-obtainable cards only.
+    /// </summary>
+    private IReadOnlyList<(PocketCard Card, int Remaining)> NeverInAPack()
+    {
+        var result = new List<(PocketCard, int)>();
+
+        foreach (var demand in _unreachable)
+        {
+            var card = demand.SuppliedBy.FirstOrDefault();
+            if (card is null) continue;
+            if (Session.Index.PacksYielding(card.OwnershipKey).Any()) continue;
+
+            result.Add((card, demand.Remaining));
+        }
+
+        return result
+            .OrderByDescending(x => RungOf(x.Item1)?.Index ?? -1)
+            .ThenBy(x => x.Item1.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
+    }
+
+    private RarityRung? RungOf(PocketCard card)
+    {
+        var index = Session.Index.Ladder.IndexOf(card.Rarity);
+        return index is null ? null : Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == index);
+    }
+
+    /// <summary>
+    /// Cheapest route in words. Never a bare number: "cheaper by points" is true of almost
+    /// every card and misleading on its own, so the pull cost is always stated beside it.
+    /// </summary>
+    private string RouteNote(PocketCard card)
+    {
+        if (Session.Routes is null) return "";
+
+        var routes = Session.Routes.For(card, Session.Owned);
+        var pull = routes.Options.FirstOrDefault(o => o.Route == AcquisitionRoute.Pull);
+        var points = routes.Options.FirstOrDefault(o => o.Route == AcquisitionRoute.PackPoints);
+
+        var parts = new List<string>();
+
+        if (pull is { Available: true, PacksEquivalent: { } p })
+            parts.Add($"~{Fmt(p)} packs to pull");
+        else
+            parts.Add("not pullable");
+
+        if (points is { Available: true, Points: { } cost, PacksEquivalent: { } q })
+            parts.Add($"{cost} points (~{Fmt(q)} packs' worth)");
+
+        var trade = routes.Options.FirstOrDefault(o => o.Route == AcquisitionRoute.Trade);
+        if (trade is { Available: true })
+            parts.Add(trade.Dust is > 0 ? $"trade: {trade.Dust:N0} dust + 1 stamina" : "trade: free + 1 stamina");
+
+        return string.Join(" · ", parts);
+    }
+
+    private void SetBalance(string set, ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var value)) return;
+        var clamped = Math.Clamp(value, 0, GameRules.PackPointsCap);
+
+        Session.Mutate(p =>
+        {
+            var next = new Dictionary<string, int>(p.Resources.PackPointsBySet);
+            if (clamped > 0) next[set] = clamped; else next.Remove(set);
+            return p with { Resources = p.Resources with { PackPointsBySet = next } };
+        });
+
+        // Balances only change what the panel says, so it is repriced without touching the
+        // ranking — which the collection-revision check would skip anyway.
+        BuildPoints();
+    }
+
+    private string _advisorFor = "";
+
+    private ICompletionTarget CurrentTarget()
+    {
+        if (_scope.StartsWith("wish:", StringComparison.Ordinal))
+        {
+            var list = Session.WishlistById(_scope[5..]);
+            // A deleted wishlist falls back rather than ranking an empty target, which would
+            // read as "nothing left to collect".
+            if (list is not null) return Session.TargetForWishlist(list);
+            _scope = "everything";
+        }
+
+        if (_scope == "wishes" && Session.Wishlists.Count > 0)
+            // Merged, not summed: CompositeTarget takes the LARGEST requirement per card, so a
+            // card on two lists is still one card.
+            return new CompositeTarget(
+                Session.Wishlists.Select(Session.TargetForWishlist).ToArray(), "all wishlists");
+
+        if (_scope.StartsWith("series:", StringComparison.Ordinal))
+        {
+            var sets = ScopeSets();
+            if (sets.Length > 0)
+                return new CompositeTarget(
+                    sets.Select(Session.TargetForSet).ToArray(), $"series {_scope[7..]}");
+
+            _scope = "everything";
+        }
+
+        return _scope == "everything" ? Session.TargetForEverything() : Session.TargetForSet(_scope);
+    }
+
+    /// <summary>
+    /// The sets the current scope covers. Used by the rarity advisor, which prices rungs and so
+    /// only means anything over sets — a wishlist scope has no sets of its own and falls back to
+    /// all of them.
+    /// </summary>
+    private string[] ScopeSets()
+    {
+        if (_scope.StartsWith("series:", StringComparison.Ordinal))
+        {
+            var series = _scope[7..];
+            return Session.Sets.SetsIn(series).Where(_sets.Contains).ToArray();
+        }
+
+        return _sets.Contains(_scope) ? [_scope] : _sets;
+    }
+
+    private void Recompute()
+    {
+        if (!Session.Ready || Session.Ranker is null) return;
+        _rankedFor = RankSignature();
+
+        var target = CurrentTarget();
+        var outstanding = target.Outstanding(Session.Index, Session.Owned);
+        _outstandingDemands = outstanding;
+        _outstanding = outstanding.Sum(d => d.Remaining);
+        if (_outstanding == 0)
+        {
+            _ranked = [];
+            _rows = [];
+            _neverInPack = [];
+            _advisor = [];
+            _expanded = null;
+            return;
+        }
+
+        var unavailable = Session.UnavailablePacks;
+
+        // Ranked WITHOUT the availability filter, then split. Each standing is computed from its
+        // own pack's rates alone, so an off-sale pack's numbers are the same either way — and
+        // one ranking pass is half the work of two.
+        var all = Session.Ranker.Rank(target, Session.Owned);
+        _ranked = all.Where(s => !unavailable.Contains(s.PackKey)).ToArray();
+
+        // The estimate still respects availability. That is the whole distinction the user asked
+        // for: excluded from the arithmetic, present in the list.
+        _unreachable = Session.Ranker.Unreachable(target, Session.Owned, unavailable);
+        _bestCase = Session.Ranker.BestCasePacksToFinish(target, Session.Owned, unavailable);
+        _priceable = _outstanding - _unreachable.Sum(d => d.Remaining);
+
+        _neverInPack = NeverInAPack();
+
+        _rows =
+        [
+            .. _ranked.Select((s, i) => new PackRow(s.PackKey, s, Best: i == 0, null, null, 0)),
+
+            // Off sale: real numbers, because we know its rates — it just cannot be bought today.
+            .. all.Where(s => unavailable.Contains(s.PackKey))
+                  .Select(s => new PackRow(s.PackKey, s, false, "off sale",
+                      $"{s.PackName} is limited-time and you have marked it unavailable, so it is left out of the estimate", 0)),
+
+            // No published rates — but WHY matters, so the badge distinguishes a set that is out
+            // and simply unpriced from one that is not out yet. Both were previously reported the
+            // same way, which told the user their B4 cards were unobtainable when they were only
+            // unpriced.
+            .. UnratedPacksServing(outstanding).Select(x => new PackRow(
+                x.PackKey, null, false,
+                x.Released ? "rates unknown" : "not out yet",
+                x.Released
+                    ? $"{x.PackKey.Split(':')[0]} is out, but nobody has published its pull rates yet — the cards drop, the odds are simply unknown, so it cannot be counted in the estimate"
+                    : $"{x.PackKey.Split(':')[0]} has not been released{(x.ReleasesOn is { } d ? $" — due {d:d MMM yyyy}" : "")}, so nothing in it can be pulled yet",
+                x.Cards, CanAssume: x.Released)),
+        ];
+
+    }
+
+    /// <summary>
+    /// Openable packs with no published pull rates that nonetheless contain cards the target
+    /// still wants. The ranker skips them because it has nothing to compute; the page shows them
+    /// because "we do not know the odds" and "this pack is no help" are different statements.
+    /// </summary>
+    private IReadOnlyList<(string PackKey, int Cards, bool Released, DateOnly? ReleasesOn)> UnratedPacksServing(
+        IReadOnlyList<Demand> outstanding)
+    {
+        if (Session.Odds is null || outstanding.Count == 0) return [];
+
+        // Local date, matching how a player thinks about a release. The set list carries dates,
+        // not times, so the day is the finest distinction available anyway.
+        var today = DateOnly.FromDateTime(DateTime.Now);
+
+        var priceable = Session.Odds.PriceablePacks.ToHashSet(StringComparer.Ordinal);
+        var rows = new List<(string, int, bool, DateOnly?)>();
+
+        // Openable only: promo "Vol. N" groupings record how a card was handed out at an event,
+        // not something anyone can choose to open, so listing them as packs would offer a route
+        // that does not exist.
+        foreach (var pack in Session.Index.OpenablePackKeys)
+        {
+            if (priceable.Contains(pack)) continue;
+            if (!Session.Index.ByPack.TryGetValue(pack, out var inPack)) continue;
+
+            var keys = inPack.Select(c => c.OwnershipKey).ToHashSet(StringComparer.Ordinal);
+            var served = outstanding.Count(d => d.SuppliedBy.Any(c => keys.Contains(c.OwnershipKey)));
+            if (served == 0) continue;
+
+            var set = pack.Split(':')[0];
+            rows.Add((pack, served, Session.Sets.IsReleased(set, today), Session.Sets.ReleaseDateOf(set)));
+        }
+
+        // Out-but-unpriced first: those cards are droppable today, so they are the ones worth
+        // knowing about. An unreleased set is information, not an option.
+        return rows
+            .OrderByDescending(x => x.Item3)
+            .ThenByDescending(x => x.Item2)
+            .ThenBy(x => x.Item1, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private void BuildAdvisor()
+    {
+        if (!Session.Ready || Session.Ranker is null) return;
+
+        _advisorFor = Signature();
+        // The advisor prices rarity rungs, which only means something over sets — so a series
+        // scope prices that series, and a wishlist scope falls back to everything rather than
+        // inventing a "wish:xyz" set.
+        var sets = ScopeSets();
+
+        _advisor = Session.Index.Ladder.Rungs.Select(rung =>
+        {
+            double Price(int copies)
+            {
+                // Each row prices "just this rung", so the table reads as the marginal cost
+                // of adding that rarity rather than a running total.
+                var parts = sets.Select(s => (ICompletionTarget)new RarityLadderTarget(
+                    s, RarityPlan.Uniform([rung.Index], copies))).ToArray();
+                return Session.Ranker!.BestCasePacksToFinish(
+                    new CompositeTarget(parts), Session.Owned, Session.UnavailablePacks);
+            }
+            return (rung, Price(1), Price(2));
+        }).ToList();
+    }
+
+    private static string Fmt(double packs) =>
+        double.IsPositiveInfinity(packs) ? "never"
+        : packs >= 10_000 ? $"{packs / 1000:N0}k"
+        : packs >= 100 ? packs.ToString("N0")
+        : packs.ToString("N1");
+
+    /// <summary>Expected packs as calendar time, which is the number that changes decisions.</summary>
+    private static string Days(double packs, bool premium)
+    {
+        if (double.IsPositiveInfinity(packs)) return "never";
+        // Written as plain comparisons on purpose: Razor's parser reads a line-leading '<'
+        // in a relational pattern as the start of a markup tag.
+        var days = packs / GameRules.PacksPerDay(premium);
+        if (days < 1) return "today";
+        if (days < 60) return $"{days:N0} days";
+        if (days < 730) return $"{days / 30.44:N0} months";
+        return $"{days / 365.25:N1} years";
+    }
+
+    /// <summary>
+    /// When premium is off, price the alternative too. A +50% pack rate is a real tradeoff
+    /// and the user deserves to see it costed — stated as a fact, not a nudge.
+    /// </summary>
+    private string RateNote() => Premium
+        ? $"{GameRules.PacksPerDay(true)} packs/day"
+        : $"{Days(_bestCase, true)} with premium";
+
+    private Task OnScope(ChangeEventArgs e)
+    {
+        var scope = e.Value?.ToString() ?? "everything";
+        return Busy.RunAsync("Ranking packs\u2026", () =>
+        {
+            _scope = scope;
+            _advisor = [];      // stale for the new scope; repriced only if reopened
+            Recompute();
+        });
+    }
+
+    private void CycleTier(int tier)
+    {
+        var next = Draft.Cycle(tier);
+        // Refuse to leave nothing selected: every screen would read "complete", which looks
+        // like a bug rather than a choice.
+        if (next.IsEmpty) return;
+
+        _draft = next;
+        _pending = true;
+        StateHasChanged();          // the chip updates immediately; the ranking waits
+
+        _debounce?.Cancel();
+        _debounce = new CancellationTokenSource();
+        var token = _debounce.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(SettleDelay, token);
+                await InvokeAsync(ApplyDraftAsync);
+            }
+            catch (OperationCanceledException) { /* superseded by a later tap */ }
+        }, token);
+    }
+
+    private async Task ApplyDraftAsync()
+    {
+        if (_draft is null) return;
+
+        var plan = _draft;
+        _pending = false;
+
+        await Busy.RunAsync("Ranking packs\u2026", () =>
+        {
+            _advisor = [];
+            Session.SetPlan(plan, PlanScope);
+            _draft = null;          // saved plan is now the source of truth again
+        });
+    }
+
+    /// <summary>
+    /// Seeded from the default rather than from nothing: an override almost always starts as
+    /// "the usual, but…", and an empty plan would read as a finished set.
+    /// </summary>
+    private Task StartOverride()
+    {
+        if (IsWishScope || !_sets.Contains(_scope)) return Task.CompletedTask;
+
+        var seed = Session.Plan();
+        return Busy.RunAsync($"Giving {_scope} its own plan\u2026", () =>
+        {
+            _draft = null;
+            Session.SetPlan(seed, _scope);
+            _advisor = [];
+            Recompute();
+        });
+    }
+
+    private Task ClearOverride()
+    {
+        if (IsWishScope || !_sets.Contains(_scope)) return Task.CompletedTask;
+
+        var set = _scope;
+        return Busy.RunAsync($"Returning {set} to the default plan\u2026", () =>
+        {
+            _draft = null;
+            Session.ClearPlanOverride(set);
+            _advisor = [];
+            Recompute();
+        });
+    }
+
+    /// <summary>
+    /// Borrowing rates changes the rate table itself, so this is not a filter — every figure on
+    /// the page is recomputed, and the busy indicator says so.
+    /// </summary>
+    private Task Assume(string set, string donor) =>
+        Busy.RunAsync($"Estimating {set} from {donor}\u2026", () =>
+        {
+            Session.SetAssumedRates(set, donor);
+            _advisor = [];
+            Recompute();
+        });
+
+    private Task StopAssuming(string set) =>
+        Busy.RunAsync($"Dropping assumed rates for {set}\u2026", () =>
+        {
+            Session.SetAssumedRates(set, null);
+            _advisor = [];
+            Recompute();
+        });
+
+    private Task ToggleLimited(string packKey, bool on)
+    {
+        var name = packKey.Split(':')[1];
+        var label = on ? $"Including {name}\u2026" : $"Excluding {name}\u2026";
+        return Busy.RunAsync(label, () =>
+            {
+                Session.SetLimitedPackAvailable(packKey, on);
+                _advisor = [];   // stale for the new availability; repriced only if reopened
+                Recompute();
+            });
+    }
+
+    private void OnPremium(ChangeEventArgs e)
+    {
+        // Affects only the packs-to-calendar-time conversion, so no re-ranking is needed and
+        // the change is instant — which is why this one gets no busy indicator.
+        var on = e.Value is bool b && b;
+        Session.Mutate(p => p with { Resources = p.Resources with { Premium = on } }, undoable: false);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Session.Changed -= OnChanged;
+        Busy.Changed -= OnBusyChanged;
+
+        // Leaving mid-edit must not silently discard the change.
+        _debounce?.Cancel();
+        if (_draft is not null) await InvokeAsync(ApplyDraftAsync);
+        _debounce?.Dispose();
+    }
+}

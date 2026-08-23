@@ -1,0 +1,169 @@
+@page "/decks/import"
+@inject AppSession Session
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Import a deck · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else
+{
+    <div class="page-head">
+        <a class="btn btn-sm btn-outline-secondary" href="decks">&larr; decks</a>
+        <span class="title">Import a deck</span>
+        <span class="subtitle">from a screenshot of the in-game code</span>
+    </div>
+
+    <div class="p-3" style="max-width:38rem">
+        @* The game's own share feature is the 2D code, so that is the whole screen rather than
+           one tab among several. *@
+        <p class="text-body-secondary">
+            In the game: <em>My Decks &rarr; a deck &rarr; Display Code</em>. Screenshot it,
+            then pick the file here.
+        </p>
+
+        <InputFile class="form-control mb-2" OnChange="ImportShot" accept="image/*" disabled="@_scanning" />
+
+        <p class="small text-body-secondary">
+            The image is read <strong>in this browser</strong> and never uploaded. The reader is
+            only downloaded the first time you use it, so nothing is paid for by people who
+            never import.
+        </p>
+
+        @if (_scanning)
+        {
+            <div class="alert alert-info py-2 small">Reading the image&hellip;</div>
+        }
+
+        @if (_message is not null)
+        {
+            <div class="alert @(_failed ? "alert-warning" : "alert-success") py-2 small">@_message</div>
+        }
+
+        @if (_failed)
+        {
+            <ul class="small text-body-secondary">
+                <li>Crop closer to the code, so it fills more of the picture.</li>
+                <li>Avoid a photo of a screen if you can &mdash; a screenshot is much cleaner.</li>
+                <li>Make sure the whole code including its border is in frame.</li>
+            </ul>
+        }
+
+        @* Deliberately understated. Share codes are no longer offered in newer versions of the
+           game, so this exists for older clients and pasted codes rather than as a route
+           anyone should be steered toward. *@
+        <details class="mt-3">
+            <summary class="small text-body-secondary">I have the code as text instead</summary>
+            <div class="pt-2">
+                <textarea class="form-control form-control-sm mb-2" rows="2"
+                          placeholder="paste the share code"
+                          @bind="_codeText" @bind:event="oninput"></textarea>
+                <button class="btn btn-sm btn-outline-primary" @onclick="ImportCode"
+                        disabled="@string.IsNullOrWhiteSpace(_codeText)">import code</button>
+            </div>
+        </details>
+
+        <hr />
+        <p class="small text-body-secondary mb-0">
+            Nothing to import? <a href="decks/new">Build a deck from scratch</a> instead.
+        </p>
+    </div>
+}
+
+@code {
+    private string _codeText = "";
+    private string? _message;
+    private bool _failed;
+    private bool _scanning;
+
+    private IJSObjectReference? _qr;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+    }
+
+    public void Dispose() => Session.Changed -= OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task ImportShot(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        _scanning = true;
+        _message = null;
+        _failed = false;
+
+        try
+        {
+            // 12 MB: a phone screenshot is a few megabytes, and the cap only exists to refuse
+            // something that plainly is not one.
+            await using var stream = file.OpenReadStream(12 * 1024 * 1024);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+
+            var mime = string.IsNullOrEmpty(file.ContentType) ? "image/png" : file.ContentType;
+            var dataUrl = $"data:{mime};base64,{Convert.ToBase64String(buffer.ToArray())}";
+
+            _qr ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/qrscan.js");
+            var scan = await _qr.InvokeAsync<ScanResult>("decode", dataUrl);
+
+            if (!scan.Ok || string.IsNullOrWhiteSpace(scan.Code))
+            {
+                Fail(scan.Error ?? "No code found in that image.");
+                return;
+            }
+
+            Adopt(scan.Code, "screenshot");
+        }
+        catch (Exception ex)
+        {
+            Fail($"That file could not be read ({ex.GetType().Name}).");
+        }
+        finally
+        {
+            _scanning = false;
+        }
+    }
+
+    private void ImportCode() => Adopt(_codeText, "code");
+
+    private void Adopt(string code, string source)
+    {
+        var parsed = DeckCodec.TryParse(code.Trim());
+        if (parsed is null)
+        {
+            Fail(source == "code"
+                ? "That is not a deck share code. Check for missing characters."
+                : "A code was read from the image, but it is not a deck share code.");
+            return;
+        }
+
+        // Saved straight away, unlike an edit: scanning is a deliberate one-shot action with a
+        // result, and making the user press Save afterwards risks losing a scan that worked.
+        var deck = new SavedDeck(
+            Guid.NewGuid().ToString("n")[..10],
+            $"Imported deck {Session.Profile.Decks.Count + 1}",
+            [.. parsed.AllCards],
+            [.. parsed.Energies],
+            source);
+
+        Session.SaveDeck(deck);
+        Nav.NavigateTo($"decks/{deck.Id}");
+    }
+
+    private void Fail(string message)
+    {
+        _failed = true;
+        _message = message;
+    }
+
+    private sealed record ScanResult(bool Ok, string? Code, string? Error);
+}

@@ -1,0 +1,149 @@
+@* One card tile. ShouldRender is overridden because Blazor treats a class-typed
+   parameter as always-changed, which would re-render every visible tile on any
+   state change. This is the core of what Phase 0 measures.
+
+   Note there is no drag handling here: touch's implicit pointer capture makes
+   per-tile pointerenter unusable for sweeping. data-idx lets wwwroot/js/gridsweep.js
+   hit-test with elementFromPoint instead, and it paints the .sel highlight directly
+   so a sweep costs no Blazor renders.
+
+   The tooltip is text only, deliberately: a tile IS the full card art, so an art preview
+   on hover would show what is already on screen. The text still earns its place because
+   the tile has no room for the name, set or number. The list layout is the opposite case
+   and does preview the art, from its thumbnail. *@
+
+<div class="card-tile @(Count > 0 ? "owned" : "") @(Picked > 0 ? "picked" : "")"
+     data-idx="@Index" data-tip="@Tip"
+     @onclick="OnClick"
+     @onpointerdown="PointerDown" @onpointerup="PointerUp"
+     @onpointercancel="CancelHold" @onpointerleave="CancelHold" @onpointermove="PointerMove">
+    <img data-src="@Card.ArtUrl" alt="@Card.Name" decoding="async" draggable="false" />
+    <span class="rar">@Card.Rarity</span>
+
+    @* Detail needs its own target: a tap on the tile means "I own one more", so it cannot also
+       mean "tell me about this". A corner button for a pointer, a long press for a finger —
+       where a button that size is an awkward target. *@
+    @if (ShowInfo)
+    {
+        <a class="info" href="card/@Card.Key" title="Card detail" aria-label="Detail for @Card.Name"
+           @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true">info</a>
+    }
+
+    @if (Count > 0)
+    {
+        <span class="cnt">@Count</span>
+    }
+    @* Distinct from the owned count: this is "I just pulled this", not "I own this". Without
+       it the only feedback for a tap was the strip at the top of the page. *@
+    @if (Picked > 0)
+    {
+        <span class="pick">@(Picked > 1 ? $"+{Picked}" : "+")</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PocketCard Card { get; set; } = default!;
+    [Parameter] public int Index { get; set; }
+    [Parameter] public int Count { get; set; }
+
+    /// <summary>Copies picked in the current action, e.g. cards pulled from a pack being logged.</summary>
+    [Parameter] public int Picked { get; set; }
+    [Parameter] public EventCallback<(int Index, bool Shift)> OnActivate { get; set; }
+
+    /// <summary>
+    /// False while a sweep is armed. Both affordances would fight the sweep: the button would
+    /// swallow the start of a drag, and a slow drag would read as a long press.
+    /// </summary>
+    [Parameter] public bool ShowInfo { get; set; } = true;
+
+    /// <summary>Raised on a long press. The page navigates; the tile only detects.</summary>
+    [Parameter] public EventCallback<PocketCard> OnHold { get; set; }
+
+    private PocketCard? _lastCard;
+    private int _lastCount = -1;
+    private int _lastIndex = -1;
+    private int _lastPicked = -1;
+    private bool _lastShowInfo = true;
+
+    protected override bool ShouldRender()
+    {
+        if (ReferenceEquals(_lastCard, Card) && _lastCount == Count
+            && _lastIndex == Index && _lastPicked == Picked && _lastShowInfo == ShowInfo)
+            return false;
+
+        _lastCard = Card;
+        _lastCount = Count;
+        _lastIndex = Index;
+        _lastPicked = Picked;
+        _lastShowInfo = ShowInfo;
+        return true;
+    }
+
+    /// <summary>Caption for the hover art: enough to identify the card without reading the image.</summary>
+    private string Tip => $"{Card.Name}\n{Card.Set} {Card.Number} · {Card.Rarity}";
+
+    // ---- long press --------------------------------------------------------------------
+
+    private const int HoldMs = 450;
+    private const double MoveTolerance = 10;
+
+    private CancellationTokenSource? _hold;
+    private bool _held;
+    private double _downX;
+    private double _downY;
+
+    private async Task PointerDown(PointerEventArgs e)
+    {
+        if (!ShowInfo || e.Button != 0) return;
+
+        _held = false;
+        _downX = e.ClientX;
+        _downY = e.ClientY;
+
+        _hold?.Cancel();
+        _hold = new CancellationTokenSource();
+        var token = _hold.Token;
+
+        try
+        {
+            await Task.Delay(HoldMs, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        // The tap that follows must not also add a copy, so the flag is checked in OnClick.
+        _held = true;
+        await OnHold.InvokeAsync(Card);
+    }
+
+    /// <summary>
+    /// A finger that travels is scrolling, not holding. Without this, any slow scroll that began
+    /// on a tile would open card detail.
+    /// </summary>
+    private void PointerMove(PointerEventArgs e)
+    {
+        if (_hold is null || _hold.IsCancellationRequested) return;
+
+        if (Math.Abs(e.ClientX - _downX) > MoveTolerance || Math.Abs(e.ClientY - _downY) > MoveTolerance)
+            CancelHold();
+    }
+
+    private void PointerUp() => _hold?.Cancel();
+
+    private void CancelHold() => _hold?.Cancel();
+
+    private Task OnClick(MouseEventArgs e)
+    {
+        // Swallowed exactly once: the click that ends a long press would otherwise increment the
+        // count on the way out of navigating away.
+        if (_held)
+        {
+            _held = false;
+            return Task.CompletedTask;
+        }
+
+        return OnActivate.InvokeAsync((Index, e.ShiftKey));
+    }
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A deliberately DIFFERENT drawing from icon.svg, not a scaled copy.
+     At 32 pixels the pack outline and its tear strip turn to mush, so the favicon keeps only
+     the part that survives: the rarity diamond, filling the tile. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="12" fill="#4338ca"/>
+  <path d="M32 9l23 23-23 23L9 32z" fill="#f59e0b"/>
+  <path d="M32 9l23 23-23 23L9 32z" fill="none" stroke="#fef3c7" stroke-width="3"/>
+</svg>

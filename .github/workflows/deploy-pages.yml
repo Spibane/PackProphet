@@ -1,0 +1,105 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a newer push cancel an in-flight deploy, but never interrupt one mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Required: InvariantGlobalization forces native relinking, which needs this.
+      # Without it the build fails outright rather than silently skipping the step.
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
+      # The app is served from https://<user>.github.io/<repo>/, not the domain root — and the
+      # rewrite happens BEFORE publish, not after. Publishing first and patching index.html
+      # afterwards breaks two things at once: the service worker pins index.html by SHA-256 in
+      # service-worker-assets.js, so a later edit makes its install fail (silently — the app
+      # still works online, it just never caches anything), and the .gz/.br sidecars are
+      # compressed from the pre-edit file. Doing it first means the SDK hashes and compresses
+      # what actually ships.
+      - name: Set base href for project-page hosting
+        run: |
+          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|' \
+            src/PackProphet.App/wwwroot/index.html
+          grep -q '<base href="/${{ github.event.repository.name }}/" />' \
+            src/PackProphet.App/wwwroot/index.html \
+            || { echo "::error::base href rewrite did not apply"; exit 1; }
+
+      - name: Publish
+        run: dotnet publish src/PackProphet.App/PackProphet.App.csproj -c Release -o build
+
+      # GitHub Pages runs Jekyll by default, which silently DROPS directories whose
+      # names start with an underscore — including _framework. Without this file the
+      # deploy "succeeds" and serves a blank page with no useful error.
+      - name: Disable Jekyll
+        run: touch build/wwwroot/.nojekyll
+
+      # Guards the ordering above. An integrity mismatch here means the service worker will
+      # refuse to install and offline support is gone, which is invisible from the served
+      # site — so it has to fail the build instead.
+      - name: Verify the service worker manifest matches what shipped
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, sys
+
+          manifest = open('build/wwwroot/service-worker-assets.js', encoding='utf-8').read()
+          body = manifest[manifest.index('{'):manifest.rindex('}') + 1]
+          assets = json.loads(body)['assets']
+
+          bad = []
+          for asset in assets:
+              try:
+                  data = open('build/wwwroot/' + asset['url'], 'rb').read()
+              except FileNotFoundError:
+                  bad.append(f"missing: {asset['url']}")
+                  continue
+              digest = 'sha256-' + base64.b64encode(hashlib.sha256(data).digest()).decode()
+              if digest != asset['hash']:
+                  bad.append(f"hash changed after publish: {asset['url']}")
+
+          if bad:
+              for line in bad:
+                  print(f'::error::{line}')
+              sys.exit(1)
+
+          print(f'{len(assets)} precached assets verified')
+          PY
+
+      # Pages has no SPA rewrite rule, so a deep link like /collection 404s. Serving
+      # index.html as the 404 page lets the Blazor router take over.
+      - name: SPA fallback
+        run: cp build/wwwroot/index.html build/wwwroot/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

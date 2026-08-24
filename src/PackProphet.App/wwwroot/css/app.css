@@ -1007,23 +1007,18 @@ tr.row-best {
    the chart above it rather than as a new thing. The heading also steps up in size, so the
    hierarchy is carried by two signals rather than by whitespace alone.
 
-   Every long single-column page shares this one rule rather than each carrying its own copy.
-   That started as two pages and had quietly become five identical blocks scattered down this
-   file, which is exactly how they drift apart. Note the two heading levels - most of these pages
-   put their sections under a panel and use h6, while Settings' are top level and use h5 - which
-   is why both appear in the selector list.
+   Opted into with a single class on the page shell, rather than a selector listing every page
+   that wants it by name. That list had reached seven selectors across six page-specific classes,
+   so a new long page meant editing this rule, and .section-head -- the best of the heading
+   patterns, with room for an action on the right -- silently did nothing anywhere except
+   History.
 
    Both are now h2. They were h5 and h6 chosen for their default SIZE, which is backwards: this
    rule sets the size anyway, and picking a heading level for its appearance left every long page
    jumping from its h1 straight to an h5, so heading navigation skipped two levels on the way in. */
 
-.history-page > h2,
-.history-page > .section-head,
-.pools-page > h2,
-.trades-page > h2,
-.board-page > h2,
-.compare-page > h2,
-.settings-page > h2 {
+.sections > h2,
+.sections > .section-head {
     margin: 2.1rem 0 .6rem;
     padding-top: 1rem;
     /* Heavier than an ordinary area boundary: this separates sections of a long page, and at the
@@ -1033,20 +1028,18 @@ tr.row-best {
     font-size: 1.1rem;
     font-weight: 700;
 }
-.history-page > .section-head {
+.sections > .section-head {
     display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
 }
 
 /* The first section needs no rule above it: on History it follows the hits panel, which is
    already fenced by its own border, and on Settings it is the first thing under the page head. */
-.history-page > h2:first-of-type,
-.settings-page > h2:first-of-type { margin-top: .5rem; padding-top: 0; border-top: 0; }
+.sections > h2:first-of-type,
+.sections > .section-head:first-of-type { margin-top: .5rem; padding-top: 0; border-top: 0; }
 
 /* Explanatory text belongs to the heading above it, so it sits closer to that than to the
    table below. */
-.history-page > h2 + p,
-.compare-page > h2 + p,
-.settings-page > h2 + p { margin-bottom: .7rem; }
+.sections > h2 + p { margin-bottom: .7rem; }
 
 /* ================================================================= hits
 

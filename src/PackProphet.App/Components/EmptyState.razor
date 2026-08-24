@@ -1,0 +1,22 @@
+@* Nothing to show, and what to do about it.
+
+   The app said this four different ways — a bare .empty, a .hits-empty, a .head with a .call
+   inside it, and plain alerts. An empty list is not a problem to be announced, so this is quiet
+   markup rather than a notice, but it should always answer the same two questions: what is missing,
+   and what fills it. *@
+
+<div class="empty-state">
+    <p class="what">@ChildContent</p>
+    @if (Action is not null)
+    {
+        <div class="act">@Action</div>
+    }
+</div>
+
+@code {
+    /// <summary>What is missing, in the user's terms.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The control that fills it, when there is one.</summary>
+    [Parameter] public RenderFragment? Action { get; set; }
+}

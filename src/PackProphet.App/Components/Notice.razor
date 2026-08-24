@@ -1,0 +1,42 @@
+@* One inline message, in four severities.
+
+   There were eighteen of these across the app and eighteen distinct class strings — not one
+   repeat. With no convention to copy, every new message invented its own padding, and a change to
+   any of it meant finding eighteen places. Severity, density and the live-region role live here
+   instead, so a caller chooses what the message MEANS and nothing else.
+
+   Severity also picks how it is announced, which is the part that was easiest to get wrong by
+   hand: a problem interrupts, a confirmation waits its turn. *@
+
+<div class="alert @Bootstrap @Density @Class" role="@Role">@ChildContent</div>
+
+@code {
+    public enum Level { Info, Success, Warning, Problem }
+
+    [Parameter, EditorRequired] public Level Severity { get; set; }
+
+    /// <summary>Tighter padding, for a message sitting inside a toolbar or a row rather than between blocks.</summary>
+    [Parameter] public bool Dense { get; set; }
+
+    /// <summary>
+    /// Placement only — margins the surrounding page still owns. Everything else about the notice
+    /// is decided here. This goes away once the page shell owns vertical rhythm.
+    /// </summary>
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string Bootstrap => Severity switch
+    {
+        Level.Success => "alert-success",
+        Level.Warning => "alert-warning",
+        Level.Problem => "alert-danger",
+        _ => "alert-info",
+    };
+
+    private string Density => Dense ? "py-1 px-2 small" : "py-2 small";
+
+    // Assertive interrupts whatever a screen reader is saying. That is right for something the
+    // user must deal with and wrong for "added 12 cards", which can wait for a gap.
+    private string Role => Severity is Level.Warning or Level.Problem ? "alert" : "status";
+}

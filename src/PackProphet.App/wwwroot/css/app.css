@@ -2137,3 +2137,13 @@ tr.row-best {
 .nav-more-search .ico { display: flex; flex: none; }
 .nav-more-search:hover { background: var(--bs-secondary-bg); color: var(--bs-body-color); }
 .nav-more-search:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
+/* An empty list is not an error, so it is quiet: no border, no tint, no icon. It only has to say
+   what is missing and offer the thing that fills it. */
+.empty-state {
+    padding: 1.5rem .75rem;
+    text-align: center;
+    color: var(--bs-secondary-color);
+}
+.empty-state .what { margin: 0; font-size: .95rem; }
+.empty-state .act { margin-top: .75rem; }

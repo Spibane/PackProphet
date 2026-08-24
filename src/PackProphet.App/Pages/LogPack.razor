@@ -123,7 +123,7 @@ else
        blocked, since a partial log is sometimes intended. *@
     @if (MiscountHint is { } hint)
     {
-        <div class="alert alert-warning py-1 px-2 small mb-0 mx-3 mt-2" role="alert">@hint</div>
+        <Notice Severity="Notice.Level.Warning" Dense="true" Class="mb-0 mx-3 mt-2">@hint</Notice>
     }
 
     @if (_picked.Count > 0)
@@ -140,7 +140,7 @@ else
 
     @if (_justLogged is not null)
     {
-        <div class="alert alert-success mx-3 my-2 py-2 small" role="status">
+        <Notice Severity="Notice.Level.Success" Class="mx-3 my-2">
             Logged @_justLogged.Value.cards cards.
             Pack points for @_justLogged.Value.set: <strong>@_justLogged.Value.points</strong>
             @if (_justLogged.Value.capped)
@@ -162,7 +162,7 @@ else
                             @onclick="MarkPackOnSale">mark @(_pack.Split(':')[1]) on sale</button>
                 </div>
             }
-        </div>
+        </Notice>
     }
 
     @* No remove mode here: a tap means "this came out of the pack", and the picked strip above is

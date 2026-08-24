@@ -136,10 +136,10 @@
 
 @if (!Session.FactsReady && (_kind.Length > 0 || _subtype.Length > 0 || _stage.Length > 0))
 {
-    <div class="alert alert-secondary py-1 px-2 small">
+    <Notice Severity="Notice.Level.Info" Dense="true">
         Card detail is still downloading, so type and stage filters have nothing to
         match yet. Name search works now.
-    </div>
+    </Notice>
 }
 
 @* What is being filtered on, spelled out. A row of dropdowns does not make its own state obvious,
@@ -173,12 +173,12 @@ else if (_results.Count == 0)
        plenty. Saying how many exist makes that one tap. *@
     @if (_ownedOnly && _elsewhere > 0)
     {
-        <div class="alert alert-secondary py-2 small">
+        <Notice Severity="Notice.Level.Info">
             None of the cards <strong>you own</strong> match &mdash; but
             <strong>@_elsewhere</strong> card(s) in the game do.
             <button class="btn btn-sm btn-outline-primary ms-1 py-0"
                     @onclick="() => SetPool(false)">search all cards</button>
-        </div>
+        </Notice>
     }
     else
     {

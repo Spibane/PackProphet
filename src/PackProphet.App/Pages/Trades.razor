@@ -116,7 +116,7 @@ else
 
         @if (_stamina.AtCap)
         {
-            <div class="alert alert-warning py-2 small">
+            <Notice Severity="Notice.Level.Warning">
                 <strong>Trade stamina is full, so it has stopped regenerating.</strong>
                 @if (_stamina.WastedSinceFull > 0)
                 {
@@ -125,7 +125,7 @@ else
                         one starts the clock again.
                     </span>
                 }
-            </div>
+            </Notice>
         }
 
         @if (_shown.Count == 0)

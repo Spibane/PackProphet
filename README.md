@@ -1,5 +1,7 @@
 # PackProphet
 
+**[spibane.github.io/PackProphet](https://spibane.github.io/PackProphet/)**
+
 A collection tracker for **Pokémon TCG Pocket** built around one question:
 
 > **Which pack should I open next?**
@@ -116,6 +118,23 @@ breach waiting to happen. Reading a screenshot reaches the same result with no c
 no network round trip. That is a feature, not a limitation.
 
 ---
+
+## Tests
+
+Two suites, and the split is deliberate.
+
+- `tests/PackProphet.Tests` — the engine. No UI, no browser, runs in about a second.
+- `tests/PackProphet.App.Tests` — the pages, rendered with bUnit against the vendored data
+  snapshot served over a fake `HttpClient`. Every routable page is discovered by **reflection**
+  and rendered twice: on a brand-new profile and on a populated one. The empty case is the
+  important half — it is the state every user starts in, and the one where a page indexes a list
+  that has nothing in it, which compiles cleanly and passes every engine test.
+
+`dotnet test` runs both, and CI runs them before it will deploy.
+
+Each regression test here was checked against the defect it describes: the fix reverted, the suite
+confirmed red, the fix restored. A test that passes on broken code is worse than no test, because
+it gets counted as coverage.
 
 ## Running it
 

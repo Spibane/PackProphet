@@ -240,6 +240,314 @@ else
             </div>
         }
 
+        @* Every extra breakdown lives behind a button in one row here, at the top of the page,
+           rather than below the ranking table &mdash; that table runs to dozens of rows across
+           every priceable pack, and a button only reachable by scrolling past all of them may as
+           well not exist. *@
+        <div class="d-flex flex-wrap gap-2 px-3 mb-3">
+            @if (!IsWishScope)
+            {
+                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleAdvisor">
+                    @(_advisorOpen ? "hide" : "show") what each rarity would cost
+                </button>
+            }
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleBatch">
+                @(_batchOpen ? "hide" : "show") buying @GameRules.PacksPerBatch at once
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleAllocate">
+                @(_allocateOpen ? "hide" : "show") splitting a budget
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="TogglePoints">
+                @(_pointsOpen ? "hide" : "show") pack points
+            </button>
+        </div>
+
+        @if (_advisorOpen && !IsWishScope)
+        {
+            <div class="px-3 pb-3">
+                <table class="table table-sm w-auto">
+                    <thead>
+                        <tr><th>rarity</th><th class="num">1 copy</th><th class="num">2 copies</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (rung, one, two) in _advisor)
+                        {
+                            <tr class="@(Draft.Wants(rung.Index) ? "table-active" : "")">
+                                <td>@rung.Symbol @(Draft.Wants(rung.Index) ? $"(x{Draft.Copies(rung.Index)})" : "")</td>
+                                <td class="num">@Fmt(one)</td>
+                                <td class="num">@Fmt(two)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <p class="small text-body-secondary mb-0">
+                    Expected packs to finish <em>that rarity alone</em>, opening the best available
+                    pack each time &mdash; so it reads as the cost of adding a rarity to your
+                    selection. People set impossible targets because nobody ever priced them.
+                </p>
+            </div>
+        }
+
+        @if (_batchOpen)
+        {
+            <div class="px-3 pb-3">
+                @* The game sells ten of a set in one action, so the batch gets a real answer
+                   rather than being left to intuition. *@
+                <p class="small text-body-secondary">
+                    Ten packs of a set costs exactly ten packs and guarantees nothing extra, so it
+                    <strong>cannot beat opening ten singles of the same pack</strong> &mdash; those
+                    are the same ten draws. What it does decide is <em>which</em> set gets the ten,
+                    and that is a real difference. The figures below are for the whole batch, not
+                    per pack.
+                </p>
+
+                @if (_batches.Count == 0)
+                {
+                    <p class="small text-body-secondary mb-0">
+                        Nothing outstanding that a purchasable pack can supply.
+                    </p>
+                }
+                else
+                {
+                    <table class="table table-sm align-middle w-auto">
+                        <thead>
+                            <tr>
+                                <th>@GameRules.PacksPerBatch packs of</th>
+                                <th class="num">new cards expected</th>
+                                <th class="num">chance of nothing new</th>
+                                <th class="num">against the best</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in _batches.Take(10))
+                            {
+                                var best = _batches[0].ExpectedNewCards;
+                                <tr class="@(b == _batches[0] ? "row-best" : "")">
+                                    <td>
+                                        <span class="pack-thumb"
+                                              style="background-image:url('@Session.PackArtUrl(b.PackKey)')"></span>
+                                        <strong>@b.PackKey.Split(':')[1]</strong>
+                                        <span class="text-body-secondary small">@b.PackKey.Split(':')[0]</span>
+                                    </td>
+                                    <td class="num">@b.ExpectedNewCards.ToString("N1")</td>
+                                    @* The figure a per-pack probability hides: ten packs that
+                                       advance nothing. *@
+                                    <td class="num">
+                                        @(b.ChanceOfNothing < 0.001 ? "—" : b.ChanceOfNothing.ToString("P1"))
+                                    </td>
+                                    <td class="num">
+                                        @if (b == _batches[0])
+                                        {
+                                            <span class="fw-semibold">best</span>
+                                        }
+                                        else
+                                        {
+                                            <span>&minus;@((best - b.ExpectedNewCards).ToString("N1"))</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <p class="small text-body-secondary mb-0">
+                        One thing this cannot price: a batch takes away the chance to change your
+                        mind after each pull. That costs nothing early on, when the same pack stays
+                        the best pick for far longer than ten packs &mdash; but on a nearly
+                        finished set the best pack changes the moment its last card lands.
+                    </p>
+                }
+            </div>
+        }
+
+        @if (_allocateOpen)
+        {
+            <div class="px-3 pb-3">
+                @* No single pack can complete a multi-set target, so a fixed budget is worth
+                   splitting rather than sinking into whichever pack currently ranks first. *@
+                <p class="small text-body-secondary">
+                    How many packs to spend, split across whichever pack keys best serve the
+                    current target.
+                </p>
+
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <label for="allocate-budget" class="small text-body-secondary">packs</label>
+                    <input id="allocate-budget" type="number" min="1" max="1000"
+                           class="form-control form-control-sm w-auto"
+                           @bind="_allocateBudget" @bind:after="BuildAllocation" />
+                </div>
+
+                @if (_allocation is null || _allocation.Rows.Count == 0)
+                {
+                    <p class="small text-body-secondary mb-0">
+                        Nothing outstanding that a purchasable pack can supply.
+                    </p>
+                }
+                else
+                {
+                    <table class="table table-sm align-middle w-auto">
+                        <thead>
+                            <tr>
+                                <th>pack</th>
+                                <th class="num">packs to buy</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in _allocation.Rows)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="pack-thumb"
+                                              style="background-image:url('@Session.PackArtUrl(row.PackKey)')"></span>
+                                        <strong>@row.PackName</strong>
+                                        <span class="text-body-secondary small">@row.Set</span>
+                                    </td>
+                                    <td class="num">@row.Packs</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <p class="small text-body-secondary mb-0">
+                        Expected to satisfy @_allocation.ExpectedNewCards.ToString("N1") of the
+                        @_outstanding outstanding demands
+                        (@_allocation.ChanceOfFinishing.ToString("P1") chance of finishing all of
+                        them).
+                    </p>
+                }
+            </div>
+        }
+
+        @if (_pointsOpen)
+        {
+            <div class="px-3 pb-3">
+                @* Pack points are a byproduct of opening rather than an alternative to it: you
+                   earn five per pack whatever you do. So this panel asks which cards deserve a
+                   limited, per-set budget rather than "buy or pull?". *@
+                <p class="small text-body-secondary">
+                    Points are earned at @GameRules.PackPointsPerPack per pack and are spendable
+                    <strong>only within the set whose packs earned them</strong> &mdash; there is
+                    no cross-funding. They stop accruing at @GameRules.PackPointsCap.
+                    Logging packs adds them automatically; set a starting balance here if you
+                    were already playing.
+                </p>
+
+                @if (_capWarnings.Count > 0)
+                {
+                    <div class="alert alert-warning py-2 small">
+                        @foreach (var warning in _capWarnings)
+                        {
+                            <div>
+                                <strong>@warning.Set</strong>
+                                @if (warning.AtCap)
+                                {
+                                    <span>
+                                        is at the cap &mdash; every further pack of this set earns
+                                        <strong>nothing</strong>. Spend before you open.
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>reaches the cap in @warning.PacksUntilCap more pack(s).</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                <table class="table table-sm align-middle w-auto">
+                    <thead>
+                        <tr>
+                            <th>set</th>
+                            <th class="num">balance</th>
+                            <th class="num">packs to cap</th>
+                            <th>could buy now</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _pointRows)
+                        {
+                            <tr class="@(row.AtCap ? "table-warning" : "")">
+                                <td>
+                                    <strong>@row.Set</strong>
+                                    <span class="small text-body-secondary ms-1">@Session.Sets.DisplayName(row.Set)</span>
+                                </td>
+                                <td class="num">
+                                    <input class="form-control form-control-sm text-end" style="width:5.5rem"
+                                           type="number" min="0" max="@GameRules.PackPointsCap" step="5"
+                                           value="@row.Balance"
+                                           @onchange="e => SetBalance(row.Set, e)"
+                                           aria-label="@($"Pack points in {row.Set}")" />
+                                </td>
+                                <td class="num">@(row.AtCap ? "—" : row.PacksUntilCap.ToString())</td>
+                                <td class="small">
+                                    @if (row.AffordableNow.Count == 0)
+                                    {
+                                        <span class="text-body-tertiary">nothing you still need</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@row.AffordableNow.Count card(s)</span>
+                                        <span class="text-body-secondary">
+                                            &mdash; dearest: @row.AffordableNow[0].Name
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <h2 class="mt-3 h6">Where points are worth spending</h2>
+                @if (_pointsShop.Count == 0)
+                {
+                    <p class="small text-body-secondary mb-0">
+                        Nothing you still need is better bought than pulled, at this scope.
+                    </p>
+                }
+                else
+                {
+                    <p class="small text-body-secondary">
+                        Ranked by <em>packs saved per pack's worth of points</em> &mdash; not by
+                        price. Almost every card looks cheaper by points, which is true and
+                        misleading: a Crown returns about 2.5 packs saved per pack of points
+                        while an Immersive returns 0.3, so ranking by price alone recommends
+                        precisely the worst purchases. Anything at or below 1.0 is left out.
+                    </p>
+                    <table class="table table-sm align-middle w-auto">
+                        <thead>
+                            <tr>
+                                <th>card</th>
+                                <th class="num">pull</th>
+                                <th class="num">points</th>
+                                <th class="num">packs saved per pack of points</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in _pointsShop.Take(12))
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="pack-thumb deck-thumb"
+                                              data-tip-img="@row.Card.ArtUrl" data-tip="@row.Card.Name"
+                                              style="background-image:url('@row.Card.ArtUrl')"></span>
+                                        <strong>@row.Card.Name</strong>
+                                        <span class="small text-body-secondary ms-1">@row.Card.Set&thinsp;@row.Card.Number</span>
+                                    </td>
+                                    <td class="num">@Fmt(row.PullPacks)</td>
+                                    <td class="num">@Fmt(row.PointsPacks)</td>
+                                    <td class="num fw-semibold">@row.Value.ToString("0.0")&times;</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        }
+
+        @if (_advisorOpen || _batchOpen || _allocateOpen || _pointsOpen)
+        {
+            <hr />
+        }
+
         <table class="table table-sm align-middle pack-table">
             <thead>
                 <tr>
@@ -391,249 +699,6 @@ else
             </tbody>
         </table>
 
-        <div class="px-3 pb-4">
-            @* Computed on demand. Pricing every rung at both copy policies is the heaviest thing
-               on the page, and it is reference material rather than something needed on every
-               edit, so it does not run when a filter or toggle changes. *@
-            @* Hidden under a wishlist scope: the advisor prices rarity rungs, which says nothing
-               about a hand-picked list of cards. *@
-            @if (!IsWishScope)
-            {
-            <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="ToggleAdvisor">
-                @(_advisorOpen ? "hide" : "show") what each rarity would cost
-            </button>
-            }
-
-            @if (_advisorOpen && !IsWishScope)
-            {
-            <table class="table table-sm w-auto">
-                <thead>
-                    <tr><th>rarity</th><th class="num">1 copy</th><th class="num">2 copies</th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var (rung, one, two) in _advisor)
-                    {
-                        <tr class="@(Draft.Wants(rung.Index) ? "table-active" : "")">
-                            <td>@rung.Symbol @(Draft.Wants(rung.Index) ? $"(x{Draft.Copies(rung.Index)})" : "")</td>
-                            <td class="num">@Fmt(one)</td>
-                            <td class="num">@Fmt(two)</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-            <p class="small text-body-secondary mb-0">
-                Expected packs to finish <em>that rarity alone</em>, opening the best available
-                pack each time &mdash; so it reads as the cost of adding a rarity to your
-                selection. People set impossible targets because nobody ever priced them.
-            </p>
-            }
-
-            <hr />
-
-            @* The game sells ten of a set in one action, so the batch gets a real answer rather
-               than being left to intuition. *@
-            <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="ToggleBatch">
-                @(_batchOpen ? "hide" : "show") buying @GameRules.PacksPerBatch at once
-            </button>
-
-            @if (_batchOpen)
-            {
-                <p class="small text-body-secondary">
-                    Ten packs of a set costs exactly ten packs and guarantees nothing extra, so it
-                    <strong>cannot beat opening ten singles of the same pack</strong> &mdash; those
-                    are the same ten draws. What it does decide is <em>which</em> set gets the ten,
-                    and that is a real difference. The figures below are for the whole batch, not
-                    per pack.
-                </p>
-
-                @if (_batches.Count == 0)
-                {
-                    <p class="small text-body-secondary mb-0">
-                        Nothing outstanding that a purchasable pack can supply.
-                    </p>
-                }
-                else
-                {
-                    <table class="table table-sm align-middle w-auto">
-                        <thead>
-                            <tr>
-                                <th>@GameRules.PacksPerBatch packs of</th>
-                                <th class="num">new cards expected</th>
-                                <th class="num">chance of nothing new</th>
-                                <th class="num">against the best</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var b in _batches.Take(10))
-                            {
-                                var best = _batches[0].ExpectedNewCards;
-                                <tr class="@(b == _batches[0] ? "row-best" : "")">
-                                    <td>
-                                        <span class="pack-thumb"
-                                              style="background-image:url('@Session.PackArtUrl(b.PackKey)')"></span>
-                                        <strong>@b.PackKey.Split(':')[1]</strong>
-                                        <span class="text-body-secondary small">@b.PackKey.Split(':')[0]</span>
-                                    </td>
-                                    <td class="num">@b.ExpectedNewCards.ToString("N1")</td>
-                                    @* The figure a per-pack probability hides: ten packs that
-                                       advance nothing. *@
-                                    <td class="num">
-                                        @(b.ChanceOfNothing < 0.001 ? "—" : b.ChanceOfNothing.ToString("P1"))
-                                    </td>
-                                    <td class="num">
-                                        @if (b == _batches[0])
-                                        {
-                                            <span class="fw-semibold">best</span>
-                                        }
-                                        else
-                                        {
-                                            <span>&minus;@((best - b.ExpectedNewCards).ToString("N1"))</span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                    <p class="small text-body-secondary mb-0">
-                        One thing this cannot price: a batch takes away the chance to change your
-                        mind after each pull. That costs nothing early on, when the same pack stays
-                        the best pick for far longer than ten packs &mdash; but on a nearly
-                        finished set the best pack changes the moment its last card lands.
-                    </p>
-                }
-            }
-
-            <hr />
-
-            @* Pack points are a byproduct of opening rather than an alternative to it: you earn
-               five per pack whatever you do. So this panel asks which cards deserve a limited,
-               per-set budget rather than "buy or pull?". *@
-            <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="TogglePoints">
-                @(_pointsOpen ? "hide" : "show") pack points
-            </button>
-
-            @if (_pointsOpen)
-            {
-                <p class="small text-body-secondary">
-                    Points are earned at @GameRules.PackPointsPerPack per pack and are spendable
-                    <strong>only within the set whose packs earned them</strong> &mdash; there is
-                    no cross-funding. They stop accruing at @GameRules.PackPointsCap.
-                    Logging packs adds them automatically; set a starting balance here if you
-                    were already playing.
-                </p>
-
-                @if (_capWarnings.Count > 0)
-                {
-                    <div class="alert alert-warning py-2 small">
-                        @foreach (var warning in _capWarnings)
-                        {
-                            <div>
-                                <strong>@warning.Set</strong>
-                                @if (warning.AtCap)
-                                {
-                                    <span>
-                                        is at the cap &mdash; every further pack of this set earns
-                                        <strong>nothing</strong>. Spend before you open.
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span>reaches the cap in @warning.PacksUntilCap more pack(s).</span>
-                                }
-                            </div>
-                        }
-                    </div>
-                }
-
-                <table class="table table-sm align-middle w-auto">
-                    <thead>
-                        <tr>
-                            <th>set</th>
-                            <th class="num">balance</th>
-                            <th class="num">packs to cap</th>
-                            <th>could buy now</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var row in _pointRows)
-                        {
-                            <tr class="@(row.AtCap ? "table-warning" : "")">
-                                <td>
-                                    <strong>@row.Set</strong>
-                                    <span class="small text-body-secondary ms-1">@Session.Sets.DisplayName(row.Set)</span>
-                                </td>
-                                <td class="num">
-                                    <input class="form-control form-control-sm text-end" style="width:5.5rem"
-                                           type="number" min="0" max="@GameRules.PackPointsCap" step="5"
-                                           value="@row.Balance"
-                                           @onchange="e => SetBalance(row.Set, e)"
-                                           aria-label="@($"Pack points in {row.Set}")" />
-                                </td>
-                                <td class="num">@(row.AtCap ? "—" : row.PacksUntilCap.ToString())</td>
-                                <td class="small">
-                                    @if (row.AffordableNow.Count == 0)
-                                    {
-                                        <span class="text-body-tertiary">nothing you still need</span>
-                                    }
-                                    else
-                                    {
-                                        <span>@row.AffordableNow.Count card(s)</span>
-                                        <span class="text-body-secondary">
-                                            &mdash; dearest: @row.AffordableNow[0].Name
-                                        </span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-
-                <h2 class="mt-3 h6">Where points are worth spending</h2>
-                @if (_pointsShop.Count == 0)
-                {
-                    <p class="small text-body-secondary mb-0">
-                        Nothing you still need is better bought than pulled, at this scope.
-                    </p>
-                }
-                else
-                {
-                    <p class="small text-body-secondary">
-                        Ranked by <em>packs saved per pack's worth of points</em> &mdash; not by
-                        price. Almost every card looks cheaper by points, which is true and
-                        misleading: a Crown returns about 2.5 packs saved per pack of points
-                        while an Immersive returns 0.3, so ranking by price alone recommends
-                        precisely the worst purchases. Anything at or below 1.0 is left out.
-                    </p>
-                    <table class="table table-sm align-middle w-auto">
-                        <thead>
-                            <tr>
-                                <th>card</th>
-                                <th class="num">pull</th>
-                                <th class="num">points</th>
-                                <th class="num">packs saved per pack of points</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var row in _pointsShop.Take(12))
-                            {
-                                <tr>
-                                    <td>
-                                        <span class="pack-thumb deck-thumb"
-                                              data-tip-img="@row.Card.ArtUrl" data-tip="@row.Card.Name"
-                                              style="background-image:url('@row.Card.ArtUrl')"></span>
-                                        <strong>@row.Card.Name</strong>
-                                        <span class="small text-body-secondary ms-1">@row.Card.Set&thinsp;@row.Card.Number</span>
-                                    </td>
-                                    <td class="num">@Fmt(row.PullPacks)</td>
-                                    <td class="num">@Fmt(row.PointsPacks)</td>
-                                    <td class="num fw-semibold">@row.Value.ToString("0.0")&times;</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-            }
-        </div>
     }
 }
 
@@ -822,6 +887,36 @@ else
         _batchFor = RankSignature();
         _batches = Session.Ranker.Batches(
             CurrentTarget(), Session.Owned, GameRules.PacksPerBatch, Session.UnavailablePacks);
+    }
+
+    private bool _allocateOpen;
+    private int _allocateBudget = GameRules.PacksPerBatch;
+    private string _allocateFor = "";
+    private PackAllocator.AllocationPlan? _allocation;
+
+    private async Task ToggleAllocate()
+    {
+        _allocateOpen = !_allocateOpen;
+        if (!_allocateOpen) return;
+
+        await BuildAllocation();
+    }
+
+    private async Task BuildAllocation()
+    {
+        var signature = $"{RankSignature()}|{_allocateBudget}";
+        if (_allocateFor == signature && _allocation is not null) return;
+
+        await Busy.RunAsync($"Splitting {_allocateBudget} packs…", BuildAllocationCore);
+    }
+
+    private void BuildAllocationCore()
+    {
+        if (Session.Allocator is null) return;
+
+        _allocateFor = $"{RankSignature()}|{_allocateBudget}";
+        _allocation = Session.Allocator.Allocate(
+            CurrentTarget(), Session.Owned, _allocateBudget, Session.UnavailablePacks);
     }
 
     private async Task TogglePoints()

@@ -16,3 +16,4 @@ obj/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+.claude/

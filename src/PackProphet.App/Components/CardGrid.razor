@@ -73,7 +73,7 @@
        knowing about it. It is also the switch a pointer user wants when they stop tapping and
        start typing counts. *@
     <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
-            title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail.">
+            title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail. Shift+move selects a range to add or remove in bulk.">
         keyboard
     </button>
 
@@ -123,6 +123,7 @@
         <span><kbd>0</kbd>&ndash;<kbd>9</kbd> set count</span>
         <span><kbd>enter</kbd> add one</span>
         <span><kbd>&minus;</kbd> remove one</span>
+        <span><kbd>shift</kbd>+move select a range, then <kbd>enter</kbd>/<kbd>&minus;</kbd> applies to all</span>
         <span><kbd>i</kbd> card detail, <kbd>esc</kbd> back</span>
     </div>
 
@@ -826,6 +827,26 @@
         for (var i = lo; i <= hi; i++) swept.Add(Cards[i]);
 
         await OnSweep.InvokeAsync((swept, DeltaFor(false)));
+        StateHasChanged();   // interop callback runs outside the render loop
+    }
+
+    /// <summary>
+    /// The keyboard equivalent of a drag sweep: Shift+Arrow extends a range from the cursor,
+    /// then Enter or minus applies one delta to the whole range as a single undo step — the
+    /// same one <see cref="ApplySweep"/> gives a pointer drag. Unordered, since gridkeys.js
+    /// tracks an anchor and a cursor rather than a lo/hi pair.
+    /// </summary>
+    [JSInvokable]
+    public async Task KeyRangeAdjust(int a, int b, int delta)
+    {
+        var lo = Math.Max(0, Math.Min(a, b));
+        var hi = Math.Min(Cards.Count - 1, Math.Max(a, b));
+        if (hi < lo) return;
+
+        var swept = new List<PocketCard>(hi - lo + 1);
+        for (var i = lo; i <= hi; i++) swept.Add(Cards[i]);
+
+        await OnSweep.InvokeAsync((swept, delta));
         StateHasChanged();   // interop callback runs outside the render loop
     }
 

@@ -451,6 +451,10 @@ main:focus { outline: none; }
 .card-tile.sel { outline: 3px solid var(--bs-primary); }
 .card-tile.picked { outline: 3px solid var(--bs-success); opacity: 1; }
 
+/* A row has no card art to outline against, so the sweep/range highlight is a tint instead —
+   stronger than .owned's, since a selection has to read over a card already tinted for owning. */
+.card-line.sel { background: color-mix(in srgb, var(--bs-primary) 22%, transparent); }
+
 .card-tile img { width: 100%; height: 100%; display: block; object-fit: cover; background: #333; }
 .card-tile img.img-failed { opacity: .25; }
 

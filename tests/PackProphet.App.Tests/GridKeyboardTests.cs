@@ -20,6 +20,7 @@ public class GridKeyboardTests : AppHost
 
     private readonly List<(PocketCard Card, int Delta)> _adjusted = [];
     private readonly List<(PocketCard Card, int Count)> _set = [];
+    private readonly List<(IReadOnlyList<PocketCard> Cards, int Delta)> _swept = [];
 
     private IRenderedComponent<CardGrid> Grid(IReadOnlyList<PocketCard> cards, bool allowSet = true)
     {
@@ -33,6 +34,8 @@ public class GridKeyboardTests : AppHost
             if (allowSet)
                 p.Add(g => g.OnSet, EventCallback.Factory.Create<(PocketCard, int)>(
                     this, a => _set.Add(a)));
+            p.Add(g => g.OnSweep, EventCallback.Factory.Create<(IReadOnlyList<PocketCard>, int)>(
+                this, a => _swept.Add(a)));
             p.Add(g => g.Columns, 4);
         });
     }
@@ -96,6 +99,71 @@ public class GridKeyboardTests : AppHost
         Assert.All(_adjusted, a => Assert.Equal(cards[2].OwnershipKey, a.Card.OwnershipKey));
         Assert.Equal(+1, _adjusted[0].Delta);
         Assert.Equal(-1, _adjusted[1].Delta);
+    }
+
+    [Fact]
+    public async Task A_keyboard_range_applies_one_delta_to_every_card_in_it()
+    {
+        // The keyboard equivalent of a drag sweep: gridkeys.js tracks an anchor and a cursor
+        // instead of a lo/hi pair, so this is what confirms the two ends still resolve to the
+        // same inclusive range a pointer drag would sweep.
+        await ReadyAsync();
+        var cards = Cards(6);
+        var grid = Grid(cards);
+
+        await grid.InvokeAsync(() => grid.Instance.KeyRangeAdjust(1, 4, +1));
+
+        var swept = Assert.Single(_swept);
+        Assert.Equal(+1, swept.Delta);
+        Assert.Equal(
+            cards.Skip(1).Take(4).Select(c => c.OwnershipKey),
+            swept.Cards.Select(c => c.OwnershipKey));
+        Assert.Empty(_adjusted);   // a range never also fires the single-tile path
+    }
+
+    [Fact]
+    public async Task A_keyboard_range_does_not_care_which_end_is_the_anchor()
+    {
+        // Shift+ArrowLeft from a cursor ahead of the anchor sends the pair the other way round;
+        // the applied range must come out identical either direction.
+        await ReadyAsync();
+        var cards = Cards(6);
+        var grid = Grid(cards);
+
+        await grid.InvokeAsync(() => grid.Instance.KeyRangeAdjust(4, 1, -1));
+
+        var swept = Assert.Single(_swept);
+        Assert.Equal(-1, swept.Delta);
+        Assert.Equal(
+            cards.Skip(1).Take(4).Select(c => c.OwnershipKey),
+            swept.Cards.Select(c => c.OwnershipKey));
+    }
+
+    [Fact]
+    public async Task A_keyboard_range_reaching_outside_the_list_is_clamped_not_refused()
+    {
+        // The index comes from a JS-tracked anchor, so it can only ever be stale in the same
+        // ordinary way a single cursor index can — clamp to what still exists rather than drop
+        // the whole action a scroll or filter change happened to make partly out of range.
+        await ReadyAsync();
+        var cards = Cards(4);
+        var grid = Grid(cards);
+
+        await grid.InvokeAsync(() => grid.Instance.KeyRangeAdjust(-2, 2, +1));
+
+        var swept = Assert.Single(_swept);
+        Assert.Equal(cards.Take(3).Select(c => c.OwnershipKey), swept.Cards.Select(c => c.OwnershipKey));
+    }
+
+    [Fact]
+    public async Task A_keyboard_range_entirely_outside_the_list_does_nothing()
+    {
+        await ReadyAsync();
+        var grid = Grid(Cards(3));
+
+        await grid.InvokeAsync(() => grid.Instance.KeyRangeAdjust(9, 12, +1));
+
+        Assert.Empty(_swept);
     }
 
     [Fact]

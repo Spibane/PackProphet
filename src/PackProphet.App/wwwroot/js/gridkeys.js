@@ -17,7 +17,10 @@
 export function attach(host, owner, columns) {
     if (!host) return;
 
-    const state = { host, owner, columns: Math.max(1, columns | 0), idx: -1 };
+    // anchor is the other end of an in-progress Shift+move range select, -1 when there is none.
+    // The keyboard equivalent of gridsweep.js's drag: that one tracks a pointer's start and
+    // current tile the same way, and both end up calling the same bulk-apply on release/Enter.
+    const state = { host, owner, columns: Math.max(1, columns | 0), idx: -1, anchor: -1 };
     host.__ppKeys = state;
 
     host.setAttribute('tabindex', '0');
@@ -105,6 +108,9 @@ function onPointerDown(e) {
     // Out of keyboard mode: this is a pointer interaction, so nothing keyboard-shaped should
     // appear. The cursor still MOVES — silently — so that arrows continue from where you clicked.
     keyMode(state, false);
+    // A click elsewhere abandons whatever range Shift+Arrow was building — otherwise a later
+    // Enter could apply to a selection the pointer interaction gave no sign was still live.
+    clearRange(state);
 
     const tile = e.target && e.target.closest ? e.target.closest('[data-idx]') : null;
     if (tile) mark(state, Number(tile.getAttribute('data-idx')));
@@ -112,8 +118,13 @@ function onPointerDown(e) {
 
 function onBlur(e) {
     const state = stateOf(e);
+    if (!state) return;
     // Leaving the grid ends the mode, or the legend sits there after focus has gone elsewhere.
-    if (state) keyMode(state, false);
+    keyMode(state, false);
+    // A range only means anything while you are still choosing what to do with it. Leaving the
+    // grid mid-selection and coming back later to press Enter would apply to tiles you can no
+    // longer see and may not remember choosing.
+    clearRange(state);
 }
 
 function onFocus(e) {
@@ -155,6 +166,66 @@ function announce(state, tile) {
     if (live) live.textContent = tile.getAttribute('aria-label') || '';
 }
 
+/// Highlights every rendered tile between the anchor and the cursor with the same .sel class
+/// gridsweep.js paints a drag with, so a range picked either way looks the same.
+///
+/// Only tiles the virtualiser currently has in the DOM can be painted. A long Shift+PageDown
+/// can extend a range past what is on screen without repainting the tiles that scroll into view
+/// afterward — cosmetic only, since KeyRangeAdjust applies to the index range itself, not to
+/// whatever happens to carry the .sel class at the moment Enter is pressed.
+function paintRange(state) {
+    if (state.anchor < 0) return;
+    const lo = Math.min(state.anchor, state.idx), hi = Math.max(state.anchor, state.idx);
+    for (const t of tiles(state.host)) {
+        const i = Number(t.getAttribute('data-idx'));
+        t.classList.toggle('sel', i >= lo && i <= hi);
+    }
+}
+
+function clearRange(state) {
+    if (state.anchor < 0) return;
+    for (const t of state.host.querySelectorAll('[data-idx].sel')) t.classList.remove('sel');
+    state.anchor = -1;
+}
+
+/// Overwrites the per-tile announcement with a count while a range is active, so a screen reader
+/// hears "4 cards selected" rather than only the name of whichever tile the cursor lands on next.
+function announceRange(state) {
+    if (state.anchor < 0) return;
+    const live = state.host.querySelector('[data-grid-live]');
+    if (!live) return;
+    const n = Math.abs(state.idx - state.anchor) + 1;
+    live.textContent = n <= 1 ? '' : `${n} cards selected`;
+}
+
+/// One step of cursor movement, extending or collapsing a range depending on Shift — the shared
+/// path every arrow/page key goes through so they agree on when a selection starts and ends.
+function stepAndMaybeRange(state, e, delta) {
+    if (e.shiftKey) {
+        if (state.anchor < 0) state.anchor = state.idx;
+        move(state, delta);
+        paintRange(state);
+        announceRange(state);
+    } else {
+        clearRange(state);
+        move(state, delta);
+    }
+}
+
+/// Enter/+/- while a real range (more than the one tile under the cursor) is active applies to
+/// the whole range as a single undo step, the same call a drag sweep makes on release. Otherwise
+/// this is just the single-tile adjustment it always was.
+function applyOrAdjust(state, delta) {
+    if (state.anchor >= 0 && state.anchor !== state.idx) {
+        const a = state.anchor, b = state.idx;
+        clearRange(state);
+        state.owner.invokeMethodAsync('KeyRangeAdjust', a, b, delta);
+    } else {
+        clearRange(state);
+        adjust(state, delta);
+    }
+}
+
 function move(state, delta) {
     const all = tiles(state.host);
     if (all.length === 0) return;
@@ -184,36 +255,50 @@ function onKeyDown(e) {
     let handled = true;
 
     switch (e.key) {
-        case 'ArrowRight': move(state, 1); break;
-        case 'ArrowLeft': move(state, -1); break;
-        case 'ArrowDown': move(state, cols); break;
-        case 'ArrowUp': move(state, -cols); break;
-        case 'PageDown': move(state, cols * 5); break;
-        case 'PageUp': move(state, -cols * 5); break;
-        case 'Home': jump(state, false); break;
-        case 'End': jump(state, true); break;
+        case 'ArrowRight': stepAndMaybeRange(state, e, 1); break;
+        case 'ArrowLeft': stepAndMaybeRange(state, e, -1); break;
+        case 'ArrowDown': stepAndMaybeRange(state, e, cols); break;
+        case 'ArrowUp': stepAndMaybeRange(state, e, -cols); break;
+        case 'PageDown': stepAndMaybeRange(state, e, cols * 5); break;
+        case 'PageUp': stepAndMaybeRange(state, e, -cols * 5); break;
+        // Not range-aware: jump() estimates a position from the scroller rather than stepping
+        // tile by tile, so it has no path of intermediate indexes to select. Clearing here
+        // rather than leaving it stops a later Shift+Arrow resuming from a stale anchor pointing
+        // at wherever the cursor happened to be before the jump.
+        case 'Home': clearRange(state); jump(state, false); break;
+        case 'End': clearRange(state); jump(state, true); break;
 
         case 'Enter':
         case ' ':
         case '+':
         case '=':
-            adjust(state, 1);
+            applyOrAdjust(state, 1);
             break;
 
         case '-':
         case 'Backspace':
         case 'Delete':
-            adjust(state, -1);
+            applyOrAdjust(state, -1);
+            break;
+
+        // Cancels a range without moving or applying anything. Only claimed while one is active,
+        // so Escape still falls through to whatever else the page does with it otherwise — the
+        // return-to-card-detail flow this grid's own hint legend advertises.
+        case 'Escape':
+            if (state.anchor < 0) { handled = false; break; }
+            clearRange(state);
             break;
 
         case 'i':
         case 'I':
+            clearRange(state);
             if (state.idx >= 0) state.owner.invokeMethodAsync('KeyOpen', state.idx);
             break;
 
         default:
             // A digit sets the count outright: 0-9 in place of nine presses of +.
             if (e.key >= '0' && e.key <= '9' && state.idx >= 0) {
+                clearRange(state);
                 state.owner.invokeMethodAsync('KeySet', state.idx, Number(e.key));
             } else {
                 handled = false;

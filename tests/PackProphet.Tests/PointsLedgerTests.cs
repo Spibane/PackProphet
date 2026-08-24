@@ -6,6 +6,11 @@ public class PointsLedgerTests
 {
     private static PointsLedger Ledger => new(Snapshot.Index(), Snapshot.Rarities());
 
+    private static PackProphet.Data.CardIndex Ix => Snapshot.Index();
+
+    /// <summary>Collect everything, one copy each - the widest plan, so nothing is filtered out.</summary>
+    private static RarityPlan All => RarityPlan.Uniform(Ix.Ladder.Everything);
+
     [Fact]
     public void PointsAccrueAtFivePerPack()
     {
@@ -27,7 +32,7 @@ public class PointsLedgerTests
         var earned = Ledger.EarnedFrom([("A1", 10_000)]);
         Assert.Equal(GameRules.PackPointsCap, earned["A1"]);
 
-        var state = Ledger.Describe("A1", earned["A1"], new Collection());
+        var state = Ledger.Describe("A1", earned["A1"], new Collection(), All);
         Assert.True(state.AtCap);
         Assert.Equal(0, state.PacksUntilCap);
     }
@@ -35,7 +40,7 @@ public class PointsLedgerTests
     [Fact]
     public void PacksUntilCap_CountsDownCorrectly()
     {
-        var state = Ledger.Describe("A1", GameRules.PackPointsCap - 20, new Collection());
+        var state = Ledger.Describe("A1", GameRules.PackPointsCap - 20, new Collection(), All);
         Assert.False(state.AtCap);
         Assert.Equal(4, state.PacksUntilCap);   // 20 points remaining at 5 per pack
     }
@@ -52,7 +57,7 @@ public class PointsLedgerTests
     [Fact]
     public void AffordableNow_ListsOnlyMissingCardsWithinBudget()
     {
-        var state = Ledger.Describe("A1", 200, new Collection());
+        var state = Ledger.Describe("A1", 200, new Collection(), All);
 
         Assert.NotEmpty(state.AffordableNow);
         Assert.All(state.AffordableNow, c => Assert.Equal("A1", c.Set));
@@ -65,11 +70,81 @@ public class PointsLedgerTests
     [Fact]
     public void AlreadyOwnedCards_AreNotListedAsAffordable()
     {
-        var before = Ledger.Describe("A1", 2500, new Collection()).AffordableNow;
+        var before = Ledger.Describe("A1", 2500, new Collection(), All).AffordableNow;
         Assert.NotEmpty(before);
 
         var owned = before.Aggregate(new Collection(), (c, card) => c.With(card.OwnershipKey, 1));
-        Assert.Empty(Ledger.Describe("A1", 2500, owned).AffordableNow);
+        Assert.Empty(Ledger.Describe("A1", 2500, owned, All).AffordableNow);
+    }
+
+    [Fact]
+    public void Describe_NamesTheRarestCardStillWantedAndThePacksToAffordIt()
+    {
+        var empty = Ledger.Describe("A1", 0, new Collection(), All);
+
+        Assert.NotNull(empty.RarestWanted);
+        Assert.True(empty.RarestPoints > 0);
+
+        // From nothing, the packs figure is simply the price at five points a pack.
+        var expected = (int)Math.Ceiling(empty.RarestPoints / (double)GameRules.PackPointsPerPack);
+        Assert.Equal(expected, empty.PacksToAfford);
+
+        // The rarest card wanted must sit at the top of the ladder among what is missing.
+        var rung = Ix.Ladder.IndexOf(empty.RarestWanted!.Rarity);
+        var highest = Ix.BySet["A1"]
+            .Select(c => Ix.Ladder.IndexOf(c.Rarity) ?? -1)
+            .Max();
+        Assert.Equal(highest, rung);
+    }
+
+    [Fact]
+    public void Describe_CountsNoPacksForACardTheBalanceAlreadyCovers()
+    {
+        var capped = Ledger.Describe("A1", GameRules.PackPointsCap, new Collection(), All);
+
+        // Nothing in the game costs more than the cap, so a capped balance affords anything —
+        // which is exactly why sitting there is waste rather than saving.
+        Assert.Equal(0, capped.PacksToAfford);
+        Assert.True(capped.RarestPoints <= GameRules.PackPointsCap);
+    }
+
+    [Fact]
+    public void Describe_MovesToTheNextRungOnceTheRarestIsOwned()
+    {
+        var first = Ledger.Describe("A1", 0, new Collection(), All);
+        var topRung = Ix.Ladder.IndexOf(first.RarestWanted!.Rarity);
+
+        // Own every card on that rung, and the target must drop to a lower one rather than
+        // repeating a card that is no longer wanted.
+        var owned = Ix.BySet["A1"]
+            .Where(c => Ix.Ladder.IndexOf(c.Rarity) == topRung)
+            .Aggregate(new Collection(), (c, card) => c.With(card.OwnershipKey, 1));
+
+        var next = Ledger.Describe("A1", 0, owned, All);
+
+        Assert.NotNull(next.RarestWanted);
+        Assert.True(Ix.Ladder.IndexOf(next.RarestWanted!.Rarity) < topRung);
+    }
+
+    [Fact]
+    public void Describe_IgnoresRaritiesTheUserDoesNotCollect()
+    {
+        // The bug this pins: with only diamonds collected, the shop advice named a Crown as the
+        // card to save for - the dearest thing in the set, and one the user had said they do not
+        // chase. A rung wanted zero times is not "still wanted" at any price.
+        var diamonds = RarityPlan.Uniform(Ix.Ladder.ByGroup("Diamond"));
+
+        var row = Ledger.Describe("A1", GameRules.PackPointsCap, new Collection(), diamonds);
+
+        Assert.NotNull(row.RarestWanted);
+        var group = Ix.Ladder.Rungs.First(r => r.Codes.Contains(row.RarestWanted!.Rarity)).Group;
+        Assert.Equal("Diamond", group);
+
+        // And the affordable list is filtered by the same rule, or the two columns would be
+        // answering different questions on the same row.
+        Assert.All(row.AffordableNow, card =>
+            Assert.Equal("Diamond",
+                Ix.Ladder.Rungs.First(r => r.Codes.Contains(card.Rarity)).Group));
     }
 
     [Fact]
@@ -82,7 +157,7 @@ public class PointsLedgerTests
             ["A3"] = 0                               // nowhere near
         };
 
-        var warnings = Ledger.Warnings(balances, new Collection());
+        var warnings = Ledger.Warnings(balances, new Collection(), _ => All);
 
         Assert.Equal("A1", warnings[0].Set);
         Assert.True(warnings[0].AtCap);

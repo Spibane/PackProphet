@@ -21,7 +21,7 @@ else
 {
     <div class="page-head">
         <button class="btn btn-sm btn-outline-secondary" @onclick="Back">&larr; back</button>
-        <span class="title">@_card.Name</span>
+        <h1 class="title">@_card.Name</h1>
         <span class="subtitle">@_card.Set&thinsp;@_card.Number</span>
         <span class="actions">
             @if (_rung is not null)
@@ -39,8 +39,27 @@ else
         <div class="art">
             @* Background rather than <img>: a failed load leaves the placeholder instead of a
                broken-image gap, with no error handling needed. *@
-            <div class="big-art" style="background-image:url('@_card.ArtUrl')"
+            <div class="big-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
+                 style="background-image:url('@_card.ArtUrl')"
                  role="img" aria-label="@_card.Name"></div>
+
+            @* Said in words as well as drawn, because the ring alone does not explain itself —
+               and if you are two copies away, that is worth knowing. *@
+            @if (Session.HasGoldFlair(_card))
+            {
+                <p class="small mb-0 flair-note">
+                    Gold flair earned &mdash; @_owned copies.
+                </p>
+            }
+            @* Same rule as the flair itself, or the hint would promise gold to a four-diamond
+               card that can never earn it. *@
+            else if (_rung is { GlyphClass: "diamond" } r && !_card.IsPromo
+                     && r.Count <= GameRules.GoldFlairMaxDiamonds && _owned > 0)
+            {
+                <p class="small text-body-secondary mb-0">
+                    @(GameRules.GoldFlairCopies - _owned) more for gold flair.
+                </p>
+            }
 
             <div class="own-row">
                 <span class="label">you own</span>
@@ -118,7 +137,7 @@ else
             }
             else
             {
-                <h6>@(_fact.IsPokemon ? "Pokémon" : "Trainer")</h6>
+                <h2 class="h6">@(_fact.IsPokemon ? "Pokémon" : "Trainer")</h2>
                 <table class="table table-sm w-auto">
                     <tbody>
                         @if (_fact.Subtype is { Length: > 0 } sub)
@@ -143,6 +162,16 @@ else
                                     @if (_fact.EvolvesFrom is { Length: > 0 } from)
                                     {
                                         <span class="text-body-secondary">&mdash; evolves from @from</span>
+                                        @* The fact that turns this row from trivia into advice: an
+                                           evolution you cannot evolve is dead weight in a deck, and
+                                           nothing else on the page would tell you. *@
+                                        @if (!OwnsAnyNamed(from))
+                                        {
+                                            <span class="badge text-bg-warning ms-1"
+                                                  title="You own none. Any printing of it will do — the game evolves on the printed name.">
+                                                you own none
+                                            </span>
+                                        }
                                     }
                                 </td>
                             </tr>
@@ -168,13 +197,13 @@ else
 
                 @if (_fact.HasAbility)
                 {
-                    <h6>Ability &mdash; @_fact.Ability!.Name</h6>
+                    <h2 class="h6">Ability &mdash; @_fact.Ability!.Name</h2>
                     <p class="small">@(_fact.Ability.Effect ?? "")</p>
                 }
 
                 @if (_fact.AttackList.Count > 0)
                 {
-                    <h6>Attacks</h6>
+                    <h2 class="h6">Attacks</h2>
                     @foreach (var atk in _fact.AttackList)
                     {
                         <div class="attack">
@@ -200,21 +229,21 @@ else
 
                 @if (_fact.CardText is { Length: > 0 } text)
                 {
-                    <h6>Card text</h6>
+                    <h2 class="h6">Card text</h2>
                     <p class="small">@text</p>
                 }
             }
         </div>
 
         <div>
-            <h6>How to get it</h6>
+            <h2 class="h6">How to get it</h2>
             @* All four routes, including the ones that do not exist for this rarity. Omitting
                them would leave the user wondering; naming the block answers it. *@
             <table class="table table-sm align-middle">
                 <tbody>
                     @foreach (var option in _routes?.Options ?? [])
                     {
-                        <tr class="@(option == _routes?.Cheapest ? "table-primary" : "")">
+                        <tr class="@(option == _routes?.Cheapest ? "row-best" : "")">
                             <td style="width:7rem">
                                 <strong>@RouteName(option.Route)</strong>
                             </td>
@@ -256,7 +285,7 @@ else
                 with no exchange rate, so they are never converted into a comparable number.
             </p>
 
-            <h6 class="mt-3">Packs that can give it</h6>
+            <h2 class="mt-3 h6">Packs that can give it</h2>
             @if (_packs.Count == 0)
             {
                 <p class="small text-body-secondary">
@@ -395,18 +424,25 @@ else
 
     private static bool HasPip(string subtype) => PipTypes.Contains(subtype);
 
+    /// <summary>
+    /// Whether any printing with this name is owned. By NAME rather than identity, and that is
+    /// correct rather than a shortcut: the game evolves on the printed name, so every Charmeleon
+    /// is as good as every other. The ambiguity that killed name-based decklist import does not
+    /// apply to a question phrased this way.
+    /// </summary>
+    private bool OwnsAnyNamed(string name) =>
+        Session.Index.All.Any(c =>
+            string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)
+            && Session.CountOf(c) > 0);
+
     private static string RouteName(AcquisitionRoute route) => route switch
     {
         AcquisitionRoute.Pull => "open packs",
         AcquisitionRoute.PackPoints => "pack points",
         AcquisitionRoute.Trade => "trade",
+        AcquisitionRoute.Share => "share",
         _ => "wonder pick"
     };
 
-    private static string Fmt(double packs) => packs switch
-    {
-        double.PositiveInfinity => "never",
-        < 10 => packs.ToString("0.#"),
-        _ => packs.ToString("N0")
-    };
+    private static string Fmt(double packs) => Text.Fmt.Packs(packs);
 }

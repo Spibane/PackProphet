@@ -3,10 +3,10 @@ namespace PackProphet.Engine;
 using PackProphet.Data;
 using PackProphet.Domain;
 
-public enum AcquisitionRoute { Pull, PackPoints, Trade, WonderPick }
+public enum AcquisitionRoute { Pull, PackPoints, Trade, Share, WonderPick }
 
 /// <summary>Why a route is unavailable for a card, so the UI can explain rather than omit.</summary>
-public enum RouteBlock { None, NotSoldInPacks, NoPullRates, NotTradeable, NotInWonderPick, NoDustPrice }
+public enum RouteBlock { None, NotSoldInPacks, NoPullRates, NotTradeable, NotShareable, NotInWonderPick, NoDustPrice }
 
 /// <param name="PacksEquivalent">
 /// Cost in packs. Only Pull and PackPoints are expressed this way — both genuinely ARE
@@ -46,11 +46,19 @@ public sealed class RouteCost
     private readonly PackOdds _odds;
     private readonly IReadOnlyDictionary<string, Rarity> _rarities;
 
+    /// <summary>
+    /// Sets with a point economy, materialised once. OpenableSets walks every pack key and
+    /// splits each one, and For() runs per card per row of several tables — recomputing it
+    /// there would put a full scan of the pack list inside the render loop.
+    /// </summary>
+    private readonly HashSet<string> _setsWithPoints;
+
     public RouteCost(CardIndex index, PackOdds odds, IReadOnlyDictionary<string, Rarity> rarities)
     {
         _index = index;
         _odds = odds;
         _rarities = rarities;
+        _setsWithPoints = index.OpenableSets.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public CardRoutes For(PocketCard card, Collection owned)
@@ -60,6 +68,7 @@ public sealed class RouteCost
             Pull(card),
             Points(card),
             Trade(card, owned),
+            Share(card),
             Wonder(card)
         };
 
@@ -94,6 +103,15 @@ public sealed class RouteCost
             return new(AcquisitionRoute.PackPoints, false, RouteBlock.None,
                 Note: "No pack-point price.");
 
+        // Points are earned by opening THIS SET's packs and can be spent nowhere else, so a set
+        // with no openable packs has no point economy at all. The card carries a point price —
+        // every rarity does — but quoting it for a promo offers a route that cannot exist: there
+        // is no pack to earn the points in and no shop to spend them at.
+        if (!_setsWithPoints.Contains(card.Set))
+            return new(AcquisitionRoute.PackPoints, false, RouteBlock.NotSoldInPacks,
+                Note: $"Points are earned and spent within one set, and {card.Set} has no " +
+                      "packs to earn them in.");
+
         // Points accrue per set and are spendable only within that set, so the packs you
         // must open are packs OF THIS CARD'S SET — they cannot be earned elsewhere.
         var packs = (double)rarity.Points / GameRules.PackPointsPerPack;
@@ -107,9 +125,11 @@ public sealed class RouteCost
 
     private RouteOption Trade(PocketCard card, Collection owned)
     {
-        if (!GameRules.IsTradeable(card.Rarity))
+        if (!GameRules.CanBeTraded(card))
             return new(AcquisitionRoute.Trade, false, RouteBlock.NotTradeable,
-                Note: $"{card.Rarity} cannot be traded at all.");
+                Note: card.IsPromo
+                    ? "Promos cannot be traded."
+                    : $"{card.Rarity} cannot be traded at all.");
 
         if (!_rarities.TryGetValue(card.Rarity, out var rarity) || rarity.TradePrice is null)
             return new(AcquisitionRoute.Trade, false, RouteBlock.NoDustPrice);
@@ -129,6 +149,28 @@ public sealed class RouteCost
             Dust: rarity.TradePrice,
             Stamina: GameRules.TradeStaminaPerTrade,
             Note: note);
+    }
+
+    /// <summary>
+    /// A friend sends the card and gets nothing back. Free, and gated only by a daily allowance
+    /// on your side - so where it applies it beats trading outright, and the app should stop
+    /// quoting dust for a card someone could simply hand over.
+    ///
+    /// Not packs-priced, and deliberately so: like a trade it needs another person, and unlike a
+    /// pull there is no rate that says how likely that is. What it costs is a day of goodwill,
+    /// which is not a currency this app can total up.
+    /// </summary>
+    private static RouteOption Share(PocketCard card)
+    {
+        if (!GameRules.CanBeShared(card))
+            return new(AcquisitionRoute.Share, false, RouteBlock.NotShareable,
+                Note: card.IsPromo
+                    ? "Promos cannot be shared."
+                    : $"{card.Rarity} cannot be shared \u2014 Shares carry 1 to 4 diamonds only.");
+
+        return new(AcquisitionRoute.Share, true,
+            Note: "A friend can simply send it \u2014 no card back, no dust, no stamina. You can " +
+                  $"receive {GameRules.SharesReceivedPerDay} a day, so the cost is the day.");
     }
 
     private RouteOption Wonder(PocketCard card)

@@ -58,6 +58,14 @@ public sealed class PocketCard
     public bool IsPackObtainable => Packs is { Length: > 0 };
 
     /// <summary>
+    /// Sold in a pack a player can choose to open. Stricter than <see cref="IsPackObtainable"/>,
+    /// and the distinction bites: most promos list a "Vol. N" pack, which records how the card was
+    /// handed out at an event rather than something purchasable. So IsPackObtainable is true for
+    /// them while no amount of opening will ever produce one.
+    /// </summary>
+    public bool Openable => IsPackObtainable && !IsPromo;
+
+    /// <summary>
     /// Booster art for a pack, from the same community CDN as the card art. Files are named
     /// by pack name, so this maps straight from the card data's `packs` values.
     ///

@@ -1,0 +1,423 @@
+@page "/resources"
+@implements IDisposable
+@inject AppSession Session
+
+<PageTitle>Resources · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else
+{
+    <div class="page-head">
+        <h1 class="title">Resources</h1>
+        <span class="subtitle">what regenerates, and what it is costing you to sit on</span>
+    </div>
+
+    <div class="p-3 pools-page" style="max-width:60rem">
+        @* Three panels, never a total. Pack, Wonder and Trade each have their own hourglass and
+           their own pool, and nothing in the game exchanges between them — so a combined figure
+           would be a number with no meaning attached to it. *@
+        <p class="small text-body-secondary">
+            Three separate systems. Each has its own hourglasses and nothing converts between
+            them, so they are never added together &mdash; twelve Wonder Hourglasses buy a Wonder
+            Pick and cannot buy a pack.
+        </p>
+
+        <div class="pools">
+            @* ---- packs ------------------------------------------------------------------- *@
+            <div class="pool">
+                <div class="pool-head">
+                    <span class="nm">Packs</span>
+                    <span class="rate">@_pack.PerDay.ToString("0.#") a day</span>
+                </div>
+
+                <p class="small text-body-secondary mb-2">
+                    Packs are not stored, so there is no pool to fill and nothing to waste by
+                    waiting &mdash; only a rate, and the hourglasses that bring the next one
+                    forward.
+                </p>
+
+                <div class="pool-figures">
+                    <div class="fig">
+                        <span class="v">@_pack.FromHourglasses</span>
+                        <span class="l">packs your hourglasses cover</span>
+                    </div>
+                    <div class="fig">
+                        <span class="v">@(_pack.UntilNextFree is { } t ? Short(t) : "ready")</span>
+                        <span class="l">next free pack</span>
+                    </div>
+                </div>
+
+                @* Premium is a +50% rate, and every timeline in the app respects it. Stated as
+                   arithmetic rather than a nudge: 240 packs is four months or under three. *@
+                <label class="form-check form-switch small mt-2">
+                    <input class="form-check-input" type="checkbox" checked="@_premium"
+                           @onchange="OnPremium" />
+                    premium membership
+                </label>
+                <p class="small text-body-secondary mb-0">
+                    @if (_premium)
+                    {
+                        <span>3 packs a day. Without it, 2 &mdash; a third slower.</span>
+                    }
+                    else
+                    {
+                        <span>2 packs a day. With premium, 3 &mdash; @HalfAgain() faster.</span>
+                    }
+                </p>
+
+                <div class="pool-entry">
+                    <label class="small">
+                        pack hourglasses
+                        <input type="number" min="0" class="form-control form-control-sm"
+                               value="@_packHourglasses" @onchange="OnPackHourglasses" />
+                    </label>
+                    <label class="small">
+                        shinedust
+                        <input type="number" min="0" class="form-control form-control-sm"
+                               value="@_dust" @onchange="OnDust" />
+                    </label>
+                    <button class="btn btn-sm btn-primary" @onclick="SavePack">save</button>
+                </div>
+            </div>
+
+            @* ---- wonder and trade, structurally identical -------------------------------- *@
+            <PoolPanel Title="Wonder Stamina"
+                       Outlook="Session.WonderOutlook"
+                       HourglassesPerUnit="GameRules.WonderHourglassesPerStamina"
+                       Note="Cost is 1 to 4, set by the highest rarity in the offer — so one 2-star can take almost your whole reserve."
+                       OnSave="@((v) => Session.SetPool(trade: false, v.Balance, v.Hourglasses))" />
+
+            <PoolPanel Title="Trade Stamina"
+                       Outlook="Session.TradeOutlook"
+                       HourglassesPerUnit="GameRules.TradeHourglassesPerStamina"
+                       Note="Every trade costs exactly 1 whatever the rarity, so this caps trading at about two a day. It, not shinedust, is what limits trading."
+                       OnSave="@((v) => Session.SetPool(trade: true, v.Balance, v.Hourglasses))" />
+        </div>
+
+        @* ---- pack points, the fourth economy --------------------------------------------
+           Not a pool and not a currency you hold: points accrue as a BYPRODUCT of opening, five
+           a pack, and can only be spent inside the set that earned them. So there is nothing to
+           regenerate and nothing to time — only a cap that silently stops paying you. *@
+        <h2>Pack points</h2>
+        <p class="small text-body-secondary">
+            Five per pack, spendable only within the set whose packs earned them, and capped at
+            @GameRules.PackPointsCap.ToString("N0"). <strong>Packs opened at the cap earn
+            nothing</strong>, so a full set is a set to spend before you open. This page tracks
+            the balances; what they are worth buying is on
+            <a href="packs">Which pack</a>, which prices every card against pulling it instead.
+        </p>
+        <p class="small text-body-secondary">
+            Balances here grow from the packs you log, so they start behind reality &mdash; correct
+            them from the game's shop screen and logging will carry on from there.
+        </p>
+
+        @if (_pointRows.Count == 0)
+        {
+            <p class="small text-body-secondary">
+                No balances yet. Add a set below, or log a pack and one appears.
+            </p>
+        }
+        else
+        {
+            <table class="table table-sm w-auto align-middle">
+                <thead>
+                    <tr>
+                        <th>set</th>
+                        <th class="num">points</th>
+                        <th class="num">packs until capped</th>
+                        @* The goal per set: points are only spendable inside the set that earned
+                           them, so "how far off" is a per-set question with a per-set answer. *@
+                        <th>rarest still wanted</th>
+                        <th class="num" title="Packs of THIS set to open before that card is affordable — points cannot cross-fund">packs to afford it</th>
+                        <th class="num" title="Cards from this set you still need that the balance already covers">can buy now</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _pointRows)
+                    {
+                        <tr class="@(row.AtCap ? "pts-capped" : "")">
+                            <td>@row.Set</td>
+                            <td class="num">
+                                <input type="number" min="0" max="@GameRules.PackPointsCap"
+                                       class="form-control form-control-sm pts-in"
+                                       value="@row.Balance"
+                                       @onchange="e => OnPoints(row.Set, e)" />
+                            </td>
+                            <td class="num">
+                                @if (row.AtCap)
+                                {
+                                    <span class="text-warning-emphasis fw-semibold">capped</span>
+                                }
+                                else
+                                {
+                                    @row.PacksUntilCap
+                                }
+                            </td>
+                            <td class="small">
+                                @if (row.RarestWanted is { } goal)
+                                {
+                                    <a href="card/@goal.Key">@goal.Name</a>
+                                    <span class="text-body-secondary ms-1">
+                                        @RarityOf(goal) &middot; @row.RarestPoints.ToString("N0")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-body-secondary">set complete</span>
+                                }
+                            </td>
+                            <td class="num">
+                                @if (row.RarestWanted is null)
+                                {
+                                    <span class="text-body-secondary">&mdash;</span>
+                                }
+                                else if (row.PacksToAfford == 0)
+                                {
+                                    <span class="text-success-emphasis fw-semibold">buy it</span>
+                                }
+                                else
+                                {
+                                    @row.PacksToAfford
+                                }
+                            </td>
+                            <td class="num small text-body-secondary">
+                                @(row.AffordableNow.Count > 0 ? $"{row.AffordableNow.Count}" : "—")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        @* A series at a time, not a set at a time. Nobody corrects one balance: they open the
+           game's shop, walk down it, and type. One tap per series beats nineteen selections. *@
+        @if (_pointsAddable.Count > 0)
+        {
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                <span class="small text-body-secondary">add rows for</span>
+                @foreach (var series in _pointsAddable
+                    .GroupBy(Session.Sets.SeriesOf)
+                    .OrderBy(g => g.Key, StringComparer.Ordinal))
+                {
+                    <button class="btn btn-sm btn-outline-primary py-0"
+                            @onclick="() => AddSeries(series.Key)"
+                            title="Show every @series.Key set that earns points, so the whole series can be typed in one pass">
+                        all @series.Key (@series.Count())
+                    </button>
+                }
+                @if (_pointsAddable.Count > 1)
+                {
+                    <button class="btn btn-sm btn-outline-secondary py-0" @onclick="AddEverySet">
+                        every set (@_pointsAddable.Count)
+                    </button>
+                }
+            </div>
+        }
+
+        @* The dust runway belongs next to trade stamina, and its job is usually to be dismissed:
+           if dust funds far more trades than stamina will allow, it is not a cost worth showing. *@
+        @if (_dustSaved > 0)
+        {
+            <h2>Is shinedust actually the problem?</h2>
+            <table class="table table-sm w-auto align-middle">
+                <thead>
+                    <tr><th>rarity</th><th class="num">dust each</th><th class="num">trades funded</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var (label, price) in TradePrices())
+                    {
+                        <tr>
+                            <td>@label</td>
+                            <td class="num">@price.ToString("N0")</td>
+                            <td class="num">@ResourcePlan.DustRunway(_dustSaved, price)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p class="small text-body-secondary">
+                Compare those against the @Session.TradeOutlook.Reachable trade(s) your stamina can
+                pay for right now. Where the dust column is the larger number, dust is not what is
+                stopping you.
+            </p>
+        }
+    </div>
+}
+
+@code {
+    private PackOutlook _pack = new(0, 0, null, false);
+
+    private bool _premium;
+    private string _packHourglasses = "";
+    private string _dust = "";
+    private int _dustSaved;
+
+    private bool _touched;
+
+    private IReadOnlyList<SetPoints> _pointRows = [];
+
+    /// <summary>Sets with no balance yet, so one can be added without listing all nineteen.</summary>
+    private IReadOnlyList<string> _pointsAddable = [];
+
+    /// <summary>
+    /// Sets added by hand this visit. Held separately because a balance of zero is not stored -
+    /// zero is how a balance is cleared - so without this the new row would vanish on the next
+    /// Changed, before there was anything to type into it.
+    /// </summary>
+    private readonly HashSet<string> _pointsShown = new(StringComparer.OrdinalIgnoreCase);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+        Load();
+    }
+
+    private void OnChanged()
+    {
+        Load();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Load()
+    {
+        if (!Session.Ready) return;
+
+        var r = Session.Profile.Resources;
+        _pack = Session.PackOutlook;
+        _premium = r.Premium;
+        _dustSaved = r.Shinedust;
+        LoadPoints();
+
+        // Prefilled from saved state, but not once the fields have been touched: Load runs on
+        // every Changed, and Changed fires for edits made anywhere in the app — including the
+        // save from this very page — so re-seeding unconditionally would overwrite what is being
+        // typed.
+        if (_touched) return;
+
+        _packHourglasses = r.PackHourglasses > 0 ? r.PackHourglasses.ToString() : "";
+        _dust = r.Shinedust > 0 ? r.Shinedust.ToString() : "";
+    }
+
+    /// <summary>
+    /// Point rows for the sets that have a balance, worst-first: a capped set is losing value on
+    /// every pack, so it belongs above a set with forty points in it.
+    /// </summary>
+    private void LoadPoints()
+    {
+        if (Session.Points is null) { _pointRows = []; _pointsAddable = []; return; }
+
+        var balances = Session.PointsBySet;
+
+        // The plan for THAT set, since targets are per set: a card on a rung the user does not
+        // collect is not "still wanted" however much it costs.
+
+        // Release order, deliberately, even though a capped set is the urgent one: these rows are
+        // typed into while reading down the game's own shop list, and a table that reorders itself
+        // as values are entered would lose the reader's place. Capped rows are tinted instead, so
+        // the warning survives without moving.
+        _pointRows = balances.Keys
+            .Union(_pointsShown, StringComparer.OrdinalIgnoreCase)
+            .Select(set => Session.Points.Describe(
+                set, balances.GetValueOrDefault(set), Session.Owned,
+                Session.Profile.Targets.PlanFor(set)))
+            .OrderBy(r => Session.Sets.SortKey(r.Set), StringComparer.Ordinal)
+            .ToArray();
+
+        // Promo sets are excluded: their packs award no points at all, so a balance there could
+        // only ever be a mistake.
+        _pointsAddable = Session.Index.OpenableSets
+            .Where(set => !balances.ContainsKey(set) && !_pointsShown.Contains(set))
+            .Where(set => !CardIndex.IsPromoSet(set))
+            .OrderBy(Session.Sets.SortKey, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private void OnPoints(string set, ChangeEventArgs e)
+    {
+        if (Num.TryCount(e.Value?.ToString(), out var n)) Session.SetPackPoints(set, n);
+    }
+
+    /// <summary>
+    /// Show every point-earning set of a series. Nothing is saved by this - a row exists so it can
+    /// be typed into, and a balance of zero is stored as no balance at all.
+    /// </summary>
+    private void AddSeries(string series)
+    {
+        foreach (var set in _pointsAddable.Where(s => Session.Sets.SeriesOf(s) == series))
+            _pointsShown.Add(set);
+
+        LoadPoints();
+    }
+
+    private void AddEverySet()
+    {
+        foreach (var set in _pointsAddable) _pointsShown.Add(set);
+        LoadPoints();
+    }
+
+    private void OnPremium(ChangeEventArgs e)
+    {
+        _premium = e.Value is bool b && b;
+        SavePack();
+    }
+
+    private void OnPackHourglasses(ChangeEventArgs e)
+    {
+        _touched = true;
+        _packHourglasses = e.Value?.ToString() ?? "";
+    }
+
+    private void OnDust(ChangeEventArgs e)
+    {
+        _touched = true;
+        _dust = e.Value?.ToString() ?? "";
+    }
+
+    private void SavePack()
+    {
+        Session.SetPackResources(
+            Num.Count(_packHourglasses),
+            Num.Count(_dust),
+            _premium);
+
+        // Released so the fields follow saved state again, which now matches what was typed.
+        _touched = false;
+    }
+
+    /// <summary>
+    /// The premium rate increase, from the constants rather than as a written "50%": if the
+    /// membership ever changes, a hardcoded figure here would be the lie nobody notices.
+    /// </summary>
+    private string HalfAgain()
+    {
+        var with = GameRules.PacksPerDay(true);
+        var without = GameRules.PacksPerDay(false);
+        return without <= 0 ? "much" : $"{(with - without) / (double)without:P0}";
+    }
+
+    /// <summary>
+    /// Dust prices per rarity, read from the data. The ladder is steeply non-monotonic — a 1-star
+    /// costs less than a 4-diamond, and a Shiny undercuts a 2-star by 15,000 — so the whole table
+    /// is shown rather than one representative price.
+    /// </summary>
+    private IEnumerable<(string Label, int Price)> TradePrices() =>
+        Session.Index.Ladder.Rungs
+            .Select(rung => (
+                Label: rung.Symbol,
+                Price: rung.Codes
+                    .Select(code => Session.Data!.Rarities.GetValueOrDefault(code)?.TradePrice)
+                    .FirstOrDefault(p => p is > 0) ?? 0))
+            .Where(x => x.Price > 0);
+
+    /// <summary>The rarity as the game draws it, which is how a collector recognises the card.</summary>
+    private string RarityOf(PocketCard card) =>
+        Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Codes.Contains(card.Rarity))?.Symbol
+            ?? card.Rarity;
+
+    private static string Short(TimeSpan t) => Fmt.Span(t);
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

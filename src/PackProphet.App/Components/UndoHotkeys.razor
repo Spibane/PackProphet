@@ -1,0 +1,59 @@
+@implements IAsyncDisposable
+@inject AppSession Session
+@inject IJSRuntime JS
+
+@* No markup. Mounted by the layout purely to own the document-level listeners that have to work
+   on every page: the Ctrl+Z accelerator, because the undo stack is app-wide, and the
+   save-before-you-go hook, because a debounced save needs somewhere to be flushed from.
+
+   Undo used to be reachable only from two arrow buttons in the Collection header, while a message
+   on the Settings page cheerfully told the user "undo still works". *@
+
+@code {
+    private DotNetObjectReference<UndoHotkeys>? _self;
+
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (!first) return;
+
+        _self = DotNetObjectReference.Create(this);
+        try { await JS.InvokeVoidAsync("ppUndo.register", _self); }
+        catch { /* an accelerator; the buttons still work without it */ }
+
+        try { await JS.InvokeVoidAsync("ppPersist.register", _self); }
+        catch { /* the debounce still saves 400ms after the last edit */ }
+    }
+
+    [JSInvokable]
+    public Task Undo()
+    {
+        Session.Undo();
+        return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public Task Redo()
+    {
+        Session.Redo();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Write now rather than 400ms from now. Called as the page is being hidden or unloaded, which
+    /// is the only moment an edit made a fraction of a second ago would otherwise be lost: in
+    /// WebAssembly nothing disposes the session when a tab closes.
+    /// </summary>
+    [JSInvokable]
+    public Task FlushNow() => Session.FlushAsync();
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await JS.InvokeVoidAsync("ppUndo.unregister"); }
+        catch { /* the page may already be gone */ }
+
+        try { await JS.InvokeVoidAsync("ppPersist.unregister"); }
+        catch { /* likewise */ }
+
+        _self?.Dispose();
+    }
+}

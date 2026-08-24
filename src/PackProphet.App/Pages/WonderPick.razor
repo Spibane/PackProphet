@@ -1,0 +1,426 @@
+@page "/wonder"
+@implements IDisposable
+@inject AppSession Session
+
+<PageTitle>Wonder Pick · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else
+{
+    <div class="page-head">
+        <h1 class="title">Wonder Pick</h1>
+        <span class="subtitle">take it or skip it?</span>
+        <span class="actions">
+            @* The pool the whole decision turns on, entered here rather than on a settings page:
+               the threshold changes with it, and at the cap the advice inverts. *@
+            <label class="small text-body-secondary" for="stamina">stamina</label>
+            <select id="stamina" class="form-select form-select-sm" style="width:5rem"
+                    @onchange="OnStamina">
+                @for (var n = 0; n <= GameRules.StaminaCap; n++)
+                {
+                    <option value="@n" selected="@(n == Session.WonderStamina)">@n</option>
+                }
+            </select>
+        </span>
+    </div>
+
+    <div class="page-tools">
+        <select class="form-select form-select-sm" style="max-width:16rem" aria-label="What counts as wanted" @onchange="OnScope">
+            <option value="everything">valued against everything I collect</option>
+            @if (Session.Wishlists.Count > 0)
+            {
+                <optgroup label="wishlists">
+                    @foreach (var list in Session.Wishlists)
+                    {
+                        <option value="wish:@list.Id" selected="@(_scope == $"wish:{list.Id}")">
+                            @list.Name
+                        </option>
+                    }
+                </optgroup>
+            }
+            @foreach (var series in Session.Sets.Series)
+            {
+                <optgroup label="series @series">
+                    @foreach (var set in Session.Sets.SetsIn(series).Where(Session.Index.OpenableSets.Contains))
+                    {
+                        <option value="@set" selected="@(_scope == set)">
+                            @set &mdash; @Session.Sets.DisplayName(set)
+                        </option>
+                    }
+                </optgroup>
+            }
+        </select>
+
+        <span class="bar-sep" aria-hidden="true"></span>
+
+        <span class="small text-body-secondary">
+            @if (_history.Count >= MinSamplesForThreshold)
+            {
+                <span>
+                    holding out for <strong>@Fmt(_threshold)</strong> packs per stamina,
+                    from @_history.Count logged offer(s)
+                    @if (Session.WonderStamina >= GameRules.StaminaCap)
+                    {
+                        <span class="text-warning-emphasis"> &mdash; lowered, you are at the cap</span>
+                    }
+                </span>
+            }
+            else
+            {
+                <span>
+                    @_history.Count of @MinSamplesForThreshold logged offers &mdash; taking
+                    anything useful until there is a distribution worth trusting
+                </span>
+            }
+        </span>
+    </div>
+
+    <div class="p-3">
+        @if (_offer.Count == 0)
+        {
+            <p class="text-body-secondary">
+                Tap the @GameRules.WonderPickCardsShown cards you have been offered. You see all
+                of them and receive <strong>one at random</strong>, so the only decision is
+                whether to spend on this offer at all &mdash; and because stamina caps at
+                @GameRules.StaminaCap and refills one every
+                @GameRules.StaminaRegen.TotalHours hours, spending it on a mediocre offer costs
+                you the good offer you will have to skip later.
+            </p>
+            <p class="text-body-secondary small">
+                3&#9733;, Crown and Shiny never appear, which is why the price stops at 4.
+            </p>
+        }
+        else
+        {
+            <div class="offer-strip mb-3">
+                @foreach (var card in _offer)
+                {
+                    <button class="offer-card" @onclick="() => Remove(card)"
+                            title="Remove @card.Name from the offer"
+                            style="background-image:url('@card.ArtUrl')">
+                        <span class="x" aria-hidden="true">&times;</span>
+                    </button>
+                }
+                @for (var i = _offer.Count; i < GameRules.WonderPickCardsShown; i++)
+                {
+                    <span class="offer-card empty">@(i + 1)</span>
+                }
+            </div>
+
+            @if (_appraisal is { } a)
+            {
+                <div class="verdict @VerdictClass(a.Verdict)" aria-live="polite">
+                    <div class="head">
+                        <span class="call">@Call(a.Verdict)</span>
+                        <span class="cost">
+                            @a.StaminaCost of @GameRules.StaminaCap stamina
+                            @if (a.StaminaCost > Session.WonderStamina)
+                            {
+                                <span class="badge text-bg-danger ms-1">you have @Session.WonderStamina</span>
+                            }
+                        </span>
+                    </div>
+                    <p class="why mb-0">@Why(a)</p>
+                </div>
+
+                <div class="summary px-0 py-2">
+                    <div class="stat">
+                        <span class="label">expected value</span>
+                        <span class="value">@Fmt(a.ExpectedValue) packs</span>
+                        @* Averaged over the 1-in-5, not the best card in the offer: hoping for
+                           the good one is how people talk about Wonder Picks and it is not what
+                           the odds say. *@
+                        <span class="sub">averaged over the 1-in-@GameRules.WonderPickCardsShown</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">per stamina</span>
+                        <span class="value">@Fmt(a.ValuePerStamina)</span>
+                        @* Never called a price. Wonder Stamina and Pack Hourglasses are separate
+                           currencies with no exchange rate, so packs-per-stamina is only ever a
+                           way to rank one offer against another. *@
+                        <span class="sub">for comparing offers, not a price</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">the price is set by</span>
+                        <span class="value">@(a.CostDriver.Length > 0 ? a.CostDriver : "—")</span>
+                        <span class="sub">
+                            @(a.CostDriverWanted ? "which you still want" : "which you do not need")
+                        </span>
+                    </div>
+                </div>
+
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>card</th>
+                            <th class="num">you own</th>
+                            <th class="num">still want</th>
+                            <th class="num">worth to you</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in a.Cards.OrderByDescending(c => c.Value))
+                        {
+                            <tr class="@(c.Value <= 0 ? "text-body-secondary" : "")">
+                                <td>
+                                    <span class="pack-thumb deck-thumb"
+                                          data-tip-img="@c.Card.ArtUrl" data-tip="@c.Card.Name"
+                                          style="background-image:url('@c.Card.ArtUrl')"></span>
+                                    <strong>@c.Card.Name</strong>
+                                    <span class="small text-body-secondary ms-1">@c.Card.Set</span>
+                                    @if (RungOf(c.Card) is { } rung)
+                                    {
+                                        <span class="glyphs @rung.GlyphClass ms-1" title="@rung.Symbol">@rung.Glyphs</span>
+                                    }
+                                </td>
+                                <td class="num">@(c.Owned > 0 ? c.Owned.ToString() : "—")</td>
+                                <td class="num">@(c.Wanted > 0 ? c.Wanted.ToString() : "—")</td>
+                                <td class="num">
+                                    @if (c.Value > 0)
+                                    {
+                                        <span>@Fmt(c.Value) packs</span>
+                                    }
+                                    else
+                                    {
+                                        <span>nothing</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @* Logging is what makes the threshold work, so it is offered on every offer —
+                   including the ones skipped. *@
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="Clear">clear</button>
+
+                    <span class="ms-auto d-flex flex-wrap gap-2 align-items-center">
+                        <span class="small text-body-secondary">log it as</span>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="LogSkipped">
+                            skipped
+                        </button>
+                        <select class="form-select form-select-sm" style="max-width:14rem"
+                                @bind="_received">
+                            <option value="">&hellip; or which card you got</option>
+                            @foreach (var c in _offer)
+                            {
+                                <option value="@c.OwnershipKey">@c.Name</option>
+                            }
+                        </select>
+                        <button class="btn btn-sm btn-success" disabled="@(_received.Length == 0)"
+                                @onclick="LogTaken">
+                            took it
+                        </button>
+                    </span>
+                </div>
+
+                @if (_logged is not null)
+                {
+                    <div class="alert alert-success py-2 small mt-2 mb-0">@_logged</div>
+                }
+            }
+        }
+
+        @if (_offer.Count < GameRules.WonderPickCardsShown)
+        {
+            <div class="mt-3">
+                <CardPicker ByPrinting="true" AllCardsDefault="true"
+                            Heading="@($"Add card {_offer.Count + 1} of {GameRules.WonderPickCardsShown}")"
+                            PickedLabel="in offer" PickedOf="InOffer" CanPick="CanPick"
+                            OnPick="Add" />
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private const int MinSamplesForThreshold = 12;
+
+    private readonly List<PocketCard> _offer = [];
+    private OfferAppraisal? _appraisal;
+    private string _scope = "everything";
+    private string _received = "";
+    private string? _logged;
+
+    private IReadOnlyList<double> _history = [];
+    private double _threshold;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+        RebuildHistory();
+    }
+
+    public void Dispose() => Session.Changed -= OnChanged;
+
+    private void OnChanged()
+    {
+        RebuildHistory();
+        Appraise();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private ICompletionTarget Target()
+    {
+        if (_scope.StartsWith("wish:", StringComparison.Ordinal)
+            && Session.WishlistById(_scope[5..]) is { } list)
+            return Session.TargetForWishlist(list);
+
+        return _scope == "everything"
+            ? Session.TargetForEverything()
+            : Session.TargetForSet(_scope);
+    }
+
+    /// <summary>
+    /// Rebuilt from the log rather than kept as a running figure: the value of a past offer
+    /// depends on what you owned and wanted, and both move. A stored number would be an
+    /// appraisal made under a collection that no longer exists.
+    /// </summary>
+    private void RebuildHistory()
+    {
+        if (Session.Wonder is null) { _history = []; _threshold = 0; return; }
+
+        _history = Session.Wonder
+            .HistoricalValuePerStamina(Session.Profile.WonderLog, Target(), Session.Owned)
+            .ToArray();
+
+        _threshold = WonderPickEval.ReservationThreshold(
+            _history, Session.WonderStamina, MinSamplesForThreshold);
+    }
+
+    private void Appraise()
+    {
+        if (Session.Wonder is null || _offer.Count == 0) { _appraisal = null; return; }
+
+        _appraisal = Session.Wonder.Appraise(_offer, Target(), Session.Owned, _threshold);
+    }
+
+    private int InOffer(PocketCard card) => _offer.Count(c => c.OwnershipKey == card.OwnershipKey);
+
+    /// <summary>
+    /// Five slots, and a card can genuinely appear twice in one offer, so duplicates are
+    /// allowed — only the count is capped.
+    /// </summary>
+    private bool CanPick(PocketCard card) => _offer.Count < GameRules.WonderPickCardsShown;
+
+    private void Add(PocketCard card)
+    {
+        if (_offer.Count >= GameRules.WonderPickCardsShown) return;
+
+        _offer.Add(card);
+        _logged = null;
+        Appraise();
+    }
+
+    private void Remove(PocketCard card)
+    {
+        var at = _offer.FindLastIndex(c => c.OwnershipKey == card.OwnershipKey);
+        if (at >= 0) _offer.RemoveAt(at);
+
+        _received = "";
+        _logged = null;
+        Appraise();
+    }
+
+    private void Clear()
+    {
+        _offer.Clear();
+        _received = "";
+        _logged = null;
+        _appraisal = null;
+    }
+
+    private void OnScope(ChangeEventArgs e)
+    {
+        _scope = e.Value?.ToString() ?? "everything";
+        RebuildHistory();
+        Appraise();
+    }
+
+    private void OnStamina(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var n)) return;
+
+        Session.SetWonderStamina(n);
+        // The threshold depends on the balance — at the cap it drops, because stamina sitting at
+        // the cap is not regenerating and waiting has a strictly negative expected cost.
+        RebuildHistory();
+        Appraise();
+    }
+
+    private void LogSkipped()
+    {
+        if (_appraisal is null) return;
+
+        Session.LogWonderOffer(_offer, _appraisal.StaminaCost, taken: false, received: null);
+        _logged = "Logged as skipped. It still counts towards your threshold.";
+        Clear();
+    }
+
+    private void LogTaken()
+    {
+        if (_appraisal is null || _received.Length == 0) return;
+
+        var got = _offer.FirstOrDefault(c => c.OwnershipKey == _received);
+        if (got is null) return;
+
+        var cost = _appraisal.StaminaCost;
+        Session.LogWonderOffer(_offer, cost, taken: true, received: got);
+        _logged = $"Logged. {got.Name} added to your collection, {cost} stamina spent.";
+        Clear();
+    }
+
+    private static string Call(OfferVerdict verdict) => verdict switch
+    {
+        OfferVerdict.NothingWanted => "Skip — nothing here you need",
+        OfferVerdict.Overpriced => "Skip — you are paying for the wrong card",
+        OfferVerdict.BelowThreshold => "Skip — better offers come along",
+        _ => "Take it"
+    };
+
+    private static string VerdictClass(OfferVerdict verdict) =>
+        verdict == OfferVerdict.Take ? "take" : "skip";
+
+    private string Why(OfferAppraisal a) => a.Verdict switch
+    {
+        OfferVerdict.NothingWanted =>
+            "Every card in this offer is one you already have enough of, so the pick cannot "
+            + "advance anything. Skipping costs you nothing at all.",
+
+        OfferVerdict.Overpriced =>
+            $"It costs {a.StaminaCost} of your {GameRules.StaminaCap} stamina because it "
+            + $"contains {a.CostDriver} — and you do not need {a.CostDriver}. The price is set "
+            + "by the offer's highest rarity, not by what it is worth to you, so you would be "
+            + $"paying near the maximum for the rest: about {Fmt(a.ExpectedValue)} packs' worth.",
+
+        OfferVerdict.BelowThreshold =>
+            $"About {Fmt(a.ValuePerStamina)} packs per stamina, against the "
+            + $"{Fmt(a.Threshold)} you have been holding out for. Stamina refills one every "
+            + $"{GameRules.StaminaRegen.TotalHours:N0} hours while offers rotate every "
+            + $"{GameRules.WonderOfferLifetime.TotalHours:N0}, so spending here costs you a "
+            + "better offer later.",
+
+        _ => Session.WonderStamina >= GameRules.StaminaCap
+            ? $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina — and you "
+              + "are at the cap, so that stamina is not regenerating. Waiting has a cost right "
+              + "now, which is why the bar is lower than usual."
+            : $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina, above "
+              + "the bar you have been holding out for."
+    };
+
+    private RarityRung? RungOf(PocketCard card)
+    {
+        var index = Session.Index.Ladder.IndexOf(card.Rarity);
+        return index is null ? null : Session.Index.Ladder.Rungs[index.Value];
+    }
+
+    // Forwards to the shared formatter. Five pages each had their own version of this and they
+    // disagreed - the same card's cost printed as "16.0" here, "16" on card detail and "1.6k" past
+    // ten thousand on two others - so the number appeared to change as you moved between screens.
+    private static string Fmt(double packs) => Text.Fmt.Packs(packs);
+}

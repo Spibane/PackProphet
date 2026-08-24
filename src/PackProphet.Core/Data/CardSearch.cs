@@ -21,15 +21,28 @@ using PackProphet.Domain;
 /// </param>
 /// <param name="Stage">"Basic", "Stage 1", "Stage 2".</param>
 /// <param name="OwnedOnly">Restrict to cards the user holds at least one copy of.</param>
+/// <param name="Set">A single set code, e.g. "A1".</param>
+/// <param name="RarityCodes">
+/// Rarity codes to accept. A SET of codes rather than one, because the useful selections are
+/// whole families — "all diamonds" is four rungs and eight codes — and because a rung like
+/// 2-star already covers two codes (SR and SAR).
+///
+/// Set and rarity come off the card itself rather than from the printed detail, so they filter
+/// correctly before card detail has finished downloading. That matters: "every diamond in A1" is
+/// exactly the sort of thing someone does on their first visit.
+/// </param>
 public readonly record struct CardQuery(
     string Text = "",
     string? Kind = null,
     string? Subtype = null,
     string? Stage = null,
-    bool OwnedOnly = false)
+    bool OwnedOnly = false,
+    string? Set = null,
+    IReadOnlySet<string>? RarityCodes = null)
 {
     public bool IsEmpty =>
-        string.IsNullOrWhiteSpace(Text) && Kind is null && Subtype is null && Stage is null;
+        string.IsNullOrWhiteSpace(Text) && Kind is null && Subtype is null && Stage is null
+        && Set is null && RarityCodes is null or { Count: 0 };
 }
 
 public static class CardSearch
@@ -90,7 +103,10 @@ public static class CardSearch
     public static Hit Rank(PocketCard card, CardFact? fact, CardQuery query, string? rulesBlob = null)
     {
         // Facets first: they are cheap field comparisons, while the text pass walks attack and
-        // ability strings.
+        // ability strings. Set and rarity lead because they need no printed detail at all.
+        if (query.Set is { Length: > 0 } set && !card.Set.Equals(set, Ci)) return Hit.None;
+        if (query.RarityCodes is { Count: > 0 } codes && !codes.Contains(card.Rarity)) return Hit.None;
+
         if (query.Kind is { Length: > 0 } kind && !KindMatches(fact, kind)) return Hit.None;
         if (query.Subtype is { Length: > 0 } sub && !Equals(fact?.Subtype, sub)) return Hit.None;
         if (query.Stage is { Length: > 0 } stage && !Equals(fact?.Stage, stage)) return Hit.None;

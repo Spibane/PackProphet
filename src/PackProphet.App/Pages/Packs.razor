@@ -12,7 +12,7 @@
 else
 {
     <div class="page-head">
-        <span class="title">Which pack</span>
+        <h1 class="title">Which pack</h1>
         <span class="subtitle">ranked for @ScopeLabel</span>
     </div>
 
@@ -21,7 +21,7 @@ else
            control: each one changes what the ranking is OF, so every figure below means
            something different afterwards. *@
         @* Grouped by series so this stays usable as sets accumulate. *@
-        <select class="form-select form-select-sm" style="max-width:16rem" @onchange="OnScope">
+        <select class="form-select form-select-sm" style="max-width:16rem" aria-label="What to rank packs against" @onchange="OnScope">
             <option value="everything">everything I collect</option>
             @* Wishlists sit in the same control as sets because they are the same kind of
                thing to the engine: a target. A separate "wishlist mode" would imply the
@@ -106,15 +106,9 @@ else
                 }
             </span>
 
-            @foreach (var rung in Session.Index.Ladder.Rungs)
-            {
-                var want = Draft.Copies(rung.Index);
-                <button class="rarity-chip @(want > 0 ? "on" : "")"
-                        title="@(want == 0 ? $"Not collecting {rung.Symbol}" : $"Collecting {want} of each {rung.Symbol}") — tap to change"
-                        @onclick="() => CycleTier(rung.Index)">
-                    @rung.Symbol@(want > 1 ? $" x{want}" : "")
-                </button>
-            }
+            <RarityChips Plan="Draft" OnCycle="CycleTier"
+                         ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
+
             @if (_pending)
             {
                 <span class="chip-pending" title="Applying shortly — keep tapping to make more changes">
@@ -257,6 +251,10 @@ else
                     <th class="num">packs per new card</th>
                     <th class="num">to finish its share</th>
                     <th class="num">cards it can give</th>
+                    @* The action, in its own column rather than tucked among the badges in the
+                       name cell: it must sit in the same place on every row to be found without
+                       being read for, and the name cell already carries up to four badges. *@
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -272,7 +270,7 @@ else
                        with identical odds — which happens, since the three A1 packs share most
                        of their contents — would both compare equal to the winner and both light
                        up as "the best". *@
-                    <tr class="@(row.Best ? "table-primary" : "") @(row.Mark is null ? "" : "pack-row-muted") pack-row-click"
+                    <tr class="@(row.Best ? "row-best" : "") @(row.Mark is null ? "" : "pack-row-muted") pack-row-click"
                         @onclick="() => ToggleExpanded(row.PackKey)">
                         <td>
                             <span class="expander" aria-hidden="true">@(_expanded == row.PackKey ? "▾" : "▸")</span>
@@ -332,6 +330,16 @@ else
                         <td class="num">@(s is null ? "—" : Fmt(s.PacksToNextUseful))</td>
                         <td class="num">@(s is null ? "—" : Fmt(s.PacksToFinishItsShare))</td>
                         <td class="num">@(s?.DemandsServed ?? row.CardsServed)</td>
+                        @* Straight to logging THIS pack. Offered on every row, including the ones
+                           the page has marked unavailable or unpriceable: what you actually opened
+                           is a fact, and the app's assumption about the shelf must not stand in
+                           the way of recording it. *@
+                        <td class="act">
+                            <a class="btn btn-sm btn-outline-secondary py-0"
+                               href="@LogHref(row.PackKey)"
+                               @onclick:stopPropagation="true"
+                               title="Log a @row.PackName pack you just opened">log</a>
+                        </td>
                     </tr>
 
                     @* Which cards, not just how many. The count alone cannot tell you whether
@@ -339,7 +347,7 @@ else
                     @if (_expanded == row.PackKey)
                     {
                         <tr class="pack-detail">
-                            <td colspan="5">
+                            <td colspan="6">
                                 @{ var supplied = SuppliedBy(row.PackKey); }
                                 @if (supplied.Count == 0)
                                 {
@@ -427,6 +435,81 @@ else
 
             <hr />
 
+            @* The game sells ten of a set in one action, so the question gets a real answer
+               rather than being left to intuition. *@
+            <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="ToggleBatch">
+                @(_batchOpen ? "hide" : "show") buying @GameRules.PacksPerBatch at once
+            </button>
+
+            @if (_batchOpen)
+            {
+                <p class="small text-body-secondary">
+                    Ten packs of a set costs exactly ten packs and guarantees nothing extra, so it
+                    <strong>cannot beat opening ten singles of the same pack</strong> &mdash; those
+                    are the same ten draws. What it does decide is <em>which</em> set gets the ten,
+                    and that is a real difference. The figures below are for the whole batch, not
+                    per pack.
+                </p>
+
+                @if (_batches.Count == 0)
+                {
+                    <p class="small text-body-secondary mb-0">
+                        Nothing outstanding that a purchasable pack can supply.
+                    </p>
+                }
+                else
+                {
+                    <table class="table table-sm align-middle w-auto">
+                        <thead>
+                            <tr>
+                                <th>@GameRules.PacksPerBatch packs of</th>
+                                <th class="num">new cards expected</th>
+                                <th class="num">chance of nothing new</th>
+                                <th class="num">against the best</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in _batches.Take(10))
+                            {
+                                var best = _batches[0].ExpectedNewCards;
+                                <tr class="@(b == _batches[0] ? "row-best" : "")">
+                                    <td>
+                                        <span class="pack-thumb"
+                                              style="background-image:url('@Session.PackArtUrl(b.PackKey)')"></span>
+                                        <strong>@b.PackKey.Split(':')[1]</strong>
+                                        <span class="text-body-secondary small">@b.PackKey.Split(':')[0]</span>
+                                    </td>
+                                    <td class="num">@b.ExpectedNewCards.ToString("N1")</td>
+                                    @* The one figure a per-pack probability hides: ten packs that
+                                       advance nothing is what a wasted batch feels like. *@
+                                    <td class="num">
+                                        @(b.ChanceOfNothing < 0.001 ? "—" : b.ChanceOfNothing.ToString("P1"))
+                                    </td>
+                                    <td class="num">
+                                        @if (b == _batches[0])
+                                        {
+                                            <span class="fw-semibold">best</span>
+                                        }
+                                        else
+                                        {
+                                            <span>&minus;@((best - b.ExpectedNewCards).ToString("N1"))</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <p class="small text-body-secondary mb-0">
+                        One thing this cannot price: a batch takes away the chance to change your
+                        mind after each pull. That costs nothing early on, when the same pack stays
+                        the best pick for far longer than ten packs &mdash; but on a nearly
+                        finished set the best pack changes the moment its last card lands.
+                    </p>
+                }
+            }
+
+            <hr />
+
             @* Pack points are a byproduct of opening rather than an alternative to it: you
                earn five per pack whatever you do. So this panel never asks "buy or pull?" —
                it asks which cards deserve a limited, per-set budget. *@
@@ -510,7 +593,7 @@ else
                     </tbody>
                 </table>
 
-                <h6 class="mt-3">Where points are worth spending</h6>
+                <h2 class="mt-3 h6">Where points are worth spending</h2>
                 @if (_pointsShop.Count == 0)
                 {
                     <p class="small text-body-secondary mb-0">
@@ -609,6 +692,9 @@ else
     /// </summary>
     private IReadOnlyList<Demand> _outstandingDemands = [];
 
+    private bool _batchOpen;
+    private IReadOnlyList<PackRanker.BatchOutcome> _batches = [];
+
     private bool _pointsOpen;
     private IReadOnlyList<SetPoints> _pointRows = [];
     private IReadOnlyList<SetPoints> _capWarnings = [];
@@ -695,7 +781,8 @@ else
         $"{Session.CollectionRevision}|{string.Join(',', Session.UnavailablePacks)}|" +
         // Borrowed rates change every number, so they belong in the signature — otherwise
         // arriving back on the page after assuming a set's rates would show the old ranking.
-        $"{string.Join(',', Session.AssumedRates.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}<{kv.Value}"))}";
+        $"{string.Join(',', Session.AssumedRates.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}<{kv.Value}"))}|" +
+        $"foils:{Session.FoilCopies}";
 
     private async Task ToggleAdvisor()
     {
@@ -706,7 +793,41 @@ else
         await Busy.RunAsync("Pricing every rarity\u2026", BuildAdvisor);
     }
 
-    private string Signature() => $"{_scope}|{string.Join(',', Session.UnavailablePacks)}";
+    /// <summary>
+    /// Cache key for the target advisor. It priced every rarity from the collection, the foil
+    /// choice and the rate table, while keying on the scope alone - so logging two hundred packs
+    /// and reopening the panel showed the prices from before, and assuming a set's rates left it
+    /// contradicting the ranking directly above it on the same page.
+    ///
+    /// The rarity PLAN is deliberately absent: each row prices its own rung with a plan it builds
+    /// itself, so what the user currently collects cannot change these numbers.
+    /// </summary>
+    private string Signature() =>
+        $"{_scope}|{string.Join(',', Session.UnavailablePacks)}|{Session.CollectionRevision}|" +
+        $"foils:{Session.FoilCopies}|" +
+        $"{string.Join(',', Session.AssumedRates.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}<{kv.Value}"))}";
+
+    private async Task ToggleBatch()
+    {
+        _batchOpen = !_batchOpen;
+        if (!_batchOpen) return;
+        if (_batchFor == RankSignature() && _batches.Count > 0) return;
+
+        // Every purchasable pack against the whole target, so it is priced on demand rather than
+        // on every filter change — same reasoning as the advisor.
+        await Busy.RunAsync($"Pricing batches of {GameRules.PacksPerBatch}\u2026", BuildBatches);
+    }
+
+    private string _batchFor = "";
+
+    private void BuildBatches()
+    {
+        if (Session.Ranker is null) return;
+
+        _batchFor = RankSignature();
+        _batches = Session.Ranker.Batches(
+            CurrentTarget(), Session.Owned, GameRules.PacksPerBatch, Session.UnavailablePacks);
+    }
 
     private async Task TogglePoints()
     {
@@ -723,15 +844,19 @@ else
         if (Session.Points is null || Session.Routes is null) return;
 
         var balances = Session.Profile.Resources.PackPointsBySet;
-        var copies = Plan.CopiesByTier.Count == 0 ? 1 : Plan.CopiesByTier.Values.Max();
+
+        // Per set, because targets are per set. Reading one set's plan for all of them was the
+        // bug that had the shop recommending a Crown to someone collecting diamonds.
+        RarityPlan PlanFor(string set) => Session.Profile.Targets.PlanFor(set);
 
         _pointRows = _sets
-            .Select(set => Session.Points.Describe(set, balances.GetValueOrDefault(set), Session.Owned, copies))
+            .Select(set => Session.Points.Describe(
+                set, balances.GetValueOrDefault(set), Session.Owned, PlanFor(set)))
             .OrderByDescending(r => r.Balance)
             .ThenBy(r => r.Set, StringComparer.Ordinal)
             .ToArray();
 
-        _capWarnings = Session.Points.Warnings(balances, Session.Owned, copies);
+        _capWarnings = Session.Points.Warnings(balances, Session.Owned, PlanFor);
 
         var outstanding = CurrentTarget().Outstanding(Session.Index, Session.Owned);
         _pointsShop = Session.Routes.PointsShopRanking(outstanding, Session.Owned);
@@ -1006,8 +1131,10 @@ else
             {
                 // Each row prices "just this rung", so the table reads as the marginal cost
                 // of adding that rarity rather than a running total.
+                // Session.TargetForSet applies the foil choice; building the target here has to
+                // as well, or the advisor would price a rarity over cards the ranking ignores.
                 var parts = sets.Select(s => (ICompletionTarget)new RarityLadderTarget(
-                    s, RarityPlan.Uniform([rung.Index], copies))).ToArray();
+                    s, RarityPlan.Uniform([rung.Index], copies), Session.FoilRule)).ToArray();
                 return Session.Ranker!.BestCasePacksToFinish(
                     new CompositeTarget(parts), Session.Owned, Session.UnavailablePacks);
             }
@@ -1015,11 +1142,14 @@ else
         }).ToList();
     }
 
-    private static string Fmt(double packs) =>
-        double.IsPositiveInfinity(packs) ? "never"
-        : packs >= 10_000 ? $"{packs / 1000:N0}k"
-        : packs >= 100 ? packs.ToString("N0")
-        : packs.ToString("N1");
+    /// <summary>
+    /// Deep link to the log screen with this pack already chosen. A pack key is "SET:Name" and
+    /// the name can hold spaces and punctuation, so it is escaped rather than interpolated -
+    /// "Mewtwo" survives either way, but "Charizard ex" and the Deluxe packs do not.
+    /// </summary>
+    private static string LogHref(string packKey) => $"log?pack={Uri.EscapeDataString(packKey)}";
+
+    private static string Fmt(double packs) => Text.Fmt.Packs(packs);
 
     /// <summary>Expected packs as calendar time, which is the number that changes decisions.</summary>
     private static string Days(double packs, bool premium)
@@ -1089,6 +1219,7 @@ else
         await Busy.RunAsync("Ranking packs\u2026", () =>
         {
             _advisor = [];
+            _batches = [];
             Session.SetPlan(plan, PlanScope);
             _draft = null;          // saved plan is now the source of truth again
         });
@@ -1098,6 +1229,43 @@ else
     /// Seeded from the default rather than from nothing: an override almost always starts as
     /// "the usual, but…", and an empty plan would read as a finished set.
     /// </summary>
+    /// <summary>
+    /// Whether the current scope contains a set with foil printings, so the chip is offered only
+    /// where it can change anything.
+    /// </summary>
+    private bool ScopeHasFoils
+    {
+        get
+        {
+            var foilSets = Session.FoilSets;
+            if (foilSets.Count == 0) return false;
+
+            if (IsWishScope) return false;
+            if (_scope == "everything") return true;
+            if (ScopedSet is { } set) return foilSets.Contains(set);
+
+            return ScopeSets().Any(foilSets.Contains);
+        }
+    }
+
+    /// <summary>
+    /// Changes what the target DEMANDS, not how it is displayed, so it re-ranks — 139 cards
+    /// entering, leaving, or doubling moves every figure on the page.
+    /// </summary>
+    private Task CycleFoils()
+    {
+        var next = Session.FoilCopies >= AppSession.MaxFoilCopies ? 0 : Session.FoilCopies + 1;
+        var label = next == 0 ? "Excluding parallel foils\u2026" : $"Counting {next} of each parallel foil\u2026";
+
+        return Busy.RunAsync(label, () =>
+        {
+            Session.SetFoilCopies(next);
+            _advisor = [];
+            _batches = [];
+            Recompute();
+        });
+    }
+
     private Task StartOverride()
     {
         if (IsWishScope || !_sets.Contains(_scope)) return Task.CompletedTask;

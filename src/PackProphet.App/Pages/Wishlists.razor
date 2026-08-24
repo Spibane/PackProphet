@@ -14,7 +14,7 @@
 else if (Id is null)
 {
     <div class="page-head">
-        <span class="title">Wishlists</span>
+        <h1 class="title">Wishlists</h1>
         <span class="subtitle">@Session.Wishlists.Count saved</span>
         <span class="actions">
             <button class="btn btn-sm btn-primary" @onclick="NewList">new wishlist</button>
@@ -28,9 +28,11 @@ else if (Id is null)
         <div class="grid-toolbar">
             <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
                 <button class="btn @(Session.WishGrid ? "btn-outline-secondary" : "btn-secondary")"
-                        @onclick="() => Session.SetWishGrid(false)" title="A table, for comparing">list</button>
+                        @onclick="() => Session.SetWishGrid(!Session.WishGrid)"
+                        aria-pressed="@(!Session.WishGrid)" title="A table, for comparing">list</button>
                 <button class="btn @(Session.WishGrid ? "btn-secondary" : "btn-outline-secondary")"
-                        @onclick="() => Session.SetWishGrid(true)" title="Cards, for recognising">grid</button>
+                        @onclick="() => Session.SetWishGrid(!Session.WishGrid)"
+                        aria-pressed="@Session.WishGrid" title="Cards, for recognising">grid</button>
             </div>
         </div>
     }
@@ -276,7 +278,8 @@ else
                     var rung = RungOf(card);
                     var fact = Session.FactFor(card);
                     <div class="wish-row @(owned >= wanted ? "got" : "")">
-                        <a class="pack-thumb deck-thumb" href="card/@card.Key"
+                        <a class="pack-thumb deck-thumb @(Session.HasGoldFlair(card) ? "gold-flair" : "")"
+                           href="card/@card.Key"
                            data-tip-img="@card.ArtUrl" data-tip="@card.Name"
                            style="background-image:url('@card.ArtUrl')"
                            aria-label="@card.Name"></a>
@@ -344,11 +347,21 @@ else
         </div>
 
         <div class="picker-col">
+            @* A bulk add of two hundred cards has to say what it did, or the only feedback is a
+               number changing in a summary box further up the page. *@
+            @if (_added > 0)
+            {
+                <div class="alert alert-success py-2 small">
+                    Added @_added card(s) to <strong>@_list.Name</strong>.
+                    <button class="btn btn-sm btn-link p-0 align-baseline"
+                            @onclick="UndoAdd">undo</button>
+                </div>
+            }
             @* All cards by default here, the opposite of the deck builder: a wishlist is mostly
                made of things you do not have yet. *@
             <CardPicker ByPrinting="true" AllCardsDefault="true"
                         Heading="Add cards to this list" PickedLabel="wanted"
-                        PickedOf="WantedOf" OnPick="Add" />
+                        PickedOf="WantedOf" OnPick="Add" OnPickAll="AddAll" />
         </div>
     </div>
 }
@@ -404,6 +417,9 @@ else
         _cards = Session.WishlistCards(_list);
         _missing = Session.MissingInWishlist(_list);
         BuildRoutes();
+
+        // Only about the list in front of you: switching lists must not carry the notice across.
+        if (_addedFor != _list.Id) { _added = 0; _addedFor = _list.Id; }
 
         // Re-priced only when the demand actually changed. Tapping through copy counts on a
         // long list would otherwise run the completion integral on every tap.
@@ -551,6 +567,23 @@ else
     /// </summary>
     private void Add(PocketCard card) => Bump(card, 1);
 
+    /// <summary>
+    /// Everything matching the current filters — "all diamonds in A1", "every Grass card in this
+    /// set". One change, so one undo press takes it all back.
+    /// </summary>
+    private void AddAll(IReadOnlyList<PocketCard> cards)
+    {
+        if (_list is null || cards.Count == 0) return;
+
+        Session.AddToWishlist(_list.Id, cards.Select(c => c.OwnershipKey));
+        _added = cards.Count;
+    }
+
+    /// <summary>How many the last bulk add covered, so the action is not silent.</summary>
+    private int _added;
+
+    private string? _addedFor;
+
     private void Bump(PocketCard card, int delta)
     {
         if (_list is null) return;
@@ -563,17 +596,19 @@ else
         Session.SetWanted(_list.Id, card.OwnershipKey, 0);
     }
 
+    private void UndoAdd()
+    {
+        Session.Undo();
+        _added = 0;
+    }
+
     private RarityRung? RungOf(PocketCard card)
     {
         var index = Session.Index.Ladder.IndexOf(card.Rarity);
         return index is null ? null : Session.Index.Ladder.Rungs[index.Value];
     }
 
-    private static string Fmt(double packs) =>
-        double.IsPositiveInfinity(packs) ? "never"
-        : packs >= 10_000 ? $"{packs / 1000:N0}k"
-        : packs >= 100 ? packs.ToString("N0")
-        : packs.ToString("N1");
+    private static string Fmt(double packs) => Text.Fmt.Packs(packs);
 
     public void Dispose() => Session.Changed -= OnChanged;
 }

@@ -12,21 +12,35 @@
    the tile has no room for the name, set or number. The list layout is the opposite case
    and does preview the art, from its thumbnail. *@
 
-<div class="card-tile @(Count > 0 ? "owned" : "") @(Picked > 0 ? "picked" : "")"
+@* Right-click removes a copy: the natural desktop counterpart to left-click adding one, and far
+   quicker than switching the whole grid into remove mode to fix one over-count. The browser menu
+   is suppressed on the tile only.
+
+   A comment cannot live INSIDE the attribute list below. Razor does not treat it as a comment
+   there — it emits the text as an attribute name, and the browser throws
+   "InvalidCharacterError: Element.setAttribute: Invalid attribute name" at render time, taking
+   the whole grid down. *@
+<div class="card-tile @(Count > 0 ? "owned" : "") @(Picked > 0 ? "picked" : "") @(Gold ? "flair gold-flair" : "")"
      data-idx="@Index" data-tip="@Tip"
      @onclick="OnClick"
+     @oncontextmenu="RightClick" @oncontextmenu:preventDefault="true"
      @onpointerdown="PointerDown" @onpointerup="PointerUp"
      @onpointercancel="CancelHold" @onpointerleave="CancelHold" @onpointermove="PointerMove">
+    @* No rarity badge. The tile IS the card art, which carries the rarity mark itself, so a
+       label in the corner repeated what was already visible and cost a corner to do it. The list
+       layout still shows rarity, because there the art is a 32px thumbnail. *@
     <img data-src="@Card.ArtUrl" alt="@Card.Name" decoding="async" draggable="false" />
-    <span class="rar">@Card.Rarity</span>
 
     @* Detail needs its own target: a tap on the tile means "I own one more", so it cannot also
        mean "tell me about this". A corner button for a pointer, a long press for a finger —
        where a button that size is an awkward target. *@
     @if (ShowInfo)
     {
+        @* Its context menu is stopped rather than prevented, so "open in new tab" still works on
+           the one thing here that is genuinely a link. *@
         <a class="info" href="card/@Card.Key" title="Card detail" aria-label="Detail for @Card.Name"
-           @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true">info</a>
+           @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true"
+           @oncontextmenu:stopPropagation="true">info</a>
     }
 
     @if (Count > 0)
@@ -48,7 +62,17 @@
 
     /// <summary>Copies picked in the current action, e.g. cards pulled from a pack being logged.</summary>
     [Parameter] public int Picked { get; set; }
-    [Parameter] public EventCallback<(int Index, bool Shift)> OnActivate { get; set; }
+
+    /// <summary>
+    /// Whether this card has earned its gold flair. Passed in rather than derived here: the rule
+    /// needs the rarity ladder and the tile deliberately knows nothing but its own card.
+    /// </summary>
+    [Parameter] public bool Gold { get; set; }
+    /// <param name="Invert">
+    /// Do the opposite of the grid's current mode — shift-click or right-click. The tile does not
+    /// know whether that means add or remove; the grid owns the mode.
+    /// </param>
+    [Parameter] public EventCallback<(int Index, bool Invert)> OnActivate { get; set; }
 
     /// <summary>
     /// False while a sweep is armed. Both affordances would fight the sweep: the button would
@@ -64,11 +88,13 @@
     private int _lastIndex = -1;
     private int _lastPicked = -1;
     private bool _lastShowInfo = true;
+    private bool _lastGold;
 
     protected override bool ShouldRender()
     {
         if (ReferenceEquals(_lastCard, Card) && _lastCount == Count
-            && _lastIndex == Index && _lastPicked == Picked && _lastShowInfo == ShowInfo)
+            && _lastIndex == Index && _lastPicked == Picked && _lastShowInfo == ShowInfo
+            && _lastGold == Gold)
             return false;
 
         _lastCard = Card;
@@ -76,6 +102,7 @@
         _lastIndex = Index;
         _lastPicked = Picked;
         _lastShowInfo = ShowInfo;
+        _lastGold = Gold;
         return true;
     }
 
@@ -146,4 +173,10 @@
 
         return OnActivate.InvokeAsync((Index, e.ShiftKey));
     }
+
+    /// <summary>
+    /// Right-click means the opposite of a left-click, exactly as shift-click does. It does not
+    /// consult <c>_held</c>: a long press is a touch gesture and cannot produce a right-click.
+    /// </summary>
+    private Task RightClick(MouseEventArgs e) => OnActivate.InvokeAsync((Index, true));
 }

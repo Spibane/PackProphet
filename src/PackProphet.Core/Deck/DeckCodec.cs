@@ -133,6 +133,13 @@ public static class DeckCodec
             i += 3;
             if (v % 10 != 0)
                 throw new FormatException($"Card value {v} is not a multiple of ten; the format has changed.");
+
+            // Symmetric with Create, which refuses a non-positive identity. Accepting one here let
+            // a deck be SAVED holding a card that can never resolve against the index: it shows as
+            // a permanently missing card with no name, and nothing in the app can explain why.
+            if (v <= 0)
+                throw new FormatException("Deck code contains a zero card identity.");
+
             result.Add(v / 10);
         }
         return result;

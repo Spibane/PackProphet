@@ -87,6 +87,50 @@ public sealed class PackOdds
             : cards;
     }
 
+    /// <summary>
+    /// Ownership keys of every FOIL printing: the second print of a 1-3 diamond card in a set
+    /// whose pull rates name foil slot codes, which today means the Deluxe set.
+    ///
+    /// Exposed because a foil is a separate collectible with its own ownership key, so a target
+    /// like "all diamonds in A4b" silently demands both printings — 139 extra cards, obtainable
+    /// only from a limited-time pack, that plenty of collectors do not chase. Whether to want
+    /// them is the user's call, and this is the set they need to be able to exclude.
+    /// </summary>
+    public IReadOnlySet<string> FoilOwnershipKeys =>
+        _foilKeys ??= BuildFoilKeys();
+
+    private IReadOnlySet<string>? _foilKeys;
+
+    private IReadOnlySet<string> BuildFoilKeys()
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var set in _rates.ModelledSets)
+        {
+            var rungs = FoilRungs(set);
+            if (rungs.Count == 0) continue;
+
+            if (!_index.BySet.TryGetValue(set, out var cards)) continue;
+
+            foreach (var card in cards)
+            {
+                // Same test the odds engine uses: a non-zero variant index is only a FOIL on a
+                // rung the set's rates name a foil code for. Anywhere else it is an alternate
+                // art, and treating those as foils would quietly drop real cards from targets.
+                if (card.VariantIndex == 0) continue;
+                if (_index.Ladder.IndexOf(card.Rarity) is not int rung || !rungs.Contains(rung)) continue;
+
+                keys.Add(card.OwnershipKey);
+            }
+        }
+
+        return keys;
+    }
+
+    /// <summary>Sets that have foil printings at all, so the UI can offer the choice only there.</summary>
+    public IEnumerable<string> SetsWithFoils =>
+        _rates.ModelledSets.Where(set => FoilRungs(set).Count > 0);
+
     /// <summary>Pack keys the engine can actually price, i.e. those whose set has rate data.</summary>
     public IEnumerable<string> PriceablePacks =>
         _index.OpenablePackKeys.Where(k => _rates.Covers(k.Split(':')[0]));

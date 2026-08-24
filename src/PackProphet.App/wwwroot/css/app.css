@@ -114,6 +114,94 @@ main > * { flex-shrink: 0; }
 .app-nav .theme-btn svg { display: block; }
 @media (max-width: 700px) { .app-nav .theme-btn .theme-label { display: none; } }
 
+/* Matches the theme button rather than Bootstrap's form-select, so the two controls in the nav
+   are the same height and weight. It is capped in width because a collection name can be long
+   and the nav has to survive a phone. */
+.app-nav .profile-switch {
+    max-width: 9rem; padding: .25rem .5rem; border-radius: .3rem;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .95rem; line-height: 1.2; cursor: pointer;
+}
+.app-nav .profile-switch:hover { border-color: var(--bs-primary); }
+
+/* The two share directions, side by side. They do not compete - each account has its own daily
+   allowance - so showing them as one list would imply a queue that does not exist. Stacks on a
+   phone, incoming first, because that is the half you act on. */
+.share-cols {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.6rem;
+    margin-bottom: .8rem;
+}
+@media (max-width: 800px) { .share-cols { grid-template-columns: 1fr; } }
+
+/* Off-screen until focused, which is the whole point: it costs sighted users nothing and saves a
+   keyboard user twelve tab stops on every navigation. */
+.skip-link {
+    position: absolute; left: -100vw; top: 0; z-index: 2000;
+    padding: .4rem .7rem; border-radius: 0 0 .3rem 0;
+    background: var(--bs-primary); color: #fff; text-decoration: none;
+}
+.skip-link:focus { left: 0; }
+/* The target is focusable so the skip actually lands, but it must not draw a box around the
+   entire page when it receives focus programmatically. */
+main:focus { outline: none; }
+
+/* ================================================================= storage alarm
+
+   Deliberately the loudest thing in the app, and not dismissible. Every other warning here is
+   about the game; this one is about the app failing to keep your work, and the cost of missing it
+   is the whole collection. */
+.storage-alarm {
+    display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap;
+    margin: .5rem .75rem; padding: .5rem .7rem; border-radius: .4rem;
+    border: 1px solid var(--bs-danger);
+    background: color-mix(in srgb, var(--bs-danger) 12%, var(--bs-body-bg));
+    font-size: .93rem;
+}
+.storage-alarm code { font-size: .88rem; }
+
+/* ================================================================= evolution gaps
+
+   One line by default. The Collection page already carries a header, a series picker, a row of
+   set tabs and the grid's own toolbar, so a permanently expanded panel here would push the first
+   card off a phone screen entirely - and the grid is what the page is for. */
+/* Neutral, not warning-coloured. Missing a stage is the ordinary state of a young collection, not
+   a fault, and a yellow bar that never goes away trains the eye to skip it - which costs more than
+   the bar is worth. It reads as a fact here, and it can be dismissed for good. */
+.gap-strip {
+    position: relative;
+    /* A top margin as well as a bottom one: with none it sat flush against the set tabs, reading
+       as part of that bar rather than as its own row. */
+    margin: .5rem .75rem;
+    padding: .35rem 2rem .35rem .6rem;
+    border: 1px solid var(--bs-border-color);
+    background: color-mix(in srgb, var(--bs-body-color) 4%, transparent);
+    border-radius: .4rem;
+    font-size: .92rem;
+}
+.gap-strip > .hd {
+    display: flex; align-items: baseline; gap: .35rem; flex-wrap: wrap;
+    width: 100%; padding: 0; border: 0; background: none; text-align: left;
+    color: var(--bs-body-color); cursor: pointer;
+}
+.gap-strip > .x {
+    position: absolute; top: .1rem; right: .35rem;
+    padding: 0 .25rem; border: 0; background: none; cursor: pointer;
+    color: var(--bs-secondary-color); font-size: 1.1rem; line-height: 1.3;
+}
+.gap-strip > .x:hover { color: var(--bs-body-color); }
+.gap-strip > .hd .chev { width: .8rem; color: var(--bs-secondary-color); }
+.gap-list { margin: 0; padding-left: 1.2rem; }
+.gap-list li { margin-bottom: .15rem; }
+/* The rarity sits between the name and the set, so it needs to read as a label rather than as
+   part of either. */
+.gap-list .rr {
+    padding: 0 .3rem; border-radius: .2rem;
+    background: color-mix(in srgb, var(--bs-body-color) 10%, transparent);
+    font-size: .85rem;
+}
+.gap-list .badge { vertical-align: baseline; }
+
 /* ================================================================= light-mode structure
 
    Bootstrap's light palette draws every line in #dee2e6 on a #fff body — about 1.3:1, which is
@@ -199,6 +287,9 @@ main > * { flex-shrink: 0; }
 /* The title is the one thing every header has, so it gets one definition rather than a <strong>
    styled slightly differently on each page. */
 .page-head .title {
+    /* An h1, so its user-agent margin and size have to be neutralised: the header is a
+       fixed-height single row and must not change because the element became a heading. */
+    margin: 0;
     font-weight: 700; font-size: 1.05rem;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -296,6 +387,10 @@ main > * { flex-shrink: 0; }
 
 .card-tile {
     position: relative;
+    /* A size container, so badges can scale with the TILE rather than with the page. The grid
+       runs from 3 to 10 columns, so a tile is anywhere from a thumbnail to a playing card, and
+       anything sized in rem is oversized at one end and unreadable at the other. */
+    container-type: size;
     aspect-ratio: 367 / 512;
     border-radius: 6px;
     overflow: hidden;
@@ -315,13 +410,8 @@ main > * { flex-shrink: 0; }
 .card-tile img { width: 100%; height: 100%; display: block; object-fit: cover; background: #333; }
 .card-tile img.img-failed { opacity: .25; }
 
-.card-tile .rar {
-    position: absolute; left: 3px; top: 3px;
-    font-size: .72rem; line-height: 1; padding: 2px 4px;
-    background: rgba(0, 0, 0, .65); color: #fff; border-radius: 3px;
-}
 /* Info button, bottom-centre. Every corner of a card carries something worth seeing — the
-   rarity mark, the set number, the illustrator — while the middle of the lower edge is flavour
+   stage, the HP, the set number, the illustrator — while the middle of the lower edge is flavour
    text, so a button there covers the least. Sized as a real target rather than a decoration:
    the first attempt was a 1.1rem corner dot and was effectively invisible. */
 .card-tile .info {
@@ -351,17 +441,40 @@ main > * { flex-shrink: 0; }
     .card-tile .info { display: none; }
 }
 
+/* How many you own: the most important thing on the tile, and it used to be the smallest — a
+   .82rem badge that had to be squinted at on a phone.
+
+   Bottom-right, and its WIDTH is what is capped rather than its height. The info button is
+   centred with a 46% minimum width, so it occupies the middle 27%-73% of the bottom edge; a
+   badge narrower than the remaining 27% never touches it however tall it gets, so height is
+   free to be 1.5x the info button's while width stays clear of it.
+
+   Top-right was tried and is wrong: it covers the HP printed on every Pokémon card. */
 .card-tile .cnt {
-    position: absolute; right: 3px; bottom: 3px;
-    min-width: 1.1rem; text-align: center;
-    font-size: .82rem; font-weight: 700; line-height: 1.1; padding: 2px 4px;
-    background: var(--bs-primary); color: #fff; border-radius: 3px;
+    position: absolute; right: 4px; bottom: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 27%; min-width: 1.9rem; max-width: 3.15rem;
+    /* 1.5x the info button's 22%, tracking it at every size — including its 1.5rem and 2.1rem
+       bounds, so the ratio holds at 3 columns and at 10. */
+    height: 33%; min-height: 2.25rem; max-height: 3.15rem;
+    /* Scaled off the container's height so the digits fill the badge at every column count. */
+    font-size: clamp(.95rem, 18cqh, 1.9rem);
+    font-weight: 700; line-height: 1;
+    background: var(--bs-primary); color: #fff; border-radius: 6px;
+    /* Sits over the art, so it needs an edge of its own to stay legible on a pale card. */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
 }
+/* Mirrors the owned count on the opposite corner, at the same size — on the log page both
+   appear on one tile, and one big badge beside one tiny one read as a mistake. */
 .card-tile .pick {
-    position: absolute; left: 3px; bottom: 3px;
-    min-width: 1.1rem; text-align: center;
-    font-size: .86rem; font-weight: 700; line-height: 1.1; padding: 2px 5px;
-    background: var(--bs-success); color: #fff; border-radius: 3px;
+    position: absolute; left: 4px; bottom: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 27%; min-width: 1.9rem; max-width: 3.15rem;
+    height: 33%; min-height: 2.25rem; max-height: 3.15rem;
+    font-size: clamp(.95rem, 18cqh, 1.9rem);
+    font-weight: 700; line-height: 1;
+    background: var(--bs-success); color: #fff; border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
 }
 
 /* Sweep mode suppresses the browser's own touch gestures so a drag selects instead of
@@ -374,8 +487,8 @@ main > * { flex-shrink: 0; }
 .grid-wrap.removing .card-tile .cnt { background: var(--bs-danger); }
 
 /* iOS raises the selection magnifier on a long press unless BOTH the callout and selection are
-   refused, and it has to be refused on the descendants too — the count and rarity badges are
-   text nodes, and a press landing on one of them selects it even when the tile says not to. */
+   refused, and it has to be refused on the descendants too — the count badges are text nodes,
+   and a press landing on one of them selects it even when the tile says not to. */
 .card-tile, .card-tile * {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -695,6 +808,22 @@ main > * { flex-shrink: 0; }
 
 /* Expandable pack rows. The whole row is the hit target, not a small caret: this is used on
    a phone beside the game. */
+/* The winning row's tint. NOT Bootstrap's .table-primary, which hardcodes a pale blue
+   background and BLACK text in both themes: in dark mode that left every muted cell on the row
+   — the set code beside the pack name most visibly — as light grey on pale blue, which is
+   unreadable. Mixing the accent into the table's own background instead keeps the row's text at
+   the theme's own colours, so secondary text stays secondary rather than becoming invisible. */
+/* Generalised from .pack-table tr.pack-row-best. The original fix covered the pack ranking and
+   left .table-primary in place on three other tables - the deck's pack ranking, the batch
+   comparison and the cheapest-route table - so the same unreadable row survived in dark mode on
+   all of them. One class, applied wherever a table marks its winning row. */
+tr.row-best {
+    /* 8%, close to the 6% the in-deck picker row uses: a table row is a wide band, so the
+       same strength that reads as a gentle hint on a narrow row reads as a selection here. The
+       "open this" badge carries the message; the tint only has to group the row with it. */
+    --bs-table-bg: color-mix(in srgb, var(--bs-primary) 8%, var(--bs-body-bg));
+}
+
 .pack-row-click { cursor: pointer; }
 .pack-row-click:hover { background: var(--bs-secondary-bg); }
 .pack-row-click .expander { display: inline-block; width: 1rem; color: var(--bs-secondary-color); }
@@ -716,6 +845,9 @@ main > * { flex-shrink: 0; }
 }
 
 .pack-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+/* The per-row action. Narrow and right-aligned so the numeric columns keep their width, and
+   never wrapping: a two-line row would break the alignment of every figure beside it. */
+.pack-table .act { text-align: right; white-space: nowrap; width: 1%; }
 .pack-table th.num { text-align: right; }
 .pack-thumb {
     display: inline-block;
@@ -725,15 +857,30 @@ main > * { flex-shrink: 0; }
     background-size: contain; background-position: center; background-repeat: no-repeat;
 }
 
-/* ================================================================= history sections
+/* ================================================================= page sections
 
-   Each section is fenced by a rule above its heading. Without it the page was one continuous
-   run of tables and headings at nearly the same weight, and "Packs per set" read as a caption
-   on the chart above it rather than as a new thing. The heading also steps up in size, so the
-   hierarchy is carried by two signals rather than by whitespace alone. */
+   Each section is fenced by a rule above its heading. Without it a long page was one continuous
+   run of tables and headings at nearly the same weight, and "Packs per set" read as a caption on
+   the chart above it rather than as a new thing. The heading also steps up in size, so the
+   hierarchy is carried by two signals rather than by whitespace alone.
 
-.history-page > h6,
-.history-page > .section-head {
+   Every long single-column page shares this one rule rather than each carrying its own copy.
+   That started as two pages and had quietly become five identical blocks scattered down this
+   file, which is exactly how they drift apart. Note the two heading levels - most of these pages
+   put their sections under a panel and use h6, while Settings' are top level and use h5 - which
+   is why both appear in the selector list.
+
+   Both are now h2. They were h5 and h6 chosen for their default SIZE, which is backwards: this
+   rule sets the size anyway, and picking a heading level for its appearance left every long page
+   jumping from its h1 straight to an h5, so heading navigation skipped two levels on the way in. */
+
+.history-page > h2,
+.history-page > .section-head,
+.pools-page > h2,
+.trades-page > h2,
+.board-page > h2,
+.compare-page > h2,
+.settings-page > h2 {
     margin: 2.1rem 0 .6rem;
     padding-top: 1rem;
     /* Deliberately heavier than an ordinary area boundary: this separates SECTIONS of a long
@@ -747,12 +894,16 @@ main > * { flex-shrink: 0; }
     display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
 }
 
-/* The first section follows the hits panel, which is already fenced by its own border. */
-.history-page > h6:first-of-type { margin-top: .5rem; padding-top: 0; border-top: 0; }
+/* The first section needs no rule above it: on History it follows the hits panel, which is
+   already fenced by its own border, and on Settings it is the first thing under the page head. */
+.history-page > h2:first-of-type,
+.settings-page > h2:first-of-type { margin-top: .5rem; padding-top: 0; border-top: 0; }
 
 /* Explanatory text belongs to the heading above it, so it sits closer to that than to the
    table below. */
-.history-page > h6 + p { margin-bottom: .7rem; }
+.history-page > h2 + p,
+.compare-page > h2 + p,
+.settings-page > h2 + p { margin-bottom: .7rem; }
 
 /* ================================================================= hits
 
@@ -1091,7 +1242,7 @@ main > * { flex-shrink: 0; }
         3rem                /* hp + unit  */
         minmax(0, 1.5fr)    /* ability + attacks */
         2.8rem              /* set        */
-        2.2rem              /* owned      */
+        5.2rem              /* owned + "n arts" qualifier */
         4.6rem;             /* in deck    */
     align-items: center; gap: .45rem; width: 100%;
     padding: .25rem .5rem; border: 0; border-bottom: 1px solid var(--bs-border-color);
@@ -1109,7 +1260,32 @@ main > * { flex-shrink: 0; }
    attack's "30+" reads as part of the same figure. */
 .pick-row .hp .u { font-size: .74rem; opacity: .7; margin-left: .1rem; }
 .pick-row .id { color: var(--bs-secondary-color); font-variant-numeric: tabular-nums; }
-.pick-row .own { text-align: right; font-variant-numeric: tabular-nums; }
+/* Two fixed tracks, not a flex row: with flex the count sat against the chip and so shifted
+   left on exactly the rows that had one, breaking the alignment of the column it shares with
+   every row that does not. The count now occupies the same track whether a chip follows it. */
+.pick-row .own {
+    display: grid;
+    /* max-content, not a guessed width: the chip carries its own padding and border, and a
+       fixed track narrower than the label clipped the right-hand padding away, leaving the
+       final "s" against the border. It collapses to nothing on rows without a chip, so the
+       count keeps its track either way. */
+    grid-template-columns: 1.9rem max-content;
+    align-items: baseline;
+    gap: .25rem;
+    font-variant-numeric: tabular-nums;
+}
+.pick-row .own .n { text-align: right; }
+/* "2 arts" beside the count, because the row names ONE printing while the count pools them all.
+   Small and secondary: it qualifies the number rather than competing with it. */
+.pick-row .own .arts {
+    font-size: .68rem;
+    padding: 0 .3rem;
+    border-radius: .2rem;
+    color: var(--bs-secondary-color);
+    background: var(--bs-secondary-bg);
+    border: 1px solid var(--bs-border-color);
+    white-space: nowrap;
+}
 .pick-row .ind { text-align: right; }
 .pick-row .ind .badge { font-size: .74rem; }
 
@@ -1118,6 +1294,7 @@ main > * { flex-shrink: 0; }
 .pick-row.unowned .nm { color: var(--bs-secondary-color); }
 .pick-row.unowned .pack-thumb { opacity: .5; }
 .pick-row.in-deck { background: color-mix(in srgb, var(--bs-primary) 6%, transparent); }
+
 
 /* Moves: the ability marker then each attack as its cost pips plus damage. */
 .pick-row .mv {
@@ -1405,7 +1582,14 @@ main > * { flex-shrink: 0; }
     background: none; color: inherit;
     padding: .7rem .9rem; font-size: 1.05rem; width: 100%;
 }
-.palette-input:focus { outline: none; }
+/* The UA ring is removed because the input spans the dialog's full width and the ring drew a box
+   around the whole header; the border underneath it takes over the job. Removing an indicator
+   without replacing it is the actual accessibility failure, not removing the default one. */
+.palette-input:focus {
+    outline: none;
+    border-bottom-color: var(--bs-primary);
+    box-shadow: 0 1px 0 0 var(--bs-primary);
+}
 
 .palette-list { overflow-y: auto; max-height: min(26rem, 60vh); }
 .palette-empty { padding: .9rem; margin: 0; color: var(--bs-secondary-color); }
@@ -1502,3 +1686,232 @@ main > * { flex-shrink: 0; }
    badge says why it is not counted. */
 .pack-row-muted td { opacity: .68; }
 .pack-row-muted .badge { opacity: 1; }
+
+/* ================================================================= wonder pick
+
+   The offer: five card slots, filled by tapping the search below. Empty slots are drawn rather
+   than absent, so the screen says how many more cards it is waiting for. */
+.offer-strip { display: flex; flex-wrap: wrap; gap: .5rem; }
+.offer-card {
+    position: relative;
+    width: 4.6rem; aspect-ratio: 367 / 512; flex: none;
+    padding: 0; border: 1px solid var(--bs-border-color); border-radius: .3rem;
+    background-color: var(--bs-secondary-bg);
+    background-size: cover; background-position: center;
+    cursor: pointer;
+}
+.offer-card .x {
+    position: absolute; top: .1rem; right: .1rem;
+    width: 1.1rem; height: 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: rgba(0, 0, 0, .6); color: #fff;
+    font-size: .85rem; line-height: 1;
+    opacity: 0;
+}
+.offer-card:hover .x, .offer-card:focus-visible .x { opacity: 1; }
+.offer-card.empty {
+    display: flex; align-items: center; justify-content: center;
+    border-style: dashed; cursor: default;
+    color: var(--bs-secondary-color); font-size: 1.1rem;
+}
+
+/* The verdict. Coloured by the CALL, not by the value: an offer can be worth a lot in packs and
+   still be the wrong thing to spend a capped, slow-refilling pool on, and the colour has to
+   agree with the sentence rather than with the number. */
+.verdict {
+    padding: .6rem .8rem; border-radius: .5rem; margin-bottom: .6rem;
+    border: 1px solid var(--bs-border-color);
+}
+.verdict .head {
+    display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
+    margin-bottom: .25rem;
+}
+.verdict .call { font-size: 1.15rem; font-weight: 700; }
+.verdict .cost { font-size: .9rem; color: var(--bs-secondary-color); }
+.verdict .why { font-size: .92rem; }
+.verdict.take {
+    border-color: color-mix(in srgb, var(--bs-success) 55%, transparent);
+    background: color-mix(in srgb, var(--bs-success) 8%, transparent);
+}
+.verdict.skip {
+    border-color: color-mix(in srgb, var(--bs-warning) 55%, transparent);
+    background: color-mix(in srgb, var(--bs-warning) 8%, transparent);
+}
+
+/* ================================================================= gold flair
+
+   Ten copies of a diamond-rarity card earns its gold flair, granted automatically — the only
+   reason to keep pulling something you already own, so it is a real collecting goal and worth
+   showing.
+
+   In the game the effect recolours every white part of the card: the outer frame, the stage
+   badge, the "evolves from" bar, the info strip under the art, the weakness and retreat panels.
+   None of that is reachable from here — those parts are pixels inside a single flat webp, and a
+   CSS filter can only work on luminance, so it would gild the clouds in the artwork too.
+
+   What IS faithful is the outer frame, because it sits at a known place: the outermost ~5% of
+   the card. Drawing the ring there covers the printed white border rather than sitting outside
+   it, so the card reads as gold-framed instead of gold-outlined. The diagonal banding is the
+   giveaway detail of the real thing — flat gold reads as a highlight, striped gold reads as
+   metal — so the gradient repeats at roughly the angle the game uses. */
+.gold-flair {
+    position: relative;
+    /* A size container purely so the ring can be measured in cqw. Percentages will not do:
+       padding percentages resolve against WIDTH while inset percentages resolve against width
+       for the sides and HEIGHT for top and bottom — on a 1:1.4 card that made the inner hairline
+       sit 40% further in at the top and bottom than at the sides. One length in cqw is the same
+       number on all four edges. */
+    container-type: size;
+    --gold-w: 3.8cqw;
+}
+
+.gold-flair::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    padding: var(--gold-w);
+
+    /* Brushed gold: pale highlight, mid gold, deep amber, repeating on the diagonal. */
+    background: repeating-linear-gradient(
+        62deg,
+        #f8e79b 0 4%,
+        #e7bf4e 4% 9%,
+        #c08f2c 9% 13%,
+        #f3d878 13% 18%,
+        #d8a838 18% 24%);
+
+    /* The gradient-border trick: paint the whole box, then mask out everything inside the
+       padding so only the ring survives. Both spellings, because Safari still wants the
+       prefixed composite. */
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+
+    /* Below the badges and the info button, which are positioned children and would otherwise
+       lose to a pseudo-element that comes last in tree order. */
+    z-index: 1;
+}
+
+/* A dark hairline where the gold meets the artwork. The real card has one, and without it a
+   pale illustration bleeds straight into the frame. */
+.gold-flair::before {
+    content: '';
+    position: absolute; inset: var(--gold-w);
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(94, 62, 12, .55);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* The tile's own furniture sits INSIDE the frame, as it does on a real card, rather than on top
+   of it. Nudged in by the ring's width so the gold band is never broken by a badge. */
+.card-tile.gold-flair .cnt,
+.card-tile.gold-flair .pick { bottom: calc(4px + var(--gold-w)); }
+.card-tile.gold-flair .cnt { right: calc(4px + var(--gold-w)); }
+.card-tile.gold-flair .pick { left: calc(4px + var(--gold-w)); }
+.card-tile.gold-flair .info { bottom: calc(4px + var(--gold-w)); }
+
+.card-tile .cnt, .card-tile .pick, .card-tile .info { z-index: 2; }
+
+/* Thinner on a big rendering, proportionally thicker on a thumbnail: 3cqw of a 32px thumb is
+   under a pixel, and the same share on the detail art is heavier than the printed border. */
+.big-art.gold-flair { --gold-w: 3cqw; }
+.c-thumb.gold-flair, .deck-thumb.gold-flair { --gold-w: 9cqw; }
+.c-thumb.gold-flair::before, .deck-thumb.gold-flair::before { box-shadow: none; }
+
+/* The count badge that earned it says so, rather than leaving the ring to be guessed at. */
+.card-tile.flair .cnt {
+    background: linear-gradient(145deg, #f6de8a, #d9a733 55%, #b6832a);
+    color: #3a2a05;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
+}
+
+/* Matches the ring rather than the body text, so the note reads as part of the flair. */
+.flair-note { color: #9a6f14; font-weight: 600; }
+[data-bs-theme="dark"] .flair-note { color: #e0b352; }
+
+/* Typed count entry in the list. Deliberately not styled as a form control: a bordered box on
+   every one of 300 rows turns the list into a form, and the field is only interesting once you
+   are in it. Flat until focused, then obviously an input. */
+.card-line .c-count {
+    width: 100%;
+    padding: 0 .15rem;
+    border: 1px solid transparent;
+    border-radius: .2rem;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+.card-line .c-count::placeholder { color: var(--bs-secondary-color); opacity: .7; }
+.card-line:hover .c-count { border-color: var(--bs-border-color); }
+.card-line .c-count:focus {
+    outline: none;
+    border-color: var(--bs-primary);
+    background: var(--bs-body-bg);
+    /* The focused row has to be findable at a glance while typing down a long list. */
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--bs-primary) 35%, transparent);
+}
+
+/* ================================================================= resource pools
+
+   Three panels side by side, deliberately equal in weight: they are three separate systems with
+   no exchange rate between them, and giving one visual priority would suggest a hierarchy the
+   game does not have. Stacks on a phone. */
+
+.pools { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: .8rem; }
+
+.pool {
+    border: 1px solid var(--bs-border-color);
+    border-radius: .4rem;
+    padding: .7rem .8rem;
+    background: var(--bs-tertiary-bg);
+}
+.pool-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .35rem; }
+.pool-head .nm { font-weight: 700; }
+.pool-head .rate { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--bs-secondary-color); }
+
+/* The figures a decision is made from, sized up so they read before the prose does. */
+.pool-figures { display: flex; flex-wrap: wrap; gap: .9rem; margin: .4rem 0; }
+.pool-figures .fig { display: flex; flex-direction: column; min-width: 0; }
+.pool-figures .fig .v { font-size: 1.35rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pool-figures .fig .l { font-size: .72rem; color: var(--bs-secondary-color); }
+
+/* Entry sits at the bottom of each panel: reading the panel is the common case, correcting it
+   the occasional one. */
+.pool-entry {
+    display: flex; flex-wrap: wrap; align-items: end; gap: .5rem;
+    margin-top: .5rem; padding-top: .5rem;
+    border-top: 1px solid var(--bs-border-color);
+}
+.pool-entry input, .pool-entry select { width: 6.5rem; }
+
+/* Points entry sits inline in its table, so the field is only as wide as the largest balance
+   (2,500) needs — a full-width input would push the columns beside it off a phone. */
+.pts-in { width: 5.5rem; display: inline-block; text-align: right; }
+
+/* A capped set is actively losing value on every pack opened, which is a stronger statement than
+   the rest of the table makes and is tinted rather than merely worded. */
+.pts-capped { --bs-table-bg: color-mix(in srgb, var(--bs-warning) 12%, var(--bs-body-bg)); }
+
+
+/* ================================================================= trades
+
+   A blocked row is dimmed rather than hidden: naming the gate is the answer, and a target that
+   vanished would read as a bug. Dimmed, though, because the page is asking "what next" and the
+   answer can only be a row you can act on. */
+
+.trade-blocked td { opacity: .62; }
+.trade-blocked .glyphs { opacity: .8; }
+
+
+/* ================================================================= in-game wishlist
+
+   The transcription table. A row being ADDED is marked, because the board is retyped by hand and
+   the only rows that need attention are the changed ones. */
+
+.board-new { --bs-table-bg: color-mix(in srgb, var(--bs-primary) 8%, var(--bs-body-bg)); }
+

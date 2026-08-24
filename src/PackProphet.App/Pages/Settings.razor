@@ -6,12 +6,12 @@
 <PageTitle>Settings · PackProphet</PageTitle>
 
 <div class="page-head">
-    <span class="title">Settings</span>
+    <h1 class="title">Settings</h1>
     <span class="subtitle">everything here is stored in this browser only</span>
 </div>
 
-<div class="p-3" style="max-width:44rem">
-    <h5>Appearance</h5>
+<div class="p-3 settings-page" style="max-width:44rem">
+    <h2>Appearance</h2>
     <p class="small text-body-secondary">
         The same control sits in the top bar. <strong>Auto</strong> follows this device's
         system setting and changes with it, including while the app is open.
@@ -24,10 +24,227 @@
         }
     </div>
 
-    <h5>Your data</h5>
+    @* Sits with Appearance rather than with the collection sections: it is about how much the
+       page says, not about what counts as complete. *@
+    <div class="form-check mb-4">
+        <input class="form-check-input" type="checkbox" id="gapstrip"
+               checked="@Session.ShowGapStrip"
+               @onchange="e => Session.SetShowGapStrip((bool)(e.Value ?? false))" />
+        <label class="form-check-label" for="gapstrip">
+            Show the evolution-gap bar on the Collection page
+            <span class="d-block small text-body-secondary">
+                Names the cards you own that cannot evolve yet. Worth leaving on with a large
+                collection, where the list is short and specific; early on almost every chain is
+                missing a stage, so it says the same thing every day. The
+                <em>fills an evolution gap</em> filter works either way.
+            </span>
+        </label>
+    </div>
+
+    @* The plan drives every estimate in the app - the ranking, the completion figures, the point
+       shop, the trade board - but until now it could only be changed from the Packs page, which
+       made a global setting look like a property of one screen. *@
+    <h2>What counts as complete</h2>
+    <p class="small text-body-secondary">
+        One chip per rarity, carrying how many copies you want. Tapping cycles none, one, two
+        &mdash; a rarity you want none of is one you are not collecting. This is the
+        <strong>default</strong>, which every set without its own plan follows.
+    </p>
+    @if (Session.Ready)
+    {
+        <div class="rarity-chips mb-2">
+            <RarityChips Plan="Session.Plan()" OnCycle="CyclePlan"
+                         ShowFoils="Session.FoilSets.Count > 0" OnCycleFoils="CycleFoils" />
+        </div>
+
+        @* Overrides are made on the Packs page, one set at a time, and were previously findable
+           only by navigating back to that same set. A list of what is currently overridden is the
+           other half of the feature. *@
+        @if (Overrides().Count > 0)
+        {
+            <p class="small text-body-secondary mb-1">
+                These sets have their own plan and ignore the default:
+            </p>
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                @foreach (var set in Overrides())
+                {
+                    <span class="avail-chip on">
+                        <span class="ttl">@set</span>
+                        <span class="small">@PlanSummary(set)</span>
+                        <button class="chip-link" @onclick="() => ClearOverride(set)"
+                                title="Follow the default plan again">use default</button>
+                    </span>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="small text-body-secondary mb-4">
+                Every set follows this default. A single set can be given its own plan from the
+                <a href="packs">Which pack</a> page while that set is selected.
+            </p>
+        }
+    }
+
+    @* Placed before "your data" because it is the first thing a returning player should be
+       offered: without it every count on the History page reads as a fraction of the truth. *@
+    <h2>What the game already counted</h2>
+    <p class="small text-body-secondary">
+        The game keeps its own lifetime totals &mdash; open your profile in PTCGP and read them
+        off. Entering them here stops History from reporting your first week as your whole
+        history. Everything you log from now on is <strong>added</strong> to these, so nothing is
+        counted twice.
+    </p>
+    <p class="small text-body-secondary">
+        These are counts and nothing more: the game says how many packs, never which ones. So
+        they cannot feed per-set figures, the pack-points ledger, or the checks of predicted
+        odds against your real pulls &mdash; all of those stay based only on packs logged here,
+        and say so where they appear.
+    </p>
+    <div class="d-flex gap-3 flex-wrap align-items-end mb-2">
+        <label class="small">
+            packs opened
+            <input type="number" min="0" class="form-control form-control-sm"
+                   style="width:8rem" value="@_packs" @onchange="OnPacks" />
+        </label>
+        <label class="small">
+            Wonder Picks
+            <input type="number" min="0" class="form-control form-control-sm"
+                   style="width:8rem" value="@_wonder" @onchange="OnWonder" />
+        </label>
+        <button class="btn btn-sm btn-primary" @onclick="SaveLifetime">save totals</button>
+        @if (Session.Lifetime is not null)
+        {
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ClearLifetime">clear</button>
+        }
+    </div>
+    @if (Session.Lifetime is { } lt)
+    {
+        <p class="small text-body-secondary mb-4">
+            Read on @lt.At.ToLocalTime().ToString("d MMM yyyy, HH:mm") &mdash;
+            @lt.PacksOpened packs and @lt.WonderPicks Wonder Picks. Logging since then brings the
+            totals to <strong>@Session.LifetimePacks</strong> packs and
+            <strong>@Session.LifetimeWonderPicks</strong> Wonder Picks.
+        </p>
+    }
+    else
+    {
+        <p class="small text-body-secondary mb-4">
+            Not set, so History counts only what has been logged here.
+        </p>
+    }
+
+    @* Alt accounts are ordinary in this game, and you can trade with yourself, so a second
+       collection is a normal way to play rather than a power-user feature. Managed here rather
+       than in the top bar: switching is frequent, but creating and deleting are not, and putting
+       a delete button in the chrome of every page is how collections get erased by accident. *@
+    <h2>Collections</h2>
+    <p class="small text-body-secondary">
+        Each one holds its own cards, plan, decks, logs and resources. One is active at a time and
+        every other page shows that one.
+        @if (Session.MultipleProfiles)
+        {
+            <span>
+                <a href="compare">Compare two of them</a> to find the trades you could make with
+                yourself.
+            </span>
+        }
+    </p>
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>collection</th>
+                <th class="text-end">cards</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var profile in Session.Profiles)
+            {
+                var active = profile.Id == Session.ActiveProfileId;
+                <tr>
+                    <td>
+                        @if (_renaming == profile.Id)
+                        {
+                            <div class="input-group input-group-sm" style="max-width:16rem">
+                                <input class="form-control" @bind="_rename" @bind:event="oninput"
+                                       @onkeydown="e => RenameKey(e, profile.Id)" />
+                                <button class="btn btn-primary" @onclick="() => SaveRename(profile.Id)">
+                                    save
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <span>@profile.Name</span>
+                            @if (active)
+                            {
+                                <span class="badge text-bg-primary ms-2">active</span>
+                            }
+                        }
+                    </td>
+                    <td class="text-end">@Cards(profile)</td>
+                    <td class="text-end">
+                        <div class="d-flex gap-1 justify-content-end flex-wrap">
+                            @if (!active)
+                            {
+                                <button class="btn btn-sm btn-primary"
+                                        @onclick="() => Switch(profile.Id)">switch to</button>
+                            }
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    @onclick="() => StartRename(profile)">rename</button>
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    @onclick="() => Duplicate(profile)">duplicate</button>
+                            @if (Session.MultipleProfiles)
+                            {
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => Delete(profile)">
+                                    @(_deleting == profile.Id ? "really delete?" : "delete")
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @* No delete button at all while there is one collection: the app has nowhere to put a tap
+       without one, so the offer would only ever be refused. *@
+    <p class="small text-body-tertiary">
+        Deleting a collection cannot be undone, and export covers every collection at once, so a
+        backup is the only way back.
+    </p>
+
+    <div class="input-group input-group-sm mb-2" style="max-width:22rem">
+        <input class="form-control" placeholder="name a new collection" @bind="_newProfile"
+               @bind:event="oninput" @onkeydown="NewProfileKey" />
+        <button class="btn btn-outline-primary" @onclick="AddProfile"
+                disabled="@string.IsNullOrWhiteSpace(_newProfile)">add</button>
+    </div>
+
+    @* Beside the buttons that caused it, not in the page-wide message box further down: a
+       confirmation nobody scrolls to is not a confirmation. *@
+    @if (_profileNote is not null)
+    {
+        <p class="small text-body-secondary mb-4">@_profileNote</p>
+    }
+    else
+    {
+        <div class="mb-4"></div>
+    }
+
+    <h2>Your data</h2>
     <p class="small text-body-secondary">
         Everything is stored in this browser only &mdash; nothing is uploaded and no account
         exists. That also means clearing site data erases it, so export a backup.
+    </p>
+    <p class="small text-body-secondary">
+        Anything you do here can be undone with <kbd>Ctrl</kbd>+<kbd>Z</kbd> (or
+        <kbd>&#8984;</kbd>+<kbd>Z</kbd>), which works on every page, from the arrow buttons on
+        the Collection page, or from the command palette. The last @AppSession.UndoDepth changes
+        are kept &mdash; but only for this session, so a reload is the point of no return.
     </p>
     <div class="d-flex gap-2 flex-wrap mb-4">
         <button class="btn btn-sm btn-primary" @onclick="Export">export backup</button>
@@ -36,18 +253,33 @@
             <InputFile OnChange="Import" style="display:none" accept=".json" />
         </label>
         <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmReset">
-            @(_confirmingReset ? "really erase everything?" : "erase collection")
+            @* Names the collection once there is more than one: "erase collection" beside a list
+               of three of them reads as all of them, and it only ever erases the active one. *@
+            @(_confirmingReset
+                ? $"really erase {(Session.MultipleProfiles ? Session.Profile.Name : "everything")}?"
+                : Session.MultipleProfiles ? $"erase {Session.Profile.Name}" : "erase collection")
         </button>
     </div>
 
     @if (_message is not null)
     {
-        <div class="alert alert-info py-2 small">@_message</div>
+        <div class="alert alert-info py-2 small d-flex flex-wrap align-items-center gap-2">
+            <span>@_message</span>
+            @* The undo lives HERE, next to the sentence that mentions it. It used to say "undo
+               still works" while the only control was a pair of arrow buttons on another page,
+               which is a promise with no button attached. *@
+            @if (_offerUndo && Session.CanUndo)
+            {
+                <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoLast">
+                    undo that
+                </button>
+            }
+        </div>
     }
 
     @if (Session.Ready)
     {
-        <h5>Card data</h5>
+        <h2>Card data</h2>
         <table class="table table-sm w-auto">
             <tbody>
                 <tr><td>source</td><td><strong>@SourceLabel</strong></td></tr>
@@ -112,6 +344,150 @@
 </div>
 
 @code {
+    // Held as strings so a half-typed field is not rounded to zero mid-keystroke, and so an
+    // empty box stays empty rather than showing a 0 the user did not enter.
+    private string _packs = "";
+    private string _wonder = "";
+
+    /// <summary>
+    /// Saved immediately, unlike the Packs page's debounced draft: nothing here re-ranks, so
+    /// there is no expensive recompute to wait out between taps.
+    /// </summary>
+    private void CyclePlan(int tier)
+    {
+        var next = Session.Plan().Cycle(tier);
+
+        // Refused rather than saved: a plan wanting nothing makes every screen read "complete",
+        // which looks like a bug instead of a choice. Same rule as the Packs page.
+        if (next.IsEmpty) return;
+
+        Session.SetPlan(next);
+    }
+
+    // ---- Collections ----------------------------------------------------------------
+
+    private string? _renaming;
+    private string _rename = "";
+    private string _newProfile = "";
+    private string? _deleting;
+    private string? _profileNote;
+
+    private void Say(string note) => _profileNote = note;
+
+    private int Cards(Profile profile) => profile.Collection.Values.Sum();
+
+    private void Switch(string id)
+    {
+        _deleting = null;
+        Session.SwitchProfile(id);
+        Say($"switched to {Session.Profile.Name}.");
+    }
+
+    private void StartRename(Profile profile)
+    {
+        _renaming = profile.Id;
+        _rename = profile.Name;
+        _deleting = null;
+    }
+
+    private void SaveRename(string id)
+    {
+        Session.RenameProfile(id, _rename);
+        _renaming = null;
+    }
+
+    private void RenameKey(KeyboardEventArgs e, string id)
+    {
+        if (e.Key == "Enter") SaveRename(id);
+        else if (e.Key == "Escape") _renaming = null;
+    }
+
+    private void Duplicate(Profile profile)
+    {
+        _deleting = null;
+        Session.DuplicateProfile(profile.Id);
+        Say($"copied {profile.Name}. The copy is not active until you switch to it.");
+    }
+
+    /// <summary>
+    /// Two taps, and the second one is the destructive one. There is no undo for this: the undo
+    /// stack is cleared by the switch that follows, and a half-working undo is worse than none.
+    /// </summary>
+    private void Delete(Profile profile)
+    {
+        if (_deleting != profile.Id)
+        {
+            _deleting = profile.Id;
+            return;
+        }
+
+        _deleting = null;
+        if (Session.DeleteProfile(profile.Id)) Say($"deleted {profile.Name}.");
+    }
+
+    private void AddProfile()
+    {
+        if (string.IsNullOrWhiteSpace(_newProfile)) return;
+
+        var name = _newProfile.Trim();
+        _newProfile = "";
+        Session.CreateProfile(name);
+        Say($"added {name}, with the same plan as {Session.Profile.Name}. Switch to it to start entering cards.");
+    }
+
+    private void NewProfileKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") AddProfile();
+    }
+
+    private void CycleFoils() =>
+        Session.SetFoilCopies(Session.FoilCopies >= AppSession.MaxFoilCopies
+            ? 0
+            : Session.FoilCopies + 1);
+
+    private IReadOnlyList<string> Overrides() =>
+        Session.Profile.Targets.PlanBySet.Keys
+            .OrderBy(Session.Sets.SortKey, StringComparer.Ordinal)
+            .ToArray();
+
+    /// <summary>An override at a glance, so the list says what it differs into, not just that it differs.</summary>
+    private string PlanSummary(string set)
+    {
+        var plan = Session.Profile.Targets.PlanFor(set);
+        var parts = Session.Index.Ladder.Rungs
+            .Where(r => plan.Copies(r.Index) > 0)
+            .Select(r => plan.Copies(r.Index) > 1
+                ? $"{r.Symbol} x{plan.Copies(r.Index)}"
+                : r.Symbol);
+
+        return string.Join(" ", parts) is { Length: > 0 } summary ? summary : "nothing";
+    }
+
+    private void ClearOverride(string set) => Session.ClearPlanOverride(set);
+
+    private void OnPacks(ChangeEventArgs e) => _packs = e.Value?.ToString() ?? "";
+
+    private void OnWonder(ChangeEventArgs e) => _wonder = e.Value?.ToString() ?? "";
+
+    private void SaveLifetime()
+    {
+        var packs = Num.Count(_packs);
+        var wonder = Num.Count(_wonder);
+        Session.SetLifetime(packs, wonder);
+        _message = packs <= 0 && wonder <= 0
+            ? "Lifetime totals cleared."
+            : $"Saved: {packs} packs and {wonder} Wonder Picks before today.";
+        _offerUndo = true;
+    }
+
+    private void ClearLifetime()
+    {
+        _packs = _wonder = "";
+        Session.SetLifetime(0, 0);
+        _message = "Lifetime totals cleared.";
+        _offerUndo = true;
+    }
+
     private static readonly (string Value, string Label)[] Themes =
     [
         ("auto", "auto"), ("light", "light"), ("dark", "dark")
@@ -124,6 +500,14 @@
     {
         Session.Changed += OnChanged;
         await Session.InitAsync();
+
+        // Prefilled from what was saved, so editing the figure means correcting it rather than
+        // retyping it from memory.
+        if (Session.Lifetime is { } lt)
+        {
+            _packs = lt.PacksOpened.ToString();
+            _wonder = lt.WonderPicks.ToString();
+        }
     }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
@@ -134,6 +518,7 @@
 
     private async Task Export()
     {
+        _offerUndo = false;
         await Session.FlushAsync();
         var stamp = DateTimeOffset.Now.ToString("yyyy-MM-dd");
         await Store.ExportAsync(Session.State, $"packprophet-backup-{stamp}.json");
@@ -143,6 +528,7 @@
     private async Task Import(InputFileChangeEventArgs e)
     {
         _message = null;
+        _offerUndo = false;
         try
         {
             // 8 MB ceiling: a legitimate backup is well under 1 MB, so anything larger is a
@@ -159,7 +545,8 @@
             }
 
             Session.ReplaceState(imported);
-            _message = $"Imported {imported.Active.Collection.Count} owned cards.";
+            _message = $"Imported {imported.Active.Collection.Count} owned cards, replacing what was here.";
+            _offerUndo = true;
         }
         catch (IOException)
         {
@@ -172,7 +559,21 @@
         if (!_confirmingReset) { _confirmingReset = true; return; }
         _confirmingReset = false;
         Session.Mutate(p => p with { Collection = new(), PackLog = [], WonderLog = [] });
-        _message = "Collection erased. Undo still works if that was a mistake.";
+
+        _message = Session.MultipleProfiles
+            ? $"{Session.Profile.Name}: collection, pack log and Wonder Pick log erased. Your other collections are untouched."
+            : "Collection, pack log and Wonder Pick log erased.";
+        _offerUndo = true;
+    }
+
+    /// <summary>Whether the current message has something to undo.</summary>
+    private bool _offerUndo;
+
+    private void UndoLast()
+    {
+        Session.Undo();
+        _offerUndo = false;
+        _message = "Restored.";
     }
 
     public void Dispose() => Session.Changed -= OnChanged;

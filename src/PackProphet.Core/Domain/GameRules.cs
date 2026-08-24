@@ -36,6 +36,13 @@ public static class GameRules
     public static int PacksPerDay(bool premium) =>
         FreePacksPerDay + (premium ? PremiumExtraPacksPerDay : 0);
 
+    /// <summary>
+    /// Packs in the game's batch-open option. It costs exactly ten packs and adds no guarantee,
+    /// so it can never beat ten singles on odds — what it costs you is the chance to choose
+    /// again after each pull, which is why the app prices the batch rather than recommending it.
+    /// </summary>
+    public const int PacksPerBatch = 10;
+
     // ---- The three resource pools -------------------------------------------------
     //
     // Pack, Wonder, and Trade each have their own hourglass and their own pool, and
@@ -71,6 +78,41 @@ public static class GameRules
     /// wasting regen, so the app can say "no rush until Thursday" instead of nagging.
     /// </summary>
     public static readonly TimeSpan StaminaFullRefill = StaminaRegen * StaminaCap;
+
+    // ---- Flair --------------------------------------------------------------------
+
+    /// <summary>
+    /// Copies of a diamond-rarity card that earn its gold flair, granted automatically.
+    ///
+    /// Worth modelling even though it is purely cosmetic: it is the only reason to keep pulling
+    /// a card you already own, so it is a real collecting goal — and unlike most flair it costs
+    /// nothing and needs no tracking, because the copy count already says whether it is earned.
+    /// </summary>
+    public const int GoldFlairCopies = 10;
+
+    /// <summary>
+    /// The highest diamond rung that earns gold flair. Four-diamond cards do NOT, despite being
+    /// diamonds — so the rule needs the number of symbols, not just the family.
+    /// </summary>
+    public const int GoldFlairMaxDiamonds = 3;
+
+    /// <summary>
+    /// Gold flair is earned by ten copies of a ONE- TO THREE-diamond card that is not a promo.
+    ///
+    /// Every part of that is load-bearing, and each was wrong in an earlier version: it is not
+    /// "ten copies" (a tenth star earns nothing), not "ten copies of a diamond" (four-diamond
+    /// cards are excluded), and not decided by rarity alone — promos carry ordinary rarity codes,
+    /// 79 commons and 70 rares among them, so a rarity-only rule gilded 151 cards that can never
+    /// earn it.
+    /// </summary>
+    /// <param name="rarityGroup">The rung's family: Diamond, Star, Shiny, Crown.</param>
+    /// <param name="rarityCount">Symbols on the rung, e.g. 3 for a three-diamond card.</param>
+    /// <param name="isPromo">Promo cards are excluded whatever their rarity says.</param>
+    public static bool EarnsGoldFlair(string rarityGroup, int rarityCount, int copies, bool isPromo) =>
+        copies >= GoldFlairCopies
+        && !isPromo
+        && rarityCount <= GoldFlairMaxDiamonds
+        && rarityGroup.Equals("Diamond", StringComparison.OrdinalIgnoreCase);
 
     // ---- Wonder Pick --------------------------------------------------------------
 
@@ -116,9 +158,86 @@ public static class GameRules
     /// </summary>
     public const int TradeStaminaPerTrade = 1;
 
+    /// <summary>
+    /// Cards the in-game wishlist holds. It is a public board other players browse when looking
+    /// for a trade, so the twenty slots are advertising space, not a tracking list - which is why
+    /// a hard cap on it is a real constraint worth planning around.
+    /// </summary>
+    public const int TradeBoardSlots = 20;
+
     /// <summary>Trades must be same-rarity, and these rarities cannot be traded at all.</summary>
     public static bool IsTradeable(string rarityCode) =>
         rarityCode is not ("IM" or "UR");
+
+    /// <summary>
+    /// Whether this CARD may be traded: its rarity, plus the promo rule that rarity cannot express.
+    ///
+    /// A card-level overload because the rarity-only one is not the whole rule, and taking it for
+    /// the whole rule was a live bug: RouteCost priced a trade for promo cards - quoting a
+    /// shinedust cost for something the game refuses outright - while the trade queue and the board
+    /// advisor, which both remembered the promo check, refused them. Offering a route that does not
+    /// exist is worse than offering none.
+    /// </summary>
+    public static bool CanBeTraded(PocketCard card) =>
+        IsTradeable(card.Rarity) && (PromosTradeable || !card.IsPromo);
+
+    /// <summary>Whether this card may be shared: 1-4 diamonds, and not a promo for now.</summary>
+    public static bool CanBeShared(PocketCard card) =>
+        IsShareable(card.Rarity) && (PromosShareable || !card.IsPromo);
+
+    // ---- Shares ----
+    //
+    // A Share is a one-way gift: a friend sends you a card and receives NOTHING back. That single
+    // fact makes it unlike every other route in the game, and it is why it cannot be folded into
+    // the trade logic:
+    //
+    //   - No same-rarity payment. The whole reason a trade can be impossible - having nothing at
+    //     that rung to offer - simply does not apply.
+    //   - No shinedust and no Trade Stamina. It is free on both sides.
+    //   - It is capped by a DAILY allowance on the receiving end, not by a regenerating pool, so
+    //     the constraint is calendar days rather than a balance to spend down.
+    //
+    // Between two accounts of the same player it is therefore strictly better than a trade
+    // wherever it applies: same cards delivered, no dust, no stamina, and no card given up. The
+    // only price is the day.
+
+    /// <summary>
+    /// Cards a Share can carry: 1 to 4 diamonds and nothing above. Stars, shinies, Immersives and
+    /// Crowns cannot be shared at all, so they remain a trade-or-pull problem.
+    /// </summary>
+    public static bool IsShareable(string rarityCode) =>
+        rarityCode is "C" or "U" or "R" or "RR";
+
+    /// <summary>
+    /// Shares one account may RECEIVE per day. Sending is unlimited as far as we know, which is
+    /// what makes the receiving cap the binding constraint - and it binds on each account
+    /// separately, so two of your own accounts can each receive one on the same day.
+    /// </summary>
+    public const int SharesReceivedPerDay = 1;
+
+    /// <summary>
+    /// Whether a promo can be shared. FALSE, matching the trade rule, and for the same reason it
+    /// is a switch rather than a scattered IsPromo check: it cannot be inferred from rarity, since
+    /// promos carry ordinary C, U and R codes, and it is the kind of rule the developers change.
+    ///
+    /// Kept SEPARATE from <see cref="PromosTradeable"/> deliberately. They are two different rules
+    /// about two different features, and tying them together would mean the day one changes, the
+    /// app silently claims the other did too.
+    /// </summary>
+    public const bool PromosShareable = false;
+
+    /// <summary>
+    /// Whether promo cards can be traded. FALSE today, and expected to change: the developers
+    /// have said promo trading is coming.
+    ///
+    /// A single switch rather than an <c>IsPromo</c> check spread through the engine and the UI,
+    /// so the day it flips is one line. The change will not be cosmetic - a promo has no pack
+    /// route at all, so the moment they become tradeable they are the most valuable thing a trade
+    /// can get you, and every ranking that prices "what would this save me" will say so.
+    ///
+    /// Note it cannot be inferred from rarity: promos carry ordinary C, U and R codes.
+    /// </summary>
+    public const bool PromosTradeable = false;
 
     // ---- Pack availability ----
 

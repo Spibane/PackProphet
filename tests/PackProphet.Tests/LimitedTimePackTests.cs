@@ -99,4 +99,115 @@ public class LimitedTimePackTests
         Assert.NotSame(a, b);
         Assert.Same(a, aAgain);
     }
+
+    // ---- Deluxe foils ----------------------------------------------------------------
+
+    [Fact]
+    public void FoilKeys_AreTheSecondPrintingsOfTheDeluxeDiamonds()
+    {
+        var odds = Snapshot.Odds();
+        var index = Snapshot.Index();
+
+        var foils = odds.FoilOwnershipKeys;
+
+        // 64 C + 50 U + 25 R, paired exactly against their plain prints.
+        Assert.Equal(139, foils.Count);
+
+        var cards = index.All.Where(c => foils.Contains(c.OwnershipKey)).ToArray();
+        Assert.All(cards, c => Assert.Equal("A4b", c.Set));
+        Assert.All(cards, c => Assert.True(c.VariantIndex > 0));
+        Assert.All(cards, c => Assert.Contains(c.Rarity, new[] { "C", "U", "R" }));
+    }
+
+    [Fact]
+    public void AlternateArtsAreNotTreatedAsFoils()
+    {
+        // A4b also has 00/01 pairs at 1-star and 2-star, and those are genuine alternate arts:
+        // the set's rates name CF, UF and RF only. Calling them foils would silently drop real
+        // cards from every target.
+        var odds = Snapshot.Odds();
+        var index = Snapshot.Index();
+
+        var starPairs = index.BySet["A4b"]
+            .Where(c => c.VariantIndex > 0 && c.Rarity is "AR" or "SR")
+            .ToArray();
+
+        Assert.NotEmpty(starPairs);
+        Assert.All(starPairs, c => Assert.DoesNotContain(c.OwnershipKey, odds.FoilOwnershipKeys));
+    }
+
+    [Fact]
+    public void OnlyTheDeluxeSetHasFoils()
+    {
+        Assert.Equal(new[] { "A4b" }, Snapshot.Odds().SetsWithFoils.OrderBy(s => s).ToArray());
+    }
+
+    [Fact]
+    public void ZeroFoilCopies_DropsExactlyThoseCardsFromATarget()
+    {
+        var index = Snapshot.Index();
+        var odds = Snapshot.Odds();
+        var plan = RarityPlan.Uniform(Snapshot.Tiers("C", "U", "R"), 1);
+
+        var following = new RarityLadderTarget("A4b", plan)
+            .Outstanding(index, new Collection());
+        var without = new RarityLadderTarget("A4b", plan, new FoilPolicy(odds.FoilOwnershipKeys, 0))
+            .Outstanding(index, new Collection());
+
+        // Exactly the foils leave, and nothing else: 139 of the 278 one-to-three diamond
+        // printings in the set.
+        Assert.Equal(139, following.Count - without.Count);
+        Assert.All(without, d => Assert.DoesNotContain(d.Key, odds.FoilOwnershipKeys));
+    }
+
+    [Fact]
+    public void FoilCopiesAreCountedSeparatelyFromTheirRung()
+    {
+        // The point of a count rather than a switch: one of each parallel foil while wanting two
+        // of every diamond, or the reverse. A shared number could say neither.
+        var index = Snapshot.Index();
+        var foils = new FoilPolicy(Snapshot.Odds().FoilOwnershipKeys, 1);
+        var plan = RarityPlan.Uniform(Snapshot.Tiers("C", "U", "R"), 2);
+
+        var demands = new RarityLadderTarget("A4b", plan, foils).Outstanding(index, new Collection());
+
+        var foilDemands = demands.Where(d => foils.Keys.Contains(d.Key)).ToArray();
+        var plainDemands = demands.Where(d => !foils.Keys.Contains(d.Key)).ToArray();
+
+        Assert.Equal(139, foilDemands.Length);
+        Assert.All(foilDemands, d => Assert.Equal(1, d.Remaining));
+        Assert.NotEmpty(plainDemands);
+        Assert.All(plainDemands, d => Assert.Equal(2, d.Remaining));
+    }
+
+    [Fact]
+    public void TwoFoilCopiesAreAskedForWhenChosen()
+    {
+        var index = Snapshot.Index();
+        var foils = new FoilPolicy(Snapshot.Odds().FoilOwnershipKeys, 2);
+        var plan = RarityPlan.Uniform(Snapshot.Tiers("C", "U", "R"), 1);
+
+        var demands = new RarityLadderTarget("A4b", plan, foils)
+            .Outstanding(index, new Collection())
+            .Where(d => foils.Keys.Contains(d.Key))
+            .ToArray();
+
+        Assert.Equal(139, demands.Length);
+        Assert.All(demands, d => Assert.Equal(2, d.Remaining));
+    }
+
+    [Fact]
+    public void TheFoilPolicy_LeavesOtherSetsAlone()
+    {
+        // Nothing in A1 is a parallel foil, so the policy must be a no-op there rather than
+        // trimming anything by variant index.
+        var index = Snapshot.Index();
+        var plan = RarityPlan.Uniform(Snapshot.Tiers("C", "U", "R"), 1);
+        var foils = new FoilPolicy(Snapshot.Odds().FoilOwnershipKeys, 0);
+
+        var with = new RarityLadderTarget("A1", plan).Outstanding(index, new Collection());
+        var without = new RarityLadderTarget("A1", plan, foils).Outstanding(index, new Collection());
+
+        Assert.Equal(with.Count, without.Count);
+    }
 }

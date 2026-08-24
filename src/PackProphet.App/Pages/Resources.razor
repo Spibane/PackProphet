@@ -15,7 +15,7 @@ else
         <span class="subtitle">what regenerates, and what it is costing you to sit on</span>
     </div>
 
-    <div class="p-3 pools-page" style="max-width:60rem">
+    <PageShell Measure="PageShell.Width.Wide" Class="pools-page">
         @* Three panels, never a total. Pack, Wonder and Trade each have their own hourglass and
            their own pool, and nothing in the game exchanges between them. *@
         <p class="small text-body-secondary">
@@ -242,7 +242,7 @@ else
                 stopping you.
             </p>
         }
-    </div>
+    </PageShell>
 }
 
 @code {

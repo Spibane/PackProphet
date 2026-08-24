@@ -44,6 +44,36 @@
     color: var(--bs-danger-text-emphasis, #7a1420);
 }
 
+/* ================================================================= page body
+
+   One container for every page below its bars, and three named reading measures instead of the
+   fifteen inline max-width values that were there before. A page says what its content is; the
+   numbers live here so the scale can be retuned once.
+
+   64rem for wide rather than the 60 two pages used: it is the larger of the two values in use, so
+   adopting it relaxes those pages rather than clipping the ones already at 64.
+
+   Left-aligned rather than centred, which is what every one of these pages already did — centring
+   would be a visible change to all of them and is a separate decision. */
+:root {
+    --measure-form: 38rem;
+    --measure-text: 44rem;
+    --measure-wide: 64rem;
+}
+
+.page-body {
+    padding-inline: 1rem;
+    padding-block: 1rem;
+    min-inline-size: 0;
+}
+/* A grid reaches the screen edge. This is a named variant rather than the absence of a container,
+   so it reads as a decision instead of an omission. */
+.page-body.flush { padding: 0; }
+
+.page-body.measure-form { max-inline-size: var(--measure-form); }
+.page-body.measure-text { max-inline-size: var(--measure-text); }
+.page-body.measure-wide { max-inline-size: var(--measure-wide); }
+
 /* ================================================================= breakpoints
 
    Three named widths. Everything new uses these; the older rules below still sit on nine ad hoc

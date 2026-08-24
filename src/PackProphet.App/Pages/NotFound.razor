@@ -1,5 +1,19 @@
 ﻿@page "/not-found"
 @layout MainLayout
 
-<h3>Not Found</h3>
-<p>Sorry, the content you are looking for does not exist.</p>
+@* The only route in the app that had no page shell at all: a bare h3 and a paragraph, sitting
+   flush against the nav with no header and no padding. It looked unfinished because it was. *@
+
+<div class="page-head">
+    <h1 class="title">Page not found</h1>
+</div>
+
+<PageShell Measure="PageShell.Width.Text">
+    <p>That address does not match anything in the app.</p>
+    <p class="text-body-secondary">
+        If you followed a shared wishlist link, it may have been truncated in the message that
+        carried it &mdash; the whole list travels inside the link, so a cut-off one cannot be
+        recovered. Ask for it again.
+    </p>
+    <a class="btn btn-sm btn-outline-secondary" href="collection">&larr; go to your collection</a>
+</PageShell>

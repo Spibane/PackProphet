@@ -37,7 +37,7 @@ else if (Id is null)
         </div>
     }
 
-    <div class="p-3">
+    <PageShell Measure="PageShell.Width.Wide">
         @* A wishlist is the one target the app cannot derive, so the empty state says what it is
            for rather than only that there is nothing here. *@
         <p class="text-body-secondary small mb-3">
@@ -195,14 +195,14 @@ else if (Id is null)
                 </tbody>
             </DataTable>
         }
-    </div>
+    </PageShell>
 }
 else if (_list is null)
 {
-    <div class="p-4">
+    <PageShell Measure="PageShell.Width.Text">
         <p>That wishlist no longer exists.</p>
         <a class="btn btn-sm btn-outline-secondary" href="wishlists">&larr; all wishlists</a>
-    </div>
+    </PageShell>
 }
 else
 {

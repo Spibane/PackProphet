@@ -14,13 +14,13 @@ else if (!Session.MultipleProfiles)
         <h1 class="title">Compare collections</h1>
         <span class="subtitle">trades you could make with yourself</span>
     </div>
-    <div class="p-3">
+    <PageShell Measure="PageShell.Width.Wide">
         <p>
             There is only one collection, so there is nothing to compare yet. Alt accounts are
             ordinary in this game and you can trade with yourself, which is what this page is for.
         </p>
         <a class="btn btn-sm btn-primary" href="settings">add a collection</a>
-    </div>
+    </PageShell>
 }
 else
 {
@@ -50,7 +50,7 @@ else
     @* Two mechanics, and the split between them is what the page is for. A Share is one-way and
        free but stops at 4 diamonds; a trade is a same-rarity swap that costs both accounts dust
        and a stamina. So "what does my alt have that my main needs" is not one list. *@
-    <p class="p-3 pb-0 small text-body-secondary" style="max-width:52rem">
+    <p class="p-3 pb-0 small text-body-secondary" style="max-inline-size:var(--measure-wide)">
         Two ways to move a card between your own accounts, and which one applies is decided
         entirely by rarity. <strong>Shares</strong> carry 1 to 4 diamonds one way &mdash; nothing
         comes back, nothing is spent, and each account can receive
@@ -73,7 +73,7 @@ else
     }
     else
     {
-        <div class="p-3 compare-page">
+        <PageShell Measure="PageShell.Width.Wide" Class="compare-page">
             @* Shares first: one costs nothing, so there is no reason to trade before taking one.
                Both directions are listed because each account has its own daily allowance, so they
                do not compete. *@
@@ -367,7 +367,7 @@ else
                     </p>
                 }
             }
-        </div>
+        </PageShell>
     }
 }
 

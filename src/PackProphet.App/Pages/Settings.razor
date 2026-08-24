@@ -10,7 +10,7 @@
     <span class="subtitle">everything here is stored in this browser only</span>
 </div>
 
-<div class="p-3 settings-page" style="max-width:44rem">
+<PageShell Measure="PageShell.Width.Text" Class="settings-page">
     <h2>Appearance</h2>
     <p class="small text-body-secondary">
         The same control sits in the top bar. <strong>Auto</strong> follows this device's
@@ -375,7 +375,7 @@
             this row will say so.
         </p>
     }
-</div>
+</PageShell>
 
 @code {
     // Held as strings so a half-typed field is not rounded to zero mid-keystroke, and so an

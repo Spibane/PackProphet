@@ -1,0 +1,46 @@
+@* The body of a page, below its bars.
+
+   Every page used to invent this. Seven different containers — p-3 with one of four inline
+   max-widths, p-3 bare, p-4, or nothing at all — and the reading measure, which is the single most
+   consequential typographic decision on a text-heavy page, was an inline style chosen ad hoc:
+   fifteen distinct values across twenty-six declarations.
+
+   Three named measures replace them. A page picks what its content IS, not how many rem that
+   happens to be, so the scale can be retuned in one place.
+
+   Written in logical properties. Localisation is deferred rather than dropped, and right-to-left
+   is the half of it that CSS has to answer; doing it while this is being written costs nothing and
+   is a second pass through every page if it is not. *@
+
+<div class="page-body @MeasureClass @(Flush ? "flush" : null) @Class">@ChildContent</div>
+
+@code {
+    public enum Width
+    {
+        /// <summary>No cap. For a card grid, which should use whatever room it is given.</summary>
+        Full,
+        /// <summary>A form or a single column of controls.</summary>
+        Form,
+        /// <summary>Prose meant to be read start to finish.</summary>
+        Text,
+        /// <summary>Tables, charts and figures, which need room but not the whole screen.</summary>
+        Wide,
+    }
+
+    [Parameter] public Width Measure { get; set; } = Width.Full;
+
+    /// <summary>No padding either — the content reaches the screen edge, as a grid should.</summary>
+    [Parameter] public bool Flush { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string? MeasureClass => Measure switch
+    {
+        Width.Form => "measure-form",
+        Width.Text => "measure-text",
+        Width.Wide => "measure-wide",
+        _ => null,
+    };
+}

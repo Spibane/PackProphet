@@ -15,7 +15,7 @@ else
         <span class="subtitle">from the packs you have logged</span>
     </div>
 
-    <div class="p-3 history-page" style="max-width:60rem">
+    <PageShell Measure="PageShell.Width.Wide" Class="history-page">
         @if (_log.Count == 0)
         {
             <p class="text-body-secondary">
@@ -496,7 +496,7 @@ else
                 </p>
             }
         }
-    </div>
+    </PageShell>
 }
 
 @code {

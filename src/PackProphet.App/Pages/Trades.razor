@@ -102,7 +102,7 @@ else
         </button>
     </div>
 
-    <div class="p-3 trades-page" style="max-width:64rem">
+    <PageShell Measure="PageShell.Width.Wide" Class="trades-page">
         @* Stamina is the scarce resource, so the page opens with how much of it there is. The
            question is not what you can afford but which of the affordable things is worth a slot
            that arrives twice a day. *@
@@ -331,7 +331,7 @@ else
                 be.
             </p>
         }
-    </div>
+    </PageShell>
 }
 
 @code {

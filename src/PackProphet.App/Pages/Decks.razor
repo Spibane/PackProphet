@@ -39,7 +39,7 @@ else
 
     @* Full width. The list is a table of decks against each other, and capping it left the columns
        bunched at the left of a wide screen with the rest of the row empty. *@
-    <div class="p-3">
+    <PageShell Measure="PageShell.Width.Wide">
         @if (_decks.Count == 0)
         {
             <p class="text-body-secondary">
@@ -213,7 +213,7 @@ else
                 </tbody>
             </DataTable>
         }
-    </div>
+    </PageShell>
 }
 
 @code {

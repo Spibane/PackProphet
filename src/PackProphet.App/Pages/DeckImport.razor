@@ -18,7 +18,7 @@ else
         <span class="subtitle">from a screenshot of the in-game code</span>
     </div>
 
-    <div class="p-3" style="max-width:38rem">
+    <PageShell Measure="PageShell.Width.Form">
         @* The game's own share feature is the 2D code, so that is the whole screen rather than one
            tab among several. *@
         <p class="text-body-secondary">
@@ -70,7 +70,7 @@ else
         <p class="small text-body-secondary mb-0">
             Nothing to import? <a href="decks/new">Build a deck from scratch</a> instead.
         </p>
-    </div>
+    </PageShell>
 }
 
 @code {

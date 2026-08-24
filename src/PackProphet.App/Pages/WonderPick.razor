@@ -78,7 +78,7 @@ else
         </span>
     </div>
 
-    <div class="p-3">
+    <PageShell Measure="PageShell.Width.Wide">
         @if (_offer.Count == 0)
         {
             <p class="text-body-secondary">
@@ -232,7 +232,7 @@ else
                             OnPick="Add" />
             </div>
         }
-    </div>
+    </PageShell>
 }
 
 @code {

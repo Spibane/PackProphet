@@ -5,9 +5,8 @@
 @inject IJSRuntime JS
 @inject GridFocus Focus
 
-@* One flat surface with deep reach, instead of a menu bar that grows an item per feature.
-   This is the "simple but versatile" rule as UI: everything stays reachable in two keystrokes
-   without the nav having to name it. *@
+@* One flat surface with deep reach, rather than a menu bar that grows an item per feature.
+   Everything stays reachable in two keystrokes without the nav having to name it. *@
 
 @if (_open)
 {
@@ -207,8 +206,8 @@
             new("action", $"Theme: {Session.Theme}", "switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),
         };
 
-        // Switching collections belongs here as much as anywhere: with two or three alts it is a
-        // frequent move, and the palette reaches it without the top bar having to grow a menu.
+        // Switching collections belongs here: with two or three alts it is a frequent move, and
+        // the palette reaches it without the top bar growing a menu.
         if (Session.MultipleProfiles)
         {
             actions.Add(new("action", "Compare collections", "trades you could make with yourself", "compare"));
@@ -222,9 +221,8 @@
             }
         }
 
-        // The only route to the card grid that costs no clicks and no counting of tab stops.
-        // Ctrl+K is advertised in the nav, so this is discoverable in a way "press Tab twenty-six
-        // times" is not.
+        // A route to the card grid that costs no counting of tab stops. Ctrl+K is advertised in
+        // the nav, so it is discoverable.
         if (Focus.Available)
         {
             actions.Add(new("action", "Jump to the cards",

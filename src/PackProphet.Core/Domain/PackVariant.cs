@@ -20,9 +20,9 @@ public sealed class PackVariant
     /// <summary>
     /// Percentage chance this variant is the one you open. Normalise before use.
     ///
-    /// The explicit name is REQUIRED: the JSON key is snake_case, which the web-default
-    /// camelCase policy cannot map even case-insensitively, because of the underscore.
-    /// Without this every rate parses as 0 and the odds engine silently computes nothing.
+    /// The explicit name is required: the JSON key is snake_case, which the web-default camelCase
+    /// policy cannot map even case-insensitively because of the underscore. Without it every rate
+    /// parses as 0 and the odds engine computes nothing.
     /// </summary>
     [JsonPropertyName("appearance_rate")]
     public double AppearanceRate { get; set; }

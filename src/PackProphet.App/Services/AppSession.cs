@@ -23,8 +23,7 @@ public sealed class AppSession : IAsyncDisposable
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private CancellationTokenSource? _pendingSave;
 
-    // Undo history. Bounded: with drag-select and fast tapping, unbounded history would grow
-    // without limit, and nobody needs to undo a thousand steps.
+    // Undo history. Bounded: drag-select and fast tapping would otherwise grow it without limit.
     public const int UndoDepth = 50;
 
     private readonly UndoHistory _history = new(UndoDepth);
@@ -344,9 +343,7 @@ public sealed class AppSession : IAsyncDisposable
     // ---- decks ------------------------------------------------------------------------
 
     /// <summary>
-    /// Saved decks, ordered closest-to-buildable first. Being told you are one card away is
-    /// the most motivating thing this app can say, so it leads rather than hides behind a sort
-    /// control.
+    /// Saved decks, ordered closest-to-buildable first.
     /// </summary>
     public IReadOnlyList<SavedDeck> DecksByBuildability =>
         Profile.Decks
@@ -440,8 +437,7 @@ public sealed class AppSession : IAsyncDisposable
     // ---- wishlists --------------------------------------------------------------------
 
     /// <summary>
-    /// Saved wishlists. The main lever for versatility: the same odds engine that prices a
-    /// rarity target prices "the cards I think are cool" with no new machinery.
+    /// Saved wishlists, priced by the same odds engine that prices a rarity target.
     /// </summary>
     public IReadOnlyList<Wishlist> Wishlists => Profile.Wishlists;
 
@@ -673,10 +669,10 @@ public sealed class AppSession : IAsyncDisposable
     /// the engine so the recommendation stays reproducible.
     /// </summary>
     /// <param name="foils">
-    /// with / without / only. Filtered HERE rather than in the advisor, because it is a question
-    /// about the game's interface - whether a foil printing can be wishlisted at all - not about
-    /// what a slot is worth. Filtering the demands before ranking also keeps the twenty slots full:
-    /// excluding foils afterwards would leave gaps.
+    /// with / without / only. Filtered here rather than in the advisor, because it is a question
+    /// about the game's interface — whether a foil printing can be wishlisted at all — rather than
+    /// about what a slot is worth. Filtering the demands before ranking also keeps the twenty slots
+    /// full: excluding foils afterwards would leave gaps.
     /// </param>
     public BoardPlan? RecommendBoard(
         ICompletionTarget target, int liquidSlots, double minimumCost, string foils = "with")
@@ -861,11 +857,9 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
-    // Column counts are persisted preferences, not per-visit view state: a user who wants
-    // 8 columns wants them on every visit, and re-picking on each navigation is exactly the
-    // kind of friction that makes a tracker tiring to use. Zero in the save means "never
-    // chosen", so the defaults live here rather than in the schema — which keeps adding
-    // the field free of a migration.
+    // Column counts are persisted preferences rather than per-visit view state: someone who wants
+    // 8 columns wants them on every visit. Zero in the save means "never chosen", so the defaults
+    // live here rather than in the schema, which keeps adding the field free of a migration.
 
     public const int DefaultGridColumns = 6;
     public const int DefaultPackColumns = 4;
@@ -1158,8 +1152,8 @@ public sealed class AppSession : IAsyncDisposable
         new CompositeTarget(Index.OpenableSets.Select(TargetForSet).ToArray(), "everything");
 
     // ---- Storage health -------------------------------------------------------------
-    // Every one of these is a state the app must ANNOUNCE rather than absorb. A tracker whose
-    // writes are failing looks identical to one that is working, right up until the reload.
+    // Each of these is a state the app announces rather than absorbs: a tracker whose writes are
+    // failing looks identical to one that is working, until the reload.
 
     /// <summary>True once a write has been refused, which means edits are not being kept.</summary>
     public bool SaveFailed { get; private set; }
@@ -1253,10 +1247,9 @@ public sealed class AppSession : IAsyncDisposable
     private int _fillKeysRevision = -1;
 
     // ---- Profiles -------------------------------------------------------------------
-    // Alt accounts are commonplace in PTCGP, and you can trade with yourself, so a second
-    // collection is not a power-user nicety - it is how a lot of people play. Everything below
-    // edits AppState directly rather than going through Mutate, which by definition only ever
-    // touches the ACTIVE profile.
+    // Alt accounts are common in PTCGP and you can trade with yourself, so a second collection is
+    // ordinary. Everything below edits AppState directly rather than going through Mutate, which
+    // only ever touches the active profile.
 
     public IReadOnlyList<Profile> Profiles => State.Profiles;
 
@@ -1265,9 +1258,9 @@ public sealed class AppSession : IAsyncDisposable
     public bool MultipleProfiles => State.Profiles.Count > 1;
 
     /// <summary>
-    /// Switch collections. Clears undo, deliberately: the history holds whole app states, so an
-    /// undo taken afterwards would restore the OTHER profile - silently switching back and
-    /// discarding whatever was just done here. Losing the history is the lesser surprise.
+    /// Switch collections. Clears undo: the history holds whole app states, so an undo taken
+    /// afterwards would restore the other profile, silently switching back and discarding whatever
+    /// was just done here.
     /// </summary>
     public void SwitchProfile(string id)
     {
@@ -1284,8 +1277,7 @@ public sealed class AppSession : IAsyncDisposable
 
     /// <summary>
     /// A new, empty collection. It inherits the current profile's completion plan rather than the
-    /// stock one: someone adding an alt has already said what they collect, and making them say it
-    /// again is the kind of re-entry that gets a feature abandoned.
+    /// stock one, since someone adding an alt has already said what they collect.
     /// </summary>
     public string CreateProfile(string name, bool copyPlan = true)
     {
@@ -1308,8 +1300,8 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     /// <summary>
-    /// Copy a whole collection, cards and all. The honest use is a what-if - trying a different
-    /// plan, or a different set of decks, without touching the real numbers.
+    /// Copy a whole collection, cards and all — for trying a different plan or a different set of
+    /// decks without touching the real numbers.
     /// </summary>
     public string DuplicateProfile(string id, string? name = null)
     {
@@ -1365,7 +1357,7 @@ public sealed class AppSession : IAsyncDisposable
         var remaining = State.Profiles.Where(p => p.Id != id).ToList();
 
         // Deleting cannot be undone through the undo stack, because the stack is cleared on the
-        // switch that follows. Said plainly in the UI rather than half-supported here.
+        // switch that follows. The UI says so rather than half-supporting it here.
         _history.Clear();
 
         var wasActive = State.ActiveProfileId == id;
@@ -1421,10 +1413,9 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     /// <summary>
-    /// One profile as the diff needs it, using ITS OWN plan and collection throughout. Reading the
-    /// active profile's plan for both sides is the obvious shortcut and it is wrong: an alt farmed
-    /// for diamonds only would have its stars counted as still wanted, so the main would never be
-    /// offered them.
+    /// One profile as the diff needs it, using its own plan and collection throughout. Reading the
+    /// active profile's plan for both sides is wrong: an alt farmed for diamonds only would have
+    /// its stars counted as still wanted, so the main would never be offered them.
     /// </summary>
     private DiffSide SideFor(Profile profile)
     {
@@ -1460,8 +1451,7 @@ public sealed class AppSession : IAsyncDisposable
                 finally { _saveGate.Release(); }
 
                 // Outside the gate. RecordSaveResult raises Changed, which runs page code, and
-                // notifying subscribers while holding a lock they could re-enter is how a
-                // deadlock gets built - even where today's handlers happen not to.
+                // notifying subscribers while holding a lock they could re-enter risks a deadlock.
                 RecordSaveResult(ok);
             }
             catch (OperationCanceledException) { /* superseded by a later edit */ }

@@ -1,16 +1,14 @@
 // Drag-to-sweep selection over the card grid.
 //
 // Two problems this solves, both specific to touch:
-//   1. Touch has IMPLICIT POINTER CAPTURE — once a finger goes down on a tile,
-//      every later pointermove/pointerenter targets that same tile. So the naive
-//      "@onpointerenter on each tile" approach can never see the tiles you drag
-//      over. We hit-test with elementFromPoint instead.
-//   2. A vertical drag is a scroll gesture unless touch-action says otherwise, so
-//      touch sweeping only arms while the caller enables sweep mode.
+//   1. Touch has implicit pointer capture — once a finger goes down on a tile, every later
+//      pointermove/pointerenter targets that same tile, so per-tile @onpointerenter never sees
+//      the tiles you drag over. This hit-tests with elementFromPoint instead.
+//   2. A vertical drag is a scroll gesture unless touch-action says otherwise, so touch sweeping
+//      only arms while the caller enables sweep mode.
 //
-// Highlighting is done here by toggling a CSS class rather than round-tripping to
-// Blazor, so a sweep across hundreds of tiles costs zero re-renders. .NET is
-// called exactly once, on release.
+// Highlighting is done here by toggling a CSS class rather than round-tripping to Blazor, so a
+// sweep across hundreds of tiles costs zero re-renders. .NET is called once, on release.
 
 let host = null, dotnet = null;
 let sweepEnabled = false;
@@ -34,17 +32,16 @@ function clearPaint() {
     for (const t of host.querySelectorAll('[data-idx].sel')) t.classList.remove('sel');
 }
 
-// Controls inside a row keep their own behaviour. This function preventDefaults every
-// pointerdown to stop the browser dragging card art, and focusing a field is a DEFAULT action —
-// so without this guard the typed count field highlighted on hover and could never be clicked
-// into. Buttons and links survived only because their click still fired.
+// Controls inside a row keep their own behaviour. This function preventDefaults every pointerdown
+// to stop the browser dragging card art, and focusing a field is a default action, so without this
+// guard the typed count field highlighted on hover and could never be clicked into. Buttons and
+// links survived only because their click still fired.
 const CONTROLS = 'input, textarea, select, button, a, [contenteditable="true"]';
 
-// List rows are full of selectable text, so a mouse drag there means "select this text" far
-// more often than it means "sweep these rows". Hijacking it destroyed the selection AND
-// range-selected rows nobody asked for, with the sweep toggle plainly reading "off".
-// Tiles have no text and no scroll gesture to lose, so an unarmed mouse drag over the grid
-// stays a selection — that is the desktop bulk-entry gesture, and it costs nothing there.
+// List rows are full of selectable text, so a mouse drag there means "select this text" more often
+// than "sweep these rows". Hijacking it destroyed the selection and range-selected rows nobody
+// asked for, with the sweep toggle reading "off". Tiles have no text and no scroll gesture to lose,
+// so an unarmed mouse drag over the grid stays a selection.
 function listing() {
     return !!host && host.classList.contains('listing');
 }

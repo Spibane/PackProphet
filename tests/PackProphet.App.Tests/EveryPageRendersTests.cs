@@ -7,11 +7,11 @@ using Microsoft.AspNetCore.Components;
 /// Renders every routable page, on a brand-new profile and again on a populated one.
 ///
 /// Discovered by reflection rather than listed, so a page added later is covered without anyone
-/// remembering to add it here. That matters more than it sounds: the compare page shipped with a
-/// crash on the empty case, and a hand-maintained list is exactly what would have omitted it.
+/// remembering to add it here. The compare page shipped with a crash on the empty case, which a
+/// hand-maintained list would have omitted.
 ///
-/// The empty profile is the important half. It is the state every user starts in, the least
-/// exercised while building, and the one where a page indexes a list that has nothing in it — which
+/// The empty profile is the important half: it is the state every user starts in, the least
+/// exercised while building, and where a page indexes a list that has nothing in it — which
 /// compiles cleanly and passes every engine test.
 /// </summary>
 public class EveryPageRendersTests : AppHost
@@ -83,8 +83,8 @@ public class EveryPageRendersTests : AppHost
     }
 
     /// <summary>
-    /// Renders a page by name. DynamicComponent rather than the generic RenderComponent, because
-    /// the whole point here is to drive the list from reflection instead of from a hand-kept list.
+    /// Renders a page by name. DynamicComponent rather than the generic RenderComponent, so the
+    /// list can be driven from reflection.
     /// </summary>
     private string Render(string typeName)
     {

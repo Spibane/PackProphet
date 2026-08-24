@@ -19,12 +19,12 @@ else if (_card is null)
 }
 else
 {
-    @* Focused on arrival and listening for Escape, which is the whole keyboard route back. Without
-       it, returning meant hunting for the back button — it is early in the tab order, but nothing
-       says so, and after reading a card you have lost track of where focus even is.
+    @* Focused on arrival and listening for Escape, which is the keyboard route back. Without it,
+       returning meant hunting for the back button: it is early in the tab order, but nothing says
+       so, and after reading a card focus is hard to place.
 
-       tabindex -1 so it can take focus without joining the tab order, and no focus ring: this is
-       plumbing for the key handler, not somewhere anyone chose to be. *@
+       tabindex -1 so it can take focus without joining the tab order, and no focus ring: it is
+       plumbing for the key handler rather than somewhere anyone chose to be. *@
     <div class="detail-keys" tabindex="-1" @ref="_root" @onkeydown="OnKey">
 
     <div class="page-head">
@@ -52,15 +52,15 @@ else
                  style="background-image:url('@_card.ArtUrl')"
                  role="img" aria-label="@_card.Name"></div>
 
-            @* Said in words as well as drawn, because the ring alone does not explain itself —
-               and if you are two copies away, that is worth knowing. *@
+            @* Said in words as well as drawn: the ring alone does not explain itself, and being
+               two copies away is worth knowing. *@
             @if (Session.HasGoldFlair(_card))
             {
                 <p class="small mb-0 flair-note">
                     Gold flair earned &mdash; @_owned copies.
                 </p>
             }
-            @* Same rule as the flair itself, or the hint would promise gold to a four-diamond
+            @* Same rule as the flair itself, so the hint does not promise gold to a four-diamond
                card that can never earn it. *@
             else if (_rung is { GlyphClass: "diamond" } r && !_card.IsPromo
                      && r.Count <= GameRules.GoldFlairMaxDiamonds && _owned > 0)
@@ -79,9 +79,9 @@ else
                         aria-label="Add one">+</button>
             </div>
 
-            @* Wanting a card is a separate fact from owning it, and this is the one screen
-               that has the card in hand — so the wishlists live here rather than making the
-               user go and search for the card again from the list side. *@
+            @* Wanting a card is a separate fact from owning it, and this is the screen that has
+               the card in hand, so the wishlists live here rather than requiring another search
+               from the list side. *@
             <div class="want-row">
                 <span class="label">want it</span>
                 @if (Session.Wishlists.Count == 0)
@@ -95,9 +95,8 @@ else
                     @foreach (var list in Session.Wishlists)
                     {
                         var wanted = list.Wanted.GetValueOrDefault(_card.OwnershipKey);
-                        @* Each tap adds a copy, so wanting four is four taps. The separate
-                           remove exists because there is no ceiling to cycle past any more —
-                           a count with no way down would be a trap. *@
+                        @* Each tap adds a copy, so wanting four is four taps. The separate remove
+                           exists because there is no ceiling to cycle past. *@
                         <span class="want-pair">
                             <button class="btn btn-sm @(wanted > 0 ? "btn-primary" : "btn-outline-secondary")"
                                     @onclick="() => Session.BumpWanted(list.Id, _card.OwnershipKey, 1)"
@@ -116,9 +115,9 @@ else
                 }
             </div>
 
-            @* Owning one copy counts for every set it appears in, so a reprint is not a second
-               card to chase. Said out loud here because the number above would otherwise look
-               wrong on a card listed in two sets. *@
+            @* Owning one copy counts for every set it appears in, so a reprint is not a second card
+               to chase. Stated here because the number above would otherwise look wrong on a card
+               listed in two sets. *@
             @if (_reprints.Count > 1)
             {
                 <p class="small text-body-secondary mb-0">
@@ -139,7 +138,7 @@ else
                     }
                     else
                     {
-                        @* Never a dead end: art, rarity, packs and routes are all still shown. *@
+                        @* Not a dead end: art, rarity, packs and routes are all still shown. *@
                         <span>No printed detail published for this card yet.</span>
                     }
                 </p>
@@ -171,9 +170,8 @@ else
                                     @if (_fact.EvolvesFrom is { Length: > 0 } from)
                                     {
                                         <span class="text-body-secondary">&mdash; evolves from @from</span>
-                                        @* The fact that turns this row from trivia into advice: an
-                                           evolution you cannot evolve is dead weight in a deck, and
-                                           nothing else on the page would tell you. *@
+                                        @* An evolution you cannot evolve is dead weight in a deck,
+                                           and nothing else on the page would say so. *@
                                         @if (!OwnsAnyNamed(from))
                                         {
                                             <span class="badge text-bg-warning ms-1"
@@ -246,8 +244,8 @@ else
 
         <div>
             <h2 class="h6">How to get it</h2>
-            @* All four routes, including the ones that do not exist for this rarity. Omitting
-               them would leave the user wondering; naming the block answers it. *@
+            @* All four routes, including the ones that do not exist for this rarity, so the absence
+               of a route is stated rather than left blank. *@
             <table class="table table-sm align-middle">
                 <tbody>
                     @foreach (var option in _routes?.Options ?? [])

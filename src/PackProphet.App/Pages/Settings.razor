@@ -25,7 +25,7 @@
     </div>
 
     @* Sits with Appearance rather than with the collection sections: it is about how much the
-       page says, not about what counts as complete. *@
+       page says rather than about what counts as complete. *@
     <div class="form-check mb-4">
         <input class="form-check-input" type="checkbox" id="gapstrip"
                checked="@Session.ShowGapStrip"
@@ -41,9 +41,8 @@
         </label>
     </div>
 
-    @* The plan drives every estimate in the app - the ranking, the completion figures, the point
-       shop, the trade board - but until now it could only be changed from the Packs page, which
-       made a global setting look like a property of one screen. *@
+    @* The plan drives every estimate in the app — the ranking, the completion figures, the point
+       shop, the trade board — so it is editable here as well as on the Packs page. *@
     <h2>What counts as complete</h2>
     <p class="small text-body-secondary">
         One chip per rarity, carrying how many copies you want. Tapping cycles none, one, two
@@ -86,8 +85,8 @@
         }
     }
 
-    @* Placed before "your data" because it is the first thing a returning player should be
-       offered: without it every count on the History page reads as a fraction of the truth. *@
+    @* Placed before "your data" because it is the first thing a returning player is offered:
+       without it every count on the History page reads as a fraction of the truth. *@
     <h2>What the game already counted</h2>
     <p class="small text-body-secondary">
         The game keeps its own lifetime totals &mdash; open your profile in PTCGP and read them
@@ -134,10 +133,10 @@
         </p>
     }
 
-    @* Alt accounts are ordinary in this game, and you can trade with yourself, so a second
-       collection is a normal way to play rather than a power-user feature. Managed here rather
-       than in the top bar: switching is frequent, but creating and deleting are not, and putting
-       a delete button in the chrome of every page is how collections get erased by accident. *@
+    @* Alt accounts are ordinary in this game and you can trade with yourself, so a second
+       collection is a normal way to play. Managed here rather than in the top bar: switching is
+       frequent, creating and deleting are not, and a delete button in the chrome of every page is
+       how collections get erased by accident. *@
     <h2>Collections</h2>
     <p class="small text-body-secondary">
         Each one holds its own cards, plan, decks, logs and resources. One is active at a time and
@@ -210,8 +209,8 @@
         </tbody>
     </table>
 
-    @* No delete button at all while there is one collection: the app has nowhere to put a tap
-       without one, so the offer would only ever be refused. *@
+    @* No delete button while there is one collection: the app has nowhere to put a tap without
+       one, so the offer could only be refused. *@
     <p class="small text-body-tertiary">
         Deleting a collection cannot be undone, and export covers every collection at once, so a
         backup is the only way back.
@@ -224,7 +223,7 @@
                 disabled="@string.IsNullOrWhiteSpace(_newProfile)">add</button>
     </div>
 
-    @* Beside the buttons that caused it, not in the page-wide message box further down: a
+    @* Beside the buttons that caused it rather than in the page-wide message box further down: a
        confirmation nobody scrolls to is not a confirmation. *@
     @if (_profileNote is not null)
     {
@@ -254,7 +253,7 @@
         </label>
         <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmReset">
             @* Names the collection once there is more than one: "erase collection" beside a list
-               of three of them reads as all of them, and it only ever erases the active one. *@
+               of three reads as all of them, and it only ever erases the active one. *@
             @(_confirmingReset
                 ? $"really erase {(Session.MultipleProfiles ? Session.Profile.Name : "everything")}?"
                 : Session.MultipleProfiles ? $"erase {Session.Profile.Name}" : "erase collection")
@@ -265,9 +264,8 @@
     {
         <div class="alert alert-info py-2 small d-flex flex-wrap align-items-center gap-2">
             <span>@_message</span>
-            @* The undo lives HERE, next to the sentence that mentions it. It used to say "undo
-               still works" while the only control was a pair of arrow buttons on another page,
-               which is a promise with no button attached. *@
+            @* The undo control sits next to the sentence that mentions it, rather than the message
+               naming an undo whose only control is on another page. *@
             @if (_offerUndo && Session.CanUndo)
             {
                 <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoLast">
@@ -335,11 +333,9 @@
                 }
             </tbody>
         </table>
-        @* Not a courtesy. This app is AGPL-3.0-or-later, and section 13 requires that anyone
-           interacting with it OVER A NETWORK be offered its Corresponding Source — which is the
-           one obligation the AGPL adds over the GPL, and the one a hosted app is most likely to
-           miss. The repository documented all of this thoroughly and none of it reached the
-           running app, where the obligation actually applies. *@
+        @* This app is AGPL-3.0-or-later, and section 13 requires that anyone interacting with it
+           over a network be offered its Corresponding Source. That obligation applies to the
+           running app rather than to the repository, so the offer is made here. *@
         <h2>Licence and source</h2>
         <p class="small text-body-secondary">
             PackProphet is free software under the
@@ -351,8 +347,8 @@
                 github.com/Spibane/PackProphet</a>.
         </p>
         <p class="small text-body-secondary">
-            That licence is inherited rather than chosen: the only community dataset carrying
-            attack text, ability text and evolution stage for every set is itself AGPL. Card data
+            The licence follows the card data: the only community dataset carrying attack text,
+            ability text and evolution stage for every set is itself AGPL. Card data comes from
             comes from
             <a href="https://github.com/chase-mew/pokemon-tcg-pocket-cards" target="_blank" rel="noopener">chase-mew/pokemon-tcg-pocket-cards</a>
             and
@@ -393,8 +389,8 @@
     {
         var next = Session.Plan().Cycle(tier);
 
-        // Refused rather than saved: a plan wanting nothing makes every screen read "complete",
-        // which looks like a bug instead of a choice. Same rule as the Packs page.
+        // Refused rather than saved: a plan wanting nothing makes every screen read "complete".
+        // Same rule as the Packs page.
         if (next.IsEmpty) return;
 
         Session.SetPlan(next);

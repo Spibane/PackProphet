@@ -9,13 +9,13 @@
 @* Twelve nav links sit above every page, and Blazor does not move focus on navigation, so a
    keyboard or screen-reader user otherwise tabs through the whole bar again on arrival.
 
-   Bootstrap's own visually-hidden-focusable rather than a hand-rolled off-screen trick: it is built
-   for exactly this and does not depend on which ancestor happens to be positioned or clipped. *@
+   Bootstrap's own visually-hidden-focusable rather than a hand-rolled off-screen rule, which
+   depends on which ancestor happens to be positioned or clipped. *@
 <a class="skip-link visually-hidden-focusable" href="#main">Skip to content</a>
 
-@* Straight to the cards, and it earns its place: the grid sits behind roughly fifteen controls in
-   the page's own toolbar — a series picker, fourteen set tabs, the filters — so "tab to the grid"
-   is not an answer anyone would follow. Only offered when a grid is actually mounted. *@
+@* Straight to the cards. The grid sits behind roughly fifteen controls in the page's own toolbar —
+   a series picker, fourteen set tabs, the filters — so tabbing to it is impractical. Only offered
+   when a grid is mounted. *@
 @if (Focus.Available)
 {
     <button class="skip-link visually-hidden-focusable" @onclick="() => Focus.FocusAsync()">
@@ -25,9 +25,8 @@
 
 <NavMenu />
 
-@* Storage trouble is announced here rather than on any one page, because it is not about what you
-   are looking at - it is about every edit you make from now on. role="alert" so a screen reader is
-   told without having to find it. *@
+@* Storage trouble is announced here rather than on any one page, because it applies to every edit
+   from now on rather than to what is on screen. role="alert" so a screen reader is told. *@
 @if (Session.SaveFailed || Session.StorageUnavailable || Session.LoadFailed)
 {
     <div class="storage-alarm" role="alert">

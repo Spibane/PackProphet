@@ -6,10 +6,9 @@ using PackProphet.Data;
 /// How many copies of each rarity count as "complete": a map from ladder rung to copies,
 /// where absent or zero means "I do not collect this rarity".
 ///
-/// Selection and quantity are ONE fact, not two. A rarity you want zero copies of is a
-/// rarity you are ignoring, so a separate "which rarities" set plus a separate "how many
-/// copies" number could disagree — and would make "two of every diamond but only one of the
-/// stars" impossible to express, which is a perfectly ordinary way to collect.
+/// Selection and quantity are one fact. A rarity you want zero copies of is a rarity you are
+/// ignoring, and a separate "which rarities" set plus a separate copy count could not express "two
+/// of every diamond but only one of the stars".
 /// </summary>
 public sealed record RarityPlan(IReadOnlyDictionary<int, int> CopiesByTier)
 {
@@ -23,8 +22,8 @@ public sealed record RarityPlan(IReadOnlyDictionary<int, int> CopiesByTier)
         CopiesByTier.Where(kv => kv.Value > 0).Select(kv => kv.Key).ToHashSet();
 
     /// <summary>
-    /// True when nothing is collected. Callers must refuse to save this: a plan wanting
-    /// nothing makes every screen read "complete", which looks like a bug, not a choice.
+    /// True when nothing is collected. Callers refuse to save this: a plan wanting nothing makes
+    /// every screen read "complete".
     /// </summary>
     public bool IsEmpty => WantedTiers.Count == 0;
 

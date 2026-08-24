@@ -6,9 +6,9 @@ using PackProphet.Domain;
 /// <param name="Packs">Estimated packs of this set, out of the total the estimate was given.</param>
 /// <param name="Copies">Copies owned that were attributed to this set.</param>
 /// <param name="CardsPerPack">
-/// Cards ATTRIBUTABLE to this set from one of its packs - not the pack size. For an ordinary set
-/// the two are nearly the same; for a Deluxe set they are wildly different, because most of what
-/// a Deluxe pack contains is reprints that count towards the set they came from.
+/// Cards attributable to this set from one of its packs - not the pack size. For an ordinary set
+/// the two are nearly the same; for a Deluxe set they differ widely, because most of what a Deluxe
+/// pack contains is reprints that count towards the set they came from.
 /// </param>
 public sealed record SetShare(string Set, double Packs, int Copies, double CardsPerPack)
 {
@@ -18,35 +18,33 @@ public sealed record SetShare(string Set, double Packs, int Copies, double Cards
 /// <summary>
 /// Splits a total pack count across sets, inferred from what the collection holds.
 ///
-/// The problem it solves: the game reports how many packs you have opened in your life, never
-/// which ones. Without a split, a lifetime figure can only be priced with the mix of packs
-/// logged in this app - fine for someone who logs everything, wrong for anyone whose first
-/// thousand packs were sets they no longer open.
+/// The game reports how many packs you have opened in your life, never which ones. Without a
+/// split, a lifetime figure can only be priced with the mix of packs logged in this app, which is
+/// wrong for anyone whose first thousand packs were sets they no longer open.
 ///
 /// The inference is arithmetic: a pack of a set yields a known average number of cards that only
-/// that set can give you, so copies held of those cards, divided by that average, estimates
-/// packs opened of it. What makes it usable is that only the RATIOS are used. The absolute
-/// figures are inflated - trades, Wonder Picks and the points shop all add copies no pack
-/// produced - but that inflation is broadly similar across sets and cancels when the shares are
-/// rescaled to a total the game has already told us. So this answers "which sets, in what
-/// proportion", never "how many".
+/// that set can give you, so copies held of those cards, divided by that average, estimates packs
+/// opened of it. Only the ratios are used. The absolute figures are inflated — trades, Wonder
+/// Picks and the points shop all add copies no pack produced — but that inflation is broadly
+/// similar across sets and cancels when the shares are rescaled to a total the game has already
+/// reported. So this answers "which sets, in what proportion", never "how many".
 ///
-/// ATTRIBUTION IS THE WHOLE DESIGN. A copy is credited to the set its card FIRST appeared in,
-/// because a reprint shares one ownership key across every set that lists it and so cannot be
-/// told apart. That single rule handles the case that would otherwise need special pleading:
+/// Attribution: a copy is credited to the set its card first appeared in, because a reprint shares
+/// one ownership key across every set that lists it and cannot be told apart. That one rule also
+/// covers Deluxe packs:
 ///
 ///   A Deluxe pack is mostly reprints of earlier sets, and those copies credit the set they were
-///   printed in, not the Deluxe set. What is left crediting a Deluxe set is exactly its own
-///   cards - the parallel foils and its handful of new ones - which no other pack can produce.
-///   So Deluxe packs ARE estimated, from the only evidence that points at them uniquely.
+///   printed in. What is left crediting a Deluxe set is its own cards - the parallel foils and its
+///   handful of new ones - which no other pack can produce, so Deluxe packs are estimated from the
+///   only evidence that points at them uniquely.
 ///
-///   And they are estimated at the right rate. A Deluxe pack does not guarantee a foil: the
-///   foil-bearing slot carries about 61% of its probability there. Dividing by the expected
-///   count of attributable cards rather than by one is what keeps that honest - assuming one
-///   foil per pack would understate Deluxe packs opened by roughly a third.
+///   A Deluxe pack does not guarantee a foil: the foil-bearing slot carries about 61% of its
+///   probability there. Dividing by the expected count of attributable cards rather than by one
+///   keeps the rate right; assuming one foil per pack would understate Deluxe packs opened by
+///   roughly a third.
 ///
 /// Promos are dropped, since no pack yields them, as are sets with no published rates: a set in
-/// the split contributing no expectation would silently shrink every other set's share.
+/// the split contributing no expectation would shrink every other set's share.
 /// </summary>
 public sealed class PackMixEstimator
 {
@@ -63,7 +61,7 @@ public sealed class PackMixEstimator
 
     /// <summary>
     /// One representative priceable pack per set. Which pack does not matter: pull rates are
-    /// published PER SET, so every pack of a set shares the same rarity distribution and the same
+    /// published per set, so every pack of a set shares the same rarity distribution and the same
     /// pack size, and they differ only in which cards they can hand you.
     /// </summary>
     private Dictionary<string, string> PackBySet() => _packBySet ??=
@@ -75,10 +73,10 @@ public sealed class PackMixEstimator
     private Dictionary<string, string>? _packBySet;
 
     /// <summary>
-    /// The set a card first appeared in, which is the set a copy of it is credited to. Public
-    /// because callers breaking a figure down by set must use the SAME attribution as the split
-    /// itself - two rules would put a card's copies in one bucket and its packs in another.
-    /// Memoised: it is asked once per owned card and again for every card in every pack.
+    /// The set a card first appeared in, which is the set a copy of it is credited to. Public so
+    /// callers breaking a figure down by set use the same attribution as the split itself; two
+    /// rules would put a card's copies in one bucket and its packs in another. Memoised: it is
+    /// asked once per owned card and again for every card in every pack.
     /// </summary>
     public string? OriginSet(string ownershipKey)
     {
@@ -97,9 +95,8 @@ public sealed class PackMixEstimator
     private readonly Dictionary<string, string?> _origin = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Expected copies, from one pack of a set, of the cards CREDITED to that set. This is the
-    /// divisor that turns copies held into packs opened, and the reason a Deluxe pack does not
-    /// need a rule of its own.
+    /// Expected copies, from one pack of a set, of the cards credited to that set. The divisor that
+    /// turns copies held into packs opened, and what lets Deluxe packs share the general rule.
     /// </summary>
     public double AttributablePerPack(string set)
     {
@@ -160,10 +157,9 @@ public sealed class PackMixEstimator
     }
 
     /// <summary>
-    /// Expected copies per rarity rung from ONE pack of a set, over everything the pack can give
-    /// - reprints included, unlike <see cref="AttributablePerPack"/>. Attribution answers "whose
-    /// packs were these"; this answers "what does opening one produce", and a Deluxe pack really
-    /// does produce the reprints it contains.
+    /// Expected copies per rarity rung from one pack of a set, over everything the pack can give -
+    /// reprints included, unlike <see cref="AttributablePerPack"/>. Attribution answers "whose
+    /// packs were these"; this answers "what does opening one produce".
     /// </summary>
     public IReadOnlyDictionary<int, double> RungRatesPerPack(string set)
     {

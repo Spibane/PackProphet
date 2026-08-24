@@ -17,8 +17,7 @@ else
 
     <div class="p-3 pools-page" style="max-width:60rem">
         @* Three panels, never a total. Pack, Wonder and Trade each have their own hourglass and
-           their own pool, and nothing in the game exchanges between them — so a combined figure
-           would be a number with no meaning attached to it. *@
+           their own pool, and nothing in the game exchanges between them. *@
         <p class="small text-body-secondary">
             Three separate systems. Each has its own hourglasses and nothing converts between
             them, so they are never added together &mdash; twelve Wonder Hourglasses buy a Wonder
@@ -51,7 +50,7 @@ else
                 </div>
 
                 @* Premium is a +50% rate, and every timeline in the app respects it. Stated as
-                   arithmetic rather than a nudge: 240 packs is four months or under three. *@
+                   arithmetic: 240 packs is four months, or under three. *@
                 <label class="form-check form-switch small mt-2">
                     <input class="form-check-input" type="checkbox" checked="@_premium"
                            @onchange="OnPremium" />
@@ -98,9 +97,9 @@ else
         </div>
 
         @* ---- pack points, the fourth economy --------------------------------------------
-           Not a pool and not a currency you hold: points accrue as a BYPRODUCT of opening, five
-           a pack, and can only be spent inside the set that earned them. So there is nothing to
-           regenerate and nothing to time — only a cap that silently stops paying you. *@
+           Not a pool and not a currency you hold: points accrue as a byproduct of opening, five a
+           pack, and can only be spent inside the set that earned them. There is nothing to
+           regenerate and nothing to time — only a cap that stops paying you. *@
         <h2>Pack points</h2>
         <p class="small text-body-secondary">
             Five per pack, spendable only within the set whose packs earned them, and capped at
@@ -192,8 +191,8 @@ else
             </table>
         }
 
-        @* A series at a time, not a set at a time. Nobody corrects one balance: they open the
-           game's shop, walk down it, and type. One tap per series beats nineteen selections. *@
+        @* A series at a time rather than a set at a time. Correcting balances means opening the
+           game's shop and walking down it, so one tap per series beats nineteen selections. *@
         @if (_pointsAddable.Count > 0)
         {
             <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
@@ -217,8 +216,8 @@ else
             </div>
         }
 
-        @* The dust runway belongs next to trade stamina, and its job is usually to be dismissed:
-           if dust funds far more trades than stamina will allow, it is not a cost worth showing. *@
+        @* The dust runway sits next to trade stamina, and usually says dust is not the
+           constraint: if it funds far more trades than stamina allows, it is not a cost. *@
         @if (_dustSaved > 0)
         {
             <h2>Is shinedust actually the problem?</h2>

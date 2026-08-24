@@ -38,10 +38,10 @@
     <ProjectReference Include="..\PackProphet.Core\PackProphet.Core.csproj" />
   </ItemGroup>
 
-  <!-- Offline support. The DEV worker is a no-op on purpose: a caching worker in development
-       serves yesterday's _framework files after a rebuild, which is indistinguishable from a
-       broken build. Only the published build gets the real one, and the SDK generates the
-       asset manifest it precaches from. -->
+  <!-- Offline support. The dev worker is a no-op: a caching worker in development serves
+       yesterday's _framework files after a rebuild, which is indistinguishable from a broken
+       build. Only the published build gets the real one, and the SDK generates the asset manifest
+       it precaches from. -->
   <PropertyGroup>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>

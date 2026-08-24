@@ -23,9 +23,8 @@ public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyLis
     };
 
     /// <summary>
-    /// The rarity drawn as the game draws it — repeated symbols rather than a code. "◆◆◆"
-    /// is recognisable at a glance in a way "R" is not, especially to anyone who has not
-    /// memorised the abbreviations.
+    /// The rarity drawn as the game draws it — repeated symbols rather than a code. "◆◆◆" reads at
+    /// a glance where "R" does not.
     /// </summary>
     public string Glyphs => Group switch
     {
@@ -41,13 +40,12 @@ public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyLis
 }
 
 /// <summary>
-/// The ordered rarity ladder, DERIVED from rarities.json rather than hardcoded, so a
-/// rarity added upstream appears without a code change.
+/// The ordered rarity ladder, derived from rarities.json rather than hardcoded, so a rarity added
+/// upstream appears without a code change.
 ///
-/// Only the ordering of the symbol families is our own knowledge, since nothing in the
-/// data says Star outranks Diamond. An unrecognised family sorts to the end rather than
-/// throwing — a data update must not brick the app — but a unit test asserts every group
-/// present in the data is known, so the gap surfaces in CI instead of in the UI.
+/// Only the ordering of the symbol families is this project's own knowledge, since nothing in the
+/// data says Star outranks Diamond. An unrecognised family sorts to the end rather than throwing,
+/// and a unit test asserts every group present in the data is known, so the gap surfaces in CI.
 /// </summary>
 public sealed class RarityLadder
 {
@@ -85,17 +83,17 @@ public sealed class RarityLadder
         _rungByCode.TryGetValue(rarityCode, out var i) ? i : null;
 
     /// <summary>
-    /// True when a card's rarity is one of the selected rungs. Unknown rarities are excluded:
-    /// better to under-claim than to invent a requirement the user can never satisfy.
+    /// True when a card's rarity is one of the selected rungs. Unknown rarities are excluded, so
+    /// the selection under-claims rather than inventing a requirement.
     /// </summary>
     public bool IsSelected(string rarityCode, IReadOnlySet<int> tiers) =>
         IndexOf(rarityCode) is int i && tiers.Contains(i);
 
     /// <summary>
-    /// Every rung up to and including <paramref name="topIndex"/> — the "all diamonds" shape.
-    /// A convenience for building a selection, not a constraint on one: a target is an
-    /// arbitrary SET of rungs, because plenty of collectors want stars and crowns while
-    /// ignoring diamonds entirely, or want all diamonds plus 3-star and nothing between.
+    /// Every rung up to and including <paramref name="topIndex"/> — the "all diamonds" shape. A
+    /// convenience for building a selection rather than a constraint on one: a target is an
+    /// arbitrary set of rungs, since collectors want stars and crowns while ignoring diamonds, or
+    /// all diamonds plus 3-star and nothing between.
     /// </summary>
     public IReadOnlySet<int> UpTo(int topIndex) =>
         Rungs.Where(r => r.Index <= topIndex).Select(r => r.Index).ToHashSet();
@@ -107,9 +105,9 @@ public sealed class RarityLadder
     /// Every rung in one symbol family, e.g. all three Star rungs.
     /// </summary>
     /// <remarks>
-    /// There are deliberately no named presets. One toggle chip per rung already makes any
-    /// shape a couple of taps, so a preset list would be a second way to say the same thing
-    /// and another place for the two to disagree. The default selection is all diamonds.
+    /// There are no named presets. One toggle chip per rung already makes any shape a couple of
+    /// taps, and a preset list would be a second way to say the same thing. The default selection
+    /// is all diamonds.
     /// </remarks>
     public IReadOnlySet<int> ByGroup(string group) =>
         Rungs.Where(r => r.Group.Equals(group, StringComparison.OrdinalIgnoreCase))

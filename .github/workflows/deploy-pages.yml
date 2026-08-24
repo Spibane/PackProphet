@@ -31,9 +31,7 @@ jobs:
         run: dotnet workload install wasm-tools
 
       # Before the base href is rewritten, so the tests run against the tree as committed.
-      # Deploying without running these makes them optional, and an optional suite goes red and
-      # stays red. Both projects: the engine suite, and the render suite that covers the pages —
-      # which is where nearly every bug found in review actually lived.
+      # Both projects: the engine suite, and the render suite that covers the pages.
       - name: Test
         run: dotnet test --configuration Release
 

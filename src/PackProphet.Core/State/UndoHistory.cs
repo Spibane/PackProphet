@@ -1,20 +1,17 @@
 namespace PackProphet.State;
 
 /// <summary>
-/// The undo and redo stacks, and the one rule that makes them behave sensibly: what a step is
-/// allowed to put back.
+/// The undo and redo stacks, and the rule for what a step is allowed to put back.
 ///
-/// It lives here rather than inside the session because the interesting part is not the stack, it
-/// is that PREFERENCES are not part of the history. Theme, grid columns, the parallel-foil count,
-/// board settings and the rest are written straight to state and never record a step - but a step
+/// Preferences are not part of the history. Theme, grid columns, the parallel-foil count, board
+/// settings and the rest are written straight to state and never record a step — but a step
 /// recorded by a card edit still carries a snapshot of whatever the preferences were at that
-/// moment. Putting that snapshot back wholesale silently reverted every preference changed since:
-/// tap a card, switch to dark mode, press Ctrl+Z, and the theme flips back with no way to tell
-/// why. An imported backup is the one step where preferences ARE part of what changed, so that
-/// step says so and undoing it restores them.
+/// moment. Putting that snapshot back wholesale reverted every preference changed since: tap a
+/// card, switch to dark mode, press Ctrl+Z, and the theme flips back. An imported backup is the one
+/// step where preferences are part of what changed, so that step says so and undoing it restores
+/// them.
 ///
-/// Bounded, because drag-select and fast tapping would otherwise grow it without limit and nobody
-/// needs to undo a thousand taps.
+/// Bounded, since drag-select and fast tapping would otherwise grow the stack without limit.
 /// </summary>
 public sealed class UndoHistory
 {
@@ -45,8 +42,8 @@ public sealed class UndoHistory
 
     /// <summary>
     /// Forget everything. Used when switching profiles: the stack holds whole app states, so an
-    /// undo taken afterwards would restore the OTHER collection - silently switching back and
-    /// discarding whatever had just been done.
+    /// undo taken afterwards would restore the other collection and discard what had just been
+    /// done.
     /// </summary>
     public void Clear()
     {

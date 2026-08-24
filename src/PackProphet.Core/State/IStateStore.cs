@@ -9,11 +9,10 @@ public interface IStateStore
     Task<AppState> LoadAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Persist the state. Returns FALSE when the write did not happen.
+    /// Persist the state. Returns false when the write did not happen.
     ///
-    /// A bool rather than void, and it is not ceremony: the browser refuses a write once the
-    /// storage quota is reached, and a caller that cannot see the refusal goes on accepting edits
-    /// it will never keep. The one thing a tracker must never do is look like it saved."
+    /// The browser refuses a write once the storage quota is reached, and a caller that cannot see
+    /// the refusal goes on accepting edits it will never keep.
     /// </summary>
     Task<bool> SaveAsync(AppState state, CancellationToken ct = default);
 }

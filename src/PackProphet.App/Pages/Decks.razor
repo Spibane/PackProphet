@@ -21,8 +21,8 @@ else
     </div>
 
     @* Two views because they answer different questions: the table compares decks against each
-       other, the grid lets you recognise one at a glance. It lays the same decks out either
-       way, so it belongs over the content rather than in the header. *@
+       other, the grid lets you recognise one at a glance. Both lay out the same decks, so the
+       toggle sits over the content rather than in the header. *@
     @if (_decks.Count > 0)
     {
         <div class="grid-toolbar">
@@ -37,8 +37,8 @@ else
         </div>
     }
 
-    @* Full width. The list is a table of decks against each other, and capping it left the
-       columns bunched at the left of a wide screen with the rest of the row empty. *@
+    @* Full width. The list is a table of decks against each other, and capping it left the columns
+       bunched at the left of a wide screen with the rest of the row empty. *@
     <div class="p-3">
         @if (_decks.Count == 0)
         {
@@ -58,8 +58,8 @@ else
                 @foreach (var deck in _decks)
                 {
                     <div class="showcase @(deck.Missing == 0 && deck.Cards > 0 ? "ready" : "")">
-                        @* The deck's face card, chosen as its rarest — which in practice is the
-                           card the deck is named after and the one you recognise it by. *@
+                        @* The deck's face card, chosen as its rarest — in practice the card the
+                           deck is named after and the one you recognise it by. *@
                         <a class="face" href="decks/@deck.Id"
                            style="background-image:url('@(deck.Face?.ArtUrl)')"
                            aria-label="Open @deck.Name">
@@ -109,8 +109,8 @@ else
                                 }
                             </div>
 
-                            @* A few more of the deck's cards, rarest first. Enough to recognise the
-                               deck by, not a contents listing — the deck page is for that. *@
+                            @* A few more of the deck's cards, rarest first: enough to recognise the
+                               deck by rather than a contents listing, which the deck page has. *@
                             @if (deck.Strip.Count > 0)
                             {
                                 <div class="strip">
@@ -137,8 +137,8 @@ else
         }
         else
         {
-            @* Closest-to-buildable order, not alphabetical: being told you are one card away is
-               the most motivating thing this app can say, so it leads. *@
+            @* Closest-to-buildable order rather than alphabetical, so the decks nearest to
+               finished lead. *@
             <h2 class="h6">
                 Your decks
                 <span class="small text-body-secondary fw-normal">closest to buildable first</span>

@@ -2,9 +2,9 @@
 // --bs-* variable follows, so this file only has to decide what that attribute should say —
 // no palette lives here, and app.css needs no dark-specific rules.
 //
-// Three settings, not two: "auto" tracks the operating system and is the default, because a
-// user who has already told their OS they want dark should not have to tell us as well.
-// "light" and "dark" are explicit overrides that ignore the OS.
+// Three settings rather than two: "auto" tracks the operating system and is the default, so a user
+// whose OS is set to dark gets dark without saying so again. "light" and "dark" are explicit
+// overrides that ignore the OS.
 (function () {
     const KEY = 'packprophet.state.v1';   // must match LocalStorageStateStore.Key
     const DARK = '(prefers-color-scheme: dark)';
@@ -20,10 +20,9 @@
         document.documentElement.setAttribute('data-bs-theme', resolve(pref));
     }
 
-    // Applied BEFORE Blazor boots, by reading the saved state directly. Waiting for the app
-    // to load would show a white flash on every cold start, which on a phone at night is the
-    // most visible defect in the whole app. A failure here is silent and simply leaves the
-    // OS default: the app re-applies the real preference once it has loaded.
+    // Applied before Blazor boots, by reading the saved state directly. Waiting for the app to load
+    // would show a white flash on every cold start. A failure here is silent and leaves the OS
+    // default: the app re-applies the real preference once it has loaded.
     function readSaved() {
         try {
             const raw = localStorage.getItem(KEY);

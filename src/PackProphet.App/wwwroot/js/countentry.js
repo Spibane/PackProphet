@@ -1,9 +1,8 @@
 // Typing counts down a list.
 //
-// Entering a collection that already exists is the worst moment in this app: hundreds of cards,
-// each needing a number. Tapping + eleven times is not entry, it is punishment. This makes the
-// count fields behave like a spreadsheet column — type, Enter, type, Enter — which is the only
-// way that job is bearable.
+// Entering an existing collection means hundreds of cards, each needing a number, and tapping +
+// eleven times per card is impractical. This makes the count fields behave like a spreadsheet
+// column — type, Enter, type, Enter.
 //
 // Delegated from the document rather than bound per row: the list is virtualised, so rows come
 // and go constantly and per-element handlers would be attached and torn down on every scroll.

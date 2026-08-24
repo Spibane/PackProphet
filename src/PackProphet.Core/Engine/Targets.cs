@@ -6,18 +6,16 @@ using PackProphet.Domain;
 /// <summary>
 /// "Finish these rarities in this set, N copies each." The everyday target.
 ///
-/// The rarities are an arbitrary SET, not a threshold. Collectors genuinely want shapes a
-/// threshold cannot express — stars and crowns but no diamonds, or all diamonds plus 3-star
-/// and nothing in between — and forcing those into "up to tier N" would silently demand cards
-/// they never wanted.
+/// The rarities are an arbitrary set rather than a threshold. Collectors want shapes a threshold
+/// cannot express — stars and crowns but no diamonds, or all diamonds plus 3-star and nothing in
+/// between.
 /// </summary>
 /// <summary>
-/// How many copies of a PARALLEL FOIL are wanted, independently of its rarity rung.
+/// How many copies of a parallel foil are wanted, independently of its rarity rung.
 ///
 /// Its own number rather than a yes/no, because a foil is not the rarity it shares. Someone
 /// chasing two of every diamond may want one of each parallel foil, or none — the printing is a
-/// separate collectible sold only in a limited-time pack, so inheriting the rung's copy count
-/// answers a question nobody asked.
+/// separate collectible sold only in a limited-time pack.
 /// </summary>
 /// <param name="Keys">Ownership keys that are parallel foils.</param>
 /// <param name="Copies">Copies wanted of each; zero leaves them out of the target entirely.</param>
@@ -52,11 +50,11 @@ public sealed class RarityLadderTarget : ICompletionTarget
     /// <summary>
     /// Copies of one card this target asks for, or zero if it wants none.
     ///
-    /// Public because the Collection page needs the SAME answer for its progress counters and its
+    /// Public because the Collection page needs the same answer for its progress counters and its
     /// "short of target" filter. It used to work the rule out for itself, and the two drifted: the
     /// page counted all 139 parallel foils toward the target while the engine, honouring the foil
-    /// setting, had dropped them from demand entirely - so one screen reported work outstanding
-    /// that another called complete.
+    /// setting, had dropped them from demand.
+    /// </summary>
     /// </summary>
     public int Required(CardIndex index, PocketCard card)
     {
@@ -182,8 +180,7 @@ public sealed class DeckTarget : ICompletionTarget
 }
 
 /// <summary>
-/// An arbitrary list of wanted cards. The main lever for versatility: the same engine
-/// prices "the cards I think are cool" with no new machinery.
+/// An arbitrary list of wanted cards, priced by the same engine as every other target.
 /// </summary>
 public sealed class WishlistTarget : ICompletionTarget
 {

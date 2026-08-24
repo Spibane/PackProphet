@@ -1,8 +1,8 @@
 namespace PackProphet.Tests;
 
 /// <summary>
-/// Removal semantics. The UI had no way to decrement at all for a while, so the underlying
-/// behaviour is worth pinning: counts must floor at zero and drop the entry entirely.
+/// Removal semantics: counts floor at zero and drop the entry entirely. The UI had no way to
+/// decrement for a while, so the underlying behaviour is pinned here.
 /// </summary>
 public class CollectionEditTests
 {

@@ -4,9 +4,8 @@ using PackProphet.Deck;
 namespace PackProphet.Tests;
 
 /// <summary>
-/// Cross-checks two independently compiled datasets against each other. Agreement is evidence
-/// both are right; disagreement is a bug in one of them, and finding out from a test beats
-/// finding out from a wrong recommendation.
+/// Cross-checks two independently compiled datasets against each other. Agreement is evidence both
+/// are right; disagreement is a bug in one of them.
 /// </summary>
 public class CrossValidationTests
 {

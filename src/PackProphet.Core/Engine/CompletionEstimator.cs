@@ -10,9 +10,8 @@ namespace PackProphet.Engine;
 ///     P_u(t) = P(Poisson(λ_u·t) ≥ k_u)
 ///     E      = ∫₀^∞ ( 1 − Π_u P_u(t) ) dt
 ///
-/// At k = 1 this collapses to 1 − e^(−λt), the single-copy formula that every other
-/// tracker implements — so multi-copy support is the same integral, not a different
-/// algorithm.
+/// At k = 1 this collapses to 1 − e^(−λt), the single-copy formula, so multi-copy support is the
+/// same integral rather than a separate algorithm.
 ///
 /// Exact in the continuous-time limit. Treating a pack's slots as independent introduces
 /// error of order λ², negligible at real pull rates.
@@ -36,9 +35,9 @@ public static class CompletionEstimator
     ];
 
     /// <summary>
-    /// Expected packs to satisfy every need. Returns 0 when nothing is outstanding, and
-    /// +Infinity when any need can never be met (rate 0) — an honest "never", which the UI
-    /// must render as such rather than as a very large number.
+    /// Expected packs to satisfy every need. Returns 0 when nothing is outstanding, and +Infinity
+    /// when any need can never be met (rate 0), which the UI renders as "never" rather than as a
+    /// very large number.
     /// </summary>
     public static double ExpectedPacks(IReadOnlyCollection<Need> needs, int panels = 96)
     {

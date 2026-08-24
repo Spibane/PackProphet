@@ -6,8 +6,7 @@ using PackProphet.State;
 /// <param name="Balance">Units held now, projected forward from when the figure was entered.</param>
 /// <param name="Entered">What the user actually typed, kept so the projection can be shown as one.</param>
 /// <param name="WastedSinceFull">
-/// Units of regeneration lost to sitting at the cap. The single most actionable number here: a
-/// full pool is not a saved pool, it is a stopped one.
+/// Units of regeneration lost to sitting at the cap. A full pool has stopped regenerating.
 /// </param>
 /// <param name="FromHourglasses">Units the hourglass balance could restore right now.</param>
 /// <param name="Hourglasses">
@@ -41,8 +40,7 @@ public sealed record PackOutlook(
     bool Premium)
 {
     /// <summary>
-    /// Days to open <paramref name="packs"/> at this rate, hourglasses included. The figure that
-    /// turns "1,900 packs" into a decision.
+    /// Days to open <paramref name="packs"/> at this rate, hourglasses included.
     /// </summary>
     public double DaysFor(double packs) =>
         PerDay <= 0 ? double.PositiveInfinity : Math.Max(0, packs - FromHourglasses) / PerDay;
@@ -51,16 +49,14 @@ public sealed record PackOutlook(
 /// <summary>
 /// Projects the three resource systems forward from what the user last told us.
 ///
-/// The systems are Pack, Wonder and Trade, and NOTHING converts between them: three separate
-/// hourglass currencies, three separate pools. So this returns three separate outlooks and never
-/// a total. Wonder and Trade happen to be structurally identical - cap 5, one unit per 12 hours -
-/// which is why one function serves both rather than each having its own.
+/// The systems are Pack, Wonder and Trade, and nothing converts between them: three separate
+/// hourglass currencies, three separate pools. So this returns three separate outlooks and never a
+/// total. Wonder and Trade are structurally identical — cap 5, one unit per 12 hours — so one
+/// function serves both.
 ///
-/// Everything hinges on the fact that a capped pool STOPS REGENERATING. Sitting at five stamina
-/// is not thrift, it is loss, and the size of that loss is computable: every 12 hours spent full
-/// is a unit nobody will ever get back. Equally, a pool at two of five has 36 hours of slack
-/// before it wastes anything, which is a reason NOT to nag - the advice is "no rush until
-/// Thursday", not "check back twice a day".
+/// A capped pool stops regenerating, and the size of that loss is computable: every 12 hours spent
+/// full is a unit that cannot be recovered. A pool at two of five has 36 hours of slack before it
+/// wastes anything, which the outlook reports as slack rather than as a warning.
 /// </summary>
 public static class ResourcePlan
 {
@@ -132,12 +128,11 @@ public static class ResourcePlan
     }
 
     /// <summary>
-    /// Trades the dust balance can fund at a given price, which is the only figure that makes
-    /// dust worth showing.
+    /// Trades the dust balance can fund at a given price.
     ///
-    /// Stamina caps trading at roughly two a day while dust merely accumulates, so dust is
-    /// usually NOT the binding constraint. A runway far beyond the stamina you could earn in the
-    /// same period is the app's cue to stop presenting dust as a cost at all.
+    /// Stamina caps trading at roughly two a day while dust accumulates, so dust is usually not the
+    /// binding constraint. A runway far beyond the stamina earnable in the same period is the cue
+    /// to stop presenting dust as a cost.
     /// </summary>
     public static int DustRunway(int shinedust, int pricePerTrade) =>
         pricePerTrade <= 0 ? int.MaxValue : Math.Max(0, shinedust) / pricePerTrade;

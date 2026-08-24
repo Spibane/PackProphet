@@ -1,22 +1,21 @@
-@* One card-type pip: a distinct SHAPE on a distinct colour.
+@* One card-type pip: a distinct shape on a distinct colour.
 
-   Covers both energies and trainer kinds. Trainers are drawn as an OUTLINED circle rather than
-   a filled one, so a trainer never reads as an energy even before you register which glyph it
-   is — the fill weight carries the category and the glyph carries the specific kind. That
-   matters because these appear side by side in the same column of a list.
+   Covers both energies and trainer kinds. Trainers are drawn as an outlined circle rather than a
+   filled one, so a trainer does not read as an energy even before you register which glyph it is:
+   the fill weight carries the category and the glyph carries the specific kind. The two appear
+   side by side in the same column of a list.
 
-   Colour alone is not enough — that is WCAG 1.4.1, and with red-green colour blindness Grass
-   and Fire were previously indistinguishable. Each type therefore gets its own glyph, so the
-   pip is readable in greyscale and to a screen reader.
+   Colour alone is not enough (WCAG 1.4.1) — with red-green colour blindness Grass and Fire were
+   indistinguishable — so each type gets its own glyph and the pip is readable in greyscale and to
+   a screen reader.
 
-   These are simple original shapes, not the game's official energy artwork, which is
-   trademarked. They serve the accessibility need (shape + colour + label) without reproducing
-   protected assets; swapping in official icons later is a change to this one component. *@
+   These are simple original shapes rather than the game's official energy artwork, which is
+   trademarked. They carry shape, colour and label without reproducing protected assets; swapping
+   in official icons later is a change to this one component. *@
 
 <span class="e e-@Slug @(IsTrainer ? "e-trainer" : "")" role="img" aria-label="@Label" title="@Type">
     <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-        @* Every glyph is placed by a MEASURED transform, not by trusting its coordinates.
-           Two things were wrong and both are fixed here:
+        @* Every glyph is placed by a measured transform rather than by trusting its coordinates:
 
              centring — a hand-drawn path is centred on its own coordinates, not on its ink. A
                         flame is wide at the base and a droplet heavier still, so both sat
@@ -25,20 +24,17 @@
                         units across. Side by side in a list, the small ones read as faint and
                         the big ones as bold, which looks like misalignment even when centred.
 
-           Each glyph is rendered, its ink bounding box measured, and the transform below scales
-           it to a common size and lands its centre on the middle of the box. Regenerate these
-           numbers rather than adjusting them by hand if a glyph is redrawn. *@
+           Each glyph is rendered, its ink bounding box measured, and the transform below scales it
+           to a common size and lands its centre on the middle of the box. Regenerate these numbers
+           rather than adjusting them by hand if a glyph is redrawn. *@
         <g transform="@Placement">
         @switch (Type)
         {
-            @* The original shapes, restored. An earlier pass redrew them all symmetric so that
-               being centred would be structural — which worked geometrically and read worse:
-               the symmetric leaf and fist were blander and the nut lost the spanner's meaning.
-               Symmetry is only worth it when the symbol is symmetric anyway.
+            @* Asymmetric shapes, kept as drawn: a symmetric leaf and fist read blander, and a
+               symmetric nut loses the spanner's meaning.
 
-               Fire is the one exception kept from that pass: the old flame was a smooth teardrop,
-               indistinguishable from Water in greyscale, which defeats the point of giving each
-               type a shape at all. *@
+               Fire is the exception: a smooth teardrop is indistinguishable from Water in
+               greyscale, so its top is jagged. *@
             case "Grass":
                 <path d="M8 2c4 2 5 6 3 9-2 3-6 3-8 1 3 0 6-2 6-6 0 3-2 5-4 5 2-3 3-6 3-9z" />
                 break;

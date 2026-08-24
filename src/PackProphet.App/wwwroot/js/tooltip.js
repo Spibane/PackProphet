@@ -79,10 +79,9 @@
     let lastX = 0;
     let lastY = 0;
 
-    // Long enough to be a deliberate hover rather than a consequence of crossing the grid. A
-    // shorter delay is what made this feel like it fired the instant the mouse moved: in a grid
-    // of tiles the pointer is ALWAYS over something, so a tooltip on a short timer is effectively
-    // permanent.
+    // Long enough to be a deliberate hover rather than a consequence of crossing the grid. In a
+    // grid of tiles the pointer is always over something, so a tooltip on a short timer is
+    // effectively permanent.
     const DELAY = 650;
 
     // The pointer must also settle. Without this, a slow sweep across the grid still opens a

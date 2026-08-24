@@ -5,14 +5,12 @@ using System.Text.RegularExpressions;
 /// <summary>
 /// What the published service worker will and will not precache.
 ///
-/// Worth testing because this file is the one part of the app that never runs in development — the
-/// dev worker is a deliberate no-op — and never runs in CI either. Its only execution is on a real
-/// visitor's first load, where a mistake is measured in megabytes over whatever connection they
-/// happen to be on.
+/// This file is the one part of the app that never runs in development — the dev worker is a no-op
+/// — and never runs in CI either. Its only execution is on a real visitor's first load.
 ///
-/// The rules are read OUT OF THE JAVASCRIPT rather than restated here. Restating them would create
-/// exactly the second copy that drifts, and the drift would be invisible: precaching too much only
-/// shows up as a slow first visit, and precaching too little only as a broken offline mode.
+/// The rules are read out of the JavaScript rather than restated here, so the two cannot drift.
+/// Precaching too much shows up only as a slow first visit, and precaching too little only as a
+/// broken offline mode.
 /// </summary>
 public class ServiceWorkerPrecacheTests
 {
@@ -42,7 +40,7 @@ public class ServiceWorkerPrecacheTests
     }
 
     [Theory]
-    // Everything the app actually loads has to survive, or offline support is a lie.
+    // Everything the app loads has to survive, or offline support does not work.
     [InlineData("_framework/PackProphet.ux03ahoajj.wasm")]
     [InlineData("_framework/dotnet.native.lore6p3j3e.wasm")]
     [InlineData("index.html")]
@@ -55,8 +53,8 @@ public class ServiceWorkerPrecacheTests
     // The vendored snapshot: without it, a first visit with no network shows an empty app.
     [InlineData("data/snapshot/cards.min.json")]
     [InlineData("data/snapshot/VERSION")]
-    // Kept on purpose despite being loaded only on demand: importing a deck from a screenshot
-    // should still work with no connection.
+    // Kept despite being loaded only on demand: importing a deck from a screenshot should still
+    // work with no connection.
     [InlineData("js/vendor-jsQR.js")]
     public void Is_precached(string url) => Assert.True(Precached(url), $"{url} must be precached");
 

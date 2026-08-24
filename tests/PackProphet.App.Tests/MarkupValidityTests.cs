@@ -5,14 +5,13 @@ using System.Text.RegularExpressions;
 /// <summary>
 /// Every rendered page, checked for attribute names a browser will refuse.
 ///
-/// This exists because of a trap this codebase has now fallen into twice. A Razor comment placed
-/// INSIDE an attribute list is not treated as a comment: Razor emits its text as an attribute
-/// NAME, and the browser throws "InvalidCharacterError: Element.setAttribute: Invalid attribute
-/// name" — which takes down the whole component, not just the attribute.
+/// A Razor comment placed inside an attribute list is not treated as a comment: Razor emits its
+/// text as an attribute name, and the browser throws "InvalidCharacterError: Element.setAttribute:
+/// Invalid attribute name", which takes down the whole component.
 ///
-/// The reason it survives review is that nothing catches it. It compiles. bUnit renders it happily,
-/// because its DOM is a parser rather than a browser and does not enforce the name grammar. Only a
-/// real browser complains, and only at runtime, and the message names no element or file.
+/// Nothing else catches it. It compiles, and bUnit renders it happily, because its DOM is a parser
+/// rather than a browser and does not enforce the name grammar. Only a real browser complains, at
+/// runtime, with a message naming no element or file.
 /// </summary>
 public class MarkupValidityTests : AppHost
 {
@@ -23,12 +22,12 @@ public class MarkupValidityTests : AppHost
     private static readonly Regex Name = new(@"^[A-Za-z_:][-A-Za-z0-9_:.]*$", RegexOptions.Compiled);
 
     /// <summary>
-    /// Walks the markup and yields every attribute NAME, including valueless ones.
+    /// Walks the markup and yields every attribute name, including valueless ones.
     ///
-    /// A scanner rather than a regex, and the difference is the whole test: Razor emits a misplaced
-    /// comment as a run of bare, valueless tokens — <c>@*</c>, then one per word — so a pattern
-    /// looking for name="value" pairs sails straight past it. Quoted values are skipped properly
-    /// too, since a card's tooltip can contain newlines and angle brackets.
+    /// A scanner rather than a regex: Razor emits a misplaced comment as a run of bare, valueless
+    /// tokens — <c>@*</c>, then one per word — so a pattern looking for name="value" pairs misses
+    /// it. Quoted values are skipped properly too, since a card's tooltip can contain newlines and
+    /// angle brackets.
     /// </summary>
     private static IEnumerable<string> AttributeNames(string markup)
     {
@@ -106,7 +105,7 @@ public class MarkupValidityTests : AppHost
     public async Task The_card_grid_and_its_tiles_render_valid_attribute_names()
     {
         // Called out separately because the tile is where it happened: the grid is the one place
-        // with enough attributes on one element that a comment gets tucked in among them.
+        // with enough attributes on one element for a comment to be tucked in among them.
         await ReadyAsync();
 
         var cards = Session.Index.All.DistinctBy(c => c.OwnershipKey).Take(12).ToArray();

@@ -4,7 +4,7 @@ namespace PackProphet.Domain;
 /// What the user owns, as copy counts keyed by <see cref="PocketCard.OwnershipKey"/>.
 /// Zero-count entries are omitted, so absence means "none".
 ///
-/// Keyed by ownable card, NOT by set entry: the game treats owning a card as owning it for
+/// Keyed by ownable card rather than by set entry: the game treats owning a card as owning it for
 /// every set it appears in, so a Deluxe reprint is already owned if you have the original.
 /// </summary>
 public sealed class Collection

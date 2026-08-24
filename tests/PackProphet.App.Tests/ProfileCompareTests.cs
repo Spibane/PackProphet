@@ -3,10 +3,10 @@ namespace PackProphet.App.Tests;
 using PackProphet.Pages;
 
 /// <summary>
-/// The page that shipped a crash. Its guard tested "no trades AND something unpayable", and the
-/// following else was left as a catch-all — so a comparison with SHARES but no trades fell through
-/// it and indexed an empty list. That is not an edge case: every diamond is routed to a share, so
-/// it is the ordinary shape of a comparison between two of your own accounts.
+/// The page that shipped a crash. Its guard tested "no trades and something unpayable", and the
+/// following else was left as a catch-all, so a comparison with shares but no trades fell through
+/// it and indexed an empty list. Every diamond is routed to a share, so that is the ordinary shape
+/// of a comparison between two of your own accounts.
 /// </summary>
 public class ProfileCompareTests : AppHost
 {
@@ -55,8 +55,7 @@ public class ProfileCompareTests : AppHost
         await ReadyAsync();
 
         // The default plan is diamonds only, so a 2-star is not wanted by default and would not
-        // appear at all — which is correct, and is why the plan has to say it is collected first.
-        // Worth stating: this is the load-bearing filter the whole feature rests on.
+        // appear at all, which is why the plan has to say it is collected first.
         var stars2 = Session.Index.Ladder.IndexOf("SR")!.Value;
         Session.SetPlan(PackProphet.Engine.RarityPlan.Uniform(
             [.. Session.Plan().WantedTiers, stars2]));

@@ -38,10 +38,9 @@
         show('promise', (r && (r.message || r)) + '', r && r.stack ? r.stack.split('\n').slice(0, 4).join('\n') : '');
     });
 
-    // Blazor reports unhandled .NET exceptions through console.error and shows only a
-    // generic "An unhandled error has occurred" in its own banner, discarding the detail.
-    // Mirroring console.error here is the only way to see the real exception on a device
-    // with no devtools — which is most of how this app gets used.
+    // Blazor reports unhandled .NET exceptions through console.error and shows only a generic
+    // "An unhandled error has occurred" in its own banner, discarding the detail. Mirroring
+    // console.error here is the only way to see the real exception on a device with no devtools.
     const originalError = console.error;
     console.error = function (...args) {
         try {

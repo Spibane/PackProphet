@@ -39,7 +39,7 @@ else
         </select>
 
         <span class="bar-sep" aria-hidden="true"></span>
-
+        @* The two facts the whole page turns on, where they can be read rather than remembered. *@
         @* The two facts the whole page turns on, where they can be read rather than remembered. *@
         <span class="avail-chip @(_stamina.Balance > 0 ? "on" : "off")">
             <span class="ttl">trade stamina</span>
@@ -52,10 +52,10 @@ else
         <a class="btn btn-sm btn-outline-secondary" href="resources">edit</a>
     </div>
 
-    @* A single global ranking is not enough here. Sorted by how hard a card is to pull, the top
-       of the list is always the same handful of near-unpullable cards — the 139 parallel foils
-       swamp it outright — which answers "what is rarest" when the question was "what should I do
-       about each pack, each rarity, each set". So the ranking is one view of several. *@
+    @* A single global ranking is not enough here. Sorted by how hard a card is to pull, the top of
+       the list is always the same handful of near-unpullable cards — the 139 parallel foils swamp
+       it — which answers "what is rarest" rather than "what should I do about each pack, each
+       rarity, each set". So the ranking is one view of several. *@
     <div class="page-tools">
         <select class="form-select form-select-sm" style="max-width:12rem" aria-label="Group the rows by" @onchange="OnView">
             <option value="all" selected="@(_view == "all")">everything, ranked</option>
@@ -103,9 +103,9 @@ else
     </div>
 
     <div class="p-3 trades-page" style="max-width:64rem">
-        @* Stamina is the scarce thing, so the page opens by saying how much of it there is. This
-           inverts the obvious framing: the question is not what you can afford, it is which one
-           of the affordable things is worth a slot that arrives twice a day. *@
+        @* Stamina is the scarce resource, so the page opens with how much of it there is. The
+           question is not what you can afford but which of the affordable things is worth a slot
+           that arrives twice a day. *@
         <p class="small text-body-secondary">
             Every trade costs exactly <strong>1 stamina</strong> whatever the rarity, and stamina
             regenerates one per 12 hours &mdash; so about two trades a day, while shinedust simply
@@ -137,8 +137,7 @@ else
         }
         else
         {
-            @* The answer, stated once and prominently. A ranked table is a reference; the point of
-               the page is the single next action. *@
+            @* The next action, stated once and prominently, above the ranked table. *@
             @if (_shown[0].Candidate.Ready)
             {
                 <div class="verdict take" aria-live="polite">
@@ -183,9 +182,8 @@ else
                 </div>
             }
 
-            @* Whether dust is actually the thing stopping you, which is usually NOT the case:
-               stamina allows about two trades a day while dust merely accumulates. Saying so
-               plainly beats presenting dust as a cost it is not. *@
+            @* Whether dust is actually the thing stopping you, which it usually is not: stamina
+               allows about two trades a day while dust accumulates. *@
             @if (_shown[0].Candidate.Dust > 0)
             {
                 var price = _shown[0].Candidate.Dust;
@@ -231,9 +229,9 @@ else
                         }
                         <th>card</th>
                         <th>rarity</th>
-                        @* A column rather than a badge on the name. Most rows are shareable, so as a
-                           badge it repeated down the whole table and crowded the one cell people
-                           read; as a column it is scannable, and the rows that say no stand out. *@
+                        @* A column rather than a badge on the name. Most rows are shareable, so as
+                           a badge it repeated down the whole table; as a column it is scannable,
+                           and the rows that say no stand out. *@
                         <th title="Whether a friend could simply send it: 1-4 diamonds only">share?</th>
                         <th class="num" title="Expected packs you would not have to open">packs saved</th>
                         <th class="num" title="Pack points still to earn in this card's own set before the shop could sell it">points short</th>
@@ -306,8 +304,8 @@ else
                                 }
                                 else
                                 {
-                                    @* Named, not counted: the decision is which card you are
-                                       willing to give up, and a bare number cannot answer that. *@
+                                    @* Named rather than counted: the decision is which card you
+                                       are willing to give up. *@
                                     <span>
                                         @string.Join(", ", row.Candidate.CouldOffer.Take(3).Select(c => c.Name))
                                         @(row.Candidate.CouldOffer.Count > 3 ? $" +{row.Candidate.CouldOffer.Count - 3}" : "")

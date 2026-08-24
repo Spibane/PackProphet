@@ -4,8 +4,8 @@ using PackProphet.Data;
 using PackProphet.Domain;
 
 /// <param name="AtCap">
-/// True when further packs of this set earn NOTHING. The most actionable warning in the app:
-/// every pack opened while capped wastes its points entirely.
+/// True when further packs of this set earn nothing: every pack opened while capped wastes its
+/// points.
 /// </param>
 /// <param name="RarestWanted">
 /// The rarest card from this set the user still needs - the thing the balance is being saved
@@ -56,14 +56,12 @@ public sealed class PointsLedger
     }
 
     /// <summary>
-    /// State of one set's points, including which missing cards the balance could buy right
-    /// now — the whole reason to track this rather than just show a number.
+    /// State of one set's points, including which missing cards the balance could buy right now.
     /// </summary>
     /// <param name="plan">
-    /// What the user actually collects. Load-bearing, not a refinement: a rung they want zero
-    /// copies of is a rung they are ignoring, so a card on it is not "still wanted" at any price.
-    /// Without this the shop advice recommended saving for a Crown to someone who collects
-    /// diamonds - the most expensive card in the set, and one they had told us not to chase.
+    /// What the user actually collects. A rung they want zero copies of is a rung they are
+    /// ignoring, so a card on it is not "still wanted" at any price. Without this the shop advice
+    /// recommended saving for a Crown to someone who collects diamonds.
     /// </param>
     public SetPoints Describe(string set, int balance, Collection owned, RarityPlan plan)
     {
@@ -90,11 +88,10 @@ public sealed class PointsLedger
             .Select(x => x.Card)
             .ToArray();
 
-        // The rarest card still wanted, which is what a balance is actually being saved for.
-        // Rarest by LADDER RUNG rather than by price, because the two disagree: an Immersive
-        // costs 1,500 against a 2-star's 1,250 while sitting a rung above it, and a Shiny 2-star
-        // costs more than a Crown's rung would suggest. "The rarest one I still need" is the
-        // question a collector asks; the price is then whatever it happens to be.
+        // The rarest card still wanted, which is what a balance is being saved for. Rarest by
+        // ladder rung rather than by price, because the two disagree: an Immersive costs 1,500
+        // against a 2-star's 1,250 while sitting a rung above it, and a Shiny 2-star costs more
+        // than a Crown's rung would suggest.
         var best = wanted
             .Select(x => (x.Card, Rung: x.Rung!.Value, Points: _rarities[x.Card.Rarity].Points))
             .OrderByDescending(x => x.Rung)
@@ -113,8 +110,8 @@ public sealed class PointsLedger
     }
 
     /// <summary>
-    /// Sets where points are being wasted, or about to be. Ordered worst-first so the UI can
-    /// lead with the set that is actively losing value on every pack.
+    /// Sets where points are being wasted, or about to be. Ordered worst-first, so the UI leads
+    /// with the set losing value on every pack.
     /// </summary>
     /// <param name="planFor">
     /// The plan for a given set, since targets are per set: someone chasing stars in the newest

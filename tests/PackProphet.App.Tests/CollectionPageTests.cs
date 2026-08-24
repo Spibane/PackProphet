@@ -7,7 +7,7 @@ using PackProphet.Pages;
 
 /// <summary>
 /// The Collection page, which had two bugs of the same kind: it worked the completion rule out for
-/// itself instead of asking the target, and drifted from it in two directions at once.
+/// itself instead of asking the target, and drifted from it in two directions.
 /// </summary>
 public class CollectionPageTests : AppHost
 {
@@ -94,10 +94,10 @@ public class CollectionPageTests : AppHost
     [Fact]
     public async Task The_headline_target_figure_matches_what_the_engine_says()
     {
-        // The one that would have caught the original bug. The page prints "target N / M" in its
-        // header, and it used to compute both numbers itself — so the header disagreed with the
-        // ranking on the very same set. Comparing the RENDERED text against the engine is the only
-        // assertion that notices a page doing its own arithmetic.
+        // The assertion that would have caught the original bug. The page prints "target N / M" in
+        // its header and used to compute both numbers itself, so the header disagreed with the
+        // ranking on the same set. Comparing the rendered text against the engine is what notices a
+        // page doing its own arithmetic.
         await ReadyAsync();
 
         var foilSet = Session.FoilSets.First();

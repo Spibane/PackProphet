@@ -1,10 +1,9 @@
 namespace PackProphet.Domain;
 
 /// <summary>
-/// One entry from the upstream rarities.json. Shipped verbatim: its economics
-/// (points, tradePrice, tradeable) were checked against the live game and are correct,
-/// so these values are READ, never hardcoded. Contrast cards.extra.json, whose stats
-/// are wrong and which this app does not use.
+/// One entry from the upstream rarities.json. Shipped verbatim: its economics (points, tradePrice,
+/// tradeable) were checked against the live game and are correct, so these values are read rather
+/// than hardcoded. cards.extra.json, whose stats are wrong, is not used.
 /// </summary>
 public sealed class Rarity
 {

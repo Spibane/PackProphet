@@ -4,8 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// Reads and writes the persisted state, and owns migration. Also the export/import format,
-/// so a user can always get their data out — a local-only app with no export is a trap.
+/// Reads and writes the persisted state, and owns migration. Also the export/import format, so a
+/// user can always get their data out of a local-only app.
 /// </summary>
 public static class StateSerializer
 {
@@ -27,8 +27,7 @@ public static class StateSerializer
 
     /// <summary>
     /// Parse persisted state, migrating older schemas. Returns null when the payload is not
-    /// recoverable, so the caller can start fresh rather than crash on boot — losing a
-    /// session beats an app that will not open.
+    /// recoverable, so the caller can start fresh rather than crash on boot.
     /// </summary>
     public static AppState? Deserialize(string? json)
     {
@@ -48,9 +47,9 @@ public static class StateSerializer
     }
 
     /// <summary>
-    /// Bring an older payload up to the current schema. Unknown FUTURE versions are refused
-    /// rather than guessed at: opening newer data with an older build and silently dropping
-    /// fields would destroy the user's collection on the next save.
+    /// Bring an older payload up to the current schema. Unknown future versions are refused rather
+    /// than guessed at: opening newer data with an older build and dropping fields would destroy
+    /// the user's collection on the next save.
     /// </summary>
     private static AppState? Migrate(AppState state)
     {
@@ -67,17 +66,15 @@ public static class StateSerializer
     /// <summary>
     /// Replace every null collection with an empty one, and clamp what cannot legally be negative.
     ///
-    /// This is not defensive padding, it closes a way to BRICK the app. Every list and dictionary
-    /// in the state model is non-nullable in C# and the serializer does not enforce that, so a
-    /// payload saying <c>"decks": null</c> deserialises to a Profile whose Decks really is null.
-    /// The import path then adopts that state, queues it to localStorage, and the first render
-    /// throws - after which every reload reads the same payload back and throws again. A single
-    /// hand-edited, truncated or merged backup file leaves an app that cannot be opened, with no
-    /// route back except clearing site data by hand.
+    /// Every list and dictionary in the state model is non-nullable in C# and the serializer does
+    /// not enforce that, so a payload saying <c>"decks": null</c> deserialises to a Profile whose
+    /// Decks really is null. The import path then adopts that state, queues it to localStorage, and
+    /// the first render throws — after which every reload reads the same payload back and throws
+    /// again, leaving an app that cannot be opened without clearing site data by hand.
     ///
-    /// Reachable without any attacker: editing a backup, a partial download, or a file written by
-    /// a future version that renamed a field. So it is fixed on READ, where every path - boot,
-    /// import, and any future sync - goes through one place.
+    /// Editing a backup, a partial download, or a file written by a future version that renamed a
+    /// field all reach this, so it is fixed on read, where boot, import and any future sync go
+    /// through one place.
     /// </summary>
     private static AppState Normalise(AppState state)
     {

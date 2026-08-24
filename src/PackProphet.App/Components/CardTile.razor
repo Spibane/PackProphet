@@ -1,32 +1,27 @@
-@* One card tile. ShouldRender is overridden because Blazor treats a class-typed
-   parameter as always-changed, which would re-render every visible tile on any
-   state change. This is the core of what Phase 0 measures.
+@* One card tile. ShouldRender is overridden because Blazor treats a class-typed parameter as
+   always-changed, which would re-render every visible tile on any state change.
 
-   Note there is no drag handling here: touch's implicit pointer capture makes
-   per-tile pointerenter unusable for sweeping. data-idx lets wwwroot/js/gridsweep.js
-   hit-test with elementFromPoint instead, and it paints the .sel highlight directly
-   so a sweep costs no Blazor renders.
+   There is no drag handling here: touch's implicit pointer capture makes per-tile pointerenter
+   unusable for sweeping. data-idx lets wwwroot/js/gridsweep.js hit-test with elementFromPoint
+   instead, and it paints the .sel highlight directly so a sweep costs no Blazor renders.
 
-   The tooltip is text only, deliberately: a tile IS the full card art, so an art preview
-   on hover would show what is already on screen. The text still earns its place because
-   the tile has no room for the name, set or number. The list layout is the opposite case
-   and does preview the art, from its thumbnail. *@
+   The tooltip is text only: a tile is the full card art, so an art preview on hover would show
+   what is already on screen, while the tile has no room for the name, set or number. The list
+   layout is the opposite case and does preview the art from its thumbnail. *@
 
-@* Right-click removes a copy: the natural desktop counterpart to left-click adding one, and far
-   quicker than switching the whole grid into remove mode to fix one over-count. The browser menu
-   is suppressed on the tile only.
+@* Right-click removes a copy, the desktop counterpart to left-click adding one, without switching
+   the whole grid into remove mode. The browser menu is suppressed on the tile only.
 
-   A comment cannot live INSIDE the attribute list below. Razor does not treat it as a comment
+   A comment cannot live inside the attribute list below. Razor does not treat it as a comment
    there — it emits the text as an attribute name, and the browser throws
-   "InvalidCharacterError: Element.setAttribute: Invalid attribute name" at render time, taking
-   the whole grid down. This has now happened twice, the second time while adding the ARIA
-   attributes below, so MarkupValidityTests scans every rendered page for names a browser would
-   refuse — nothing else catches it. It compiles, and bUnit's DOM is a parser rather than a
-   browser, so it renders the nonsense without complaint.
+   "InvalidCharacterError: Element.setAttribute: Invalid attribute name" at render time, taking the
+   whole grid down. It compiles, and bUnit's DOM is a parser rather than a browser, so it renders
+   the nonsense without complaint; MarkupValidityTests scans every rendered page for names a
+   browser would refuse.
 
    The tile is a cell of the grid its container declares, named by a sentence CardGrid builds so
-   the keyboard cursor and the tile cannot describe the same card differently. It carries no
-   tabindex on purpose: the container holds the only tab stop and moves aria-activedescendant. *@
+   the keyboard cursor and the tile describe the card the same way. It carries no tabindex: the
+   container holds the only tab stop and moves aria-activedescendant. *@
 <div class="card-tile @(Count > 0 ? "owned" : "") @(Picked > 0 ? "picked" : "") @(Gold ? "flair gold-flair" : "")"
      data-idx="@Index" data-tip="@Tip"
      id="@DomId" role="gridcell" aria-label="@Label"
@@ -34,21 +29,19 @@
      @oncontextmenu="RightClick" @oncontextmenu:preventDefault="true"
      @onpointerdown="PointerDown" @onpointerup="PointerUp"
      @onpointercancel="CancelHold" @onpointerleave="CancelHold" @onpointermove="PointerMove">
-    @* No rarity badge. The tile IS the card art, which carries the rarity mark itself, so a
-       label in the corner repeated what was already visible and cost a corner to do it. The list
-       layout still shows rarity, because there the art is a 32px thumbnail. *@
+    @* No rarity badge. The tile is the card art, which carries the rarity mark itself. The list
+       layout does show rarity, because there the art is a 32px thumbnail. *@
     <img data-src="@Card.ArtUrl" alt="@Card.Name" decoding="async" draggable="false" />
 
     @* Detail needs its own target: a tap on the tile means "I own one more", so it cannot also
-       mean "tell me about this". A corner button for a pointer, a long press for a finger —
-       where a button that size is an awkward target. *@
+       mean "tell me about this". A corner button for a pointer, a long press for a finger. *@
     @if (ShowInfo)
     {
         @* Its context menu is stopped rather than prevented, so "open in new tab" still works on
            the one thing here that is genuinely a link. *@
-        @* Out of the tab order deliberately: a focus stop per tile would put thousands of them
-           between the grid and whatever follows it. The keyboard route to detail is `i` on the
-           cursor, which gridkeys.js sends to KeyOpen. *@
+        @* Out of the tab order: a focus stop per tile would put thousands of them between the grid
+           and whatever follows it. The keyboard route to detail is `i` on the cursor, which
+           gridkeys.js sends to KeyOpen. *@
         <a class="info" href="card/@Card.Key" title="Card detail" aria-label="Detail for @Card.Name"
            tabindex="-1"
            @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true"
@@ -59,8 +52,7 @@
     {
         <span class="cnt">@Count</span>
     }
-    @* Distinct from the owned count: this is "I just pulled this", not "I own this". Without
-       it the only feedback for a tap was the strip at the top of the page. *@
+    @* Distinct from the owned count: this is "I just pulled this" rather than "I own this". *@
     @if (Picked > 0)
     {
         <span class="pick">@(Picked > 1 ? $"+{Picked}" : "+")</span>
@@ -83,7 +75,7 @@
 
     /// <summary>
     /// Whether this card has earned its gold flair. Passed in rather than derived here: the rule
-    /// needs the rarity ladder and the tile deliberately knows nothing but its own card.
+    /// needs the rarity ladder, and the tile knows only its own card.
     /// </summary>
     [Parameter] public bool Gold { get; set; }
     /// <param name="Invert">

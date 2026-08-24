@@ -3,13 +3,11 @@ namespace PackProphet.Data;
 using PackProphet.Domain;
 
 /// <summary>
-/// Per-set pack pull rates: the irreplaceable dependency that makes every recommendation
-/// real math rather than a heuristic.
+/// Per-set pack pull rates, the data every odds calculation is built on.
 ///
-/// Coverage is NOT total. In the current snapshot the newest set (B4) and both promo
-/// sets have no rate data at all, so the odds engine can price neither. That must be
-/// disclosed to the user rather than silently dropped — a set quietly missing from a
-/// ranking looks like "nothing to gain here", which is the opposite of the truth.
+/// Coverage is not total. In the current snapshot the newest set (B4) and both promo sets have no
+/// rate data at all, so the odds engine can price neither. Callers disclose that rather than
+/// dropping the sets, since a set missing from a ranking reads as "nothing to gain here".
 /// </summary>
 public sealed class PullRates
 {
@@ -30,12 +28,11 @@ public sealed class PullRates
     public bool Covers(string set) => _bySet.ContainsKey(set);
 
     /// <summary>
-    /// Sets whose rates are BORROWED from another set, mapped to the set they came from.
+    /// Sets whose rates are borrowed from another set, mapped to the set they came from.
     ///
-    /// Every surface that reports a number derived from one of these must say so. A borrowed
-    /// distribution is a good estimate — the standard five-card pack has had the same shape for
-    /// two years — but it is still an assumption, and an assumption presented as measured data
-    /// is how a tool loses the user's trust the first time it is wrong.
+    /// Every surface that reports a number derived from one of these labels it as an assumption. A
+    /// borrowed distribution is a reasonable estimate — the standard five-card pack has had the
+    /// same shape for two years — but it is still an assumption rather than measured data.
     /// </summary>
     public IReadOnlyDictionary<string, string> AssumedFrom { get; }
 
@@ -49,14 +46,12 @@ public sealed class PullRates
     /// A copy of this table with <paramref name="sets"/> priced using <paramref name="donor"/>'s
     /// distributions.
     ///
-    /// Only the slot SHAPE is borrowed, never per-card probabilities: the engine divides each
-    /// slot's rarity share by how many cards of that rung the pack actually holds, so a borrowed
-    /// distribution automatically adapts to the new set's own contents. Any share naming a rarity
-    /// the new set does not have is dropped rather than redistributed, exactly as it is for
-    /// published rates — inventing chances at cards that do not exist would be worse than being
-    /// slightly conservative.
+    /// Only the slot shape is borrowed, never per-card probabilities: the engine divides each
+    /// slot's rarity share by how many cards of that rung the pack holds, so a borrowed
+    /// distribution adapts to the new set's own contents. Any share naming a rarity the new set
+    /// does not have is dropped rather than redistributed, as it is for published rates.
     ///
-    /// A set that already has published rates is never overwritten. Real data always wins.
+    /// A set that already has published rates is never overwritten.
     /// </summary>
     public PullRates Assuming(IEnumerable<string> sets, string donor)
     {
@@ -81,10 +76,9 @@ public sealed class PullRates
     /// rates and sells ordinary packs.
     ///
     /// Most recent because pack structure drifts — slot counts and the rarities on offer have both
-    /// changed across series — so the newest measured set is the closest thing to "what a pack
-    /// looks like now". Limited-time sets are excluded because they are structurally unlike the
-    /// rest: a Deluxe pack holds four cards and guarantees a 4-diamond, so copying it would price
-    /// an ordinary set as far better than it is.
+    /// changed across series. Limited-time sets are excluded because they are structurally unlike
+    /// the rest: a Deluxe pack holds four cards and guarantees a 4-diamond, so copying it would
+    /// price an ordinary set as far better than it is.
     /// </summary>
     public string? StandardDonor(SetCatalog sets)
     {
@@ -100,11 +94,11 @@ public sealed class PullRates
 
     /// <summary>
     /// How many cards a pack of this set can hold, across all its variants. Empty for an unpriced
-    /// set, which is the honest answer - we do not know.
+    /// set.
     ///
-    /// A SET of counts rather than one number, because a set genuinely has more than one: variants
-    /// hold 4, 5 or 6 cards, and "Regular Pack +1" is a real six-card pack at about 8%. A single
-    /// expected count would flag a perfectly ordinary opening as wrong.
+    /// A set of counts rather than one number, because a set has more than one: variants hold 4, 5
+    /// or 6 cards, and "Regular Pack +1" is a real six-card pack at about 8%. A single expected
+    /// count would flag an ordinary opening as wrong.
     /// </summary>
     public IReadOnlySet<int> CardCounts(string set) =>
         _bySet.TryGetValue(set, out var vs)
@@ -121,19 +115,19 @@ public sealed class PullRates
             : 0;
 
     /// <summary>
-    /// Variants for a set, with appearance rates normalised to sum to exactly 1.0.
-    /// Upstream sums to 99.999 for several sets; normalising keeps probabilities honest
-    /// instead of leaking a fraction of a percent of probability mass.
+    /// Variants for a set, with appearance rates normalised to sum to exactly 1.0. Upstream sums
+    /// to 99.999 for several sets, which would otherwise leak a fraction of a percent of
+    /// probability mass.
     /// </summary>
     public IReadOnlyList<(string Name, double Weight, PackVariant Variant)> Variants(string set)
     {
         if (!_bySet.TryGetValue(set, out var vs) || vs.Count == 0) return [];
 
         var total = vs.Values.Sum(v => v.AppearanceRate);
-        // A set with no variants is legitimate (uncovered set, handled above). Variants
-        // that exist but carry zero total weight is a deserialization bug, not missing
-        // data — fail loudly, because the silent version of this returns "no odds" and
-        // looks exactly like a complete collection.
+        // A set with no variants is legitimate (uncovered set, handled above). Variants that exist
+        // but carry zero total weight is a deserialization bug rather than missing data, so it
+        // fails loudly: the silent version returns "no odds", which looks like a complete
+        // collection.
         if (total <= 0)
             throw new InvalidOperationException(
                 $"Set '{set}' has {vs.Count} pack variant(s) but their appearance rates sum to {total}. " +

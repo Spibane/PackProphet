@@ -8,12 +8,10 @@ using PackProphet.Components;
 /// Keyboard operation of the card grid.
 ///
 /// The grid is how a collection is entered, and it was pointer-only: a tile was a div with a click
-/// handler, no tabindex, no key handling, no accessible name. Someone who cannot use a mouse or a
-/// touchscreen could not use the app at all.
+/// handler, no tabindex, no key handling, no accessible name.
 ///
-/// The cursor itself lives in js/gridkeys.js, so what is checked here is everything .NET owns: the
-/// grid semantics, the accessible names, and that each key ends up doing exactly what the pointer
-/// path does. The JS half is deliberately thin for that reason.
+/// The cursor itself lives in js/gridkeys.js, so what is checked here is what .NET owns: the grid
+/// semantics, the accessible names, and that each key ends up doing what the pointer path does.
 /// </summary>
 public class GridKeyboardTests : AppHost
 {
@@ -103,8 +101,8 @@ public class GridKeyboardTests : AppHost
     [Fact]
     public async Task A_digit_sets_the_count_outright()
     {
-        // The key that makes the keyboard path usable rather than merely possible: entering a
-        // collection that already exists otherwise means nine presses of + per card.
+        // The key that makes the keyboard path practical: entering an existing collection otherwise
+        // means nine presses of + per card.
         await ReadyAsync();
         var cards = Cards(6);
         var grid = Grid(cards);

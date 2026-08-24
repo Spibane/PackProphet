@@ -7,9 +7,8 @@ using PackProphet.Domain;
 /// One unit of outstanding demand: how many more copies are needed, and which cards can
 /// supply it.
 ///
-/// Demand carries a QUANTITY rather than being mere set membership. That is the whole
-/// point: a set cannot express "this deck needs two Pikachu ex", nor "I want two of every
-/// diamond", which is what most players actually want.
+/// Demand carries a quantity rather than being set membership, so it can express "this deck needs
+/// two Pikachu ex" or "two of every diamond".
 /// </summary>
 /// <param name="Key">Stable identity for grouping and display.</param>
 /// <param name="Remaining">Copies still needed. Always &gt; 0 for a live demand.</param>

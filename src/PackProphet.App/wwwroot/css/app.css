@@ -454,10 +454,9 @@ main:focus { outline: none; }
 .card-tile img { width: 100%; height: 100%; display: block; object-fit: cover; background: #333; }
 .card-tile img.img-failed { opacity: .25; }
 
-/* Info button, bottom-centre. Every corner of a card carries something worth seeing — the
-   stage, the HP, the set number, the illustrator — while the middle of the lower edge is flavour
-   text, so a button there covers the least. Sized as a real target rather than a decoration:
-   the first attempt was a 1.1rem corner dot and was effectively invisible. */
+/* Info button, bottom-centre. Every corner of a card carries something — the stage, the HP, the
+   set number, the illustrator — while the middle of the lower edge is flavour text, so a button
+   there covers the least. Sized as a real target: a 1.1rem corner dot was effectively invisible. */
 .card-tile .info {
     position: absolute; left: 50%; bottom: 4px;
     transform: translateX(-50%);
@@ -927,9 +926,9 @@ tr.row-best {
 .settings-page > h2 {
     margin: 2.1rem 0 .6rem;
     padding-top: 1rem;
-    /* Deliberately heavier than an ordinary area boundary: this separates SECTIONS of a long
-       page, and at the same weight as the boxes inside them it stopped reading as a break at
-       all. Mixed against the body colour so one rule covers both themes. */
+    /* Heavier than an ordinary area boundary: this separates sections of a long page, and at the
+       same weight as the boxes inside them it stopped reading as a break. Mixed against the body
+       colour so one rule covers both themes. */
     border-top: 2px solid color-mix(in srgb, var(--bs-body-color) 32%, transparent);
     font-size: 1.1rem;
     font-weight: 700;
@@ -1141,8 +1140,8 @@ tr.row-best {
     border-radius: .5rem;
     background: var(--bs-tertiary-bg);
 }
-/* A deck you can build today is the one worth spotting, so it is marked on the container rather
-   than only by a badge in the corner. */
+/* A deck you can build today is marked on the container rather than only by a badge in the
+   corner. */
 .showcase.ready {
     border-color: color-mix(in srgb, var(--bs-success) 55%, transparent);
     background:

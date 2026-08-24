@@ -13,9 +13,8 @@ using PackProphet.Domain;
 /// printed name, so the cheapest common is as good as the art rare.
 /// </param>
 /// <param name="Requires">
-/// What the missing card ITSELF needs and you also lack, or null. A Stage 2 with neither of its
-/// lower stages is two purchases from playable, and reporting only the nearer one would understate
-/// it by half.
+/// What the missing card itself needs and you also lack, or null. A Stage 2 with neither of its
+/// lower stages is two purchases from playable.
 /// </param>
 public sealed record EvolutionGap(
     string MissingName,
@@ -34,9 +33,8 @@ public sealed record EvolutionGap(
 }
 
 /// <param name="Unverified">
-/// Owned Pokémon with no stage data published yet. The number that keeps the report honest: a
-/// clean result over an incomplete database is not the same as having no gaps, and the newest
-/// sets are exactly where the data is missing.
+/// Owned Pokémon with no stage data published yet. A clean result over an incomplete database is
+/// not the same as having no gaps, and the newest sets are where the data is missing.
 /// </param>
 public sealed record EvolutionReport(
     IReadOnlyList<EvolutionGap> Gaps,
@@ -45,7 +43,7 @@ public sealed record EvolutionReport(
 {
     public bool Complete => Gaps.Count == 0;
 
-    /// <summary>Cards blocked across every gap, which is the figure worth leading with.</summary>
+    /// <summary>Cards blocked across every gap.</summary>
     public int BlockedCards =>
         Gaps.SelectMany(g => g.Blocks).DistinctBy(c => c.Name).Count();
 }
@@ -53,17 +51,14 @@ public sealed record EvolutionReport(
 /// <summary>
 /// Evolutions you own but cannot play, because you do not own what they evolve from.
 ///
-/// Worth building because the collection view cannot show it: a Charizard sits in the grid looking
-/// like an asset, and the fact that it is dead weight without a Charmeleon is invisible until you
-/// try to build a deck. It is also the cheapest advice in the app - the missing card is almost
-/// always a common.
+/// The collection view cannot show this: a Charizard sits in the grid looking like an asset, and
+/// its being unplayable without a Charmeleon is invisible until you build a deck. The missing card
+/// is almost always a common.
 ///
-/// **Matching is by NAME, and that is correct here rather than a shortcut.** Data correction 9
-/// killed name-based decklist import because 40% of names map to several card identities, so the
-/// obvious worry is that this feature inherits the same defect. It does not, because the question
-/// is different. Import asks "WHICH Bulbasaur is this?", which is genuinely ambiguous. This asks
-/// "do I own anything called Bulbasaur?" - and the game evolves on the printed name, so every
-/// answer is equally correct. The ambiguity that ruins one feature is irrelevant to the other.
+/// Matching is by name. Name-based decklist import was dropped because 40% of names map to several
+/// card identities, but the question here is different: import asks "which Bulbasaur is this?",
+/// which is ambiguous, while this asks "do I own anything called Bulbasaur?" — and the game evolves
+/// on the printed name, so every answer is equally correct.
 /// </summary>
 public sealed class EvolutionGaps
 {
@@ -78,8 +73,8 @@ public sealed class EvolutionGaps
     private readonly Dictionary<string, string> _evolvesFrom;
 
     /// <summary>
-    /// Basic, Stage 1, Stage 2 - so two steps is the deepest a chain goes. A hard cap anyway,
-    /// because bad upstream data could otherwise describe a cycle and spin here forever.
+    /// Basic, Stage 1, Stage 2 - so two steps is the deepest a chain goes. Also a hard cap, since
+    /// bad upstream data could describe a cycle.
     /// </summary>
     private const int MaxChainDepth = 2;
 
@@ -92,9 +87,9 @@ public sealed class EvolutionGaps
         _byName = new Dictionary<string, List<PocketCard>>(StringComparer.OrdinalIgnoreCase);
         _evolvesFrom = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        // Trainers are NOT excluded here, and the reason is the fossils: Omanyte evolves from
-        // Helix Fossil, which is a Trainer card. Excluding trainers from the name tables reported
-        // eleven missing fossils to a player who owned every card in the game.
+        // Trainers are not excluded here, because of the fossils: Omanyte evolves from Helix
+        // Fossil, which is a Trainer card. Excluding trainers from the name tables reported eleven
+        // missing fossils to a player who owned every card in the game.
         foreach (var card in index.All)
         {
             if (!_byName.TryGetValue(card.Name, out var list)) _byName[card.Name] = list = [];
@@ -111,12 +106,11 @@ public sealed class EvolutionGaps
     /// <summary>
     /// Trainers, from the identity namespace rather than from the facts table. Identity comes from
     /// the artwork filename, so it is known for every card including the newest sets where stage
-    /// data is missing entirely - which is the difference between excluding trainers correctly and
-    /// reporting a few hundred of them as "stage unknown".
+    /// data is missing.
     ///
-    /// Used ONLY to keep them out of the unverified count. A trainer has no pre-evolution so it can
-    /// never open a gap, but it can certainly CLOSE one - the fossils are trainers, and a fossil is
-    /// the pre-evolution of a real Pokémon line.
+    /// Used only to keep them out of the unverified count. A trainer has no pre-evolution so it
+    /// cannot open a gap, but it can close one - the fossils are trainers, and a fossil is the
+    /// pre-evolution of a real Pokémon line.
     /// </summary>
     private bool IsTrainer(PocketCard card) =>
         _index.DeckNrOf(card) is int nr && nr >= DeckBuilderNr.TrainerOffset;
@@ -144,22 +138,20 @@ public sealed class EvolutionGaps
             if (fact is null)
             {
                 // A trainer with no stage data is not an unknown: it has no pre-evolution to be
-                // missing. Counting them would have put a few hundred cards behind a caveat that
-                // could not apply to any of them.
+                // missing.
                 if (IsTrainer(card)) continue;
 
                 // No stage data, so this card cannot be checked either way. Counted rather than
-                // assumed safe: the newest sets are exactly where the gaps and the missing data
-                // both live.
+                // assumed safe: the newest sets are where the gaps and the missing data both live.
                 unverified++;
                 continue;
             }
 
             if (fact.EvolvesFrom is not { Length: > 0 } from) continue;
 
-            // Walk DOWN the chain, not just one step. A Stage 2 with neither lower stage owned has
-            // two gaps, and the deeper one is invisible from the owned cards alone - you do not
-            // own the middle card, so nothing else in this loop will ever mention it.
+            // Walk down the chain rather than one step. A Stage 2 with neither lower stage owned
+            // has two gaps, and the deeper one is invisible from the owned cards alone, since the
+            // middle card is not owned.
             var next = from;
             for (var depth = 0; depth < MaxChainDepth && next is not null; depth++)
             {
@@ -179,8 +171,7 @@ public sealed class EvolutionGaps
                     .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToArray(),
                 Candidates(kv.Key),
                 Deeper(kv.Key, ownedNames)))
-            // Most cards unblocked first, then the cheapest fix - which is the order you would
-            // spend on them in.
+            // Most cards unblocked first, then the cheapest fix.
             .OrderByDescending(g => g.Blocks.Count)
             .ThenBy(g => g.Easiest is null ? int.MaxValue : Rung(g.Easiest))
             .ThenBy(g => g.MissingName, StringComparer.OrdinalIgnoreCase)
@@ -191,16 +182,14 @@ public sealed class EvolutionGaps
 
     /// <summary>
     /// Printings that fill a gap, easiest first: lowest rarity, then actually sold in packs, then
-    /// the best pull rate. Any of them works, so there is no reason to send someone after a rarer
-    /// one than they need.
+    /// the best pull rate. Any of them works.
     /// </summary>
     private IReadOnlyList<PocketCard> Candidates(string name) =>
         (_byName.GetValueOrDefault(name) ?? [])
             .DistinctBy(c => c.OwnershipKey)
-            // Obtainable FIRST, ahead of rarity, which is not the obvious order and is the right
-            // one: a card nobody can open is never the easiest fix however common it is. Measured,
-            // it matters - the promo Charmeleon is a 1-diamond while every openable one is a
-            // 2-diamond, so ranking by rarity first recommended the one card you cannot get.
+            // Obtainable ranks ahead of rarity: a card nobody can open is never the easiest fix
+            // however common it is. The promo Charmeleon is a 1-diamond while every openable one is
+            // a 2-diamond, so ranking by rarity first recommended the one card you cannot get.
             .OrderByDescending(c => c.Openable)
             .ThenBy(Rung)
             .ThenByDescending(c => _rates.GetValueOrDefault(c.Key))

@@ -30,8 +30,8 @@ public sealed record PackOpenEvent(
     List<string> OwnershipKeys);
 
 /// <summary>
-/// One Wonder Pick offer that was evaluated. Logging offers SEEN (not just taken) is what
-/// lets the reservation threshold be learned from the user's own distribution of offers.
+/// One Wonder Pick offer that was evaluated. Offers seen are logged rather than only offers taken,
+/// so the reservation threshold can be learned from the user's own distribution.
 /// </summary>
 public sealed record WonderOfferEvent(
     DateTimeOffset At,
@@ -41,19 +41,17 @@ public sealed record WonderOfferEvent(
     string? Received);
 
 /// <summary>
-/// A regenerating resource pool. Pack, Wonder and Trade are three instances of this one
-/// shape — and NOTHING converts between them, so they are never summed or compared.
-/// Every hourglass is worth one hour, which is why that ratio lives in GameRules rather
-/// than here.
+/// A regenerating resource pool. Pack, Wonder and Trade are three instances of this one shape, and
+/// nothing converts between them, so they are never summed or compared. Every hourglass is worth
+/// one hour, which is why that ratio lives in GameRules rather than here.
 /// </summary>
 public sealed record ResourcePool(int Balance, int Hourglasses)
 {
     public static readonly ResourcePool Empty = new(0, 0);
 
     /// <summary>
-    /// When this balance was true. Without it a stamina figure is unusable the moment it is
-    /// typed: the pool regenerates on a clock, so "3 of 5" means one thing said now and another
-    /// said two days ago, and the difference is the whole point of projecting it.
+    /// When this balance was true. The pool regenerates on a clock, so "3 of 5" means one thing
+    /// said now and another said two days ago, and projecting it needs the age.
     ///
     /// Null means the figure has no known age and is taken at face value. An optional property
     /// rather than a constructor parameter, so existing saves load unchanged.
@@ -78,9 +76,8 @@ public sealed record Resources(
 }
 
 /// <param name="DefaultPlan">
-/// Copies wanted per rarity rung, by default. One map expresses both which rarities are
-/// collected and how many of each — "two of every diamond, one of the stars" is ordinary,
-/// and a separate selection plus a single copy count could not say it.
+/// Copies wanted per rarity rung, by default. One map expresses both which rarities are collected
+/// and how many of each — "two of every diamond, one of the stars" needs both.
 /// </param>
 public sealed record TargetSettings(
     Dictionary<int, int> DefaultPlan,
@@ -111,17 +108,15 @@ public sealed record TargetSettings(
 public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool ShowOwnedDimmed = true, bool ListView = false)
 {
     /// <summary>
-    /// Columns in the pack picker, kept separate from <see cref="GridColumns"/>: booster
-    /// tiles are a different shape from card tiles, so the count that fits comfortably is
-    /// not the same. Zero means unset — readers substitute their own default, which is why
-    /// adding this field needs no schema bump.
+    /// Columns in the pack picker, kept separate from <see cref="GridColumns"/>: booster tiles are
+    /// a different shape from card tiles, so the count that fits is not the same. Zero means unset
+    /// and readers substitute their own default, so adding this field needed no schema bump.
     /// </summary>
     public int PackColumns { get; init; }
 
     /// <summary>
-    /// Roomier list rows, which have space to show attack and ability text inline rather than
-    /// only on hover. False is the compact original, and stays the default: it fits far more
-    /// cards on screen, which is what scanning a set wants.
+    /// Roomier list rows, which have space to show attack and ability text inline rather than only
+    /// on hover. False is the compact original and the default, since it fits more cards on screen.
     /// </summary>
     public bool ListRoomy { get; init; }
 
@@ -129,65 +124,62 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     /// Rarity rungs the user counts as a "hit" in History. Null means never chosen, and readers
     /// substitute everything above the diamonds.
     ///
-    /// A SET of rungs, not a threshold, for the same reason the completion plan is: someone might
-    /// count 2-star and Crown but be indifferent to shinies, and "N and above" cannot say that.
-    /// It is a personal measure — a 1-star is a good day to one player and noise to someone
-    /// opening thirty packs a week — so the app must not decide it.
+    /// A set of rungs rather than a threshold, as with the completion plan: someone might count
+    /// 2-star and Crown but be indifferent to shinies, which "N and above" cannot express. It is a
+    /// personal measure, so the app does not pick it.
     /// </summary>
     public List<int>? HitTiers { get; init; }
 
     /// <summary>
-    /// Show saved decks as showcase cards instead of a table. Both views answer different
-    /// questions — the table compares decks, the grid recognises them — so it is a preference
-    /// rather than a mode, and it sticks.
+    /// Show saved decks as showcase cards instead of a table. The two views answer different
+    /// questions — the table compares decks, the grid recognises them — so it is a persisted
+    /// preference rather than a mode.
     /// </summary>
     public bool DeckGrid { get; init; }
 
     /// <summary>
     /// Show wishlists as showcase cards instead of a table. Kept separate from
-    /// <see cref="DeckGrid"/> rather than shared: someone with three wishlists and forty decks
-    /// wants different answers for each, and one flag would make the two pages fight.
+    /// <see cref="DeckGrid"/>: someone with three wishlists and forty decks wants a different
+    /// answer for each.
     /// </summary>
     public bool WishGrid { get; init; }
 
     /// <summary>
-    /// Copies wanted of each PARALLEL FOIL — the Deluxe set's second printings of its 1-3 diamond
+    /// Copies wanted of each parallel foil — the Deluxe set's second printings of its 1-3 diamond
     /// cards. Zero ignores them; one is the default.
     ///
     /// A count rather than a switch, and separate from the rarity plan, because a foil is not the
     /// rarity it shares: it is 139 extra cards sold only in a limited-time pack. Someone wanting
-    /// two of every diamond may well want one parallel foil, or none, and a shared number cannot
-    /// say either.
+    /// two of every diamond may want one parallel foil, or none.
     /// </summary>
     public int FoilCopies { get; init; } = 1;
 
     /// <summary>
-    /// Sets priced with BORROWED rates, mapped to the set the rates came from.
+    /// Sets priced with borrowed rates, mapped to the set the rates came from.
     ///
-    /// Opt-in per set, because it trades accuracy for coverage and only the user can say which
-    /// they want. A set released weeks ago whose rates nobody has published yet is otherwise
-    /// reported as unpullable — technically honest, and useless: the cards drop, and an estimate
-    /// from the standard five-card distribution is far closer to the truth than leaving the set
-    /// out of every figure on the page.
+    /// Opt-in per set, since it trades accuracy for coverage. A set released weeks ago whose rates
+    /// nobody has published yet is otherwise reported as unpullable, even though its cards drop and
+    /// an estimate from the standard five-card distribution is closer to the truth than leaving the
+    /// set out of every figure on the page.
     ///
-    /// The donor is stored rather than derived so the numbers do not silently change when a newer
-    /// set gains rates and becomes the better default.
+    /// The donor is stored rather than derived, so the numbers do not change when a newer set gains
+    /// rates and becomes the better default.
     /// </summary>
     public Dictionary<string, string> AssumedRateDonors { get; init; } = [];
 
     /// <summary>
     /// Slots on the in-game wishlist reserved for widely-held cards rather than the dearest ones.
     ///
-    /// Persisted, and that is a correctness matter rather than a convenience: the board advisor
-    /// reports SWAPS against what is already on the board, so a setting that reset on navigation
-    /// would have the page demand changes caused by nothing but its own forgetfulness.
+    /// Persisted, because the board advisor reports swaps against what is already on the board: a
+    /// setting that reset on navigation would have the page demand changes caused by its own
+    /// forgetfulness.
     /// </summary>
     public int BoardLiquidSlots { get; init; } = PackProphet.Engine.TradeBoardAdvisor.DefaultLiquidSlots;
 
     /// <summary>
-    /// Packs-equivalent floor below which a card is not worth a board slot. Zero is no floor,
-    /// which is the default - see the note on TradeBoardAdvisor.Recommend for why an absolute
-    /// threshold can empty the board entirely.
+    /// Packs-equivalent floor below which a card is not worth a board slot. Zero is no floor, and
+    /// is the default — see TradeBoardAdvisor.Recommend on how an absolute threshold can empty the
+    /// board.
     /// </summary>
     public double BoardMinimumCost { get; init; }
 
@@ -195,23 +187,21 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     public string BoardFoils { get; init; } = "with";
 
     /// <summary>
-    /// Show the evolution-gap strip on the Collection page. True by default - it is the one place
-    /// the information appears unprompted, and it is genuinely useful the first time.
+    /// Show the evolution-gap strip on the Collection page. True by default, since it is the one
+    /// place the information appears unprompted.
     ///
-    /// Dismissible and PERSISTED because for a small collection the gaps are a standing fact
+    /// Dismissible and persisted, because for a small collection the gaps are a standing fact
     /// rather than a problem: nearly every evolution is missing a stage early on, so the strip
-    /// would never go away on its own. A notice that cannot be closed is a notice that gets
-    /// ignored, which costs more than hiding it.
+    /// would not go away on its own.
     /// </summary>
     public bool ShowEvolutionGaps { get; init; } = true;
 
     /// <summary>
     /// Limited-time packs the user has confirmed are currently on sale, by pack key.
     ///
-    /// Empty by default, i.e. assumed NOT available: Deluxe packs are absent far more often
-    /// than they are present, so defaulting to available would routinely recommend a pack
-    /// nobody can buy. The Packs page surfaces the toggle prominently so the assumption is
-    /// visible rather than silent.
+    /// Empty by default, i.e. assumed not available: Deluxe packs are absent more often than
+    /// present, so defaulting to available would recommend a pack nobody can buy. The Packs page
+    /// surfaces the toggle so the assumption is visible.
     /// </summary>
     public List<string> AvailableLimitedPacks { get; init; } = [];
 }
@@ -219,33 +209,30 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
 /// <summary>
 /// The game's own lifetime counters, copied in by the player.
 ///
-/// Why a BASELINE with a timestamp rather than a plain total: someone who has played for months
-/// before finding this app has thousands of packs behind them and nothing logged, so every count
-/// here reads as a fraction of the truth. Recording what the game says, and the moment it was
-/// read, lets a total be stated honestly - the baseline plus everything logged since - without
-/// double-counting packs that were already inside the game's figure when it was read.
+/// A baseline with a timestamp rather than a plain total: someone who played for months before
+/// finding this app has thousands of packs behind them and nothing logged. Recording what the game
+/// says, and when it was read, lets a total be stated as the baseline plus everything logged since,
+/// without double-counting packs already inside the game's figure.
 ///
-/// What it deliberately CANNOT do is attribute anything. The game reports how many packs, not
-/// which packs, so a baseline can never feed a per-set figure, the points ledger, or any
-/// odds-versus-reality comparison. Those stay strictly logged-only, and the UI says which is
-/// which.
+/// It cannot attribute anything. The game reports how many packs, not which packs, so a baseline
+/// never feeds a per-set figure, the points ledger, or an odds-versus-reality comparison. Those
+/// stay logged-only, and the UI says which is which.
 /// </summary>
 /// <param name="At">When the counters were read, so later logging adds rather than overlaps.</param>
 public sealed record LifetimeTotals(int PacksOpened, int WonderPicks, DateTimeOffset At)
 {
     /// <summary>
-    /// Total packs opened: this baseline plus the ones logged AFTER it was read.
+    /// Total packs opened: this baseline plus the ones logged after it was read.
     ///
-    /// The timestamp filter is the whole point. A player who logs for a week and only then reads
-    /// the game's counter would otherwise have that week counted twice, once inside the game's
-    /// figure and once from the log.
+    /// The timestamp filter keeps a player who logs for a week and only then reads the game's
+    /// counter from having that week counted twice.
     /// </summary>
     public int PacksWith(IEnumerable<PackOpenEvent> log) =>
         PacksOpened + log.Count(e => e.At > At);
 
     /// <summary>
-    /// Total Wonder Picks taken. Only taken ones count: the log holds every offer SEEN, which is
-    /// what makes the reservation threshold learnable, but the game counts the stamina you spent.
+    /// Total Wonder Picks taken. Only taken ones count: the log holds every offer seen, which is
+    /// what makes the reservation threshold learnable, but the game counts stamina spent.
     /// </summary>
     public int WonderPicksWith(IEnumerable<WonderOfferEvent> log) =>
         WonderPicks + log.Count(e => e.Taken && e.At > At);
@@ -270,9 +257,7 @@ public sealed record Profile(
     /// Cards currently on the game's own 20-slot wishlist, by ownership key.
     ///
     /// Stored because there is no import path into the game: the board is retyped by hand, so the
-    /// app has to know what is already on it to recommend SWAPS rather than a fresh list of twenty.
-    /// Retyping the whole board because one card's rank moved is what would get the feature
-    /// abandoned.
+    /// app has to know what is already on it to recommend swaps rather than a fresh list of twenty.
     /// </summary>
     public List<string> TradeBoard { get; init; } = [];
 
@@ -288,8 +273,8 @@ public sealed record Profile(
 }
 
 /// <summary>
-/// Everything persisted. <see cref="SchemaVersion"/> ships from day one because this shape
-/// WILL change, and a silent misread of old data is worse than a migration.
+/// Everything persisted. <see cref="SchemaVersion"/> ships from day one because this shape will
+/// change, and a silent misread of old data is worse than a migration.
 /// </summary>
 public sealed record AppState(
     int SchemaVersion,

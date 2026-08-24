@@ -4,9 +4,8 @@ using PackProphet.State;
 namespace PackProphet.Services;
 
 /// <summary>
-/// Persists state to the browser's localStorage. Writes are best-effort: a failure is
-/// surfaced to the user (see js/store.js) rather than swallowed, because silently losing
-/// edits is the worst outcome for a tracker.
+/// Persists state to the browser's localStorage. Writes are best-effort: a failure is surfaced to
+/// the user (see js/store.js) rather than swallowed.
 /// </summary>
 public sealed class LocalStorageStateStore : IStateStore, IAsyncDisposable
 {
@@ -15,11 +14,10 @@ public sealed class LocalStorageStateStore : IStateStore, IAsyncDisposable
     /// <summary>
     /// Where an unreadable payload is set aside before anything overwrites it.
     ///
-    /// Booting fresh from corrupt data is the right call - refusing to open would be worse - but
-    /// on its own it destroys the evidence: the app comes up with an empty collection, the
-    /// debounce saves that empty state over the damaged one, and a collection that was partly
-    /// recoverable is gone for good. Truncated storage is a real outcome under quota pressure, so
-    /// the raw text is copied aside first and left alone.
+    /// Booting fresh from corrupt data keeps the app openable, but on its own it destroys the
+    /// evidence: the app comes up with an empty collection, the debounce saves that empty state
+    /// over the damaged one, and a partly recoverable collection is gone. Truncated storage is a
+    /// real outcome under quota pressure, so the raw text is copied aside first and left alone.
     /// </summary>
     private const string SalvageKey = "packprophet.state.unreadable";
 
@@ -79,7 +77,7 @@ public sealed class LocalStorageStateStore : IStateStore, IAsyncDisposable
             var module = await ModuleAsync();
             // The return value was being discarded. localStorage refuses a write once the quota is
             // reached, so every edit after that point was lost while the app carried on as though
-            // it had saved - the single worst failure mode a tracker has.
+            // it had saved.
             return await module.InvokeAsync<bool>("save", ct, Key, StateSerializer.Serialize(state));
         }
         catch (JSException)

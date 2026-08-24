@@ -9,9 +9,9 @@ public enum AcquisitionRoute { Pull, PackPoints, Trade, Share, WonderPick }
 public enum RouteBlock { None, NotSoldInPacks, NoPullRates, NotTradeable, NotShareable, NotInWonderPick, NoDustPrice }
 
 /// <param name="PacksEquivalent">
-/// Cost in packs. Only Pull and PackPoints are expressed this way — both genuinely ARE
-/// packs. Trade and Wonder Pick are priced in their own currencies and must never be
-/// converted, since the three resource systems do not exchange.
+/// Cost in packs. Only Pull and PackPoints are expressed this way, since both are packs. Trade
+/// and Wonder Pick are priced in their own currencies and are not converted, because the three
+/// resource systems do not exchange.
 /// </param>
 public sealed record RouteOption(
     AcquisitionRoute Route,
@@ -25,7 +25,7 @@ public sealed record RouteOption(
 
 /// <param name="Cheapest">
 /// The best route measured in packs-equivalent, or null when no packs-priced route exists.
-/// Trade and Wonder Pick are deliberately excluded from this comparison.
+/// Trade and Wonder Pick are excluded from this comparison.
 /// </param>
 public sealed record CardRoutes(
     PocketCard Card,
@@ -35,10 +35,9 @@ public sealed record CardRoutes(
 /// <summary>
 /// Prices every way to obtain a card, and names the ones that do not exist.
 ///
-/// Which routes are even possible varies by rarity in a non-obvious way — 3-star and Crown
-/// are neither tradeable nor available from Wonder Pick, so for them packs and pack points
-/// are the ONLY options. Offering a trade for a Crown is worse than offering nothing, so the
-/// routing rules are enforced here rather than left to each caller.
+/// Which routes are possible varies by rarity: 3-star and Crown are neither tradeable nor
+/// available from Wonder Pick, so for them packs and pack points are the only options. The
+/// routing rules are enforced here rather than by each caller.
 /// </summary>
 public sealed class RouteCost
 {
@@ -48,7 +47,7 @@ public sealed class RouteCost
 
     /// <summary>
     /// Sets with a point economy, materialised once. OpenableSets walks every pack key and
-    /// splits each one, and For() runs per card per row of several tables — recomputing it
+    /// splits each one, and For() runs per card per row of several tables, so recomputing it
     /// there would put a full scan of the pack list inside the render loop.
     /// </summary>
     private readonly HashSet<string> _setsWithPoints;
@@ -72,8 +71,8 @@ public sealed class RouteCost
             Wonder(card)
         };
 
-        // Only packs-priced routes are comparable. Trade and Wonder Pick are separate
-        // currencies with no exchange rate, so a "cheapest" across all four would be fiction.
+        // Only packs-priced routes are comparable. Trade and Wonder Pick are separate currencies
+        // with no exchange rate.
         var cheapest = options
             .Where(o => o is { Available: true, PacksEquivalent: not null })
             .OrderBy(o => o.PacksEquivalent)
@@ -103,10 +102,10 @@ public sealed class RouteCost
             return new(AcquisitionRoute.PackPoints, false, RouteBlock.None,
                 Note: "No pack-point price.");
 
-        // Points are earned by opening THIS SET's packs and can be spent nowhere else, so a set
-        // with no openable packs has no point economy at all. The card carries a point price —
-        // every rarity does — but quoting it for a promo offers a route that cannot exist: there
-        // is no pack to earn the points in and no shop to spend them at.
+        // Points are earned by opening this set's packs and can be spent nowhere else, so a set
+        // with no openable packs has no point economy. The card carries a point price — every
+        // rarity does — but for a promo there is no pack to earn the points in and no shop to
+        // spend them at.
         if (!_setsWithPoints.Contains(card.Set))
             return new(AcquisitionRoute.PackPoints, false, RouteBlock.NotSoldInPacks,
                 Note: $"Points are earned and spent within one set, and {card.Set} has no " +
@@ -134,8 +133,8 @@ public sealed class RouteCost
         if (!_rarities.TryGetValue(card.Rarity, out var rarity) || rarity.TradePrice is null)
             return new(AcquisitionRoute.Trade, false, RouteBlock.NoDustPrice);
 
-        // Trading needs a same-rarity card to offer as well as the dust, so report the gate
-        // that is actually blocking rather than collapsing it to one number.
+        // Trading needs a same-rarity card to offer as well as the dust, so report which gate is
+        // blocking rather than collapsing both to one number.
         var spares = _index.All
             .Where(c => c.Rarity == card.Rarity && c.OwnershipKey != card.OwnershipKey)
             .DistinctBy(c => c.OwnershipKey)
@@ -153,12 +152,11 @@ public sealed class RouteCost
 
     /// <summary>
     /// A friend sends the card and gets nothing back. Free, and gated only by a daily allowance
-    /// on your side - so where it applies it beats trading outright, and the app should stop
-    /// quoting dust for a card someone could simply hand over.
+    /// on the receiving side, so where it applies it costs less than a trade.
     ///
-    /// Not packs-priced, and deliberately so: like a trade it needs another person, and unlike a
-    /// pull there is no rate that says how likely that is. What it costs is a day of goodwill,
-    /// which is not a currency this app can total up.
+    /// Not packs-priced: like a trade it needs another person, and unlike a pull there is no rate
+    /// for how likely that is. Its cost is a day of the receiving allowance, which is not a
+    /// currency the app totals up.
     /// </summary>
     private static RouteOption Share(PocketCard card)
     {
@@ -193,16 +191,13 @@ public sealed class RouteCost
     /// <summary>
     /// Outstanding cards ranked by how well the point shop serves them.
     ///
-    /// Pack points are a BYPRODUCT of opening, not an alternative to it: you accrue five per
-    /// pack whatever you do. So the real question is never "buy or pull?" but "which cards
-    /// deserve my limited per-set point budget?" — which makes the ratio of pull cost to
-    /// point cost the only meaningful ranking.
+    /// Pack points are a byproduct of opening rather than an alternative to it: you accrue five
+    /// per pack whatever you do. The question is which cards deserve a limited per-set point
+    /// budget, so the ranking uses the ratio of pull cost to point cost.
     ///
-    /// The answer is not uniform, and not intuitive. Measured across A1 and A3, Crown rares
-    /// return ~2.5 packs saved per pack of points, while Double Rares return ~0.6 and
-    /// Immersives just ~0.3 — an Immersive pulls in about 90 packs because a set holds only
-    /// one or two of them, yet costs 300 packs' worth of points. Ranking by point price alone
-    /// would recommend precisely the worst purchases.
+    /// Measured across A1 and A3, Crown rares return ~2.5 packs saved per pack of points, while
+    /// Double Rares return ~0.6 and Immersives ~0.3 — an Immersive pulls in about 90 packs
+    /// because a set holds only one or two, yet costs 300 packs' worth of points.
     /// </summary>
     public IReadOnlyList<PointsValue> PointsShopRanking(
         IEnumerable<Demand> outstanding, Collection owned, bool onlyWorthwhile = true)

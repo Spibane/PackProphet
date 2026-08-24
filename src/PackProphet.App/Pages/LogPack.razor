@@ -16,10 +16,9 @@ else if (_pack is null)
         <span class="subtitle">which pack did you open?</span>
     </div>
 
-    @* Grouped by series, then by set. A flat list of every pack ever sold is already long
-       and only grows; a set heading also answers "which set is this pack from", which a
-       pack name like "Mewtwo" does not. Defaults to the newest series, since that is
-       where packs are usually being opened. *@
+    @* Grouped by series, then by set. A flat list of every pack ever sold is already long and only
+       grows, and a set heading answers "which set is this pack from", which a pack name like
+       "Mewtwo" does not. Defaults to the newest series, where packs are usually being opened. *@
     <div class="page-tools">
         <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Series" @onchange="OnSeries">
             @foreach (var series in Session.Sets.Series)
@@ -28,10 +27,10 @@ else if (_pack is null)
             }
         </select>
 
-        @* The same setting as on the Packs page — there is one answer to "is Deluxe on sale",
-           not one per screen — and it belongs here as well because this is the page you are on
-           when you find out. It never filters the picker, though: you can always log a pack you
-           actually opened, whatever the app assumed about the shelf. *@
+        @* The same setting as on the Packs page — there is one answer to "is Deluxe on sale" — and
+           it is repeated here because this is the page you are on when you find out. It never
+           filters the picker: you can log a pack you opened whatever the app assumed about the
+           shelf. *@
         @if (Session.LimitedPacks.Count > 0)
         {
             <span class="avail ms-auto">
@@ -50,8 +49,8 @@ else if (_pack is null)
         }
     </div>
 
-    @* Column count sits with the grid it lays out, the same as it does over the card grid —
-       it changes nothing about which packs are shown. *@
+    @* Column count sits with the grid it lays out, as it does over the card grid. It changes
+       nothing about which packs are shown. *@
     <div class="grid-toolbar">
         <span class="small text-body-secondary me-auto">
             Picking the pack narrows the choices to the ~100 cards it can contain, so logging
@@ -68,7 +67,7 @@ else if (_pack is null)
 
     <div class="p-3">
 
-        @* One flat grid, not a group per set. The per-set headings cost more vertical space
+        @* One flat grid rather than a group per set. The per-set headings cost more vertical space
            than the tiles they labelled — eleven sets meant roughly thirty rem of headings and
            margins — so the set code lives on the tile instead. *@
         <div class="pack-picker" style="grid-template-columns:repeat(@Session.PackColumns,1fr)">
@@ -118,10 +117,10 @@ else
         </span>
     </div>
 
-    @* A soft warning, never a block. Logging a different number of cards than the pack held is the
-       one way to quietly corrupt the odds check on History - the observed side comes straight from
-       what was tapped here, so four taps on a five-card pack reads later as the model having been
-       wrong. Not blocked, because a partial log is sometimes exactly what someone means to do. *@
+    @* A soft warning rather than a block. Logging a different number of cards than the pack held
+       corrupts the odds check on History: the observed side comes straight from what was tapped
+       here, so four taps on a five-card pack reads later as the model having been wrong. Not
+       blocked, since a partial log is sometimes intended. *@
     @if (MiscountHint is { } hint)
     {
         <div class="alert alert-warning py-1 px-2 small mb-0 mx-3 mt-2" role="alert">@hint</div>
@@ -151,9 +150,9 @@ else
                 </span>
             }
 
-            @* Having just opened one is the best evidence there is that it is on the shelf, and
-               the app assumes otherwise by default — so it asks rather than leaving the ranking
-               quietly excluding a pack you can demonstrably buy. *@
+            @* Having just opened one is good evidence that it is on the shelf, and the app assumes
+               otherwise by default, so it asks rather than leaving the ranking excluding a pack
+               you can buy. *@
             @if (_pack is not null && GameRules.IsLimitedTimePack(_pack.Split(':')[1])
                  && !Session.IsLimitedPackAvailable(_pack))
             {
@@ -166,8 +165,8 @@ else
         </div>
     }
 
-    @* No remove mode here: a tap means "this came out of the pack", and the picked strip
-       above is how you take one back. *@
+    @* No remove mode here: a tap means "this came out of the pack", and the picked strip above is
+       how you take one back. *@
     <CardGrid Cards="_inPack" CountOf="Session.CountOf" Columns="Session.GridColumns"
               OnAdjust="OnTap" OnSweep="OnSweep" AllowRemove="false"
               PickedOf="PickedCount"

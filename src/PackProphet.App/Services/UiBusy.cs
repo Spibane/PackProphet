@@ -3,13 +3,13 @@ namespace PackProphet.Services;
 /// <summary>
 /// Shows the user that work is happening during a slow synchronous computation.
 ///
-/// WebAssembly runs on a single thread, so a long calculation blocks rendering completely —
-/// the page stops responding and looks broken rather than busy. There is no way to move the
-/// work off-thread, so the only honest option is to paint a "working" state BEFORE starting
-/// and let the browser draw it, which is what <see cref="RunAsync"/> sequences.
+/// WebAssembly runs on a single thread, so a long calculation blocks rendering completely and the
+/// page looks broken rather than busy. The work cannot be moved off-thread, so a "working" state is
+/// painted before starting and the browser is given a frame to draw it, which is what
+/// <see cref="RunAsync"/> sequences.
 ///
-/// Every path slow enough to be noticed should go through here rather than reimplementing
-/// the yield dance, which is easy to forget and invisible when missing.
+/// Every path slow enough to be noticed goes through here rather than reimplementing the yield
+/// sequence.
 /// </summary>
 public sealed class UiBusy
 {

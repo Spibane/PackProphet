@@ -19,23 +19,20 @@ public sealed class CardAttack
     public string? Effect { get; set; }
 
     /// <summary>
-    /// Damage as the card actually prints it: "50×", "30+" or "60". Empty when the attack does
-    /// no fixed damage.
+    /// Damage as the card actually prints it: "50×", "30+" or "60". Empty when the attack does no
+    /// fixed damage.
     ///
-    /// The data stores only the base number, so the modifier has to come from the effect text —
-    /// which is where the game puts the distinction that matters most:
+    /// The data stores only the base number, so the modifier is read from the effect text:
     ///
     ///   "50×"  the damage is multiplied ("does 50 damage for each heads")
     ///   "30+"  a conditional bonus is added ("if heads, this attack does 30 more damage")
     ///
-    /// Showing a bare "50" for Pinsir's Double Horn understates it by up to 100, which is the
-    /// difference between a card being worth a deck slot and not.
+    /// A bare "50" for Pinsir's Double Horn understates it by up to 100.
     ///
-    /// The patterns are anchored tightly on purpose. "Heal 30 damage" and "does 20 damage to
-    /// itself" both mention damage without modifying this attack's, and must get no suffix —
-    /// measured against the full dataset, 167 attacks are multipliers and 484 are bonuses with
-    /// no overlap between them, and the remaining 1,038 damage-mentioning effects are heals and
-    /// self-damage that correctly get nothing.
+    /// The patterns are anchored tightly. "Heal 30 damage" and "does 20 damage to itself" both
+    /// mention damage without modifying this attack's, and get no suffix. Across the full dataset,
+    /// 167 attacks are multipliers and 484 are bonuses with no overlap, and the remaining 1,038
+    /// damage-mentioning effects are heals and self-damage that get nothing.
     /// </summary>
     public string DamageLabel
     {
@@ -87,11 +84,11 @@ public sealed class CardAbility
 /// <summary>
 /// A card's printed detail, from chase-mew/pokemon-tcg-pocket-cards v5 (AGPL-3.0-or-later).
 ///
-/// This replaced flibustier's cards.extra.json, which was both WRONG on stats (it reported
-/// Venusaur ex as 50 HP / retreat 1 against the real 190 / 3) and stale — it stopped before
-/// B2, leaving eight sets with no evolution stage at all and the "at least one Basic Pokémon"
-/// legality rule uncheckable for them. This source is correct on those stats and covers every
-/// set, which is why the project accepts its copyleft licence.
+/// This replaced flibustier's cards.extra.json, which was wrong on stats (it reported Venusaur ex
+/// as 50 HP / retreat 1 against the real 190 / 3) and stale — it stopped before B2, leaving eight
+/// sets with no evolution stage and the "at least one Basic Pokémon" legality rule uncheckable for
+/// them. This source is correct on those stats and covers every set, which is why the project
+/// takes on its copyleft licence.
 /// </summary>
 public sealed class CardFact
 {
@@ -102,8 +99,8 @@ public sealed class CardFact
     public string? Type { get; set; }
 
     /// <summary>
-    /// For a Pokémon its energy (Grass, Fire, … Dragon, Colorless); for a Trainer its kind
-    /// (Item, Supporter, Tool, Stadium). One column in the UI, because that is how it reads.
+    /// For a Pokémon its energy (Grass, Fire, … Dragon, Colorless); for a Trainer its kind (Item,
+    /// Supporter, Tool, Stadium). Shown as one column in the UI.
     /// </summary>
     public string? Subtype { get; set; }
 
@@ -126,9 +123,9 @@ public sealed class CardFact
     public string? Artist { get; set; }
 
     /// <summary>
-    /// Pack-point cost of THIS PRINTING. Per-printing, unlike the rest of this record: an art
-    /// rare and its base card share attacks and stage but not price. Only meaningful when
-    /// looked up by card key, never by identity — see <see cref="CardFacts.ForPrinting"/>.
+    /// Pack-point cost of this printing. Per-printing, unlike the rest of this record: an art rare
+    /// and its base card share attacks and stage but not price. Only meaningful when looked up by
+    /// card key, never by identity — see <see cref="CardFacts.ForPrinting"/>.
     /// </summary>
     [JsonPropertyName("pack_points")] public int? PackPoints { get; set; }
 
@@ -159,9 +156,8 @@ public sealed class CardFact
     }
 
     /// <summary>
-    /// Card identity, published directly here. Verified to match this project's own
-    /// derivation from artwork filenames on all 3,558 joinable cards with zero mismatches —
-    /// independent confirmation that the reverse-engineered identity logic is right.
+    /// Card identity, published directly here. It matches this project's own derivation from
+    /// artwork filenames on all 3,558 joinable cards with zero mismatches.
     /// </summary>
     public int? DeckBuilderNr { get; set; }
 
@@ -176,8 +172,8 @@ public sealed class CardFact
 }
 
 /// <summary>
-/// Card detail keyed by identity, so an alternate art inherits the base card's printed text —
-/// which is correct: different arts of one card share attacks, stage and stats.
+/// Card detail keyed by identity, so an alternate art inherits the base card's printed text.
+/// Different arts of one card share attacks, stage and stats.
 /// </summary>
 public sealed class CardFacts
 {
@@ -191,10 +187,10 @@ public sealed class CardFacts
 
         foreach (var f in facts ?? [])
         {
-            // Two indexes, because the record mixes two kinds of fact. Attacks, stage, element
-            // and stats belong to the CARD and are shared by all its arts. Pack points belong
-            // to the PRINTING — an art rare costs 400 where its base card costs 35 — so
-            // reading those off an identity lookup silently returns the base card's price.
+            // Two indexes, because the record mixes two kinds of fact. Attacks, stage, element and
+            // stats belong to the card and are shared by all its arts. Pack points belong to the
+            // printing — an art rare costs 400 where its base card costs 35 — so reading those off
+            // an identity lookup returns the base card's price.
             if (f.DeckBuilderNr is int nr && nr > 0) _byIdentity.TryAdd(nr, f);
             if (f.CardKey is { Length: > 0 } key) _byPrinting.TryAdd(key, f);
         }
@@ -216,16 +212,15 @@ public sealed class CardFacts
     public bool Knows(int deckBuilderNr) => _byIdentity.ContainsKey(deckBuilderNr);
 
     /// <summary>
-    /// Every known card, one per identity. Used to offer search facets built from the data
-    /// itself rather than from a hardcoded list — a new trainer kind or element then appears
-    /// on its own instead of being silently unfilterable.
+    /// Every known card, one per identity. Used to build search facets from the data rather than
+    /// from a hardcoded list, so a new trainer kind or element appears on its own.
     /// </summary>
     public IEnumerable<CardFact> All => _byIdentity.Values;
 
     /// <summary>
-    /// Identities with no detail, so callers can disclose a gap rather than imply a fact. Now
-    /// expected to be empty, but the mechanism stays: coverage is an upstream property, and a
-    /// new set can always land in the card list before its detail does.
+    /// Identities with no detail, so callers can disclose a gap rather than imply a fact. Expected
+    /// to be empty today; the mechanism stays because coverage is an upstream property and a new
+    /// set can land in the card list before its detail does.
     /// </summary>
     public IReadOnlyList<int> Unknown(IEnumerable<int> deckBuilderNrs) =>
         deckBuilderNrs.Distinct().Where(nr => !Knows(nr)).ToArray();

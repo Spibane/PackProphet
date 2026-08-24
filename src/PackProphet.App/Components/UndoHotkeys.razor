@@ -2,12 +2,9 @@
 @inject AppSession Session
 @inject IJSRuntime JS
 
-@* No markup. Mounted by the layout purely to own the document-level listeners that have to work
-   on every page: the Ctrl+Z accelerator, because the undo stack is app-wide, and the
-   save-before-you-go hook, because a debounced save needs somewhere to be flushed from.
-
-   Undo used to be reachable only from two arrow buttons in the Collection header, while a message
-   on the Settings page cheerfully told the user "undo still works". *@
+@* No markup. Mounted by the layout to own the document-level listeners that have to work on every
+   page: the Ctrl+Z accelerator, because the undo stack is app-wide, and the save-before-you-go
+   hook, because a debounced save needs somewhere to be flushed from. *@
 
 @code {
     private DotNetObjectReference<UndoHotkeys>? _self;

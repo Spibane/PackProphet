@@ -6,61 +6,56 @@ until then the minor number tracks the roadmap phase.
 
 ## Unreleased
 
-- **Licence and source are now offered inside the app.** This is AGPL-3.0-or-later, and section 13
-  requires that anyone interacting with it over a network be offered the Corresponding Source —
-  the one obligation the AGPL adds over the GPL, and the one a hosted app is most likely to miss.
-  The repository documented all of it and none of it reached the running app, which is where the
-  obligation applies.
-- **The service worker stopped precaching about 663 KB nothing loads** — roughly a sixth of a
-  4.3 MB first visit. Blazor.Bootstrap's pdf.js worker and sortable list, and every vendored
-  Bootstrap variant other than the two files `index.html` links: unminified copies, right-to-left
-  builds, ESM builds, and the grid/reboot/utilities subsets. Its precache rules are now tested by
-  reading the regexes out of the worker itself, since that file runs neither in development nor in
-  CI — only on a real visitor's first load.
+- **Licence and source are offered inside the app.** Settings now carries a "Licence and
+  source" section linking the licence text, the repository, every upstream data source and the
+  trademark disclaimer. AGPL section 13 applies to network interaction, so the offer has to
+  reach the running app rather than only the repository.
+- **The service worker no longer precaches about 663 KB that no page loads** — roughly a sixth
+  of a 4.3 MB first visit. Removed: Blazor.Bootstrap's pdf.js worker and sortable list, and
+  every vendored Bootstrap variant other than the two files `index.html` links (unminified
+  copies, right-to-left builds, ESM builds, and the grid/reboot/utilities subsets). The
+  precache rules are now tested by reading the regexes out of the worker itself, since that
+  file runs neither in development nor in CI.
 
-- **The card grid is operable from the keyboard.** It was pointer-only: a tile was a div with a
-  click handler, so entering a collection — the app's primary interaction — was impossible without
-  a mouse or a touchscreen. Arrows move, digits set a count outright, Enter adds, `-` removes, `i`
-  opens card detail, Home and End jump. One tab stop for the whole grid with `aria-activedescendant`
-  naming the cursor, rather than a roving tabindex that Blazor would have to re-render to move. The
-  key legend appears only while the grid has focus, and every tile now has an accessible name
-  reading name, set, rarity and copies held. Starting keyboard entry needed its own answer,
-  since tabbing to the grid means passing twenty-six controls: there is a visible **keyboard**
-  button in the grid toolbar whose tooltip names the keys, a skip link one tab from page load, and
-  a command-palette action. Pressing `i` opens a card and Escape comes straight back, with the
-  cursor restored to the card you were reading about — without that, every look at a card cost you
-  your place in the list.
+- **The card grid is operable from the keyboard.** It was previously pointer-only: a tile was a
+  div with a click handler. Arrows move, digits set a count outright, Enter adds, `-` removes,
+  `i` opens card detail, Home and End jump. The grid is one tab stop with
+  `aria-activedescendant` naming the cursor, rather than a roving tabindex that Blazor would
+  have to re-render to move. The key legend appears only while the grid has focus, and every
+  tile has an accessible name reading name, set, rarity and copies held. Keyboard entry can be
+  started three ways: a visible **keyboard** button in the grid toolbar whose tooltip names the
+  keys, a skip link one tab from page load, and a command-palette action. Pressing `i` opens a
+  card and Escape returns, with the cursor restored to the card you were reading about.
 
-- **Render tests for the App project** (bUnit). It had none, while being the larger half of the
-  codebase — and nearly every defect found in review lived there, because a page that indexes an
-  empty list compiles cleanly and passes every engine test. Pages are discovered by reflection, so
-  one added later is covered without anyone remembering; each is rendered on a brand-new profile
-  and on a populated one. Discovery is deduplicated by page type rather than by route, because
-  Collection answers both `/` and `/collection` and a repeated theory argument is dropped by the
-  runner — which quietly removed the app's main screen from every page-driven test. Every regression test was verified by reverting the fix and confirming
-  the suite went red.
-- **CI now runs the tests before deploying.** It did not, which made a green suite optional.
-- The deck QR was **verified against the live game in both directions** — until then every codec
-  test was our encoder against our decoder.
+- **Render tests for the App project** (bUnit), which previously had none. Pages are discovered
+  by reflection, so a page added later is covered automatically; each is rendered on a
+  brand-new profile and on a populated one. Discovery deduplicates by page type rather than by
+  route, because Collection answers both `/` and `/collection` and a repeated theory argument is
+  dropped by the runner, which removed the app's main screen from every page-driven test. Every
+  regression test was verified by reverting the fix and confirming the suite went red.
+- **CI runs the tests before deploying.** It previously did not.
+- The deck QR was **verified against the live game in both directions**. Until then every codec
+  test ran this project's encoder against its own decoder.
 
 ## 0.2.0 — 2026-08-23
 
-Phase 2: daily-use depth. The same odds engine pointed at the decisions you make between packs.
+Phase 2: daily-use depth. The same odds engine applied to the decisions between packs.
 
 ### New screens
 
 - **Wonder Pick** — tap the five cards on offer for a take-or-skip verdict. Cost is set by the
-  highest rarity *in the offer* rather than by what it is worth to you, so the overpriced-offer
-  flag falls straight out of the pricing rule and is sharpest at the top of the range.
+  highest rarity *in the offer* rather than by what the offer is worth to you, so offers priced
+  above their value to you are flagged.
 - **Resources** — the three currency systems side by side, never summed, because nothing
-  converts between them. Leads with the waste: a full pool has *stopped* regenerating, and that
-  loss is computable, while a pool at two of five has 36 hours of slack and needs no attention.
+  converts between them. Each leads with waste: a full pool has *stopped* regenerating, while a
+  pool at two of five has 36 hours of slack.
 - **Trades** — which single trade deserves your next stamina. Stamina caps trading at ~2/day
-  while dust accumulates, so the scarce thing is trades, not currency. Grouped by pack, set or
-  rarity, since the best trade in each is rarely near the top of a global ranking.
+  while dust accumulates, so trades rather than currency are treated as the scarce resource.
+  Grouped by pack, set or rarity, since the best trade in each is rarely near the top of a
+  global ranking.
 - **In-game wishlist** — the game's own 20-slot board, filled by cost-to-get-otherwise, with a
-  minority of slots reserved for cards someone will actually offer. Output is a transcription
-  list in set order with swap-level diffs, because the board is retyped by hand.
+  minority of slots reserved for widely-held cards. Output is a transcription list in set order
+  with swap-level diffs, since the board is retyped by hand.
 - **Compare collections** — self-trades between profiles, with full profile management.
 
 ### Additions to existing screens
@@ -70,45 +65,41 @@ Phase 2: daily-use depth. The same odds engine pointed at the decisions you make
   imported figures are never mixed, and per-set figures stay logged-only.
 - **Evolution gaps** on Collection and Card detail, with a grid filter for the printings that
   would close a chain.
-- **Rarity plan chips** moved to Settings as well as Packs, since they drive every page.
+- **Rarity plan chips** are available in Settings as well as on Packs.
 - **Pack points** panel gained a "packs until you can afford the rarest card you still need"
-  column, and now respects the rarity plan — it had been recommending cards the plan excluded.
+  column, and now respects the rarity plan.
 - Deep link from the pack ranking straight to logging that pack.
 
 ### Shares
 
-A mechanic added to the game mid-phase, and it is not a variety of trade. A Share is one-way:
-a friend sends a 1–4 diamond card and receives **nothing** back, capped at one received per day
-per account. So it costs no shinedust, no stamina and no card given up — which means wherever it
-applies, trading is *strictly worse*, and any surface offering both routes for one card is
-recommending the bad one. Diamonds are therefore removed from the self-trade pairing altogether
-rather than listed twice, and the trade queue flags them so a 4-diamond is never bought for
-5,000 dust when someone would hand it over.
+Shares were added to the game during this phase. A Share is one-way: a friend sends a 1–4
+diamond card and receives nothing back, capped at one received per day per account. It costs no
+shinedust, no stamina and no card given up. Diamonds are therefore removed from the self-trade
+pairing rather than listed under both routes, and the trade queue flags them so a 4-diamond is
+not bought for 5,000 dust.
 
 ### Bugs found by probing real data
 
 - **Fossils are Trainers, and a Trainer can close an evolution gap.** Omanyte evolves from Helix
   Fossil. Excluding trainers from the name tables reported eleven missing fossils to a player
   who owned every card in the game.
-- **Obtainability must outrank rarity** when recommending which printing to chase: the promo
+- **Obtainability now outranks rarity** when recommending which printing to chase: the promo
   Charmeleon is a 1-diamond while every openable one is a 2-diamond, so ranking by rarity
-  recommended the one card that cannot be got.
+  recommended the one card that cannot be obtained.
 - **The points ledger ignored the rarity plan**, so it advised saving for rarities the user had
-  explicitly excluded — and the Packs page was applying one set's plan to every set.
+  excluded — and the Packs page was applying one set's plan to every set.
 - **Hourglass balances were rounded on save.** The field was seeded from a floored division, so
-  1,751 came back as 1,740 and eleven hourglasses vanished on every save.
+  1,751 came back as 1,740.
 - **A stamina pool was blamed for time it spent filling**, reporting waste to someone who had
   never been at the cap.
 
 ### Notes
 
 - The evolution-gap bar is dismissible and stays dismissed. Early on nearly every chain is
-  missing a stage, so it is a standing fact rather than a problem — and a notice that cannot be
-  closed is a notice that gets ignored.
+  missing a stage, so it reports a standing fact rather than a problem.
 - **Binder view was cut.** The Collection page already lists every card of a set in set-then-
-  number order, owned and unowned, with a columns picker; the binder's remaining delta was row-
-  width parity with a number that varies by device. What was left was decoration, which is the
-  category this project refuses.
+  number order, owned and unowned, with a columns picker; the binder's remaining delta was
+  row-width parity with a number that varies by device.
 
 ## 0.1.0 — 2026-08-23
 
@@ -117,20 +108,20 @@ First working version: the whole core loop, from an empty collection to "open th
 ### The engine
 
 - **Pull-rate odds** per pack variant and slot, with expected copies per card. Slot
-  distributions and variant appearance rates are both normalised — a slot always yields
-  exactly one card, so upstream's 99.996% totals would otherwise leak a chance of an empty
-  slot into every card's rate.
-- **Expected packs to finish a target** as a Poissonised integral, so a demand for two copies
-  is the same formula as a demand for one rather than a special case.
-- **Targets** are an interface, not a setting: rarity plans, decks, wishlists and arbitrary
-  composites all feed the same ranking. Demand carries a *quantity*, which is what lets a deck
-  ask for two of a card and stops the ranking chasing a card you already have enough of.
-- **Cheapest route per card** across pulling, pack points, trading and Wonder Pick, consulting
-  a routing matrix so no route is ever offered that does not exist at that rarity.
+  distributions and variant appearance rates are both normalised — a slot always yields exactly
+  one card, so upstream's 99.996% totals would otherwise leak a chance of an empty slot into
+  every card's rate.
+- **Expected packs to finish a target** as a Poissonised integral, so a demand for two copies is
+  the same formula as a demand for one rather than a special case.
+- **Targets** are an interface: rarity plans, decks, wishlists and arbitrary composites all feed
+  the same ranking. Demand carries a *quantity*, which lets a deck ask for two of a card and
+  stops the ranking chasing a card you already have enough of.
+- **Cheapest route per card** across pulling, pack points, trading and Wonder Pick, consulting a
+  routing matrix so no route is offered that does not exist at that rarity.
 - **Pack points** ranked by packs saved per pack's worth of points, not by price.
 - **Deck codec** — a C# port of the reverse-engineered share format, round-tripped in tests.
-- **Deck linter** with a distinct *unverified* severity, because reporting a deck as legal when
-  its stage data is missing is how you hand someone a deck that cannot start.
+- **Deck linter** with a distinct *unverified* severity, so a deck with missing stage data is
+  not reported as legal.
 
 ### Screens
 
@@ -154,26 +145,24 @@ silently wrong numbers rather than an error. All are now pinned by tests.
   anywhere; counting exact matches priced all 113 SAR cards as unobtainable.
 - Pack variants are not just Regular and Rare — sets have 2, 3 or 4, holding **4, 5 or 6**
   cards, and one variant numbers its slots from 0 while every other starts at 1.
-- Ownership is per **card**, not per set entry. 3,761 entries are only 3,546 ownable cards;
-  A4b re-lists 214 of its 379. Keying by set entry would have priced "complete A4b" at nearly
-  double its real cost.
-- **40% of card names map to more than one card identity** — Eevee has twelve. This killed
-  text-decklist import outright: ambiguity is not an edge case at 40%, and it gets worse with
-  every set that reprints a species.
-- Pack points are a **byproduct** of opening, not an alternative to it, so the only meaningful
-  ranking is the ratio of pull cost to point cost — and by that measure Immersives are among
-  the worst purchases in the game despite looking cheap.
-- Deluxe packs are limited-time, which re-prices *other* sets when they leave rotation, and
-  makes a completion estimate **fall** when the situation gets worse. Estimates therefore never
-  appear without saying how many cards they cover.
+- Ownership is per **card**, not per set entry. 3,761 entries are only 3,546 ownable cards; A4b
+  re-lists 214 of its 379. Keying by set entry would have priced "complete A4b" at nearly double
+  its real cost.
+- **40% of card names map to more than one card identity** — Eevee has twelve. Text-decklist
+  import was dropped as a result, since the ambiguity cannot be resolved from a name alone.
+- Pack points are a **byproduct** of opening rather than an alternative to it, so the ranking
+  uses the ratio of pull cost to point cost. By that measure Immersives are among the worst
+  purchases in the game despite looking cheap.
+- Deluxe packs are limited-time, which re-prices *other* sets when they leave rotation, and can
+  make a completion estimate **fall** when the situation gets worse. Estimates therefore always
+  state how many cards they cover.
 
 ### Notes
 
-- Local-only storage, with a schema version and a real migration from two earlier target
-  shapes.
+- Local-only storage, with a schema version and a migration from two earlier target shapes.
 - Installable as a PWA with full offline support after first visit.
 - Light and dark themes, applied before first paint so a dark-mode user never sees a flash.
-- Light mode's structural lines were rebuilt at 2.9:1 contrast against the body; Bootstrap's
-  default `#dee2e6` on white manages 1.30:1, which is invisible on a phone outdoors.
-- Sets that are released but have no published pull rates can borrow another set's slot shape,
+- Light mode's structural lines are drawn at 2.9:1 contrast against the body. Bootstrap's
+  default `#dee2e6` on white manages 1.30:1.
+- Sets that are released but have no published pull rates borrow another set's slot shape,
   labelled as an assumption everywhere a number derived from it appears.

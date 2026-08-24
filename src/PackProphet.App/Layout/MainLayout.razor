@@ -4,14 +4,8 @@
 @inject NavHistory History
 @inject AppSession Session
 @inject GridFocus Focus
-@inject PaletteSwitch Switch
 @implements IDisposable
 
-@* Everything except the palette itself, so it can be taken out of the accessibility tree —
-   inert, not just visually covered — while the palette is open. Without this a screen reader
-   or a Tab press that slips past the palette's own trap still finds a full page of live nav
-   links and content sitting right behind the dialog. *@
-<div class="app-shell" inert="@Switch.IsOpen">
     @* Twelve nav links sit above every page, and Blazor does not move focus on navigation, so a
        keyboard or screen-reader user otherwise tabs through the whole bar again on arrival.
 
@@ -74,9 +68,10 @@
        a keyboard user a way past the nav without needing it to come first. *@
     <TabBar />
     <BusyOverlay />
-</div>
-@* Rendered once, above every page, because it is reachable from anywhere — outside the inert
-   wrapper, since it is the one thing that must stay interactive while it is open. *@
+
+@* Rendered once, above every page, because it is reachable from anywhere. It no longer needs to
+   sit outside a wrapper: as a modal <dialog> it lives in the top layer, and the browser makes the
+   rest of the document inert for exactly as long as it is open. *@
 <CommandPalette />
 @* Also markup-free: it owns the app-wide undo shortcut. *@
 <UndoHotkeys />
@@ -85,13 +80,11 @@
     protected override void OnInitialized()
     {
         Session.Changed += OnChanged;
-        Switch.OpenedChanged += OnChanged;
     }
 
     public void Dispose()
     {
         Session.Changed -= OnChanged;
-        Switch.OpenedChanged -= OnChanged;
     }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);

@@ -86,17 +86,6 @@ body {
     flex-direction: column;
 }
 
-/* MainLayout wraps the whole page so the palette can mark it `inert`. That wrapper is an
-   accessibility device, not a layout box, and left as an ordinary block it re-introduced the
-   exact bug described above one level further down: it measured 972px inside an 812px #app, so
-   main started below the nav but was still a full viewport tall, and the last 160px of every
-   page sat under the fold where body's `overflow: hidden` clipped it with no scrollbar. Scrolling
-   could not reach it either, because the overhang was the scroll container itself.
-
-   `display: contents` removes the box and leaves the element — inertness is not a layout
-   property — so #app's flex children are the nav and main again, as they were before. */
-.app-shell { display: contents; }
-
 /* viewport-fit=cover lets the app paint into a notched phone's full screen, which is what the
    bottom bar will need in order to sit against the real bottom edge rather than above the home
    indicator. On its own, though, cover would put content under the indicator and the status bar,
@@ -1682,18 +1671,19 @@ tr.row-best {
 @media (width <= 700px) { .app-nav .palette-btn .hint { display: none; } }
 
 /* A button, not a div, so it is reachable by keyboard and announced — see the markup. */
-.palette-back {
-    position: fixed; inset: 0; z-index: 1080;
-    border: 0; padding: 0;
-    background: rgba(0, 0, 0, .45);
-}
+.palette::backdrop { background: rgba(0, 0, 0, .45); }
 
 .palette {
-    position: fixed; z-index: 1081;
-    /* Anchored near the top rather than centred: the list grows downwards, and a centred box
+    /* A modal <dialog> is already in the top layer, so it needs no z-index and cannot be covered.
+       The UA stylesheet centres it and gives it a border and padding, all of which is reset here.
+
+       Anchored near the top rather than centred: the list grows downwards, and a centred box
        would move its own input as results arrive. */
-    top: 4rem; left: 50%; transform: translateX(-50%);
-    width: min(38rem, calc(100vw - 1.5rem));
+    position: fixed;
+    inset: 4rem auto auto 50%; transform: translateX(-50%);
+    width: min(38rem, calc(100dvw - 1.5rem));
+    max-width: none; max-height: none;
+    margin: 0; padding: 0;
     display: flex; flex-direction: column;
     background: var(--bs-body-bg); color: var(--bs-body-color);
     border: 1px solid var(--bs-border-color); border-radius: .5rem;
@@ -2133,3 +2123,17 @@ tr.row-best {
 @media (width <= 1056px) {
     main { padding-bottom: 0; }
 }
+
+/* The palette reached from the More sheet: an action, not one of the destinations under it, so it
+   is tinted and full width rather than sharing their two-column grid. */
+.nav-more-search {
+    display: flex; align-items: center; gap: .5rem;
+    width: 100%; margin-bottom: .6rem;
+    padding: .7rem .75rem;
+    border: 1px solid var(--bs-border-color); border-radius: .4rem;
+    background: var(--bs-tertiary-bg); color: var(--bs-secondary-color);
+    text-align: left; font-size: .92rem;
+}
+.nav-more-search .ico { display: flex; flex: none; }
+.nav-more-search:hover { background: var(--bs-secondary-bg); color: var(--bs-body-color); }
+.nav-more-search:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }

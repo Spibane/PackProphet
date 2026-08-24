@@ -48,6 +48,10 @@ Any set of cards you want — chase cards, a binder page, the alternate arts of 
 Priced by the same engine as a rarity target. Wishlists want a particular **printing**, unlike
 decks: wanting the alternate art is not satisfied by owning the plain one.
 
+Share one as a link — nothing is uploaded, the list travels entirely inside the link. It shows
+only what is wanted, never your own collection, and if the person opening it has their own
+PackProphet collection loaded, it highlights which of it they already own a copy of.
+
 ### Log a pack
 Pick the pack, tap the cards that came out of it, done. Accrues pack points, warns at the cap,
 and updates every recommendation immediately.
@@ -182,7 +186,8 @@ Phases 1 and 2 are complete. See [CHANGELOG.md](CHANGELOG.md).
 
 - **Phase 3** — importing from other trackers, localisation, accessibility pass. Done: budget
   allocation across packs ("Which pack" &rarr; splitting a budget), and shareable read-only
-  snapshots (Settings &rarr; share a read-only link).
+  wishlist links (a wishlist's own page &rarr; share this list) — the recipient sees what is
+  wanted and, if they have their own collection loaded, which of it they already own.
 - **Phase 4** — screenshot recognition of the in-game card list. Cloud sync last, since it is
   the first thing needing a backend.
 

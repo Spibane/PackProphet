@@ -219,6 +219,9 @@ else
             <a class="btn btn-sm btn-outline-primary" href="packs?wish=@_list.Id">
                 rank packs for this list
             </a>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="MakeShareLink">
+                share this list
+            </button>
             @* Two taps, like the deck editor's delete: the list took work to build and there
                is no undo prompt after the fact. *@
             <button class="btn btn-sm @(_confirming == _list.Id ? "btn-danger" : "btn-outline-danger")"
@@ -227,6 +230,18 @@ else
             </button>
         </span>
     </div>
+
+    @if (_shareLink is not null)
+    {
+        <div class="px-3 pb-2">
+            <input class="form-control form-control-sm" readonly value="@_shareLink"
+                   onfocus="this.select()" aria-label="Shareable read-only link for this wishlist" />
+            <p class="small text-body-secondary mt-1 mb-0">
+                Tap the field to select it, then copy. Shows only what is wanted, not what you
+                already own &mdash; nothing is uploaded, the whole list travels inside the link.
+            </p>
+        </div>
+    }
 
     <div class="summary px-3 py-2">
         <div class="stat">
@@ -386,6 +401,19 @@ else
     private int _missing;
     private int _unreachable;
     private double _packs;
+    private string? _shareLink;
+    private string? _shareLinkFor;
+
+    private void MakeShareLink()
+    {
+        if (_list is null) return;
+
+        var code = WishlistCodec.Encode(Session.Profile.Name, _list);
+        // After a `#`, not in the query string, on the same reasoning as everywhere else a
+        // payload travels inside a link: a fragment is never sent to a server, so it cannot 414
+        // no matter how the list grows.
+        _shareLink = $"{Nav.BaseUri}share#{code}";
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -410,6 +438,10 @@ else
 
         _list = Id is null ? null : Session.WishlistById(Id);
         if (_list is null) { _cards = []; return; }
+
+        // A stale link for a list you have navigated away from is worse than none: it would go
+        // on showing the previous list's name and contents if left in place.
+        if (_shareLinkFor != _list.Id) { _shareLink = null; _shareLinkFor = _list.Id; }
 
         _cards = Session.WishlistCards(_list);
         _missing = Session.MissingInWishlist(_list);

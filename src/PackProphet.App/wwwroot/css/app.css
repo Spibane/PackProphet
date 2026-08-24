@@ -25,7 +25,7 @@
 #blazor-error-ui .reload { color: inherit; text-decoration: underline; cursor: pointer; }
 #blazor-error-ui .dismiss { cursor: pointer; float: right; margin-top: -.3rem; font-size: 1.4rem; line-height: 1; }
 
-.loading-progress { display: block; position: relative; width: 6rem; height: 6rem; margin: 20vh auto 1rem; }
+.loading-progress { display: block; position: relative; width: 6rem; height: 6rem; margin: 20dvh auto 1rem; }
 .loading-progress circle {
     fill: none; stroke: var(--bs-secondary-bg, #e0e0e0); stroke-width: .5rem;
     transform-origin: 50% 50%; transform: rotate(-90deg);
@@ -79,9 +79,25 @@ body {
    property — so #app's flex children are the nav and main again, as they were before. */
 .app-shell { display: contents; }
 
+/* viewport-fit=cover lets the app paint into a notched phone's full screen, which is what the
+   bottom bar will need in order to sit against the real bottom edge rather than above the home
+   indicator. On its own, though, cover would put content under the indicator and the status bar,
+   so the insets are honoured here rather than later: the horizontal ones on body, because a
+   landscape notch eats into every band at once, and the bottom one inside main, so a long page can
+   still scroll its last line clear of the indicator.
+
+   Every one of these resolves to 0 on hardware without cutouts, so this changes nothing anywhere
+   else. */
+body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-top: env(safe-area-inset-top);
+}
+
 main {
     flex: 1 1 auto;
     min-height: 0;          /* lets a flex child actually shrink and scroll */
+    padding-bottom: env(safe-area-inset-bottom);
     display: flex;
     flex-direction: column;
     overflow-y: auto;       /* pages with no scroller of their own scroll here */
@@ -1440,7 +1456,7 @@ tr.row-best {
 .busy-veil {
     position: fixed; inset: 0; z-index: 3000;
     display: flex; align-items: flex-start; justify-content: center;
-    padding-top: 25vh;
+    padding-top: 25dvh;
     background: color-mix(in srgb, var(--bs-body-bg) 55%, transparent);
     cursor: progress;      /* also blocks clicks: a second click just lengthens the stall */
 }
@@ -1468,7 +1484,7 @@ tr.row-best {
 
 #diag {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999;
-    max-height: 45vh; overflow-y: auto;
+    max-height: 45dvh; overflow-y: auto;
     background: #2b0000; color: #ffd7d7;
     font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
     border-top: 2px solid #ff5c5c;
@@ -1536,7 +1552,7 @@ tr.row-best {
 }
 #tip img + .tip-text { border-top: 1px solid var(--bs-border-color); margin-top: .35rem; }
 
-@media (max-height: 700px) { #tip img { height: 15rem; } }
+@media (height <= 700px) { #tip img { height: 15rem; } }
 @media (max-width: 560px)  { #tip img { height: 13rem; } }
 
 /* The list thumbnail is a hover target, so it needs to sit in the grid like the image did. */
@@ -1679,7 +1695,7 @@ tr.row-best {
     box-shadow: 0 1px 0 0 var(--bs-primary);
 }
 
-.palette-list { overflow-y: auto; max-height: min(26rem, 60vh); }
+.palette-list { overflow-y: auto; max-height: min(26rem, 60dvh); }
 .palette-empty { padding: .9rem; margin: 0; color: var(--bs-secondary-color); }
 
 .palette-item {

@@ -115,6 +115,8 @@ body {
 main {
     flex: 1 1 auto;
     min-height: 0;          /* lets a flex child actually shrink and scroll */
+    /* Only where nothing else sits on the inset. Below desk the tab bar is the bottom-most
+       element and owns it instead, or the two would both pay for the same strip. */
     padding-bottom: env(safe-area-inset-bottom);
     display: flex;
     flex-direction: column;
@@ -2037,3 +2039,97 @@ tr.row-best {
 
 .board-new { --bs-table-bg: color-mix(in srgb, var(--bs-primary) 8%, var(--bs-body-bg)); }
 
+
+
+/* ================================================================= bottom tab bar
+
+   Twelve equal links in a wrapping flex row cost 160px and four rows on a phone, and the row needs
+   1057px to fit on one line — so it wraps on a laptop and in any half-width window too, not only on
+   phones. Below the desk range the nav becomes five tabs pinned to the bottom edge; at desk the
+   original row is still the better shape and is what shows.
+
+   The tab bar is a flex sibling AFTER main rather than a fixed overlay, so it takes its 56px out of
+   the flex chain and main's scroller ends exactly above it. A fixed bar would sit over the last row
+   of cards, which is the bug this whole pass exists to remove. */
+.tab-bar {
+    display: flex;
+    flex: none;
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+    /* The bar owns the bottom inset so its buttons sit above a home indicator while its background
+       still reaches the physical bottom edge. main gives its own bottom padding back, since the
+       bar now covers that ground. */
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.tab-bar .tab {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .1rem;
+    height: 3.5rem;
+    padding: .25rem .15rem;
+    border: 0; background: none;
+    color: var(--bs-secondary-color);
+    text-decoration: none;
+    font-size: .68rem; line-height: 1.15;
+}
+.tab-bar .tab .lbl {
+    max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tab-bar .tab .ico { display: flex; }
+.tab-bar .tab.active { color: var(--bs-primary); font-weight: 600; }
+.tab-bar .tab:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -3px; }
+
+/* The one tab that writes something rather than going somewhere, and the one used many times in a
+   session. Raised and filled so it reads as the action among four destinations. */
+.tab-bar .tab-primary .ico {
+    width: 2.6rem; height: 2.6rem;
+    margin-top: -.9rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--bs-primary); color: #fff;
+    border: 3px solid var(--bs-tertiary-bg);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+}
+.tab-bar .tab-primary.active .ico { background: var(--bs-primary); }
+.tab-bar .tab-primary { color: var(--bs-body-color); }
+
+/* The seven destinations that are not part of the daily loop. */
+.nav-more {
+    margin: 0 0 auto; inset: auto 0 0 0;
+    width: 100%; max-width: none;
+    padding: .5rem .5rem calc(.5rem + env(safe-area-inset-bottom));
+    border: 0; border-top: 1px solid var(--bs-border-color);
+    border-radius: .75rem .75rem 0 0;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, .25);
+}
+.nav-more::backdrop { background: rgba(0, 0, 0, .35); }
+.nav-more-head {
+    margin: .25rem .5rem .5rem;
+    font-size: .72rem; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.nav-more nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .25rem; }
+.nav-more-item {
+    padding: .7rem .75rem;
+    border-radius: .4rem;
+    color: var(--bs-body-color); text-decoration: none;
+    background: var(--bs-secondary-bg);
+}
+.nav-more-item.active { background: var(--bs-primary); color: #fff; font-weight: 600; }
+.nav-more-item:hover:not(.active) { background: var(--bs-tertiary-bg); }
+.nav-more-item:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
+/* Below desk the wrapping row is replaced; at desk it is still the better shape. */
+@media (width <= 1056px) {
+    .app-nav { display: none; }
+}
+@media (width >= 1057px) {
+    .tab-bar, .nav-more { display: none; }
+}
+
+@media (width <= 1056px) {
+    main { padding-bottom: 0; }
+}

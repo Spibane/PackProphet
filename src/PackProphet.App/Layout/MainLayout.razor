@@ -68,6 +68,11 @@
     }
 
     <main id="main" tabindex="-1">@Body</main>
+
+    @* After main, not before it: the bar sits at the bottom of the screen, so this is also the
+       order a screen reader and the Tab key should meet it in. The skip links above already give
+       a keyboard user a way past the nav without needing it to come first. *@
+    <TabBar />
     <BusyOverlay />
 </div>
 @* Rendered once, above every page, because it is reachable from anywhere — outside the inert

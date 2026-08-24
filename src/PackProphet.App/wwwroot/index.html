@@ -76,6 +76,19 @@
     <script src="js/scroll.js"></script>
     <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <!-- The More menu is a native popover, so light dismiss and Escape are free. Following a link
+         inside it is not a dismiss, though: Blazor routes in place, the popover has no idea the
+         page changed, and it would sit open over the destination. One delegated listener closes
+         it, rather than wiring an onclick to each of eight links. -->
+    <script>
+        document.addEventListener('click', e => {
+            const link = e.target.closest('#nav-more a');
+            if (!link) return;
+            const menu = document.getElementById('nav-more');
+            if (menu && menu.matches(':popover-open')) menu.hidePopover();
+        });
+    </script>
+
     <!-- Resolved against the BASE href, not the current URL. A deep link like /packs is served
          index.html by the Pages 404 fallback, so a bare relative path would register
          /packs/service-worker.js — a 404, and a scope that covers nothing. -->

@@ -26,71 +26,87 @@ internal sealed class FullStore : IStateStore
 /// A tracker that appears to have saved is the worst failure it has, so the alarm is tested rather
 /// than trusted.
 /// </summary>
-public class StorageAlarmTests : TestContext
+/// <summary>
+/// The warning that has to appear when writes are failing.
+///
+/// This was silent: js/store.js already returned false on a refused write, and the caller threw the
+/// answer away — so past the quota every edit was lost while the app looked completely normal. A
+/// tracker that appears to have saved is the worst failure it has, so the alarm is tested rather
+/// than trusted.
+///
+/// Inherits the host rather than wiring its own services: a second copy of Program.cs's
+/// registrations is a copy that drifts, and it already had — adding one service to the app broke
+/// this file and nothing else.
+/// </summary>
+public class StorageAlarmTests : AppHost
 {
-    private AppSession Host(IStateStore store)
-    {
-        JSInterop.Mode = JSRuntimeMode.Loose;
+    private bool _full;
 
-        Services.AddSingleton(new HttpClient(new SnapshotHandler())
-        {
-            BaseAddress = new Uri("https://test.local/")
-        });
-        Services.AddSingleton<CardDataLoader>();
-        Services.AddSingleton<LocalStorageStateStore>();
-        Services.AddSingleton(store);
-        Services.AddSingleton<AppSession>();
-        Services.AddSingleton<UiBusy>();
-        Services.AddSingleton<NavHistory>();
-        Services.AddSingleton<PaletteSwitch>();
-        Services.AddBlazorBootstrap();
-
-        return Services.GetRequiredService<AppSession>();
-    }
+    protected override IStateStore Store() => _full ? new FullStore() : new InMemoryStateStore();
 
     [Fact]
     public async Task Nothing_is_shown_while_saving_works()
     {
-        var session = Host(new InMemoryStateStore());
-        await session.InitAsync();
+        await ReadyAsync();
 
         var layout = RenderComponent<MainLayout>();
 
-        Assert.False(session.SaveFailed);
+        Assert.False(Session.SaveFailed);
         Assert.DoesNotContain("not being saved", layout.Markup);
     }
 
     [Fact]
     public async Task A_refused_write_is_announced_on_every_page()
     {
-        var session = Host(new FullStore());
-        await session.InitAsync();
+        _full = true;
+        await ReadyAsync();
 
         var layout = RenderComponent<MainLayout>();
 
-        // Force the write rather than waiting out the debounce.
-        await session.FlushAsync();
+        // Forced rather than waiting out the debounce.
+        await Session.FlushAsync();
 
-        Assert.True(session.SaveFailed);
+        Assert.True(Session.SaveFailed);
 
         layout.WaitForAssertion(() =>
             Assert.Contains("not being saved", layout.Markup), TimeSpan.FromSeconds(2));
 
-        // It has to say what to DO. "Something went wrong" would leave the user with a full
-        // storage quota and no idea their collection is one reload from gone.
+        // It has to say what to DO. "Something went wrong" would leave someone with a full quota
+        // and no idea their collection is one reload from gone.
         Assert.Contains("Export a backup", layout.Markup);
     }
 
     [Fact]
     public async Task The_alarm_carries_an_alert_role_so_it_is_not_only_visual()
     {
-        var session = Host(new FullStore());
-        await session.InitAsync();
+        _full = true;
+        await ReadyAsync();
 
         var layout = RenderComponent<MainLayout>();
-        await session.FlushAsync();
+        await Session.FlushAsync();
 
         layout.WaitForAssertion(() =>
             Assert.NotEmpty(layout.FindAll("[role=alert]")), TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
+    public async Task The_layout_offers_a_skip_straight_to_the_cards_when_a_grid_is_mounted()
+    {
+        // One tab from page load, versus roughly fifteen to reach the grid through the page's own
+        // toolbar. Absent when there is no grid, so it never focuses nothing.
+        await ReadyAsync();
+        var focus = Services.GetRequiredService<PackProphet.Services.GridFocus>();
+
+        var layout = RenderComponent<MainLayout>();
+        Assert.DoesNotContain("Skip to the cards", layout.Markup);
+
+        focus.Register(this, () => Task.CompletedTask);
+        layout.Render();
+
+        Assert.Contains("Skip to the cards", layout.Markup);
+
+        // Bootstrap's own class, not a hand-rolled off-screen trick: the hand-rolled one depended
+        // on which ancestor was positioned and which clipped.
+        Assert.NotEmpty(layout.FindAll(".skip-link.visually-hidden-focusable"));
     }
 }

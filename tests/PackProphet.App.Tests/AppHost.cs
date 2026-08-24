@@ -56,7 +56,14 @@ internal sealed class SnapshotHandler : HttpMessageHandler
 /// </summary>
 public abstract class AppHost : TestContext
 {
-    protected AppSession Session { get; }
+    /// <summary>
+    /// Resolved on first use, not in the constructor. A test that wants a different store sets
+    /// that up in its own body, which runs after construction — so building the session eagerly
+    /// meant Store() was always asked before the test had said what it wanted.
+    /// </summary>
+    protected AppSession Session => _session ??= Services.GetRequiredService<AppSession>();
+
+    private AppSession? _session;
 
     protected AppHost()
     {
@@ -69,15 +76,22 @@ public abstract class AppHost : TestContext
 
         Services.AddSingleton<CardDataLoader>();
         Services.AddSingleton<LocalStorageStateStore>();
-        Services.AddSingleton<IStateStore>(_ => new InMemoryStateStore(Start()));
+        // A factory, not an instance: passing Store() here would call it during
+        // construction, which is the very thing the laziness below exists to avoid.
+        Services.AddSingleton<IStateStore>(_ => Store());
         Services.AddSingleton<AppSession>();
         Services.AddSingleton<UiBusy>();
         Services.AddSingleton<NavHistory>();
         Services.AddSingleton<PaletteSwitch>();
+        Services.AddSingleton<GridFocus>();
         Services.AddBlazorBootstrap();
-
-        Session = Services.GetRequiredService<AppSession>();
     }
+
+    /// <summary>
+    /// The store the session persists through. Overridden by the tests that need a store which
+    /// FAILS, since a refused write is the case worth covering.
+    /// </summary>
+    protected virtual IStateStore Store() => new InMemoryStateStore(Start());
 
     /// <summary>
     /// The state a test starts from. Overridden to set up a collection, extra profiles, a log —

@@ -19,9 +19,17 @@
    A comment cannot live INSIDE the attribute list below. Razor does not treat it as a comment
    there — it emits the text as an attribute name, and the browser throws
    "InvalidCharacterError: Element.setAttribute: Invalid attribute name" at render time, taking
-   the whole grid down. *@
+   the whole grid down. This has now happened twice, the second time while adding the ARIA
+   attributes below, so MarkupValidityTests scans every rendered page for names a browser would
+   refuse — nothing else catches it. It compiles, and bUnit's DOM is a parser rather than a
+   browser, so it renders the nonsense without complaint.
+
+   The tile is a cell of the grid its container declares, named by a sentence CardGrid builds so
+   the keyboard cursor and the tile cannot describe the same card differently. It carries no
+   tabindex on purpose: the container holds the only tab stop and moves aria-activedescendant. *@
 <div class="card-tile @(Count > 0 ? "owned" : "") @(Picked > 0 ? "picked" : "") @(Gold ? "flair gold-flair" : "")"
      data-idx="@Index" data-tip="@Tip"
+     id="@DomId" role="gridcell" aria-label="@Label"
      @onclick="OnClick"
      @oncontextmenu="RightClick" @oncontextmenu:preventDefault="true"
      @onpointerdown="PointerDown" @onpointerup="PointerUp"
@@ -38,7 +46,11 @@
     {
         @* Its context menu is stopped rather than prevented, so "open in new tab" still works on
            the one thing here that is genuinely a link. *@
+        @* Out of the tab order deliberately: a focus stop per tile would put thousands of them
+           between the grid and whatever follows it. The keyboard route to detail is `i` on the
+           cursor, which gridkeys.js sends to KeyOpen. *@
         <a class="info" href="card/@Card.Key" title="Card detail" aria-label="Detail for @Card.Name"
+           tabindex="-1"
            @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true"
            @oncontextmenu:stopPropagation="true">info</a>
     }
@@ -58,6 +70,12 @@
 @code {
     [Parameter, EditorRequired] public PocketCard Card { get; set; } = default!;
     [Parameter] public int Index { get; set; }
+
+    /// <summary>Element id, so the grid's aria-activedescendant can point at this tile.</summary>
+    [Parameter] public string? DomId { get; set; }
+
+    /// <summary>The accessible name. Built by CardGrid so every surface says the same thing.</summary>
+    [Parameter] public string? Label { get; set; }
     [Parameter] public int Count { get; set; }
 
     /// <summary>Copies picked in the current action, e.g. cards pulled from a pack being logged.</summary>

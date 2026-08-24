@@ -3,12 +3,25 @@
    startup: it records navigation as it happens and cannot recover a history it did not see. *@
 @inject NavHistory History
 @inject AppSession Session
+@inject GridFocus Focus
 @implements IDisposable
 
 @* Twelve nav links sit above every page, and Blazor does not move focus on navigation, so a
-   keyboard or screen-reader user otherwise tabs through the whole bar again on arrival. Visible
-   only when focused. *@
-<a class="skip-link" href="#main">Skip to content</a>
+   keyboard or screen-reader user otherwise tabs through the whole bar again on arrival.
+
+   Bootstrap's own visually-hidden-focusable rather than a hand-rolled off-screen trick: it is built
+   for exactly this and does not depend on which ancestor happens to be positioned or clipped. *@
+<a class="skip-link visually-hidden-focusable" href="#main">Skip to content</a>
+
+@* Straight to the cards, and it earns its place: the grid sits behind roughly fifteen controls in
+   the page's own toolbar — a series picker, fourteen set tabs, the filters — so "tab to the grid"
+   is not an answer anyone would follow. Only offered when a grid is actually mounted. *@
+@if (Focus.Available)
+{
+    <button class="skip-link visually-hidden-focusable" @onclick="() => Focus.FocusAsync()">
+        Skip to the cards &mdash; arrow keys move, digits set a count
+    </button>
+}
 
 <NavMenu />
 

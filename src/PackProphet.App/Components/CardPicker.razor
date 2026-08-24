@@ -12,7 +12,17 @@
    The deck-dependent bits arrive as delegates rather than as data, so the parent does not have to
    hand over a copy of the deck on every edit. *@
 
-<h6>@Heading</h6>
+@* The level is the caller's to set, because this component appears at three different depths:
+   directly under the page title on Wonder Pick and Wishlists, and inside a section on a deck. It
+   was a hard-coded h6, which meant Wonder Pick's outline went h1 straight to h6 and a screen
+   reader navigating by heading skipped four levels on the way in. Size is set by .h6 either way,
+   so the two decisions are now separate. *@
+@switch (Level)
+{
+    case 2: <h2 class="h6">@Heading</h2>; break;
+    case 4: <h4 class="h6">@Heading</h4>; break;
+    default: <h3 class="h6">@Heading</h3>; break;
+}
 
 @* Name search alone cannot build a deck. "What puts something to Sleep", "show me the Supporters"
    and "which Basics do I own" are the real questions, and the last two need no typing at all, so
@@ -382,6 +392,12 @@ else
     [Parameter] public string PickedLabel { get; set; } = "in deck";
 
     [Parameter] public string Heading { get; set; } = "Add cards";
+
+    /// <summary>
+    /// Heading level for the title above, matching where this sits in the page's outline. Two
+    /// when it follows the page title directly, three inside a section.
+    /// </summary>
+    [Parameter] public int Level { get; set; } = 3;
 
     /// <summary>
     /// Add every match at once. Optional: the deck builder does not offer it, because a 20-card

@@ -226,7 +226,7 @@ else
         @if (_offer.Count < GameRules.WonderPickCardsShown)
         {
             <div class="mt-3">
-                <CardPicker ByPrinting="true" AllCardsDefault="true"
+                <CardPicker Level="2" ByPrinting="true" AllCardsDefault="true"
                             Heading="@($"Add card {_offer.Count + 1} of {GameRules.WonderPickCardsShown}")"
                             PickedLabel="in offer" PickedOf="InOffer" CanPick="CanPick"
                             OnPick="Add" />

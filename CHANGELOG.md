@@ -4,6 +4,18 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
+## Unreleased
+
+- **Render tests for the App project** (bUnit). It had none, while being the larger half of the
+  codebase — and nearly every defect found in review lived there, because a page that indexes an
+  empty list compiles cleanly and passes every engine test. Pages are discovered by reflection, so
+  one added later is covered without anyone remembering; each is rendered on a brand-new profile
+  and on a populated one. Every regression test was verified by reverting the fix and confirming
+  the suite went red.
+- **CI now runs the tests before deploying.** It did not, which made a green suite optional.
+- The deck QR was **verified against the live game in both directions** — until then every codec
+  test was our encoder against our decoder.
+
 ## 0.2.0 — 2026-08-23
 
 Phase 2: daily-use depth. The same odds engine pointed at the decisions you make between packs.

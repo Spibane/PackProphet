@@ -1,6 +1,7 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject GridFocus Focus
 
 @* Virtualized card grid. Two JS modules do the heavy lifting, for reasons proven in the
    Phase 0 spike:
@@ -71,6 +72,14 @@
        range-selects, so on a device with no touch input the button would be a control that
        changes nothing. It stays in list mode (where a mouse drag means "select this text"
        until armed) and on anything with a touchscreen (where a drag is a scroll until armed). *@
+    @* Visible, because the honest answer to "how do I start keyboard entry" cannot be a control
+       that only appears once you have already found it. It is also the switch a pointer user wants
+       when they decide to stop tapping and start typing counts. *@
+    <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
+            title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail.">
+        keyboard
+    </button>
+
     @if (ShowSweepToggle)
     {
         <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
@@ -99,7 +108,28 @@
 
 @* "listing" is read by gridsweep.js, not by CSS: a mouse drag over list rows must obey the
    sweep toggle, while a drag over the tile grid need not. See the comment on onDown there. *@
-<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "")" @ref="_gridEl">
+@* tabindex, role and aria-activedescendant are set from js/gridkeys.js, which owns the cursor —
+   see the note there on why a roving tabindex is wrong for a virtualised grid. The container is
+   the single tab stop for however many thousand cards are in scope. *@
+<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "")"
+     id="@_gridId" role="grid"
+     aria-label="@(ListView ? "Card list" : "Card grid") — arrow keys to move, digits to set a count"
+     @ref="_gridEl">
+    @* Named by the cursor as it moves, and after every count change. Outside the virtualised
+       region so scrolling never destroys it mid-announcement. *@
+    <div data-grid-live class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+
+    @* Shown only while the grid has focus, so it costs a pointer user nothing and a keyboard user
+       does not have to guess. Discoverability is the difference between keys that exist and keys
+       anyone uses. *@
+    <div class="kb-hint" aria-hidden="true">
+        <span><kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd> move</span>
+        <span><kbd>0</kbd>&ndash;<kbd>9</kbd> set count</span>
+        <span><kbd>enter</kbd> add one</span>
+        <span><kbd>&minus;</kbd> remove one</span>
+        <span><kbd>i</kbd> card detail, <kbd>esc</kbd> back</span>
+    </div>
+
     @if (Cards.Count == 0)
     {
         <p class="p-4 text-body-secondary">Nothing matches those filters.</p>
@@ -111,20 +141,20 @@
            matter most — type and rarity — via CSS rather than a second code path. *@
         @* Every cell is always present, header and rows alike: the row is a CSS grid, so a
            conditionally-omitted cell would shift every column after it out of alignment. *@
-        <div class="card-line head @(Roomy ? "roomy" : "")">
-            <span class="c-thumb"></span>
-            <button class="c-nm" @onclick="() => SortBy(ListSort.Name)">name @Caret(ListSort.Name)</button>
-            <button class="c-id" @onclick="() => SortBy(ListSort.Number)">set @Caret(ListSort.Number)</button>
-            <button class="c-ty" @onclick="() => SortBy(ListSort.Type)">type @Caret(ListSort.Type)</button>
-            <button class="c-st" @onclick="() => SortBy(ListSort.Stage)">stage @Caret(ListSort.Stage)</button>
-            <button class="c-rr" @onclick="() => SortBy(ListSort.Rarity)">rarity @Caret(ListSort.Rarity)</button>
-            <button class="c-hp" @onclick="() => SortBy(ListSort.Health)">hp @Caret(ListSort.Health)</button>
-            <span class="c-a1">attack 1</span>
-            <span class="c-a2">attack 2</span>
-            <span class="c-ab">ability</span>
-            <span class="c-pick"></span>
-            <button class="c-ct" @onclick="() => SortBy(ListSort.Count)">have @Caret(ListSort.Count)</button>
-            <span class="c-acts"></span>
+        <div class="card-line head @(Roomy ? "roomy" : "")" role="row">
+            <span class="c-thumb" role="columnheader"></span>
+            <button class="c-nm" role="columnheader" @onclick="() => SortBy(ListSort.Name)">name @Caret(ListSort.Name)</button>
+            <button class="c-id" role="columnheader" @onclick="() => SortBy(ListSort.Number)">set @Caret(ListSort.Number)</button>
+            <button class="c-ty" role="columnheader" @onclick="() => SortBy(ListSort.Type)">type @Caret(ListSort.Type)</button>
+            <button class="c-st" role="columnheader" @onclick="() => SortBy(ListSort.Stage)">stage @Caret(ListSort.Stage)</button>
+            <button class="c-rr" role="columnheader" @onclick="() => SortBy(ListSort.Rarity)">rarity @Caret(ListSort.Rarity)</button>
+            <button class="c-hp" role="columnheader" @onclick="() => SortBy(ListSort.Health)">hp @Caret(ListSort.Health)</button>
+            <span class="c-a1" role="columnheader">attack 1</span>
+            <span class="c-a2" role="columnheader">attack 2</span>
+            <span class="c-ab" role="columnheader">ability</span>
+            <span class="c-pick" role="columnheader"></span>
+            <button class="c-ct" role="columnheader" @onclick="() => SortBy(ListSort.Count)">have @Caret(ListSort.Count)</button>
+            <span class="c-acts" role="columnheader"></span>
         </div>
 
         @* ItemSize must match the rendered row height or Virtualize mis-sizes the scrollbar
@@ -141,23 +171,26 @@
                recycles the DOM and only rewrites data-src, which left the previous card's
                art on screen after switching sets. The loader also detects that case, but not
                creating it is the better fix. *@
+            @* A row of cells, so the list reads as the data table it looks like. The label is what
+               gridkeys.js announces as the cursor moves, so it has to be the whole sentence. *@
             <div @key="card.Key" class="card-line @(Roomy ? "roomy" : "") @(count > 0 ? "owned" : "")"
-                 data-idx="@idx">
+                 data-idx="@idx" id="@($"{_gridId}-tile-{idx}")" role="row"
+                 aria-label="@Describe(card, count)">
                 @* The image is pointer-events:none so sweep hit-testing lands on the row, so
                    the hover target has to be this wrapper rather than the image itself. *@
                 <span class="c-thumb @(Gold(card, count) ? "gold-flair" : "")"
-                      data-tip-img="@card.ArtUrl" data-tip="@card.Name">
+                      data-tip-img="@card.ArtUrl" data-tip="@card.Name" role="gridcell">
                     <img class="thumb" data-src="@card.ArtUrl" alt="" decoding="async" draggable="false" />
                 </span>
                 @* The name is the link. A tile tap means "I own one more", so detail needs its
                    own target rather than stealing that gesture. *@
-                <span class="c-nm">
+                <span class="c-nm" role="gridcell">
                     <a href="card/@card.Key" title="@card.Name"
                        @onclick:stopPropagation="true">@card.Name</a>
                 </span>
-                <span class="c-id">@card.Set&thinsp;@card.Number</span>
+                <span class="c-id" role="gridcell">@card.Set&thinsp;@card.Number</span>
                 @{ var ty = TypeOf?.Invoke(card) ?? ""; }
-                <span class="c-ty">
+                <span class="c-ty" role="gridcell">
                     @* Icon AND label. The icon is the fast read; the word stays because it is
                        unambiguous, searchable by eye, and the only thing a screen reader has
                        if the SVG is missed. Trainer kinds have pips too, drawn as outlined
@@ -168,14 +201,14 @@
                     }
                     <span class="ty-name">@ty</span>
                 </span>
-                <span class="c-st">@(StageOf?.Invoke(card) ?? "")</span>
-                <span class="c-rr">
+                <span class="c-st" role="gridcell">@(StageOf?.Invoke(card) ?? "")</span>
+                <span class="c-rr" role="gridcell">
                     @if (rung is not null)
                     {
                         <span class="glyphs @rung.GlyphClass" title="@rung.Symbol">@rung.Glyphs</span>
                     }
                 </span>
-                <span class="c-hp">@(fact?.Health?.ToString() ?? "")</span>
+                <span class="c-hp" role="gridcell">@(fact?.Health?.ToString() ?? "")</span>
 
                 @* Two attack columns, because two is the maximum a card can have. Fixed
                    columns rather than a run of items keeps the second attack aligned down the
@@ -213,7 +246,7 @@
                     </span>
                 }
 
-                <span class="c-ab">
+                <span class="c-ab" role="gridcell">
                     @if (fact?.HasAbility == true)
                     {
                         <span class="atk-item ability" data-tip="@(Roomy ? null : AbilityTip(fact))"
@@ -227,7 +260,7 @@
                     }
                 </span>
 
-                <span class="c-pick">
+                <span class="c-pick" role="gridcell">
                     @if (picked > 0)
                     {
                         <span class="pick">+@picked</span>
@@ -239,7 +272,7 @@
                    "9 ⏎ 12 ⏎ 2 ⏎" straight down the list. Enter commits and moves to the row
                    below. Falls back to plain text where only relative changes make sense, as on
                    the log-a-pack screen, where a count is what you own rather than what you set. *@
-                <span class="c-ct">
+                <span class="c-ct" role="gridcell">
                     @if (OnSet.HasDelegate)
                     {
                         <input class="c-count" data-count-input type="text" inputmode="numeric"
@@ -252,7 +285,7 @@
                         <span>@(count > 0 ? count.ToString() : "—")</span>
                     }
                 </span>
-                <span class="c-acts">
+                <span class="c-acts" role="gridcell">
                     <button class="btn btn-sm btn-outline-secondary py-0 px-2"
                             @onclick="() => Bump(card, -1)" @onclick:stopPropagation="true"
                             disabled="@(count == 0 && PickedOf is null)" aria-label="Remove one">&minus;</button>
@@ -266,10 +299,12 @@
     else
     {
         <Virtualize Items="_rows" ItemSize="@RowHeight" Context="row" OverscanCount="3">
-            <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)">
+            <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row">
                 @foreach (var (card, idx) in row)
                 {
                     <CardTile @key="card.Key" Card="card" Index="idx"
+                              DomId="@($"{_gridId}-tile-{idx}")"
+                              Label="@Describe(card, CountOf(card))"
                               Count="CountOf(card)"
                               Gold="@Gold(card, CountOf(card))"
                               Picked="@(PickedOf?.Invoke(card) ?? 0)"
@@ -351,7 +386,11 @@
     }
 
     /// <summary>The same ceiling the sweep uses, so both paths agree on what a typo looks like.</summary>
-    private const int MaxCopies = 99;
+    /// <summary>
+    /// The most copies a count field or a digit key can set. Public so a test can assert the clamp
+    /// against the same number the component uses, rather than repeating 99 and drifting from it.
+    /// </summary>
+    public const int MaxCopies = 99;
 
     /// <summary>
     /// Whether a card has earned its gold flair. Derived from the rarity ladder this component
@@ -394,6 +433,7 @@
     private IJSObjectReference? _sweep, _images;
     private string _lastListSignature = "";
     private DotNetObjectReference<CardGrid>? _self;
+    private IJSObjectReference? _keys;
     private bool _attached;
     private int _imgFailed;
     private System.Threading.Timer? _statsTimer;
@@ -534,6 +574,32 @@
         return q.ToList();
     }
 
+    /// <summary>
+    /// Unique per instance, because two grids can share a page (the deck builder renders its own)
+    /// and aria-activedescendant points at an id — a duplicate would send a screen reader to the
+    /// wrong grid's tile.
+    /// </summary>
+    private readonly string _gridId = $"cg{Guid.NewGuid():N}"[..10];
+
+    /// <summary>
+    /// What a screen reader is told about a card, as one sentence: name, where it is from, its
+    /// rarity, and how many you hold. The count comes last because it is the part that changes.
+    ///
+    /// A single label rather than a label plus a separate description: the cursor announcement and
+    /// the tile itself then cannot drift into saying different things about the same card.
+    /// </summary>
+    private string Describe(PocketCard card, int count)
+    {
+        var rarity = RungOf?.Invoke(card)?.Symbol ?? card.Rarity;
+        var held = count switch
+        {
+            0 => "none owned",
+            1 => "1 owned",
+            _ => $"{count} owned"
+        };
+        return $"{card.Name}, {card.Set} {card.Number}, {rarity}, {held}";
+    }
+
     private Task Bump(PocketCard card, int delta) => OnAdjust.InvokeAsync((card, delta));
 
     private void Rechunk()
@@ -573,6 +639,10 @@
                 await PrefetchAsync();
             }
 
+            // Cheap, and the column count changes from two places (the picker and the list-view
+            // toggle) neither of which is a good place to remember this.
+            await SyncKeyColumnsAsync();
+
             // A mode armed in list view must not survive into a grid that hides its button:
             // the state would be unreachable, and .sweeping still changes the cursor and
             // touch-action.
@@ -591,6 +661,20 @@
         await _sweep.InvokeVoidAsync("attach", _gridEl, _self);
         _touchCapable = await _sweep.InvokeAsync<bool>("hasCoarsePointer");
 
+        _keys = await JS.InvokeAsync<IJSObjectReference>("import", "./js/gridkeys.js");
+        await _keys.InvokeVoidAsync("attach", _gridEl, _self, ListView ? 1 : Columns);
+
+        // So the command palette can hand focus here from anywhere on the page.
+        Focus.Register(this, () => FocusGridAsync());
+
+        // Coming back from a card's detail page: put the cursor where it was. Only when the memo
+        // is there, so arriving any other way does not have focus pulled into the grid.
+        if (Focus.TakeReturn() is { Length: > 0 } key)
+        {
+            var back = IndexOfCard(key);
+            if (back >= 0) await FocusGridAsync(back);
+        }
+
         _images = await JS.InvokeAsync<IJSObjectReference>("import", "./js/imgloader.js");
         await _images.InvokeVoidAsync("init", _gridEl);
 
@@ -606,6 +690,43 @@
             }
             catch { /* page torn down */ }
         }, null, 1000, 1500);
+    }
+
+    /// <summary>
+    /// Where a card sits in the current list, or -1 if the filters no longer include it — which is
+    /// ordinary rather than exceptional: the count may have changed while you were reading about it,
+    /// and "missing only" would then have dropped it.
+    /// </summary>
+    private int IndexOfCard(string cardKey)
+    {
+        for (var i = 0; i < Cards.Count; i++)
+            if (Cards[i].Key == cardKey) return i;
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Keep the cursor's row width in step with the layout. A stale column count is not cosmetic:
+    /// ArrowDown would move by the old width and land on a different row than the one below.
+    /// </summary>
+    /// <summary>
+    /// Give the grid keyboard focus and put the cursor somewhere sensible. Reached from the skip
+    /// button above and from the command palette.
+    /// </summary>
+    public async Task FocusGridAsync(int index = -1)
+    {
+        if (_keys is null) return;
+        try { await _keys.InvokeVoidAsync("focusGrid", _gridEl, index, Cards.Count); }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    private async Task SyncKeyColumnsAsync()
+    {
+        if (_keys is null) return;
+        try { await _keys.InvokeVoidAsync("setColumns", _gridEl, ListView ? 1 : Columns); }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
     }
 
     private async Task RefreshImagesAsync()
@@ -661,6 +782,46 @@
             ? OnAdjust.InvokeAsync((Cards[a.Index], DeltaFor(a.Invert)))
             : Task.CompletedTask;
 
+    // ---- keyboard, from js/gridkeys.js ---------------------------------------------
+    // The cursor lives in JS so moving it costs no renders; these are the points where a key
+    // actually changes something, and each is the same call the pointer path makes.
+
+    [JSInvokable]
+    public Task KeyAdjust(int index, int delta) =>
+        index >= 0 && index < Cards.Count
+            ? OnAdjust.InvokeAsync((Cards[index], delta))
+            : Task.CompletedTask;
+
+    /// <summary>
+    /// A digit sets the count outright. Without it, entering a collection that already exists
+    /// means nine presses of + per card, which is what makes the keyboard path unusable rather
+    /// than merely slower. Falls back to relative adjustment where the page only accepts that -
+    /// the log screen, where a count is what came out of a pack rather than what you hold.
+    /// </summary>
+    [JSInvokable]
+    public Task KeySet(int index, int count)
+    {
+        if (index < 0 || index >= Cards.Count) return Task.CompletedTask;
+
+        var card = Cards[index];
+        if (OnSet.HasDelegate) return OnSet.InvokeAsync((card, Math.Clamp(count, 0, MaxCopies)));
+
+        var delta = Math.Clamp(count, 0, MaxCopies) - CountOf(card);
+        return delta == 0 ? Task.CompletedTask : OnAdjust.InvokeAsync((card, delta));
+    }
+
+    [JSInvokable]
+    public Task KeyOpen(int index)
+    {
+        if (index < 0 || index >= Cards.Count) return Task.CompletedTask;
+
+        // Noted before navigating, so Escape on the detail page comes back to this card with the
+        // cursor still on it. Otherwise every press of `i` cost you your place in the list.
+        Focus.ReturnTo(Cards[index].Key);
+        OpenDetail(Cards[index]);
+        return Task.CompletedTask;
+    }
+
     /// <summary>Called once by gridsweep.js when a drag is released.</summary>
     [JSInvokable]
     public async Task ApplySweep(int lo, int hi)
@@ -681,7 +842,16 @@
     public async ValueTask DisposeAsync()
     {
         if (_statsTimer is not null) await _statsTimer.DisposeAsync();
-        foreach (var m in new[] { _sweep, _images })
+        Focus.Release(this);
+
+        if (_keys is not null)
+        {
+            try { await _keys.InvokeVoidAsync("dispose", _gridEl); }
+            catch (JSDisconnectedException) { }
+            catch (JSException) { }
+        }
+
+        foreach (var m in new[] { _sweep, _images, _keys })
         {
             if (m is null) continue;
             try { await m.InvokeVoidAsync("dispose"); await m.DisposeAsync(); }

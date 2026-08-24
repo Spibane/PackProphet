@@ -134,14 +134,15 @@ main > * { flex-shrink: 0; }
 }
 @media (max-width: 800px) { .share-cols { grid-template-columns: 1fr; } }
 
-/* Off-screen until focused, which is the whole point: it costs sighted users nothing and saves a
-   keyboard user twelve tab stops on every navigation. */
-.skip-link {
-    position: absolute; left: -100vw; top: 0; z-index: 2000;
-    padding: .4rem .7rem; border-radius: 0 0 .3rem 0;
+/* Bootstrap's .visually-hidden-focusable does the showing and hiding; this only dresses it, and
+   only while it is on screen. Rolling the hiding by hand was a mistake once already: an absolutely
+   positioned element depends on which ancestor is positioned and which clips, neither of which this
+   file should have an opinion about. */
+.skip-link:focus, .skip-link:focus-within {
+    position: absolute; left: 0; top: 0; z-index: 2000;
+    padding: .4rem .7rem; border: 0; border-radius: 0 0 .3rem 0;
     background: var(--bs-primary); color: #fff; text-decoration: none;
 }
-.skip-link:focus { left: 0; }
 /* The target is focusable so the skip actually lands, but it must not draw a box around the
    entire page when it receives focus programmatically. */
 main:focus { outline: none; }
@@ -404,6 +405,49 @@ main:focus { outline: none; }
     transition: opacity .08s linear;
 }
 .card-tile.owned { opacity: 1; }
+/* The keyboard cursor. Distinct from .sel (a pointer sweep) and from :hover, because all three
+   can be true of different tiles at once and "where am I" has to stay answerable. Drawn inside the
+   tile as well as out, so it reads against both light and dark art. */
+.grid-wrap.keys .card-tile.kb, .grid-wrap.keys .card-line.kb {
+    outline: 3px solid var(--bs-warning);
+    outline-offset: -1px;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--bs-warning) 45%, transparent);
+}
+.grid-wrap.keys .card-line.kb { position: relative; z-index: 1; }
+
+/* A focus holder for the Escape handler on card detail, not somewhere anyone chose to be — so it
+   takes focus without drawing a ring around the whole page. */
+.detail-keys:focus { outline: none; }
+
+/* The key legend, revealed only while the grid has focus. aria-hidden because a screen reader is
+   told the same thing by the container's own label, and hearing it twice on arrival is worse than
+   not hearing it at all. */
+.kb-hint {
+    display: none;
+    position: sticky; top: 0; z-index: 3;
+    gap: .8rem; flex-wrap: wrap;
+    padding: .25rem .6rem;
+    background: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+    font-size: .82rem; color: var(--bs-secondary-color);
+}
+/* Only in keyboard mode, set by js/gridkeys.js when a key is pressed or the keyboard is asked
+   for. It hung on :focus-within before, which showed the legend on every mouse click — clicking a
+   tile focuses the container, since the container is what holds the tab stop. */
+.grid-wrap.keys .kb-hint { display: flex; }
+.kb-hint kbd {
+    padding: 0 .25rem; font-size: .78rem;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    border: 1px solid var(--bs-border-color); border-radius: .2rem;
+}
+
+/* The grid owns a single tab stop for however many thousand cards are in it, so arriving there
+   must be obvious — the cursor ring alone is inside the scroller and can be scrolled out of view. */
+.grid-wrap.keys:focus {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: -2px;
+}
+
 .card-tile.sel { outline: 3px solid var(--bs-primary); }
 .card-tile.picked { outline: 3px solid var(--bs-success); opacity: 1; }
 

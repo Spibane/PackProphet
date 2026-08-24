@@ -3,6 +3,7 @@
 @inject PaletteSwitch Switch
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject GridFocus Focus
 
 @* One flat surface with deep reach, instead of a menu bar that grows an item per feature.
    This is the "simple but versatile" rule as UI: everything stays reachable in two keystrokes
@@ -17,7 +18,7 @@
     <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
         <input class="palette-input" @ref="_input" placeholder="Jump to a card, set, deck, or action&hellip;"
                @bind="_query" @bind:event="oninput" @bind:after="Search"
-               @onkeydown="OnKeyDown" aria-label="Search" />
+               @onkeydown="OnKeyDown" @onkeydown:stopPropagation="true" aria-label="Search" />
 
         @* Announced, not shown: the rows below are real buttons so they are already reachable and
            read out, but nothing told a screen-reader user that the list had changed as they typed. *@
@@ -219,6 +220,16 @@
                                 $"{profile.Collection.Values.Sum()} cards", null,
                                 () => Session.SwitchProfile(id)));
             }
+        }
+
+        // The only route to the card grid that costs no clicks and no counting of tab stops.
+        // Ctrl+K is advertised in the nav, so this is discoverable in a way "press Tab twenty-six
+        // times" is not.
+        if (Focus.Available)
+        {
+            actions.Add(new("action", "Jump to the cards",
+                            "keyboard entry: arrows to move, digits to set a count", null,
+                            () => _ = Focus.FocusAsync()));
         }
 
         if (Session.CanUndo) actions.Add(new("action", "Undo", "ctrl+z, anywhere", null, Session.Undo));

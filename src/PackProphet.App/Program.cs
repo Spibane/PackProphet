@@ -30,4 +30,8 @@ builder.Services.AddScoped<NavHistory>();
 // The nav asks for the palette; the layout owns it.
 builder.Services.AddScoped<PaletteSwitch>();
 
+// Whichever grid is on screen registers itself here, so the palette can hand it focus from
+// anywhere. Tabbing to it means passing dozens of controls first.
+builder.Services.AddScoped<GridFocus>();
+
 await builder.Build().RunAsync();

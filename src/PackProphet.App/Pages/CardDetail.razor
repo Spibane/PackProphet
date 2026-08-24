@@ -19,8 +19,17 @@ else if (_card is null)
 }
 else
 {
+    @* Focused on arrival and listening for Escape, which is the whole keyboard route back. Without
+       it, returning meant hunting for the back button — it is early in the tab order, but nothing
+       says so, and after reading a card you have lost track of where focus even is.
+
+       tabindex -1 so it can take focus without joining the tab order, and no focus ring: this is
+       plumbing for the key handler, not somewhere anyone chose to be. *@
+    <div class="detail-keys" tabindex="-1" @ref="_root" @onkeydown="OnKey">
+
     <div class="page-head">
-        <button class="btn btn-sm btn-outline-secondary" @onclick="Back">&larr; back</button>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="Back"
+                title="Back to @History.LastListPage — or press Escape">&larr; back</button>
         <h1 class="title">@_card.Name</h1>
         <span class="subtitle">@_card.Set&thinsp;@_card.Number</span>
         <span class="actions">
@@ -323,6 +332,8 @@ else
             }
         </div>
     </div>
+
+    </div>@* .detail-keys *@
 }
 
 @code {
@@ -408,6 +419,32 @@ else
     /// History. Falls back to the collection on a deep link, where there is nothing to return to.
     /// </summary>
     private void Back() => Nav.NavigateTo(History.LastListPage);
+
+    private ElementReference _root;
+    private bool _focused;
+
+    /// <summary>
+    /// Focus the page once on arrival, so Escape works without clicking first. Also the right thing
+    /// for a screen reader after a client-side navigation, which otherwise leaves the cursor parked
+    /// on whatever was clicked on the previous page.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focused || _card is null) return;
+
+        _focused = true;
+        try { await _root.FocusAsync(); }
+        catch { /* the element is gone, or the browser refused; Escape simply needs a click first */ }
+    }
+
+    /// <summary>
+    /// Escape goes back, which is the only keyboard route out that does not involve hunting. The
+    /// grid it returns to puts the cursor back on this card, so reading about one costs nothing.
+    /// </summary>
+    private void OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") Back();
+    }
 
     /// <summary>
     /// First wishlist and first card in one tap. Naming the list can wait — the point of

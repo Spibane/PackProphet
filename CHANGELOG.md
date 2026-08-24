@@ -6,6 +6,19 @@ until then the minor number tracks the roadmap phase.
 
 ## Unreleased
 
+- **The card grid is operable from the keyboard.** It was pointer-only: a tile was a div with a
+  click handler, so entering a collection — the app's primary interaction — was impossible without
+  a mouse or a touchscreen. Arrows move, digits set a count outright, Enter adds, `-` removes, `i`
+  opens card detail, Home and End jump. One tab stop for the whole grid with `aria-activedescendant`
+  naming the cursor, rather than a roving tabindex that Blazor would have to re-render to move. The
+  key legend appears only while the grid has focus, and every tile now has an accessible name
+  reading name, set, rarity and copies held. Starting keyboard entry needed its own answer,
+  since tabbing to the grid means passing twenty-six controls: there is a visible **keyboard**
+  button in the grid toolbar whose tooltip names the keys, a skip link one tab from page load, and
+  a command-palette action. Pressing `i` opens a card and Escape comes straight back, with the
+  cursor restored to the card you were reading about — without that, every look at a card cost you
+  your place in the list.
+
 - **Render tests for the App project** (bUnit). It had none, while being the larger half of the
   codebase — and nearly every defect found in review lived there, because a page that indexes an
   empty list compiles cleanly and passes every engine test. Pages are discovered by reflection, so

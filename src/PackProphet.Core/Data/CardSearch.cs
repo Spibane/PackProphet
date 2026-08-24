@@ -28,8 +28,8 @@ using PackProphet.Domain;
 /// 2-star already covers two codes (SR and SAR).
 ///
 /// Set and rarity come off the card itself rather than from the printed detail, so they filter
-/// correctly before card detail has finished downloading. That matters: "every diamond in A1" is
-/// exactly the sort of thing someone does on their first visit.
+/// correctly before card detail has finished downloading — "every diamond in A1" works on a first
+/// visit.
 /// </param>
 public readonly record struct CardQuery(
     string Text = "",
@@ -50,9 +50,9 @@ public static class CardSearch
     private const StringComparison Ci = StringComparison.OrdinalIgnoreCase;
 
     /// <summary>
-    /// Where a card matched, so results can be ordered by relevance. A name hit is what the
-    /// user meant when they typed a name; a rules-text hit is what they meant when they typed
-    /// "sleep". Ranking name hits first serves both without asking which they intended.
+    /// Where a card matched, so results can be ordered by relevance. A name hit is what the user
+    /// meant when they typed a name; a rules-text hit is what they meant when they typed "sleep".
+    /// Name hits rank first.
     /// </summary>
     public enum Hit { None = 0, RulesText = 1, NameContains = 2, NamePrefix = 3, NameExact = 4 }
 
@@ -83,8 +83,8 @@ public static class CardSearch
             Append(sb, attack.Effect);
         }
 
-        // Flavour text is deliberately absent: prose about the creature makes "asleep" match a
-        // dozen Pokémon whose rules do nothing of the kind.
+        // Flavour text is not included: prose about the creature makes "asleep" match a dozen
+        // Pokémon whose rules do nothing of the kind.
         return sb.ToString();
     }
 
@@ -151,8 +151,8 @@ public static class CardSearch
         foreach (var attack in fact.AttackList)
             if (Has(attack.Name, text) || Has(attack.Effect, text)) return true;
 
-        // Flavour text is deliberately NOT searched: it is prose about the creature, so "sleep"
-        // matches a dozen Pokémon whose rules do nothing of the kind.
+        // Flavour text is not searched: it is prose about the creature, so "sleep" would match a
+        // dozen Pokémon whose rules do nothing of the kind.
         return false;
     }
 

@@ -14,16 +14,15 @@ else
 {
     <div class="page-head">
         <h1 class="title">Collection</h1>
-        @* Where you are and how far along, in the header rather than tucked in with the
-           filters: it is the answer the page exists to give, and the filters bar is where you
-           look to change something, not to read a total. *@
+        @* Where you are and how far along, in the header rather than in the filters bar: it is the
+           answer the page exists to give, and the filters bar is for changing something rather
+           than for reading a total. *@
         <span class="subtitle" title="Distinct cards you own here, total copies including duplicates, and progress against the rarities you have chosen to collect">
             @Label(_set)
             &middot; @Stats.Owned of @Stats.Cards owned
-            @* Copies as well as cards, because they answer different questions: one is how far
-               through the set you are, the other is how much you are actually holding — and with
-               gold flair needing ten of a card, duplicates are worth counting rather than being
-               invisible. *@
+            @* Copies as well as cards, since they answer different questions: one is how far
+               through the set you are, the other how much you are holding — and gold flair needs
+               ten of a card, so duplicates are worth counting. *@
             &middot; @Stats.Copies copies
             &middot; target @TargetOwned / @TargetTotal
         </span>
@@ -35,12 +34,12 @@ else
         </span>
     </div>
 
-    @* The set tabs are the page's main control, but they are TALL — two lines per tab, since
-       each carries its own progress — so they cannot live in the header without making it a
-       different height from every other page's. *@
+    @* The set tabs are the page's main control, but they are tall — two lines per tab, since each
+       carries its own progress — so they sit below the header rather than making it a different
+       height from every other page's. *@
     <div class="page-tools">
-        @* A series at a time. One row of every set ever printed already wraps to three lines
-           and only gets worse; grouping keeps it to one row per series indefinitely. *@
+        @* A series at a time. One row of every set ever printed already wraps to three lines;
+           grouping keeps it to one row per series indefinitely. *@
         <select class="form-select form-select-sm" style="max-width:9rem" aria-label="Series" @onchange="OnSeries">
             <option value="@AllSets" selected="@(_series == AllSets)">every series</option>
             @foreach (var series in Session.Sets.Series)
@@ -80,9 +79,9 @@ else
         </div>
     </div>
 
-    @* Collection-wide, not scoped to the visible set: evolution does not care which set a card
-       came from, and scoping it would hide the gap whose fix lives one tab over. Collapsed by
-       default because the grid is what the page is for. *@
+    @* Collection-wide rather than scoped to the visible set: evolution does not care which set a
+       card came from, and scoping it would hide the gap whose fix lives one tab over. Collapsed by
+       default, since the grid is what the page is for. *@
     @if (Session.ShowGapStrip && Session.Gaps is { Complete: false } gaps)
     {
         <div class="gap-strip">
@@ -97,9 +96,9 @@ else
                 </span>
             </button>
 
-            @* Early on nearly every evolution is missing a stage, so this is a standing fact rather
-               than something that resolves - it would never leave on its own. The filter and the
-               Settings toggle are both still there, so dismissing hides the bar, not the feature. *@
+            @* Early on nearly every evolution is missing a stage, so this reports a standing fact
+               rather than something that resolves. The filter and the Settings toggle both remain,
+               so dismissing hides the bar rather than the feature. *@
             <button class="x" @onclick="() => Session.SetShowGapStrip(false)"
                     title="Hide this bar for good. The 'fills an evolution gap' filter still works, and Settings brings it back."
                     aria-label="Hide the evolution gap bar">&times;</button>
@@ -173,8 +172,8 @@ else
               SortKeyOf="Session.Sets.SortKey"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady">
         @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
-           header, the set tabs, a filter row and a control row, this page put five bars above
-           the first card; sharing one bar halves that without hiding anything. *@
+           header, the set tabs, a filter row and a control row, this page put five bars above the
+           first card; sharing one bar halves that without hiding anything. *@
         <Filters>
             <input class="form-control form-control-sm" style="max-width:14rem"
                    placeholder="search name" aria-label="Search card names" value="@_search" @oninput="OnSearch" />
@@ -185,8 +184,8 @@ else
                 <option value="owned">owned only</option>
                 <option value="dupes">duplicates</option>
                 <option value="needed">short of target</option>
-                @* Only offered when there is something to see. A permanently empty filter that
-                   silently returns nothing reads as a broken control. *@
+                @* Only offered when there is something to see: a permanently empty filter that
+                   returns nothing reads as a broken control. *@
                 @if (Session.Gaps is { Complete: false })
                 {
                     <option value="gaps">fills an evolution gap</option>
@@ -201,8 +200,8 @@ else
                 }
             </select>
 
-            @* No pack filter for promo sets: their "Vol. N" groupings record how a promo was
-               given away, not packs you can open, so filtering by them tells you nothing. *@
+            @* No pack filter for promo sets: their "Vol. N" groupings record how a promo was given
+               away rather than packs you can open. *@
             @if (!ViewingAll && !CardIndex.IsPromoSet(_set))
             {
                 <select class="form-select form-select-sm" style="max-width:12rem" aria-label="Filter by pack" @onchange="OnPackFilter">
@@ -225,8 +224,8 @@ else
                     <option value="@n" selected="@(n == Session.GridColumns)">@n cols</option>
                 }
             </select>
-            @* Both act on one set. Across every set they would be indiscriminate, and
-               "erase everything" already lives in Settings where it belongs. *@
+            @* Both act on one set. Across every set they would be indiscriminate, and "erase
+               everything" lives in Settings. *@
             @if (!ViewingAll)
             {
                 <button class="btn btn-sm btn-outline-secondary" @onclick="MarkTargetOwned"

@@ -1,8 +1,8 @@
 namespace PackProphet.Domain;
 
 /// <summary>
-/// A card as published by flibustier/pokemon-tcg-pocket-database (cards.min.json).
-/// Only the fields that file is trusted for — see the plan's data-source split.
+/// A card as published by flibustier/pokemon-tcg-pocket-database (cards.min.json). Only the fields
+/// that file is trusted for.
 /// </summary>
 public sealed class PocketCard
 {
@@ -14,18 +14,17 @@ public sealed class PocketCard
     public string[]? Packs { get; set; }
 
     /// <summary>
-    /// Identifies this ENTRY: a position in a set's numbered list. Use for display,
-    /// navigation and set membership — NOT for ownership. See <see cref="OwnershipKey"/>.
+    /// Identifies this entry: a position in a set's numbered list. Used for display, navigation and
+    /// set membership, not for ownership — see <see cref="OwnershipKey"/>.
     /// </summary>
     public string Key => $"{Set}-{Number}";
 
     /// <summary>
-    /// Identifies the OWNABLE CARD. The game treats owning a card as owning it for every
-    /// set it appears in, and 215 of the 3,761 entries are re-listings of a card first
-    /// printed elsewhere — A4b alone re-lists 214, because Deluxe packs reprint earlier
-    /// sets. Keying ownership by set-number would demand the same card once per set and
-    /// grossly overstate what is left to collect (A4b would look like 379 cards to chase
-    /// when 214 may already be owned).
+    /// Identifies the ownable card. The game treats owning a card as owning it for every set it
+    /// appears in, and 215 of the 3,761 entries are re-listings of a card first printed elsewhere —
+    /// A4b alone re-lists 214, because Deluxe packs reprint earlier sets. Keying ownership by
+    /// set-number would demand the same card once per set and overstate what is left to collect:
+    /// A4b would look like 379 cards to chase when 214 may already be owned.
     ///
     /// The artwork filename is the identity: re-listings share it exactly.
     /// </summary>
@@ -34,23 +33,21 @@ public sealed class PocketCard
     /// <summary>
     /// The artwork variant index from the filename ("..._00_..." -&gt; 0, "..._01_..." -&gt; 1).
     ///
-    /// Meaning is CONTEXTUAL and must not be generalised. In Deluxe sets, a non-zero index
-    /// at a diamond rarity is the FOIL printing (A4b pairs exactly: 64/64 C, 50/50 U,
-    /// 25/25 R). Everywhere else a non-zero index is simply an alternate art, which is why
-    /// foil handling keys off the set's pull rates naming CF/UF/RF rather than off this
-    /// value alone. Deliberately excluded from DeckBuilderNr: a foil and a plain copy are
-    /// the same card for deck purposes.
+    /// Its meaning is contextual. In Deluxe sets, a non-zero index at a diamond rarity is the foil
+    /// printing (A4b pairs exactly: 64/64 C, 50/50 U, 25/25 R). Everywhere else a non-zero index is
+    /// an alternate art, which is why foil handling keys off the set's pull rates naming CF/UF/RF
+    /// rather than off this value. Excluded from DeckBuilderNr: a foil and a plain copy are the
+    /// same card for deck purposes.
     /// </summary>
     public int VariantIndex =>
         System.Text.RegularExpressions.Regex.Match(Image ?? "", @"^c[A-Z]+_\d+_\d{6}_(\d+)_")
             is { Success: true } m && int.TryParse(m.Groups[1].Value, out var v) ? v : 0;
 
     /// <summary>
-    /// A promo card. Promos are collectible and worth tracking, but their "Vol. N" groupings
-    /// are distribution vehicles for event giveaways, not packs anyone chooses to open. They
-    /// must therefore be excluded from every pack-facing surface: the pack picker, the pack
-    /// ranking, and the missing-pull-rates warning, which would otherwise report a gap the
-    /// user can do nothing about.
+    /// A promo card. Promos are collectible and worth tracking, but their "Vol. N" groupings are
+    /// distribution vehicles for event giveaways rather than packs anyone chooses to open, so they
+    /// are excluded from every pack-facing surface: the pack picker, the pack ranking, and the
+    /// missing-pull-rates warning.
     /// </summary>
     public bool IsPromo => Set.StartsWith("PROMO", StringComparison.OrdinalIgnoreCase);
 
@@ -58,10 +55,10 @@ public sealed class PocketCard
     public bool IsPackObtainable => Packs is { Length: > 0 };
 
     /// <summary>
-    /// Sold in a pack a player can choose to open. Stricter than <see cref="IsPackObtainable"/>,
-    /// and the distinction bites: most promos list a "Vol. N" pack, which records how the card was
-    /// handed out at an event rather than something purchasable. So IsPackObtainable is true for
-    /// them while no amount of opening will ever produce one.
+    /// Sold in a pack a player can choose to open. Stricter than <see cref="IsPackObtainable"/>:
+    /// most promos list a "Vol. N" pack, which records how the card was handed out at an event
+    /// rather than something purchasable, so IsPackObtainable is true for them while no amount of
+    /// opening will produce one.
     /// </summary>
     public bool Openable => IsPackObtainable && !IsPromo;
 

@@ -8,9 +8,8 @@ using PackProphet.Pages;
 /// <summary>
 /// Getting out of a card's detail page with the keyboard.
 ///
-/// The back button was always there and early in the tab order, but nothing said so — and after
-/// reading a card you have lost track of where focus is, so "it is only a few tabs away" is not an
-/// answer. Escape is.
+/// The back button is early in the tab order but nothing announces it, so Escape is the route
+/// covered here.
 /// </summary>
 public class CardDetailTests : AppHost
 {
@@ -54,7 +53,7 @@ public class CardDetailTests : AppHost
     [Fact]
     public async Task The_back_button_says_that_Escape_works()
     {
-        // A shortcut nobody is told about is a shortcut nobody uses.
+        // The shortcut is announced on the page, so it can be found.
         await ReadyAsync();
         var card = Session.Index.All.First(c => !c.IsPromo);
 

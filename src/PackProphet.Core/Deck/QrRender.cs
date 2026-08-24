@@ -6,14 +6,12 @@ namespace PackProphet.Deck;
 /// <summary>
 /// Renders a deck share code as a scannable QR image.
 ///
-/// The SVG is built from QRCoder's raw module matrix rather than with its own SVG helper: the
-/// helper pulls in a drawing dependency, and this way the output is a handful of rects that
-/// stay crisp at any zoom. The whole point is that the user holds their phone up to it and the
-/// game's scanner reads it.
+/// The SVG is built from QRCoder's raw module matrix rather than with its own SVG helper, which
+/// pulls in a drawing dependency. The output is a handful of rects that stay crisp at any zoom,
+/// since the user holds a phone up to it for the game's scanner.
 ///
-/// Colours are hardcoded black on white and do NOT follow the app theme: a scanner needs the
-/// contrast and the standard polarity, and a dark-mode inversion is exactly the kind of
-/// thoughtful touch that would quietly stop the code from being readable.
+/// Colours are hardcoded black on white and do not follow the app theme: a scanner needs the
+/// contrast and the standard polarity, so a dark-mode inversion would stop the code being readable.
 /// </summary>
 public static class QrRender
 {
@@ -35,8 +33,8 @@ public static class QrRender
         }
         catch (Exception)
         {
-            // An over-long payload is the only realistic failure, and a missing QR is not
-            // worth taking the page down for — the base64 code is shown beside it regardless.
+            // An over-long payload is the only realistic failure, and the base64 code is shown
+            // beside the image regardless.
             return null;
         }
     }

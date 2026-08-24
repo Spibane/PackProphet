@@ -11,8 +11,8 @@
     <NavLink class="nav-item" href="wonder">Wonder</NavLink>
     <NavLink class="nav-item" href="trades">Trades</NavLink>
     <NavLink class="nav-item" href="board">In-game list</NavLink>
-    @* Only with something to compare. A link that always reads "Compare" and always says "you
-       have one collection" is a permanent dead end in a nav that is already long. *@
+    @* Only with something to compare: a link that always says "you have one collection" is a dead
+       end in a nav that is already long. *@
     @if (Session.MultipleProfiles)
     {
         <NavLink class="nav-item" href="compare">Compare</NavLink>
@@ -22,9 +22,8 @@
     <NavLink class="nav-item" href="history">History</NavLink>
     <NavLink class="nav-item" href="settings">Settings</NavLink>
 
-    @* The hotkey alone would be invisible — and on a phone there is no Ctrl+K at all — so the
-       palette gets a button. The shortcut is printed on it rather than hidden in a tooltip,
-       which is how anyone learns it exists. *@
+    @* The hotkey alone would be invisible, and on a phone there is no Ctrl+K, so the palette gets a
+       button. The shortcut is printed on it rather than hidden in a tooltip. *@
     <button class="palette-btn ms-auto" @onclick="() => Palette.Toggle()"
             title="Jump to a card, set, deck or action (Ctrl+K)" aria-label="Open the command palette">
         <span class="glyph" aria-hidden="true">
@@ -36,9 +35,8 @@
         <span class="hint">ctrl K</span>
     </button>
 
-    @* Switching collections is frequent enough to belong in the chrome; creating and deleting
-       are not, and live on the Settings page. Hidden entirely with one collection, so the
-       majority who never make an alt pay nothing for the feature. *@
+    @* Switching collections is frequent enough to belong in the chrome; creating and deleting live
+       on the Settings page. Hidden entirely with one collection. *@
     @if (Session.MultipleProfiles)
     {
         <select class="profile-switch" @onchange="PickProfile"
@@ -52,15 +50,13 @@
         </select>
     }
 
-    @* One cycling button rather than three, because the nav has to survive a phone width.
-       The label names the CURRENT setting, and the tooltip names what a tap will do — a
-       cycling control is only usable if both are legible. *@
+    @* One cycling button rather than three, so the nav survives a phone width. The label names the
+       current setting and the tooltip names what a tap will do. *@
     <button class="theme-btn" @onclick="CycleTheme"
             title="Theme: @Label(Session.Theme). Tap for @Label(Next(Session.Theme))."
             aria-label="Theme: @Label(Session.Theme)">
-        @* Drawn, not typed. The half-filled circle for "auto" was U+25D1, which plenty of
-           system fonts do not carry — so it fell back to a tofu box. An inline SVG cannot be
-           missing from a font. *@
+        @* Drawn, not typed. The half-filled circle for "auto" was U+25D1, which plenty of system
+           fonts do not carry, so it fell back to a tofu box. *@
         <span class="glyph" aria-hidden="true">
             <svg viewBox="0 0 16 16" width="14" height="14" focusable="false">
                 @switch (Session.Theme)
@@ -99,8 +95,8 @@
         if (e.Value?.ToString() is { Length: > 0 } id) Session.SwitchProfile(id);
     }
 
-    // auto -> light -> dark -> auto. Auto is first because it is the default and the one most
-    // people should stay on; the explicit modes are for overriding the OS deliberately.
+    // auto -> light -> dark -> auto. Auto is first as the default; the explicit modes override the
+    // OS.
     private static string Next(string theme) => theme switch
     {
         "auto" => "light",

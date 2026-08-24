@@ -24,26 +24,25 @@ public sealed class SetInfo
         DateOnly.TryParseExact(ReleaseDate, "yyyy-MM-dd", out var date) ? date : null;
 
     /// <summary>
-    /// Whether the set is out. Distinguishing this from "we have no odds for it" matters: a set
-    /// that is out but unpriced means the community has not published pull rates YET and the
-    /// cards are already droppable, while an unreleased set means nobody can have them at all.
-    /// Reporting both as "not pullable" told the user their B4 cards were unobtainable when they
-    /// were simply unpriced.
+    /// Whether the set is out, which is distinct from "we have no odds for it". A set that is out
+    /// but unpriced means the community has not published pull rates yet and the cards are already
+    /// droppable, while an unreleased set means nobody can have them. Reporting both as "not
+    /// pullable" told the user their B4 cards were unobtainable when they were simply unpriced.
     ///
-    /// An absent or unparseable date counts as released. Sets.json lags cards.json for a new
-    /// set, so treating a missing date as "not out" would hide a set that is in fact on sale.
+    /// An absent or unparseable date counts as released, since sets.json lags cards.json for a new
+    /// set.
     /// </summary>
     public bool IsReleased(DateOnly today) => ReleasedOn is not DateOnly d || d <= today;
 }
 
 /// <summary>
-/// Sets grouped into series (A, B, …), so the UI can offer a series at a time instead of one
+/// Sets grouped into series (A, B, …), so the UI can offer a series at a time rather than one
 /// ever-growing row of every set ever printed.
 ///
-/// Upstream's own grouping is authoritative — it already places promo sets with their series
-/// — but it is NOT relied upon exclusively: sets.json lags cards.json for a brand-new set, so
-/// any set code the catalogue does not know is placed by deriving the series from its code.
-/// That way a future series C appears the day its cards do, without a code change.
+/// Upstream's own grouping is used where it exists — it already places promo sets with their
+/// series — but sets.json lags cards.json for a brand-new set, so any set code the catalogue does
+/// not know is placed by deriving the series from its code. A future series C then appears the day
+/// its cards do.
 /// </summary>
 public sealed class SetCatalog
 {
@@ -62,8 +61,8 @@ public sealed class SetCatalog
         }
 
         // Sets present in the card data but absent from the published grouping — a new set
-        // upstream has not catalogued yet. Place them rather than dropping them, or they
-        // would silently vanish from the set picker.
+        // upstream has not catalogued yet. Placed rather than dropped, so they do not vanish from
+        // the set picker.
         foreach (var code in setCodesInUse)
         {
             if (_byCode.ContainsKey(code)) continue;
@@ -110,26 +109,26 @@ public sealed class SetCatalog
     /// A sortable key putting sets in release order within their series, with the series' promo
     /// set last: A1, A1a, A2 ... A4b, PROMO-A, B1, B1a ... PROMO-B.
     ///
-    /// One definition, shared, because two places were sorting sets by different rules — a list
+    /// One shared definition: two places had been sorting sets by different rules, and a list
     /// sorted by "set" was ordering A1-1, A2-1, A3-1 because it compared card numbers and ignored
-    /// the set entirely.
+    /// the set.
     ///
-    /// The numeric part is zero-padded rather than compared as text: ordinally "A10" sorts before
-    /// "A2", which is not a problem with today's sets and silently becomes one at A10.
+    /// The numeric part is zero-padded rather than compared as text, since ordinally "A10" sorts
+    /// before "A2".
     ///
     /// Promos sort last within their series rather than by date. PROMO-A shares its release date
-    /// with A1 because that is when promos started, not because it belongs first — and a promo set
-    /// keeps growing long after the numbered sets it sits beside.
+    /// with A1 because that is when promos started, and a promo set keeps growing long after the
+    /// numbered sets beside it.
     /// </summary>
     public string SortKey(string setCode) =>
         _sortKeys.TryGetValue(setCode, out var cached) ? cached : _sortKeys[setCode] = BuildSortKey(setCode);
 
     /// <summary>
-    /// Memoised per set, because this is called once per CARD while sorting a list.
+    /// Memoised per set, because this is called once per card while sorting a list.
     ///
     /// It parses the code with a regex, and a list of 1,862 cards re-sorted on every render meant
-    /// 1,862 regex matches per keystroke and per tap — enough to make adding a copy visibly lag on
-    /// the WebAssembly interpreter. There are twenty-two sets, so the cache is two dozen entries.
+    /// 1,862 regex matches per keystroke and per tap, which was visible lag on the WebAssembly
+    /// interpreter. There are twenty-two sets, so the cache is two dozen entries.
     /// </summary>
     private readonly Dictionary<string, string> _sortKeys = new(StringComparer.OrdinalIgnoreCase);
 

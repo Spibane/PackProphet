@@ -1,28 +1,27 @@
 @inject AppSession Session
 @implements IDisposable
 
-@* The card picker, deliberately its own component.
+@* The card picker, as its own component.
 
-   Every keystroke re-renders the component that owns the text field. When that was the whole
-   deck page, one keypress also re-rendered the deck list, the linter output, the missing-cards
-   table (a RouteCost lookup per row) and the pack ranking — so typing dragged no matter how
-   fast the search itself got. Owning the query state here means a keystroke re-renders this
-   subtree and nothing else.
+   Every keystroke re-renders the component that owns the text field. When that was the whole deck
+   page, one keypress also re-rendered the deck list, the linter output, the missing-cards table (a
+   RouteCost lookup per row) and the pack ranking, so typing dragged no matter how fast the search
+   itself got. Owning the query state here means a keystroke re-renders this subtree and nothing
+   else.
 
-   The deck-dependent bits arrive as delegates rather than as data, so the parent does not have
-   to hand over a copy of the deck on every edit. *@
+   The deck-dependent bits arrive as delegates rather than as data, so the parent does not have to
+   hand over a copy of the deck on every edit. *@
 
 <h6>@Heading</h6>
 
-@* Name search alone cannot build a deck. "What puts something to Sleep", "show me
-   the Supporters" and "which Basics do I own" are the real questions — and the last
-   two need no typing at all, so the dropdowns work on their own.
+@* Name search alone cannot build a deck. "What puts something to Sleep", "show me the Supporters"
+   and "which Basics do I own" are the real questions, and the last two need no typing at all, so
+   the dropdowns work on their own.
 
-   Every control binds the SELECT's value rather than marking an option `selected`.
-   Blazor tracks the element's value property, but a `selected` attribute inside a
-   re-rendered option list is not reliably reapplied to the DOM's selectedIndex — so
-   the visible choice can snap back to the first option even though the filter did
-   change. Binding the select is the form that cannot drift. *@
+   Every control binds the select's value rather than marking an option `selected`. Blazor tracks
+   the element's value property, but a `selected` attribute inside a re-rendered option list is not
+   reliably reapplied to the DOM's selectedIndex, so the visible choice can snap back to the first
+   option even though the filter did change. *@
 <div class="search-grid mb-2">
     <input class="form-control form-control-sm" placeholder="name, or words from the card text" aria-label="Search cards by name or rules text"
            @bind="_text" @bind:event="oninput" @bind:after="OnTyped" />
@@ -40,9 +39,9 @@
         </button>
     </div>
 
-    @* Card type is the hinge: everything to its right narrows to what that choice
-       can actually be. Offering Supporter under Pokémon, or a stage for a Trainer,
-       is offering a filter combination that matches nothing by construction. *@
+    @* Card type is the hinge: everything to its right narrows to what that choice can be.
+       Supporter under Pokémon, or a stage for a Trainer, is a filter combination that matches
+       nothing. *@
     <select class="form-select form-select-sm" @bind="_kind" @bind:after="OnKindChanged"
             aria-label="Card type">
         <option value="">any card type</option>
@@ -53,10 +52,9 @@
     <select class="form-select form-select-sm" @bind="_subtype" @bind:after="OnFilterChanged"
             aria-label="@SubtypeLabel">
         <option value="">@("any " + SubtypeLabel.ToLowerInvariant())</option>
-        @* Built from the data rather than hardcoded, so a new element or trainer
-           kind becomes filterable on its own. Grouped only when both kinds are in
-           play — with one chosen, the group heading would say what the dropdown to
-           the left already says. *@
+        @* Built from the data rather than hardcoded, so a new element or trainer kind becomes
+           filterable on its own. Grouped only when both kinds are in play — with one chosen, the
+           group heading repeats the dropdown to the left. *@
         @if (Subtypes.Count == 1)
         {
             @foreach (var value in Subtypes[0].Value)
@@ -79,8 +77,8 @@
     </select>
 
     @* Set and rarity. Both read straight off the card rather than from printed detail, so they
-       work while card detail is still downloading — which matters, because "every diamond in
-       A1" is exactly what someone does on a first visit. *@
+       work while card detail is still downloading — "every diamond in A1" is something people do
+       on a first visit. *@
     <select class="form-select form-select-sm" @bind="_set" @bind:after="OnFilterChanged"
             aria-label="Set">
         <option value="">any set</option>
@@ -100,8 +98,8 @@
     <select class="form-select form-select-sm" @bind="_rarity" @bind:after="OnFilterChanged"
             aria-label="Rarity">
         <option value="">any rarity</option>
-        @* Families first, because they are what people actually want — "all diamonds" is four
-           rungs — and then the individual rungs for a precise pick. *@
+        @* Families first — "all diamonds" is four rungs — then the individual rungs for a precise
+           pick. *@
         <optgroup label="families">
             @foreach (var family in Families)
             {
@@ -116,9 +114,8 @@
         </optgroup>
     </select>
 
-    @* Trainers have no evolution stage, so under Trainer this control is not
-       disabled-but-present, it is gone: a greyed-out box invites a click that can
-       never do anything. *@
+    @* Trainers have no evolution stage, so under Trainer this control is removed rather than
+       disabled: a greyed-out box invites a click that can never do anything. *@
     @if (StageApplies)
     {
         <select class="form-select form-select-sm" @bind="_stage" @bind:after="OnFilterChanged"
@@ -145,9 +142,8 @@
     </div>
 }
 
-@* What is actually being filtered on, spelled out. A row of dropdowns does not
-   make its own state obvious — especially the pool, which is a pair of buttons
-   rather than a labelled control. *@
+@* What is being filtered on, spelled out. A row of dropdowns does not make its own state obvious,
+   especially the pool, which is a pair of buttons rather than a labelled control. *@
 @if (!Query.IsEmpty)
 {
     <p class="small text-body-secondary mb-1">
@@ -172,10 +168,9 @@
 }
 else if (_results.Count == 0)
 {
-    @* A dead end here is nearly always the pool, not the filter: the default is
-       "cards I own", so any narrow filter can come back empty while the same filter
-       over all cards has plenty. Saying how many exist turns that into one tap
-       instead of a puzzle. *@
+    @* A dead end here is nearly always the pool rather than the filter: the default is "cards I
+       own", so a narrow filter can come back empty while the same filter over all cards has
+       plenty. Saying how many exist makes that one tap. *@
     @if (_ownedOnly && _elsewhere > 0)
     {
         <div class="alert alert-secondary py-2 small">
@@ -194,16 +189,14 @@ else if (_results.Count == 0)
 }
 else
 {
-    @* A CSS grid, not flex: with flex the cells size from their content, so the
-       columns drifted from row to row. Same lesson as the collection list.
+    @* A CSS grid, not flex: with flex the cells size from their content, so the columns drifted
+       from row to row.
 
-       The columns deliberately carry what the dropdowns CANNOT say — rarity, HP,
-       attack costs and damage, whether there is an ability, and how many you own —
-       so a row is readable without hovering it. Element and stage are omitted
-       precisely because they are already filters. *@
-    @* Bulk add, where the parent supports it. This is the only sane way to enter "all diamonds
-       from this set" — 226 cards, which nobody is tapping one at a time — and it applies to every
-       match, not just the ones on screen. *@
+       The columns carry what the dropdowns cannot say — rarity, HP, attack costs and damage,
+       whether there is an ability, and how many you own — so a row is readable without hovering
+       it. Element and stage are omitted because they are already filters. *@
+    @* Bulk add, where the parent supports it. It is how "all diamonds from this set" — 226 cards —
+       gets entered, and it applies to every match rather than only the ones on screen. *@
     @if (OnPickAll.HasDelegate && _matches.Count > 0)
     {
         <div class="d-flex align-items-center gap-2 mb-2">
@@ -221,9 +214,9 @@ else
         {
             var nr = Session.Index.DeckNrOf(card)!.Value;
             var fact = Session.FactFor(card);
-            @* Owned copies mean different things in the two modes, and the row must say the
-               one that matches what a click does: picking a printing is about that printing,
-               while filling a deck slot pools every printing of the identity. *@
+            @* Owned copies mean different things in the two modes, and the row says the one that
+               matches what a click does: picking a printing is about that printing, while filling
+               a deck slot pools every printing of the identity. *@
             var owned = ByPrinting ? Session.CountOf(card) : Session.OwnedCopiesOfIdentity(nr);
             var picked = ByPrinting ? PickedOf(card) : InDeck(nr);
             var enabled = ByPrinting ? CanPick(card) : CanAdd(nr);
@@ -243,9 +236,8 @@ else
                     }
                 </span>
 
-                @* Unit shown because these rows have no header to label the column,
-                   and an unlabelled number sitting next to attack damage reads as
-                   part of it. *@
+                @* Unit shown because these rows have no header to label the column, and an
+                   unlabelled number next to attack damage reads as part of it. *@
                 <span class="hp">
                     @if (fact?.Health is int hp)
                     {
@@ -253,25 +245,25 @@ else
                     }
                     else if (fact is { IsPokemon: false, Subtype: { Length: > 0 } pipKind })
                     {
-                        @* A Trainer has no HP, so its kind goes in the space that would
-                           otherwise sit empty. Drawn as an outlined pip, which is how a trainer
-                           is told apart from an energy at a glance. *@
+                        @* A Trainer has no HP, so its kind goes in the space that would otherwise
+                           sit empty. Drawn as an outlined pip, which is how a trainer is told
+                           apart from an energy at a glance. *@
                         <EnergyPip Type="@pipKind" />
                     }
                 </span>
 
                 <span class="mv">
-                    @* A Trainer has no attacks, so its kind is spelled out here. The pip beside
-                       HP carries the same fact as a shape, but a word is unambiguous and is what
-                       a screen reader reads — and this column would otherwise be blank on every
+                    @* A Trainer has no attacks, so its kind is spelled out here. The pip beside HP
+                       carries the same fact as a shape, but a word is unambiguous and is what a
+                       screen reader reads — and this column would otherwise be blank on every
                        Trainer row. *@
                     @if (fact is { IsPokemon: false, Subtype: { Length: > 0 } kind })
                     {
                         <span class="kind">@kind</span>
                     }
 
-                    @* Ability first and as a word, because "has an ability" changes
-                       how a card plays more than its damage does. *@
+                    @* Ability first and as a word: "has an ability" changes how a card plays more
+                       than its damage does. *@
                     @if (fact?.HasAbility == true)
                     {
                         <span class="abl" data-tip="@AbilityTip(fact)">ability</span>
@@ -283,9 +275,8 @@ else
                             {
                                 <EnergyPip Type="@sym" />
                             }
-                            @* The printed damage, not the raw number: "50×" and
-                               "30+" are the difference between a card being worth
-                               a slot and not. *@
+                            @* The printed damage rather than the raw number: "50×" and "30+" are
+                               a large difference in what the attack does. *@
                             @if (atk.DamageLabel is { Length: > 0 } dmg)
                             {
                                 <span class="dmg">@dmg</span>
@@ -294,12 +285,12 @@ else
                     }
                 </span>
 
-                @* Set only. The number within a set says nothing about the card and
-                   is not what anyone recognises it by. *@
+                @* Set only. The number within a set says nothing about the card and is not what
+                   anyone recognises it by. *@
                 <span class="id">@card.Set</span>
 
-                @* Owned and in-deck are different facts and both matter here: the
-                   pool can be "all cards", so a row may be one you do not have. *@
+                @* Owned and in-deck are different facts and both matter here: the pool can be "all
+                   cards", so a row may be one you do not have. *@
                 @{
                     var spread = Spread(owned, nr);
                 }
@@ -308,9 +299,9 @@ else
                        fixed column: as an anonymous grid item it cannot be aligned, and the
                        numbers drifted out of line on every row that gained a chip. *@
                     <span class="n">@(owned > 0 ? $"×{owned}" : "—")</span>
-                    @* A deck slot is filled by the CARD, not by one printing of it, so this count
-                       pools every art. Saying so matters: the row shows a single set and number,
-                       and a bare "x3" beside it reads as three copies of THAT printing. *@
+                    @* A deck slot is filled by the card rather than by one printing of it, so this
+                       count pools every art. The row shows a single set and number, so a bare "x3"
+                       beside it would read as three copies of that printing. *@
                     @if (spread.Count > 1)
                     {
                         <span class="arts" data-tip="@SpreadTip(spread)">@spread.Count arts</span>
@@ -424,8 +415,8 @@ else
     private IReadOnlyList<PocketCard> _results = [];
 
     /// <summary>
-    /// EVERY match, not just the page of them being shown. The bulk action operates on this:
-    /// "add all 226" that quietly added the 60 on screen would be a trap.
+    /// Every match, not just the page of them being shown. The bulk action operates on this, so
+    /// "add all 226" adds 226.
     /// </summary>
     private IReadOnlyList<PocketCard> _matches = [];
 
@@ -638,8 +629,7 @@ else
 
     /// <summary>
     /// Typing never waits for the search. The keystroke renders immediately — this component is
-    /// small, so that is cheap — and the scan happens once the burst has settled. Results
-    /// lagging the caret by a moment is far better than a caret that lags the keyboard.
+    /// small, so that is cheap — and the scan happens once the burst has settled.
     /// </summary>
     private async Task OnTyped()
     {
@@ -704,8 +694,8 @@ else
         Subtypes.SelectMany(g => g.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// The stage filter is hidden under Trainer, so it must not linger in the summary line
-    /// either — a filter the user cannot see or remove is worse than no filter.
+    /// The stage filter is hidden under Trainer, so it must not linger in the summary line either:
+    /// a filter the user cannot see or remove cannot be undone.
     /// </summary>
     private bool ShowStageInSummary => StageApplies && _stage.Length > 0;
 
@@ -762,8 +752,8 @@ else
     private readonly Dictionary<string, RarityRung> _rungs = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Hover text for an attack. The cost is NOT repeated — it is drawn as pips right there, and
-    /// "Lightning + Lightning + Lightning" is bloat. Only the name and any special effect.
+    /// Hover text for an attack. The cost is not repeated — it is drawn as pips right there — so
+    /// this carries only the name and any special effect.
     /// </summary>
     private static string AttackTip(CardAttack atk)
     {

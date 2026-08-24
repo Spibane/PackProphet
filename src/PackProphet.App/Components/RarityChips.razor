@@ -1,10 +1,9 @@
-@* One chip per rarity rung, carrying its own copy count. Selection and quantity are the same
-   fact — a rarity you want zero of is one you ignore — so a single control says both, and "two
-   of each diamond, one of the stars" is a few taps. Tap to cycle none / 1 / 2.
+@* One chip per rarity rung, carrying its own copy count. Selection and quantity are the same fact
+   — a rarity you want zero of is one you ignore — so a single control says both, and "two of each
+   diamond, one of the stars" is a few taps. Tap to cycle none / 1 / 2.
 
-   Shared by the Packs page and Settings rather than written twice. The plan drives every
-   estimate in the app, so two implementations of the same chips would eventually disagree about
-   what a tap means, and the disagreement would show up as numbers that will not reconcile. *@
+   Shared by the Packs page and Settings rather than written twice. The plan drives every estimate
+   in the app, so two implementations could disagree about what a tap means. *@
 
 @inject AppSession Session
 
@@ -18,15 +17,15 @@
     </button>
 }
 
-@* A different axis from rarity, so it is fenced off from the rungs rather than sitting in the
-   row as if it were one. Only shown where foils exist at all: the Deluxe set is the only one
-   whose rates name foil slot codes. *@
+@* A different axis from rarity, so it sits apart from the rungs rather than in the row as if it
+   were one. Only shown where foils exist at all: the Deluxe set is the only one whose rates name
+   foil slot codes. *@
 @if (ShowFoils)
 {
     <span class="bar-sep" aria-hidden="true"></span>
     @* Cycles like a rarity chip but carries its own count rather than inheriting a rung's: a
-       parallel foil is a separate printing, so wanting two of every diamond says nothing about
-       how many foils you want. *@
+       parallel foil is a separate printing, so wanting two of every diamond says nothing about how
+       many foils you want. *@
     <button class="rarity-chip @(Session.FoilCopies > 0 ? "on" : "")"
             @onclick="() => OnCycleFoils.InvokeAsync()"
             title="@(Session.FoilCopies == 0

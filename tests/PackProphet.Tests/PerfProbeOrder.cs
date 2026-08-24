@@ -4,9 +4,9 @@ using PackProphet.Data;
 namespace PackProphet.Tests;
 
 /// <summary>
-/// Guards the cost of the collection page's ordering. Desktop .NET is roughly an order of
-/// magnitude faster than the WebAssembly interpreter, so the budget here is deliberately tight:
-/// what reads as "fine" in a test is a visible delay on a phone.
+/// Guards the cost of the collection page's ordering. Desktop .NET is roughly an order of magnitude
+/// faster than the WebAssembly interpreter, so the budget here is tight: what reads as "fine" in a
+/// test is a visible delay on a phone.
 /// </summary>
 public class PerfProbeOrder
 {

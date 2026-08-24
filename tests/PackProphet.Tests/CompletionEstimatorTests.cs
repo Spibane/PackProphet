@@ -4,9 +4,8 @@ using Need = PackProphet.Engine.CompletionEstimator.Need;
 namespace PackProphet.Tests;
 
 /// <summary>
-/// The integral has closed-form answers in several special cases. Checking against them is
-/// the only way to know the numerics are right — a subtly wrong estimator produces
-/// plausible numbers forever and nobody notices.
+/// The integral has closed-form answers in several special cases, which is what the numerics are
+/// checked against. A subtly wrong estimator produces plausible numbers rather than an error.
 /// </summary>
 public class CompletionEstimatorTests
 {

@@ -7,10 +7,8 @@ using PackProphet.Services;
 /// <summary>
 /// Serves the vendored snapshot from disk and refuses everything else.
 ///
-/// Refusing the CDN is deliberate rather than convenient: the loader tries the network first and
-/// falls back to the snapshot, so every render test also exercises the fallback path — the one the
-/// app takes on a plane or behind a captive portal, and the one that would otherwise never be run
-/// until a user hit it.
+/// Refusing the CDN means every render test also exercises the offline fallback path: the loader
+/// tries the network first and falls back to the snapshot.
 /// </summary>
 internal sealed class SnapshotHandler : HttpMessageHandler
 {
@@ -42,17 +40,16 @@ internal sealed class SnapshotHandler : HttpMessageHandler
 }
 
 /// <summary>
-/// A rendering host wired the same way Program.cs wires the real app, so a page under test gets
-/// the services it actually asks for rather than a bespoke set that cannot drift into agreement.
+/// A rendering host wired the same way Program.cs wires the real app, so a page under test gets the
+/// services it actually asks for.
 ///
-/// Two decisions worth stating:
+/// Two things to note:
 ///
-///   - JS interop runs in LOOSE mode. Every call becomes a no-op returning a default. That is
-///     right for these tests: the pages call into the image loader, the sweep handler, the tooltip
-///     positioner and localStorage, none of which have anything to assert without a browser, and
-///     strict mode would turn every one of them into a failure that says nothing about the page.
-///   - State goes through InMemoryStateStore. localStorage is a browser fact; what these tests are
-///     for is whether a page RENDERS against a given state.
+///   - JS interop runs in loose mode, so every call is a no-op returning a default. The pages call
+///     into the image loader, the sweep handler, the tooltip positioner and localStorage, none of
+///     which have anything to assert without a browser.
+///   - State goes through InMemoryStateStore. These tests cover whether a page renders against a
+///     given state, not browser storage.
 /// </summary>
 public abstract class AppHost : TestContext
 {
@@ -89,14 +86,13 @@ public abstract class AppHost : TestContext
 
     /// <summary>
     /// The store the session persists through. Overridden by the tests that need a store which
-    /// FAILS, since a refused write is the case worth covering.
+    /// fails, since a refused write is a case worth covering.
     /// </summary>
     protected virtual IStateStore Store() => new InMemoryStateStore(Start());
 
     /// <summary>
     /// The state a test starts from. Overridden to set up a collection, extra profiles, a log —
-    /// whatever the case needs. Default is a brand-new profile, which is the state every real user
-    /// begins in and the one that broke most often.
+    /// whatever the case needs. Default is a brand-new profile, the state every real user begins in.
     /// </summary>
     protected virtual AppState Start() => AppState.Fresh();
 

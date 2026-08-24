@@ -15,7 +15,7 @@ public enum BoardBand
 
 /// <param name="NormalCost">
 /// Packs-equivalent to get it the ordinary way, by pulling or by points - whichever is cheaper.
-/// Infinite when NEITHER route exists, which makes it the best possible use of a slot.
+/// Infinite when neither route exists.
 /// </param>
 /// <param name="Liquidity">
 /// A rough estimate of copies in circulation: the card's pull rate times how long its set has
@@ -26,10 +26,8 @@ public enum BoardBand
 /// a rarity you cannot pay for is a request you cannot honour even when someone bites.
 /// </param>
 /// <param name="CostRoute">
-/// Which route that cost came from. Worth reporting, because the two mean different things: a
-/// pull figure is an average you might beat or miss badly, while a points figure is a guarantee
-/// after that many packs of the set. Showing one number without saying which it is invites the
-/// reader to treat a certainty as a gamble, or the reverse.
+/// Which route that cost came from. The two mean different things: a pull figure is an average,
+/// while a points figure is a guarantee after that many packs of the set.
 /// </param>
 public sealed record BoardSlot(
     PocketCard Card,
@@ -47,8 +45,8 @@ public sealed record BoardSlot(
 /// <param name="Add">Recommended additions.</param>
 /// <param name="Drop">On the board but no longer worth a slot.</param>
 /// <param name="Excluded">
-/// Cards the user wants that CANNOT go on the board, with the reason. Named rather than dropped:
-/// someone chasing a Crown who sees it missing will read that as a bug, not a rule.
+/// Cards the user wants that cannot go on the board, with the reason. Named rather than dropped,
+/// so a Crown missing from the board reads as a rule rather than a bug.
 /// </param>
 public sealed record BoardPlan(
     IReadOnlyList<BoardSlot> Slots,
@@ -58,8 +56,8 @@ public sealed record BoardPlan(
     IReadOnlyList<(PocketCard Card, string Reason)> Excluded)
 {
     /// <summary>
-    /// Nothing to retype. Worth its own property because the whole design goal is that a rerun
-    /// after a few packs asks for two swaps rather than twenty entries.
+    /// Nothing to retype. A rerun after a few packs usually asks for two swaps rather than
+    /// twenty entries.
     /// </summary>
     public bool Unchanged => Add.Count == 0 && Drop.Count == 0;
 }
@@ -68,24 +66,20 @@ public sealed record BoardPlan(
 /// What to put on the game's own 20-slot wishlist - the public board other players browse when
 /// looking for a trade.
 ///
-/// It is not a tracking list, it is an ADVERTISEMENT: the only thing it does is make other people
-/// offer you those cards. So the question is a selection problem over a hard budget of twenty
-/// slots, and it is a different question from the app's own wishlists (which are quantified
-/// completion targets, and are not capped, public, or restricted to tradeable rarities).
+/// The board is an advertisement rather than a tracking list: listing a card only makes other
+/// people offer it. So this is a selection problem over a hard budget of twenty slots, separate
+/// from the app's own wishlists, which are quantified completion targets and are not capped,
+/// public, or restricted to tradeable rarities.
 ///
-/// RANKING, AND WHY THE OBVIOUS REFINEMENT IS DEGENERATE. Sorting by what a card costs to get
-/// normally is right. The tempting improvement is to multiply that by the chance anyone offers it,
-/// since a card nobody holds spare will never be traded to you however expensive it is. That
-/// product CANCELS: offer likelihood is proportional to copies in circulation, i.e. to the pull
-/// rate times the set's age, while cost is one over the pull rate - so cost times liquidity is
-/// just set age, and the "sophisticated" ranking is oldest-set-first. Anything of this shape must
-/// be checked for that cancellation before it ships.
+/// Ranking is by what a card costs to get normally, descending. Multiplying that by the chance
+/// anyone offers it cancels out: offer likelihood is proportional to copies in circulation, i.e.
+/// to pull rate times set age, while cost is one over the pull rate, so the product is just set
+/// age and the ranking becomes oldest-set-first.
 ///
-/// Plain cost-descending survives for an economic reason instead: a listing costs nothing but a
-/// slot, and slots do not expire. Unlike stamina, a request nobody accepts loses you nothing, so a
-/// low-probability high-value listing is a free lottery ticket. The only real failure is a board
-/// where EVERY slot is a card no one will ever offer, which converts nothing. So liquidity enters
-/// as a floor on a minority of slots rather than a multiplier on all of them.
+/// Cost-descending works because a listing costs nothing but a slot and slots do not expire, so a
+/// request nobody accepts loses nothing. The failure case is a board where every slot is a card
+/// no one will ever offer, so liquidity enters as a floor on a minority of slots rather than a
+/// multiplier on all of them.
 /// </summary>
 public sealed class TradeBoardAdvisor
 {
@@ -114,17 +108,15 @@ public sealed class TradeBoardAdvisor
 
     /// <param name="outstanding">
     /// Demands from the target selected on the Packs page - the same one the ranking uses, not
-    /// everything missing. This is the load-bearing filter: the rarity chips are how the user says
-    /// what they collect, so a diamonds-only collector must never be told to advertise for a
-    /// 2-star, however expensive it is.
+    /// everything missing. The rarity chips are how the user says what they collect, so a
+    /// diamonds-only collector is never told to advertise for a 2-star.
     /// </param>
     /// <param name="board">What is on the board now, so the result can be a set of swaps.</param>
     /// <param name="today">Passed in rather than read, so the estimate is reproducible in tests.</param>
     /// <param name="minimumCost">
-    /// Optional floor in packs-equivalent. Off by default, and deliberately: scope comes from the
-    /// user's plan, and a diamonds-only plan contains almost nothing above a threshold like 15 -
-    /// so an absolute floor would hand that user an EMPTY board, which is a worse answer than a
-    /// board of cheap cards. It earns its keep only for someone whose scope reaches the stars.
+    /// Optional floor in packs-equivalent, off by default. Scope comes from the user's plan, and a
+    /// diamonds-only plan contains almost nothing above a threshold like 15, so an absolute floor
+    /// would produce an empty board. It applies only where the scope reaches the stars.
     /// </param>
     public BoardPlan Recommend(
         IEnumerable<Demand> outstanding,
@@ -214,7 +206,7 @@ public sealed class TradeBoardAdvisor
         }
 
         // Any shortfall in the liquid band (nothing left above the floor) falls back to cost, so
-        // the board is never left with empty slots for want of a heuristic.
+        // the board is never left with empty slots.
         if (chosen.Count < GameRules.TradeBoardSlots)
         {
             var have = chosen.Select(c => c.Card.OwnershipKey).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -233,12 +225,11 @@ public sealed class TradeBoardAdvisor
         return values[values.Length / 2];
     }
 
-    // Cost is the cheaper of pulling and the points shop, and is infinite only when NEITHER route
-    // exists. Measured against the real data that never fires today: not one tradeable card is
-    // without a route. A set with no published pull rates is NOT unobtainable - it still sells
-    // packs, so its points shop still works, and a B4 common prices at seven packs rather than
-    // infinity. The 203 cards genuinely without any route are all promos, which cannot be traded
-    // yet - so the unbounded branch is dormant by design, and goes live the day
+    // Cost is the cheaper of pulling and the points shop, and is infinite only when neither route
+    // exists. Against the real data that never fires today: no tradeable card is without a route.
+    // A set with no published pull rates still sells packs, so its points shop still works, and a
+    // B4 common prices at seven packs rather than infinity. The 203 cards with no route at all are
+    // promos, which cannot be traded yet, so the unbounded branch goes live when
     // GameRules.PromosTradeable flips.
 
     /// <summary>

@@ -138,9 +138,9 @@ public sealed class CardIndex
         set.StartsWith("PROMO", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Packs a player can actually decide to open. Promo "Vol. N" groupings are excluded:
-    /// they describe how a promo was handed out, not something available to open, so offering
-    /// them as choices — or counting them as packs with missing data — is noise.
+    /// Packs a player can actually decide to open. Promo "Vol. N" groupings are excluded: they
+    /// describe how a promo was handed out rather than something available to open, so they are
+    /// neither offered as choices nor counted as packs with missing data.
     /// </summary>
     public IEnumerable<string> OpenablePackKeys =>
         ByPack.Keys.Where(k => !IsPromoSet(k.Split(':')[0]));

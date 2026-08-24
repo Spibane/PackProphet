@@ -1,9 +1,9 @@
 @implements IDisposable
 @inject UiBusy Busy
 
-@* Deliberately blocks pointer events while visible. On a single-threaded runtime a second
-   click during a slow recompute just queues more work and makes the stall longer, so the
-   overlay both explains the wait and prevents the user from compounding it. *@
+@* Blocks pointer events while visible. On a single-threaded runtime a second click during a slow
+   recompute queues more work and makes the stall longer, so the overlay both explains the wait and
+   stops it being compounded. *@
 @if (Busy.IsBusy)
 {
     <div class="busy-veil" aria-live="polite" aria-busy="true">

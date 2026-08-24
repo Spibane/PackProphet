@@ -11,8 +11,8 @@ public enum OfferVerdict
     NothingWanted,
 
     /// <summary>
-    /// Priced by a rarity you already own, so you are paying the offer's maximum for cards
-    /// that are not what makes it expensive. The single most useful thing this screen says.
+    /// Priced by a rarity you already own, so you are paying the offer's maximum for cards that
+    /// are not what makes it expensive.
     /// </summary>
     Overpriced,
 
@@ -25,7 +25,7 @@ public enum OfferVerdict
 
 /// <param name="Value">
 /// Packs-equivalent this card is worth to you: zero if you already have enough of it, else the
-/// cheapest packs-priced route to it. Wonder Pick's own cost is NOT part of this — stamina and
+/// cheapest packs-priced route to it. Wonder Pick's own cost is not part of this — stamina and
 /// packs do not exchange.
 /// </param>
 public sealed record OfferCard(PocketCard Card, double Value, int Owned, int Wanted);
@@ -33,9 +33,8 @@ public sealed record OfferCard(PocketCard Card, double Value, int Owned, int Wan
 /// <param name="ExpectedValue">Packs-equivalent, averaged over the 1-in-5 chance of each card.</param>
 /// <param name="StaminaCost">Set by the offer's highest rarity, not by what it is worth to you.</param>
 /// <param name="ValuePerStamina">
-/// Only ever used to compare offers WITH EACH OTHER. It is not a price: Wonder Stamina and Pack
-/// Hourglasses are separate currencies with no exchange rate, so "packs per stamina" would be
-/// a fiction if presented as one.
+/// Used only to compare offers with each other. It is not a price: Wonder Stamina and Pack
+/// Hourglasses are separate currencies with no exchange rate.
 /// </param>
 /// <param name="Threshold">The value-per-stamina this offer had to beat, and why.</param>
 public sealed record OfferAppraisal(
@@ -51,20 +50,18 @@ public sealed record OfferAppraisal(
 /// <summary>
 /// Take it or skip it?
 ///
-/// This is not a valuation problem, it is a RESERVATION-PRICE problem. You see all five cards
-/// and then receive one at random, so the only decision is whether to spend on this offer at
-/// all — and because stamina caps at 5 and regenerates one per 12 hours, spending it on a
-/// mediocre offer costs you the good offer you will have to skip later. A human cannot hold
-/// that trade-off in their head against a three-hourly rotation, which is exactly why it
-/// belongs in a tool.
+/// A reservation-price problem rather than a valuation one. You see all five cards and then
+/// receive one at random, so the only decision is whether to spend on this offer at all — and
+/// because stamina caps at 5 and regenerates one per 12 hours, spending it on a mediocre offer
+/// costs the good offer you will have to skip later.
 ///
-/// Two rules this class exists to enforce:
+/// Two rules this class enforces:
 ///
-///   - Value is reported in packs-equivalent and cost in stamina, and the two are NEVER
-///     divided into a single "price". They are separate currencies with no exchange rate.
-///   - Cost is set by the offer's highest rarity, which has nothing to do with what the offer
-///     is worth to YOU. That asymmetry is where the money is: an offer priced at 4 stamina
-///     because of a 2-star you already own is expensive for reasons that do not benefit you.
+///   - Value is reported in packs-equivalent and cost in stamina, and the two are never divided
+///     into a single "price". They are separate currencies with no exchange rate.
+///   - Cost is set by the offer's highest rarity, which is independent of what the offer is worth
+///     to you: an offer priced at 4 stamina because of a 2-star you already own is expensive for
+///     reasons that do not benefit you.
 /// </summary>
 public sealed class WonderPickEval
 {
@@ -123,12 +120,11 @@ public sealed class WonderPickEval
 
         var cost = StaminaCost(offer);
 
-        // The average over a uniform 1-in-5, NOT the best card in it. Hoping for the good one is
-        // how people talk about Wonder Picks and it is not what the odds say.
+        // The average over a uniform 1-in-5, not the best card in the offer.
         var ev = cards.Sum(c => c.Value) * GameRules.WonderPickCardChance;
         var perStamina = cost > 0 ? ev / cost : ev;
 
-        // The card that SET the price, and whether it is one you actually want.
+        // The card that set the price, and whether it is one you actually want.
         var driver = offer
             .Where(c => GameRules.CanAppearInWonderPick(c.Rarity))
             .OrderByDescending(c => GameRules.WonderPickCost(c.Rarity))
@@ -138,8 +134,7 @@ public sealed class WonderPickEval
 
         var verdict =
             ev <= 0 ? OfferVerdict.NothingWanted
-            // Only at a premium price: at 1 stamina there is no premium to be paying, so calling
-            // a cheap offer "overpriced" would be noise.
+            // Only at a premium price: at 1 stamina there is no premium to be paying.
             : cost >= OverpricedFrom && !driverWanted ? OfferVerdict.Overpriced
             : perStamina < threshold ? OfferVerdict.BelowThreshold
             : OfferVerdict.Take;
@@ -166,9 +161,9 @@ public sealed class WonderPickEval
         var routes = _routes.For(card, owned);
         var packs = routes.Cheapest?.PacksEquivalent;
 
-        // No packs-priced route at all — a promo, or a set with no rates. Worth nothing HERE
+        // No packs-priced route at all — a promo, or a set with no rates. Worth nothing here
         // rather than infinity: this is a comparison between offers, and one unpriceable card
-        // would otherwise make every offer containing it look infinitely good.
+        // would make every offer containing it look infinitely good.
         return packs is { } p && double.IsFinite(p) ? p : 0;
     }
 
@@ -195,9 +190,8 @@ public sealed class WonderPickEval
         var offersPerStamina = GameRules.StaminaRegen / GameRules.WonderOfferLifetime;
         var acceptRate = Math.Clamp(1.0 / offersPerStamina, 0.01, 1.0);
 
-        // At the cap, stamina has stopped regenerating, so holding out has a strictly negative
-        // expected cost — the correct response is to become LESS fussy, not more. This is the
-        // exact inverse of the pack-points cap warning and the same class of insight.
+        // At the cap, stamina has stopped regenerating, so holding out has a negative expected
+        // cost and the threshold drops rather than rises.
         if (staminaNow >= GameRules.StaminaCap) acceptRate = Math.Min(1.0, acceptRate * 2);
 
         var index = (int)Math.Floor((1 - acceptRate) * (seen.Length - 1));
@@ -206,8 +200,8 @@ public sealed class WonderPickEval
 
     /// <summary>
     /// Value-per-stamina of every offer in the log, for the threshold above. Read from what the
-    /// user SAW rather than what they took: a distribution of accepted offers only would be
-    /// biased upward by the very policy it is meant to set.
+    /// user saw rather than what they took: a distribution of accepted offers only would be
+    /// biased upward by the policy it sets.
     /// </summary>
     public IEnumerable<double> HistoricalValuePerStamina(
         IEnumerable<WonderOfferEvent> log, ICompletionTarget target, Collection owned)

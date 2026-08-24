@@ -15,14 +15,14 @@ public sealed class ExpansionPack
 }
 
 /// <summary>
-/// Higher-resolution booster art, mapped from the expansions index published alongside the
-/// card data.
+/// Higher-resolution booster art, mapped from the expansions index published alongside the card
+/// data.
 ///
-/// The other source's booster images are 160x256, which visibly upscales at any reasonable
-/// tile size; these are 334x644 — over four times the pixels. What makes this awkward is that
-/// the two projects NAME packs differently: for single-pack sets one says "Paradox Drive" and
-/// the other just "Booster". So URLs are not constructed from a name; they are matched, by
-/// name where names agree and by position where a set has exactly one pack in both.
+/// The other source's booster images are 160x256, which upscales visibly at any reasonable tile
+/// size; these are 334x644. The two projects name packs differently — for single-pack sets one
+/// says "Paradox Drive" and the other just "Booster" — so URLs are matched rather than
+/// constructed: by name where names agree, and by position where a set has exactly one pack in
+/// both.
 /// </summary>
 public sealed class PackArtCatalog
 {

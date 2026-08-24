@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Domain + engine. Deliberately a plain library with NO Blazor or UI reference, so
-       "the engine is pure C#" is enforced by the compiler rather than by discipline.
-       Everything here must be unit-testable without a browser. -->
+  <!-- Domain + engine. A plain library with no Blazor or UI reference, so "the engine is pure C#"
+       is enforced by the compiler. Everything here is unit-testable without a browser. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -11,9 +10,8 @@
   </PropertyGroup>
 
 
-  <!-- PoissonTail is an implementation detail, but it is worth asserting directly against
-       hand-computed values. Exposing internals to the test project beats widening the
-       public API purely for testability. -->
+  <!-- PoissonTail is an implementation detail, asserted directly against hand-computed values.
+       Exposing internals to the test project avoids widening the public API for testability. -->
   <ItemGroup>
     <InternalsVisibleTo Include="PackProphet.Tests" />
   </ItemGroup>

@@ -12,8 +12,8 @@ public enum LintSeverity
     /// <summary>Informational, e.g. cards you do not own yet.</summary>
     Info,
     /// <summary>
-    /// A rule that could NOT be checked because the data is missing. Distinct from a pass on
-    /// purpose: reporting an unverifiable deck as legal hands someone an unplayable deck.
+    /// A rule that could not be checked because the data is missing. Distinct from a pass:
+    /// reporting an unverifiable deck as legal hands someone an unplayable deck.
     /// </summary>
     Unverified
 }
@@ -31,8 +31,7 @@ public sealed record LintReport(IReadOnlyList<LintFinding> Findings)
 
 /// <summary>
 /// Checks a deck against the game's rules, and against common mistakes that are legal but
-/// self-defeating. A deck that passes the builder but cannot function is a bug in the app,
-/// not a user error.
+/// self-defeating.
 /// </summary>
 public sealed class DeckLinter
 {
@@ -106,8 +105,8 @@ public sealed class DeckLinter
         var basics = nrs.Distinct().Count(nr => _facts.For(nr)?.IsBasic == true);
         if (basics >= GameRules.MinBasicPokemon) return;
 
-        // Without stage data we genuinely cannot tell, and this rule is the difference
-        // between a deck that plays and one that cannot start.
+        // Without stage data the rule cannot be checked, and it is the difference between a deck
+        // that plays and one that cannot start.
         var unknown = _facts.Unknown(nrs.Where(nr => _index.ByDeckBuilderNr.ContainsKey(nr)));
         if (unknown.Count > 0)
         {

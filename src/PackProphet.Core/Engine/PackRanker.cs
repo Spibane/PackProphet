@@ -8,8 +8,8 @@ using PackProphet.Domain;
 /// <param name="ChanceUseful">Probability a single pack contains something still needed.</param>
 /// <param name="PacksToNextUseful">1 / ChanceUseful. Infinite when the pack cannot help.</param>
 /// <param name="PacksToFinishItsShare">
-/// Expected packs to finish only the demands this pack can actually supply. The fair
-/// comparison between packs, since no single pack can complete a multi-set target.
+/// Expected packs to finish only the demands this pack can supply. The comparable figure
+/// between packs, since no single pack can complete a multi-set target.
 /// </param>
 /// <param name="DemandsServed">How many outstanding demands this pack can help with.</param>
 /// <param name="MissingByTier">Outstanding demands this pack serves, grouped by rarity rung.</param>
@@ -42,8 +42,8 @@ public sealed class PackRanker
     /// they would finish their share of the target. Packs that cannot help are omitted.
     /// </summary>
     /// <param name="unavailablePacks">
-    /// Packs not purchasable right now — limited-time packs out of rotation. Recommending one
-    /// of those is worse than useless, so they are dropped from the ranking entirely.
+    /// Packs not purchasable right now — limited-time packs out of rotation. Dropped from the
+    /// ranking entirely.
     /// </param>
     public IReadOnlyList<PackStanding> Rank(
         ICompletionTarget target, Collection owned, IReadOnlySet<string>? unavailablePacks = null)
@@ -100,8 +100,8 @@ public sealed class PackRanker
     /// batch counts once, and demand shrinks as it is met.
     /// </param>
     /// <param name="ChanceOfNothing">
-    /// Chance the whole batch advances nothing at all. The number that makes a batch feel bad,
-    /// and the one a per-pack probability hides.
+    /// Chance the whole batch advances nothing at all, which a per-pack probability does not
+    /// show.
     /// </param>
     public sealed record BatchOutcome(
         string PackKey,
@@ -110,19 +110,15 @@ public sealed class PackRanker
         double ChanceOfNothing);
 
     /// <summary>
-    /// What committing a fixed number of packs to ONE pack key is expected to yield.
+    /// What committing a fixed number of packs to one pack key is expected to yield.
     ///
-    /// The game's ten-at-once option costs exactly ten packs and adds no guarantee, so it cannot
-    /// beat ten singles of the same pack on odds — those are the same ten draws. The question it
-    /// does answer is the one across SETS: ten of this pack against ten of that one, which is
-    /// what <see cref="Batches"/> is for.
+    /// The game's ten-at-once option costs exactly ten packs and adds no guarantee, so its odds
+    /// match ten singles of the same pack — the same ten draws. The comparison it does inform is
+    /// across sets: ten of this pack against ten of that one, which is what
+    /// <see cref="Batches"/> is for.
     ///
-    /// What is deliberately NOT modelled is the value of re-choosing mid-batch. Quantifying that
-    /// means solving how to split n packs across packs optimally, which is a different problem —
-    /// Phase 3's allocator. A first attempt credited every card with its best source across the
-    /// whole batch, which for an A1 target spanning three packs assumed thirty packs' worth of
-    /// coverage and reported that committing lost half the value. It cannot be priced that
-    /// cheaply, so it is not priced here at all.
+    /// The value of re-choosing mid-batch is not modelled. Pricing it means solving how to split
+    /// n packs across packs optimally, which is Phase 3's allocator.
     /// </summary>
     public BatchOutcome Batch(
         ICompletionTarget target, Collection owned, string packKey,
@@ -156,9 +152,9 @@ public sealed class PackRanker
     }
 
     /// <summary>
-    /// Every purchasable pack's batch outcome, best first. One pass over the target, because
-    /// these figures are only useful beside each other: the decision the batch option forces is
-    /// which SET to commit ten packs to.
+    /// Every purchasable pack's batch outcome, best first. One pass over the target, since these
+    /// figures are read side by side: the batch option is a choice of which set to commit ten
+    /// packs to.
     /// </summary>
     public IReadOnlyList<BatchOutcome> Batches(
         ICompletionTarget target, Collection owned,
@@ -181,14 +177,13 @@ public sealed class PackRanker
     }
 
     /// <summary>
-    /// Cheapest expected packs to finish the PRICEABLE part of a target, assuming you always
+    /// Cheapest expected packs to finish the priceable part of a target, assuming you always
     /// open the best available pack. A lower bound rather than a plan: it credits each demand
-    /// with its best single source, which is how a rational opener would actually behave.
+    /// with its best single source.
     ///
-    /// Demands no pack can supply are excluded rather than treated as infinite. A single
-    /// unpriceable card — one from a set awaiting pull rates — would otherwise turn the whole
-    /// estimate into "never" and hide the real cost of everything else. They are reported
-    /// separately by <see cref="Unreachable"/>, and callers must show both.
+    /// Demands no pack can supply are excluded rather than treated as infinite, so one
+    /// unpriceable card — from a set awaiting pull rates — does not turn the whole estimate into
+    /// "never". They are reported separately by <see cref="Unreachable"/>, and callers show both.
     /// </summary>
     public double BestCasePacksToFinish(
         ICompletionTarget target, Collection owned, IReadOnlySet<string>? unavailablePacks = null)
@@ -203,7 +198,7 @@ public sealed class PackRanker
             .Where(n => n.Rate > 0)
             .ToArray();
 
-        // Three distinct answers, and conflating any two of them misleads:
+        // Three distinct answers:
         //   nothing outstanding            -> 0        (done)
         //   outstanding, none priceable    -> infinity (no pack will ever help)
         //   outstanding, some priceable    -> estimate over those, rest disclosed separately
@@ -213,8 +208,8 @@ public sealed class PackRanker
     }
 
     /// <summary>
-    /// Demands no priceable pack can supply — cards from a set with no pull-rate data, or
-    /// not sold in packs at all. Must be DISCLOSED: silently dropping them turns an
+    /// Demands no priceable pack can supply — cards from a set with no pull-rate data, or not
+    /// sold in packs at all. Disclosed rather than dropped, since dropping them turns an
     /// impossible target into a merely expensive-looking one.
     /// </summary>
     public IReadOnlyList<Demand> Unreachable(

@@ -5,10 +5,9 @@ namespace PackProphet.Deck;
 /// <summary>
 /// A card's internal game id, recovered from its artwork filename.
 ///
-/// This is card IDENTITY, not printing. Every alternate art of the same card shares one
-/// DeckBuilderNr, which is exactly how the game treats decks: owning ANY printing
-/// satisfies a deck slot. Deck membership must therefore always be compared by this
-/// number and NEVER by set+number.
+/// This is card identity rather than printing. Every alternate art of the same card shares one
+/// DeckBuilderNr, matching how the game treats decks: owning any printing satisfies a deck slot.
+/// Deck membership is therefore compared by this number and never by set+number.
 ///
 /// Pokémon and Trainers occupy separate id namespaces that both start at 1, so Trainers
 /// are offset by <see cref="TrainerOffset"/> to keep them distinguishable in one value.
@@ -32,9 +31,9 @@ public static class DeckBuilderNr
     public static bool IsTrainer(int nr) => nr >= SpecialThreshold;
 
     /// <summary>
-    /// Recover the number from an artwork filename, or null when the name does not fit
-    /// the expected shape. Returns null rather than throwing: an unparseable filename
-    /// from upstream should cost one card's deck support, not crash the data load.
+    /// Recover the number from an artwork filename, or null when the name does not fit the expected
+    /// shape. Returns null rather than throwing, so an unparseable filename from upstream costs one
+    /// card's deck support rather than the data load.
     /// </summary>
     public static int? FromImage(string? image)
     {

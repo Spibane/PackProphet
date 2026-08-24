@@ -21,22 +21,12 @@ internal sealed class FullStore : IStateStore
 /// <summary>
 /// The warning that has to appear when writes are failing.
 ///
-/// This was silent: js/store.js already returned false on a refused write, and the caller threw
-/// the answer away — so past the quota every edit was lost while the app looked completely normal.
-/// A tracker that appears to have saved is the worst failure it has, so the alarm is tested rather
-/// than trusted.
-/// </summary>
-/// <summary>
-/// The warning that has to appear when writes are failing.
-///
 /// This was silent: js/store.js already returned false on a refused write, and the caller threw the
-/// answer away — so past the quota every edit was lost while the app looked completely normal. A
-/// tracker that appears to have saved is the worst failure it has, so the alarm is tested rather
-/// than trusted.
+/// answer away, so past the quota every edit was lost while the app looked normal.
 ///
 /// Inherits the host rather than wiring its own services: a second copy of Program.cs's
-/// registrations is a copy that drifts, and it already had — adding one service to the app broke
-/// this file and nothing else.
+/// registrations drifts, and it already had — adding one service to the app broke this file and
+/// nothing else.
 /// </summary>
 public class StorageAlarmTests : AppHost
 {
@@ -105,8 +95,8 @@ public class StorageAlarmTests : AppHost
 
         Assert.Contains("Skip to the cards", layout.Markup);
 
-        // Bootstrap's own class, not a hand-rolled off-screen trick: the hand-rolled one depended
-        // on which ancestor was positioned and which clipped.
+        // Bootstrap's own class rather than a hand-rolled off-screen rule, which depended on which
+        // ancestor was positioned and which clipped.
         Assert.NotEmpty(layout.FindAll(".skip-link.visually-hidden-focusable"));
     }
 }

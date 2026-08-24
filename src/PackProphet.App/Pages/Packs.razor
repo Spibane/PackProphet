@@ -17,15 +17,15 @@ else
     </div>
 
     <div class="page-tools">
-        @* Scope, target and availability all sit together because they are the same kind of
-           control: each one changes what the ranking is OF, so every figure below means
-           something different afterwards. *@
+        @* Scope, target and availability sit together because they are the same kind of control:
+           each changes what the ranking is of, so every figure below means something different
+           afterwards. *@
         @* Grouped by series so this stays usable as sets accumulate. *@
         <select class="form-select form-select-sm" style="max-width:16rem" aria-label="What to rank packs against" @onchange="OnScope">
             <option value="everything">everything I collect</option>
-            @* Wishlists sit in the same control as sets because they are the same kind of
-               thing to the engine: a target. A separate "wishlist mode" would imply the
-               ranking works differently for them, and it does not. *@
+            @* Wishlists sit in the same control as sets because they are the same thing to the
+               engine: a target. A separate "wishlist mode" would imply the ranking works
+               differently for them. *@
             @if (Session.Wishlists.Count > 0)
             {
                 <optgroup label="wishlists">
@@ -74,15 +74,14 @@ else
            same fact — a rarity you want zero of is one you ignore — so a single control says
            both, and "two of each diamond, one of the stars" is a few taps. Tap to cycle
            none / 1 / 2. *@
-        @* The rarity chips edit the completion plan, which a wishlist target does not consult
-           — so under a wishlist scope they are hidden rather than shown doing nothing. *@
+        @* The rarity chips edit the completion plan, which a wishlist target does not consult, so
+           under a wishlist scope they are hidden rather than shown doing nothing. *@
         @if (!IsWishScope)
         {
         <span class="rarity-chips">
-            @* Which plan the chips are editing, stated rather than implied. The same row of
-               chips means two different things depending on the scope, and silently editing
-               the global default while a set is selected is the kind of surprise that makes a
-               user distrust every number on the page. *@
+            @* Which plan the chips are editing, stated rather than implied. The same row of chips
+               means two different things depending on the scope, and editing the global default
+               while a set is selected would be a surprise. *@
             <span class="chip-scope">
                 @if (ScopedSet is null)
                 {
@@ -118,16 +117,14 @@ else
         </span>
         }
 
-        @* Limited-time packs get a labelled control that SAYS which way it is set, not a bare
-           switch. This one is load-bearing: availability is a live fact no dataset records, the
-           app assumes off sale, and a Deluxe pack is otherwise the standout pick for a
-           4-diamond target — so an assumption left invisible quietly changes every figure on
-           the page. It was a form-switch at the end of the header's wrap row, which is to say
-           it was invisible. *@
+        @* Limited-time packs get a labelled control that says which way it is set rather than a
+           bare switch. Availability is a live fact no dataset records, the app assumes off sale,
+           and a Deluxe pack is otherwise the standout pick for a 4-diamond target, so the
+           assumption changes every figure on the page. *@
         @if (Session.LimitedPacks.Count > 0)
         {
-            @* Inside the condition, so there is no divider dangling at the end of the bar when
-               there are no limited-time packs to separate. *@
+            @* Inside the condition, so no divider dangles at the end of the bar when there are no
+               limited-time packs to separate. *@
             <span class="bar-sep" aria-hidden="true"></span>
             <span class="avail">
                 <span class="ttl">limited-time</span>
@@ -164,9 +161,9 @@ else
                 <span class="label">expected packs</span>
                 <span class="value">@Fmt(_bestCase)</span>
                 <span class="sub">
-                    @* Always say what the number covers. When a pack is unavailable its
-                       exclusive cards leave the estimate, so the figure can FALL even though
-                       the situation got worse — shown bare, that reads as "cheaper". *@
+                    @* Always say what the number covers. When a pack is unavailable its exclusive
+                       cards leave the estimate, so the figure can fall even though the situation
+                       got worse — shown bare, that reads as "cheaper". *@
                     to finish @_priceable of @_outstanding, opening the best pack each time
                 </span>
             </div>
@@ -251,18 +248,18 @@ else
                     <th class="num">packs per new card</th>
                     <th class="num">to finish its share</th>
                     <th class="num">cards it can give</th>
-                    @* The action, in its own column rather than tucked among the badges in the
-                       name cell: it must sit in the same place on every row to be found without
-                       being read for, and the name cell already carries up to four badges. *@
+                    @* The action, in its own column rather than among the badges in the name cell:
+                       it sits in the same place on every row, and the name cell already carries up
+                       to four badges. *@
                     <th></th>
                 </tr>
             </thead>
             <tbody>
-                @* Every pack that could serve the target, INCLUDING the ones that cannot be
-                   bought or priced today. Those sit in the table like any other pack, marked,
-                   rather than off in a warning: a pack you are waiting on is still part of the
-                   answer to "which pack", and it belongs beside its rivals where its numbers can
-                   be compared. What they are excluded from is the estimate, not the list. *@
+                @* Every pack that could serve the target, including the ones that cannot be bought
+                   or priced today. Those sit in the table like any other pack, marked, rather than
+                   off in a warning: a pack you are waiting on is still part of the answer, and its
+                   numbers belong beside its rivals. They are excluded from the estimate rather
+                   than from the list. *@
                 @foreach (var row in _rows)
                 {
                     var s = row.Standing;
@@ -292,9 +289,8 @@ else
                             {
                                 <span class="badge text-bg-warning ms-1" title="@row.MarkTitle">@mark</span>
                             }
-                            @* A borrowed distribution is a good estimate and still an assumption,
-                               so every row it prices says so. An assumption presented as measured
-                               data is how a tool loses trust the first time it is wrong. *@
+                            @* A borrowed distribution is an estimate rather than measured data, so
+                               every row it prices says so. *@
                             @if (Session.AssumedRates.TryGetValue(row.Set, out var donor))
                             {
                                 <span class="badge text-bg-secondary ms-1"
@@ -302,10 +298,10 @@ else
                                     rates assumed from @donor
                                 </span>
                             }
-                            @* Offered right where the problem is visible. A released set with no
-                               published rates is otherwise reported as unpullable, which is
-                               literally true and useless: the cards drop, and the standard
-                               five-card distribution has barely changed in two years. *@
+                            @* Offered where the problem is visible. A released set with no
+                               published rates is otherwise reported as unpullable, which is true
+                               and unhelpful: the cards drop, and the standard five-card
+                               distribution has barely changed in two years. *@
                             @if (row.CanAssume && Session.StandardRateDonor is { } standard)
                             {
                                 <button class="btn btn-sm btn-outline-primary py-0 ms-2"
@@ -324,16 +320,16 @@ else
                             }
                         </td>
                         @* Dashes rather than zeroes where a pack has no published rates. A zero
-                           would say "this pack cannot help", and the truth is that nobody knows
-                           the odds yet — the cards are in there. *@
+                           would say "this pack cannot help", when the truth is that nobody knows
+                           the odds yet. *@
                         <td class="num">@(s is null ? "—" : s.ChanceUseful.ToString("P1"))</td>
                         <td class="num">@(s is null ? "—" : Fmt(s.PacksToNextUseful))</td>
                         <td class="num">@(s is null ? "—" : Fmt(s.PacksToFinishItsShare))</td>
                         <td class="num">@(s?.DemandsServed ?? row.CardsServed)</td>
-                        @* Straight to logging THIS pack. Offered on every row, including the ones
-                           the page has marked unavailable or unpriceable: what you actually opened
-                           is a fact, and the app's assumption about the shelf must not stand in
-                           the way of recording it. *@
+                        @* Straight to logging this pack. Offered on every row, including the ones
+                           marked unavailable or unpriceable: what you actually opened is a fact,
+                           and the app's assumption about the shelf should not stop it being
+                           recorded. *@
                         <td class="act">
                             <a class="btn btn-sm btn-outline-secondary py-0"
                                href="@LogHref(row.PackKey)"
@@ -342,8 +338,8 @@ else
                         </td>
                     </tr>
 
-                    @* Which cards, not just how many. The count alone cannot tell you whether
-                       a pack is worth opening: five commons and one Crown rank the same. *@
+                    @* Which cards, not just how many. The count alone cannot tell you whether a
+                       pack is worth opening: five commons and one Crown rank the same. *@
                     @if (_expanded == row.PackKey)
                     {
                         <tr class="pack-detail">
@@ -396,12 +392,11 @@ else
         </table>
 
         <div class="px-3 pb-4">
-            @* Computed on demand. Pricing every rung at both copy policies is by far the
-               heaviest thing on the page, and it is reference material rather than something
-               needed on every edit — so it must not run when a filter or toggle changes. *@
-            @* Hidden under a wishlist scope: the advisor prices rarity RUNGS, which says
-               nothing about a hand-picked list of cards, and showing it there would put an
-               unrelated table under a wishlist heading. *@
+            @* Computed on demand. Pricing every rung at both copy policies is the heaviest thing
+               on the page, and it is reference material rather than something needed on every
+               edit, so it does not run when a filter or toggle changes. *@
+            @* Hidden under a wishlist scope: the advisor prices rarity rungs, which says nothing
+               about a hand-picked list of cards. *@
             @if (!IsWishScope)
             {
             <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="ToggleAdvisor">
@@ -435,8 +430,8 @@ else
 
             <hr />
 
-            @* The game sells ten of a set in one action, so the question gets a real answer
-               rather than being left to intuition. *@
+            @* The game sells ten of a set in one action, so the batch gets a real answer rather
+               than being left to intuition. *@
             <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="ToggleBatch">
                 @(_batchOpen ? "hide" : "show") buying @GameRules.PacksPerBatch at once
             </button>
@@ -480,8 +475,8 @@ else
                                         <span class="text-body-secondary small">@b.PackKey.Split(':')[0]</span>
                                     </td>
                                     <td class="num">@b.ExpectedNewCards.ToString("N1")</td>
-                                    @* The one figure a per-pack probability hides: ten packs that
-                                       advance nothing is what a wasted batch feels like. *@
+                                    @* The figure a per-pack probability hides: ten packs that
+                                       advance nothing. *@
                                     <td class="num">
                                         @(b.ChanceOfNothing < 0.001 ? "—" : b.ChanceOfNothing.ToString("P1"))
                                     </td>
@@ -510,9 +505,9 @@ else
 
             <hr />
 
-            @* Pack points are a byproduct of opening rather than an alternative to it: you
-               earn five per pack whatever you do. So this panel never asks "buy or pull?" —
-               it asks which cards deserve a limited, per-set budget. *@
+            @* Pack points are a byproduct of opening rather than an alternative to it: you earn
+               five per pack whatever you do. So this panel asks which cards deserve a limited,
+               per-set budget rather than "buy or pull?". *@
             <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="TogglePoints">
                 @(_pointsOpen ? "hide" : "show") pack points
             </button>

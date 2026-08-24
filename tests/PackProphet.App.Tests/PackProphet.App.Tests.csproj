@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Render tests for the App project.
-       
-       Kept separate from PackProphet.Tests deliberately. That suite covers the engine, runs in a
-       second, and has no browser stack behind it; pulling a Blazor WebAssembly reference and a
-       DOM implementation into it would slow every engine test down for no benefit. The split also
-       means an SDK problem with referencing a WASM project cannot take the engine suite with it.
-       
-       This exists because the App project — the larger half of the codebase — had no tests at all,
-       and that is where nearly every bug found in review actually lived. A page that indexes an
-       empty list compiles cleanly and passes every engine test. -->
+
+       Kept separate from PackProphet.Tests, which covers the engine, runs in a second, and has no
+       browser stack behind it. Pulling a Blazor WebAssembly reference and a DOM implementation
+       into it would slow every engine test down, and the split means an SDK problem with
+       referencing a WASM project cannot take the engine suite with it.
+
+       The App project is the larger half of the codebase and had no tests at all, which is where
+       nearly every bug found in review lived: a page that indexes an empty list compiles cleanly
+       and passes every engine test. -->
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -23,10 +23,9 @@
 
   <ItemGroup>
     <PackageReference Include="bunit" Version="1.40.0" />
-    <!-- Pinned above bunit's own dependency: AngleSharp 1.2.0 carries GHSA-pgww-w46g-26qg, and it is not
-         fixed until 1.5.0.
-         Test-only and never shipped, but a restore warning nobody can act on is a warning that
-         trains everyone to ignore restore warnings. -->
+    <!-- Pinned above bunit's own dependency: AngleSharp 1.2.0 carries GHSA-pgww-w46g-26qg, fixed
+         in 1.5.0. Test-only and never shipped, but a restore warning nobody can act on trains
+         everyone to ignore restore warnings. -->
     <PackageReference Include="AngleSharp" Version="1.5.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />

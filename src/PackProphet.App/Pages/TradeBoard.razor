@@ -40,8 +40,8 @@ else
 
         <span class="bar-sep" aria-hidden="true"></span>
 
-        @* Both knobs are exposed because neither default is right for everyone: a patient
-           collector and someone who wants a trade this week want different boards. *@
+        @* Both knobs are exposed because neither default suits everyone: a patient collector and
+           someone who wants a trade this week want different boards. *@
         <label class="small text-body-secondary" for="liquid">slots for likely offers</label>
         <select id="liquid" class="form-select form-select-sm" style="width:4.5rem"
                 @onchange="OnLiquid">
@@ -52,7 +52,7 @@ else
         </select>
 
         @* Parallel foils are diamond-rarity, so no rarity filter separates them, and they come
-           only from a limited-time pack - which makes them among the dearest things here and prone
+           only from a limited-time pack, which makes them among the dearest things here and prone
            to filling the board. Offered only when they are being collected at all. *@
         @if (ShowFoilFilter)
         {
@@ -112,7 +112,7 @@ else
         else
         {
             @* What to change, first and separately. The board is retyped by hand in the game, so
-               the useful output is a couple of edits, not twenty rows to transcribe again. *@
+               the useful output is a couple of edits rather than twenty rows to transcribe. *@
             @if (_plan.Unchanged)
             {
                 <div class="verdict take">
@@ -152,9 +152,9 @@ else
                 </button>
             }
 
-            @* Ordered by set and number, NOT by rank: the board is entered by walking the in-game
-               card list, and the ranking order would have you jumping between sets for every
-               entry. Rank picks the cards; this order gets them typed. *@
+            @* Ordered by set and number rather than by rank: the board is entered by walking the
+               in-game card list, and rank order would mean jumping between sets for every entry.
+               Rank picks the cards; this order gets them typed. *@
             <h2>The board, in the order you will enter it</h2>
             <table class="table table-sm align-middle">
                 <thead>
@@ -177,9 +177,9 @@ else
                                 @* No "add" badge: on a first run every row is an addition, and the
                                    summary above already names the changes. The row tint marks them
                                    without spending a word on each one. *@
-                                @* Labelled by what is actually known - roughly how many copies are
-                                   out there - rather than by a prediction about other players. See
-                                   the note under the table for how weak the estimate is. *@
+                                @* Labelled by what is known — roughly how many copies are out
+                                   there — rather than by a prediction about other players. See the
+                                   note under the table for how weak the estimate is. *@
                                 @if (slot.Band == BoardBand.Liquid)
                                 {
                                     <span class="badge text-bg-secondary ms-1"
@@ -207,7 +207,7 @@ else
                             <td class="small">
                                 @if (slot.SparesAtRarity > 0)
                                 {
-                                    @* What the number means, spelled out: these are YOUR surplus
+                                    @* What the number means, spelled out: these are your surplus
                                        cards at the same rarity, one of which the trade would cost
                                        you. A bare count next to a rarity glyph read as neither. *@
                                     <span title="You hold @slot.SparesAtRarity surplus @Session.Index.Symbol(slot.Card) card(s), and a trade would cost you one of them">
@@ -217,8 +217,8 @@ else
                                 }
                                 else
                                 {
-                                    @* Flagged, not removed: you may pull a spare tomorrow, and the
-                                       request is what generates the offer in the first place. *@
+                                    @* Flagged rather than removed: you may pull a spare tomorrow,
+                                       and the request is what generates the offer. *@
                                     <span class="text-warning-emphasis"
                                           title="A trade is a swap at the same rarity, and you have no surplus @Session.Index.Symbol(slot.Card) to hand over">
                                         no spare @Session.Index.Symbol(slot.Card) to give
@@ -230,9 +230,9 @@ else
                 </tbody>
             </table>
 
-            @* The honest limits of the one heuristic on this page. It is a guess about other
-               players made from data about card drops, and the reader deserves to know that before
-               deciding whether to keep the slots reserved. *@
+            @* The limits of the one heuristic on this page. It is a guess about other players made
+               from data about card drops, which is worth knowing before deciding whether to keep
+               the slots reserved. *@
             @if (_plan.Slots.Any(s => s.Band == BoardBand.Liquid))
             {
                 <p class="small text-body-secondary">
@@ -268,10 +268,10 @@ else
                 <ul class="small text-body-secondary">
                     @foreach (var group in _plan.Excluded.GroupBy(x => x.Reason).OrderBy(g => g.Key))
                     {
-                        @* Every name, not the first few. A truncated list is the worst of both:
-                           it neither tells you which cards are affected nor stays out of the way.
-                           These groups are small by nature - only 3-star and Crown are excluded on
-                           rarity - so the full list costs a line or two. *@
+                        @* Every name rather than the first few. These groups are small by nature —
+                           only 3-star and Crown are excluded on rarity — so the full list costs a
+                           line or two, and a truncated one would not say which cards are
+                           affected. *@
                         <li>
                             <strong>@group.Count() card(s)</strong> &mdash; @group.Key
                             <div class="text-body-tertiary">
@@ -290,8 +290,8 @@ else
     private string _scope = "everything";
     private BoardPlan? _plan;
 
-    @* Read straight from saved settings rather than copied into local fields: all three change
-       what is recommended, so a stale copy would put the table out of step with the swap list. *@
+    @* Read straight from saved settings rather than copied into local fields: all three change what
+       is recommended, so a stale copy would put the table out of step with the swap list. *@
     private int _liquidSlots => Session.BoardLiquidSlots;
 
     private double _floor => Session.BoardMinimumCost;

@@ -1,20 +1,19 @@
 // Keyboard operation of the card grid.
 //
-// Entering a collection is the app's primary interaction, and until this file existed it could
-// only be done with a pointer: a tile was a div with a click handler, no tabindex and no key
-// handling, so someone who cannot use a mouse or a touchscreen could not use the app at all.
+// Entering a collection is the app's primary interaction, and before this file it could only be
+// done with a pointer: a tile was a div with a click handler, no tabindex and no key handling.
 //
-// Why JS rather than a Blazor @onkeydown on the container, which would be easier to test: only
-// here can preventDefault be applied SELECTIVELY. The container is the scroller, so arrow keys
-// must be stopped from scrolling it as well as moving the cursor — but the list layout has a count
-// field in every row, and countentry.js listens for keys on the document, so blanket-preventing or
-// blanket-stopping would break typing counts down a column, which is the other half of bearable
-// entry. The rule is: if the key is one we act on, and focus is not in a field, take it.
+// This lives in JS rather than a Blazor @onkeydown on the container because only here can
+// preventDefault be applied selectively. The container is the scroller, so arrow keys must be
+// stopped from scrolling it as well as moving the cursor — but the list layout has a count field in
+// every row, and countentry.js listens for keys on the document, so blanket-preventing or
+// blanket-stopping would break typing counts down a column. The rule is: if the key is one we act
+// on, and focus is not in a field, take it.
 //
-// Focus stays on the container throughout, with aria-activedescendant naming the current tile.
-// That is deliberate for a virtualised grid: a roving tabindex would need Blazor to re-render on
-// every keypress to move the tab stop, and would leave a tab stop pointing at an element
-// Virtualize had since destroyed. One container, one tab stop, no renders to move the cursor.
+// Focus stays on the container throughout, with aria-activedescendant naming the current tile. For
+// a virtualised grid a roving tabindex would need Blazor to re-render on every keypress to move the
+// tab stop, and would leave a tab stop pointing at an element Virtualize had since destroyed. One
+// container, one tab stop, no renders to move the cursor.
 export function attach(host, owner, columns) {
     if (!host) return;
 
@@ -30,15 +29,15 @@ export function attach(host, owner, columns) {
     host.addEventListener('pointerdown', onPointerDown, true);
 }
 
-/// Whether to SHOW the keyboard affordances: the key legend, and the ring on the cursor.
+/// Whether to show the keyboard affordances: the key legend, and the ring on the cursor.
 ///
-/// Tracked as an explicit mode rather than inferred from focus, which is what it was at first and
-/// wrong: clicking a tile focuses the container, because the container is what holds the tab stop,
-/// so :focus-within lit the legend up on every mouse click. :focus-visible is not the fix either —
-/// focus moved programmatically after a mouse click on the toolbar button does not match it, so the
-/// one deliberate path to the keyboard would have shown nothing.
+/// Tracked as an explicit mode rather than inferred from focus. Clicking a tile focuses the
+/// container, because the container holds the tab stop, so :focus-within lit the legend up on every
+/// mouse click. :focus-visible does not work either — focus moved programmatically after a mouse
+/// click on the toolbar button does not match it, so the deliberate route to the keyboard would
+/// have shown nothing.
 ///
-/// The rule is intent, not focus: a key was pressed, or the keyboard was asked for.
+/// The rule is intent rather than focus: a key was pressed, or the keyboard was asked for.
 function keyMode(state, on) {
     state.host.classList.toggle('keys', !!on);
 }
@@ -166,8 +165,8 @@ function move(state, delta) {
     if (mark(state, target, true)) return;
 
     // Off the rendered window. Scroll toward it and try again next frame: Virtualize renders an
-    // overscan either side, so one step at a time always lands — and this is why movement is by
-    // steps rather than by jumping to an arbitrary index.
+    // overscan either side, so one step at a time always lands, which is why movement is by steps
+    // rather than by jumping to an arbitrary index.
     const edge = delta < 0 ? Math.min(...indexes) : Math.max(...indexes);
     const at = tileAt(state.host, edge);
     if (at) at.scrollIntoView({ block: 'nearest' });
@@ -213,8 +212,7 @@ function onKeyDown(e) {
             break;
 
         default:
-            // A digit sets the count outright, which is what makes entering an existing collection
-            // possible at all: 0-9 in place of nine presses of +.
+            // A digit sets the count outright: 0-9 in place of nine presses of +.
             if (e.key >= '0' && e.key <= '9' && state.idx >= 0) {
                 state.owner.invokeMethodAsync('KeySet', state.idx, Number(e.key));
             } else {
@@ -253,8 +251,8 @@ export function focusGrid(host, idx, total) {
     const state = host.__ppKeys;
     if (!state) return;
 
-    // Asked for explicitly - the toolbar button or the palette - so show the keys even though the
-    // request itself may have arrived by mouse. This is the case :focus-visible gets wrong.
+    // Asked for explicitly — the toolbar button or the palette — so show the keys even though the
+    // request may have arrived by mouse. This is the case :focus-visible gets wrong.
     keyMode(state, true);
 
     if (typeof idx === 'number' && idx >= 0) {
@@ -267,13 +265,13 @@ export function focusGrid(host, idx, total) {
     else if (state.idx >= 0) mark(state, state.idx, true);
 }
 
-/// Puts the cursor on an arbitrary index, which move() deliberately cannot do.
+/// Puts the cursor on an arbitrary index, which move() cannot do.
 ///
 /// Returning from a card's detail page lands on a freshly mounted grid: scrolled to the top, with
 /// only the first screenful rendered, so the card you were reading about usually does not exist in
 /// the DOM yet. Stepping there would take hundreds of frames, so the position is estimated from the
-/// scroller instead - Virtualize sizes it to the whole list - and the cursor is placed once the
-/// window has caught up.
+/// scroller — Virtualize sizes it to the whole list — and the cursor is placed once the window has
+/// caught up.
 function restore(state, idx, total) {
     if (mark(state, idx, true)) return;
 

@@ -3,32 +3,29 @@
 @inject NavigationManager Nav
 @inject GridFocus Focus
 
-@* Virtualized card grid. Two JS modules do the heavy lifting, for reasons proven in the
-   Phase 0 spike:
-     - gridsweep.js hit-tests with elementFromPoint, because touch's implicit pointer
-       capture makes per-tile pointerenter useless for drag-select, and paints the
-       selection in the DOM so a sweep costs zero Blazor re-renders.
-     - imgloader.js caps in-flight image requests, because native loading="lazy" let a
-       fast scroll queue thousands of requests and the CDN dropped the connection. *@
+@* Virtualized card grid. Two JS modules do the heavy lifting:
+     - gridsweep.js hit-tests with elementFromPoint, because touch's implicit pointer capture
+       makes per-tile pointerenter useless for drag-select, and paints the selection in the DOM
+       so a sweep costs zero Blazor re-renders.
+     - imgloader.js caps in-flight image requests, because native loading="lazy" let a fast
+       scroll queue thousands of requests and the CDN dropped the connection. *@
 
 <div class="grid-toolbar">
-    @* The page's own filters share this bar rather than getting one above it. Keeping them
-       apart was tidier in principle and worse in practice: on Collection it meant a nav, a
-       header, a set-tab row, a filter row and a control row — five bars before a single card.
-       One bar, filters first and layout after, says the same thing in half the height. *@
+    @* The page's own filters share this bar rather than getting one above it. Separate bars meant
+       five rows on Collection — a nav, a header, a set-tab row, a filter row and a control row —
+       before a single card. One bar, filters first and layout after, is half the height. *@
     @if (Filters is not null)
     {
         @Filters
         <span class="bar-sep" aria-hidden="true"></span>
     }
 
-    @* An explicit add/remove mode, because there was previously no way to decrement at all
-       on a touch device — shift-click is both undiscoverable and unavailable on a phone. *@
+    @* An explicit add/remove mode, since there was otherwise no way to decrement on a touch
+       device: shift-click is both undiscoverable and unavailable on a phone. *@
     @if (AllowRemove)
     {
-        @* Either half flips it. A segmented control that ignores a tap on the side already
-           chosen is a control that does nothing half the time you touch it — and with two
-           states, "the other one" is never ambiguous. *@
+        @* Either half flips it, so a tap on the side already chosen still does something. With two
+           states, "the other one" is unambiguous. *@
         <div class="btn-group btn-group-sm" role="group" aria-label="Tap action">
             <button class="btn @(Removing ? "btn-outline-secondary" : "btn-success")"
                     @onclick="() => Removing = !Removing" aria-pressed="@(!Removing)"
@@ -69,12 +66,12 @@
     }
 
     @* Hidden where it cannot do anything: in grid mode an unarmed mouse drag already
-       range-selects, so on a device with no touch input the button would be a control that
-       changes nothing. It stays in list mode (where a mouse drag means "select this text"
-       until armed) and on anything with a touchscreen (where a drag is a scroll until armed). *@
-    @* Visible, because the honest answer to "how do I start keyboard entry" cannot be a control
-       that only appears once you have already found it. It is also the switch a pointer user wants
-       when they decide to stop tapping and start typing counts. *@
+       range-selects, so on a device with no touch input the button would change nothing. It stays
+       in list mode (where a mouse drag means "select this text" until armed) and on anything with
+       a touchscreen (where a drag is a scroll until armed). *@
+    @* Visible rather than revealed on focus, so keyboard entry can be found without already
+       knowing about it. It is also the switch a pointer user wants when they stop tapping and
+       start typing counts. *@
     <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
             title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail.">
         keyboard
@@ -109,7 +106,7 @@
 @* "listing" is read by gridsweep.js, not by CSS: a mouse drag over list rows must obey the
    sweep toggle, while a drag over the tile grid need not. See the comment on onDown there. *@
 @* tabindex, role and aria-activedescendant are set from js/gridkeys.js, which owns the cursor —
-   see the note there on why a roving tabindex is wrong for a virtualised grid. The container is
+   see the note there on why a roving tabindex does not suit a virtualised grid. The container is
    the single tab stop for however many thousand cards are in scope. *@
 <div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "")"
      id="@_gridId" role="grid"
@@ -120,8 +117,7 @@
     <div data-grid-live class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
 
     @* Shown only while the grid has focus, so it costs a pointer user nothing and a keyboard user
-       does not have to guess. Discoverability is the difference between keys that exist and keys
-       anyone uses. *@
+       does not have to guess at the keys. *@
     <div class="kb-hint" aria-hidden="true">
         <span><kbd>&larr;</kbd><kbd>&rarr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd> move</span>
         <span><kbd>0</kbd>&ndash;<kbd>9</kbd> set count</span>
@@ -191,10 +187,9 @@
                 <span class="c-id" role="gridcell">@card.Set&thinsp;@card.Number</span>
                 @{ var ty = TypeOf?.Invoke(card) ?? ""; }
                 <span class="c-ty" role="gridcell">
-                    @* Icon AND label. The icon is the fast read; the word stays because it is
-                       unambiguous, searchable by eye, and the only thing a screen reader has
-                       if the SVG is missed. Trainer kinds have pips too, drawn as outlined
-                       rings so they never read as an energy. *@
+                    @* Icon and label. The icon is the fast read; the word is unambiguous, scannable
+                       and the only thing a screen reader has if the SVG is missed. Trainer kinds
+                       have pips too, drawn as outlined rings so they never read as an energy. *@
                     @if (HasPip(ty))
                     {
                         <EnergyPip Type="@ty" />
@@ -210,9 +205,9 @@
                 </span>
                 <span class="c-hp" role="gridcell">@(fact?.Health?.ToString() ?? "")</span>
 
-                @* Two attack columns, because two is the maximum a card can have. Fixed
-                   columns rather than a run of items keeps the second attack aligned down the
-                   whole list instead of starting wherever the first one happened to end. *@
+                @* Two attack columns, because two is the maximum a card can have. Fixed columns
+                   rather than a run of items keep the second attack aligned down the whole list
+                   instead of starting wherever the first one ended. *@
                 @for (var slot = 0; slot < 2; slot++)
                 {
                     var atk = fact is not null && fact.AttackList.Count > slot ? fact.AttackList[slot] : null;
@@ -235,8 +230,8 @@
                                         <span class="atk-dmg">@dmg</span>
                                     }
                                 </span>
-                                @* Always rendered, hidden by CSS when compact: one code path,
-                                   and the roomy toggle then costs no re-render of the tree. *@
+                                @* Always rendered, hidden by CSS when compact: one code path, and
+                                   the roomy toggle then costs no re-render of the tree. *@
                                 @if (!string.IsNullOrWhiteSpace(atk.Effect))
                                 {
                                     <span class="atk-effect">@atk.Effect</span>
@@ -267,11 +262,11 @@
                     }
                 </span>
 
-                @* Typeable where the page supports setting an absolute count, which is what
-                   makes entering an existing collection bearable: click the field, then
-                   "9 ⏎ 12 ⏎ 2 ⏎" straight down the list. Enter commits and moves to the row
-                   below. Falls back to plain text where only relative changes make sense, as on
-                   the log-a-pack screen, where a count is what you own rather than what you set. *@
+                @* Typeable where the page supports setting an absolute count, which is what makes
+                   entering an existing collection bearable: click the field, then "9 ⏎ 12 ⏎ 2 ⏎"
+                   straight down the list. Enter commits and moves to the row below. Falls back to
+                   plain text where only relative changes make sense, as on the log-a-pack screen,
+                   where a count is what you own rather than what you set. *@
                 <span class="c-ct" role="gridcell">
                     @if (OnSet.HasDelegate)
                     {
@@ -460,10 +455,9 @@
         _listChanged = signature != _lastListSignature;
         _lastListSignature = signature;
 
-        // Whether the CONTENT changed, as opposed to how it is laid out. Switching sets left the
-        // scroll position where it was, so a new set opened halfway down itself; toggling grid
-        // and list, on the other hand, should keep your place rather than throwing you to the
-        // top — which is why layout is deliberately absent from this signature.
+        // Whether the content changed, as opposed to how it is laid out. Switching sets left the
+        // scroll position where it was, so a new set opened halfway down itself; toggling grid and
+        // list should keep your place, which is why layout is absent from this signature.
         var content = $"{Cards.Count}|{(Cards.Count > 0 ? Cards[0].Key : "")}|" +
                       $"{(Cards.Count > 0 ? Cards[^1].Key : "")}";
         _contentChanged = content != _lastContentSignature;
@@ -478,7 +472,7 @@
 
     /// <summary>
     /// A long press on a tile opens card detail. The tile detects the hold; navigating is this
-    /// component's job because the tile is deliberately ignorant of routing.
+    /// component's job, since the tile knows nothing about routing.
     /// </summary>
     private void OpenDetail(PocketCard card) => Nav.NavigateTo($"card/{card.Key}");
 
@@ -511,10 +505,10 @@
     /// <summary>
     /// Hover text for an attack: the name, plus its effect when it has one.
     ///
-    /// Deliberately NOT the energy cost or the damage. Both are already on screen — the cost
-    /// as coloured pips, the damage as a number — so repeating them as
-    /// "Lightning + Lightning + Lightning · 90 damage" is bloat that buries the one thing the
-    /// row cannot show. The name is kept because the column truncates it.
+    /// Not the energy cost or the damage. Both are already on screen — the cost as coloured pips,
+    /// the damage as a number — so repeating them as "Lightning + Lightning + Lightning · 90
+    /// damage" would bury the one thing the row cannot show. The name is kept because the column
+    /// truncates it.
     /// </summary>
     private static string AttackTip(CardAttack atk)
     {
@@ -585,8 +579,8 @@
     /// What a screen reader is told about a card, as one sentence: name, where it is from, its
     /// rarity, and how many you hold. The count comes last because it is the part that changes.
     ///
-    /// A single label rather than a label plus a separate description: the cursor announcement and
-    /// the tile itself then cannot drift into saying different things about the same card.
+    /// A single label rather than a label plus a separate description, so the cursor announcement
+    /// and the tile cannot say different things about the same card.
     /// </summary>
     private string Describe(PocketCard card, int count)
     {
@@ -738,10 +732,10 @@
     }
 
     /// <summary>
-    /// Warm the cache for the whole visible list, so scrolling a set never waits on the
-    /// network. Capped: "all sets" is 3,700+ cards at roughly 45 KB each, and eagerly
-    /// pulling ~170 MB to save some scrolling latency is a bad trade — especially on mobile
-    /// data. Below the cap (any single set) the entire thing is fetched.
+    /// Warm the cache for the whole visible list, so scrolling a set never waits on the network.
+    /// Capped: "all sets" is 3,700+ cards at roughly 45 KB each, so eagerly pulling ~170 MB is not
+    /// worth the scrolling latency it saves, especially on mobile data. Below the cap (any single
+    /// set) the entire thing is fetched.
     /// </summary>
     private async Task PrefetchAsync()
     {
@@ -763,9 +757,8 @@
     private const int PrefetchLimit = 700;
 
     /// <summary>
-    /// True until the device tells us otherwise, so the button never flickers into existence
-    /// on the phones that need it most — the check needs JS and so cannot run before the
-    /// first render.
+    /// True until the device tells us otherwise, so the button does not flicker into existence on
+    /// a touchscreen: the check needs JS and cannot run before the first render.
     /// </summary>
     private bool _touchCapable = true;
 
@@ -784,7 +777,7 @@
 
     // ---- keyboard, from js/gridkeys.js ---------------------------------------------
     // The cursor lives in JS so moving it costs no renders; these are the points where a key
-    // actually changes something, and each is the same call the pointer path makes.
+    // changes something, and each is the same call the pointer path makes.
 
     [JSInvokable]
     public Task KeyAdjust(int index, int delta) =>
@@ -793,9 +786,8 @@
             : Task.CompletedTask;
 
     /// <summary>
-    /// A digit sets the count outright. Without it, entering a collection that already exists
-    /// means nine presses of + per card, which is what makes the keyboard path unusable rather
-    /// than merely slower. Falls back to relative adjustment where the page only accepts that -
+    /// A digit sets the count outright. Without it, entering an existing collection means nine
+    /// presses of + per card. Falls back to relative adjustment where the page only accepts that —
     /// the log screen, where a count is what came out of a pack rather than what you hold.
     /// </summary>
     [JSInvokable]
@@ -816,7 +808,7 @@
         if (index < 0 || index >= Cards.Count) return Task.CompletedTask;
 
         // Noted before navigating, so Escape on the detail page comes back to this card with the
-        // cursor still on it. Otherwise every press of `i` cost you your place in the list.
+        // cursor still on it.
         Focus.ReturnTo(Cards[index].Key);
         OpenDetail(Cards[index]);
         return Task.CompletedTask;

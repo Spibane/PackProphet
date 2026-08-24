@@ -3,11 +3,10 @@
 PackProphet is licensed under the **GNU Affero General Public License v3.0 or later**
 (see [LICENSE](LICENSE)).
 
-That choice is not arbitrary. The only community dataset that carries attack text, ability
-text and evolution stage for **every** set is `chase-mew/pokemon-tcg-pocket-cards` v5, which
-is AGPL-3.0-or-later. The alternatives were: an MIT dataset with none of that information, a
-dataset with no licence at all (all rights reserved by default, which is worse than copyleft),
-or scraping the origin ourselves. Adopting AGPL data was the deliberate trade.
+The licence follows the card data. `chase-mew/pokemon-tcg-pocket-cards` v5 is the only
+community dataset carrying attack text, ability text and evolution stage for **every** set, and
+it is AGPL-3.0-or-later. The alternatives considered were an MIT dataset without that
+information, a dataset with no licence at all, and scraping the origin directly.
 
 ## Card data
 
@@ -33,12 +32,12 @@ The Pokémon TCG Pocket deck-share code format was reverse-engineered by
 | [jsQR](https://github.com/cozmo/jsQR) 1.4.0, vendored as `wwwroot/js/vendor-jsQR.js` | Reading a deck share code out of an uploaded screenshot | Apache-2.0, © Cosmo Wolfe |
 | [QRCoder](https://github.com/codebude/QRCoder) | Rendering a deck's share code as a scannable image | MIT, © Raffael Herrmann |
 
-jsQR is vendored rather than fetched from a CDN so the app keeps working offline, and it is
-loaded **only** when a screenshot import is actually attempted — it is larger than the rest of
-the app's JavaScript combined, and most sessions never touch it.
+jsQR is vendored rather than fetched from a CDN so the app works offline, and it is loaded only
+when a screenshot import is attempted. It is larger than the rest of the app's JavaScript
+combined.
 
-Decoding happens entirely in the browser: the screenshot is drawn to a canvas and the pixels
-are read locally. **No image is ever uploaded anywhere.**
+Decoding happens entirely in the browser: the screenshot is drawn to a canvas and the pixels are
+read locally. **No image is ever uploaded anywhere.**
 
 ## Trademarks
 

@@ -5,13 +5,12 @@ namespace PackProphet.Services;
 /// <summary>
 /// Remembers where the user was before they opened a detail page, so "back" returns there.
 ///
-/// The browser's own history.back() is the obvious answer and the wrong one: card detail is
-/// reached from four different surfaces, and on a deep link — a shared URL, a reload, a
-/// bookmark — there is no in-app history to go back to, so it would walk the user out of the
-/// app entirely. Tracking it here means back always lands somewhere inside PackProphet.
+/// The browser's own history.back() does not work here: card detail is reached from four different
+/// surfaces, and on a deep link — a shared URL, a reload, a bookmark — there is no in-app history
+/// to go back to, so it would walk the user out of the app. Tracking it here means back always
+/// lands somewhere inside PackProphet.
 ///
-/// Detail pages are deliberately not recorded, so opening one card from another still returns
-/// to the list rather than bouncing between cards.
+/// Detail pages are not recorded, so opening one card from another still returns to the list.
 /// </summary>
 public sealed class NavHistory : IDisposable
 {

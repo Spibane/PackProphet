@@ -5,9 +5,9 @@ using PackProphet.Engine;
 namespace PackProphet.Tests;
 
 /// <summary>
-/// The game's ten-at-once option costs exactly ten packs and guarantees nothing, so these tests
-/// pin the one thing that IS true of it: a batch cannot beat opening the same number of packs one
-/// at a time, and the gap between them is the cost of not choosing again.
+/// The game's ten-at-once option costs exactly ten packs and guarantees nothing. These tests pin
+/// what follows from that: a batch cannot beat opening the same number of packs one at a time, and
+/// the gap between them is the cost of not choosing again.
 /// </summary>
 public class BatchTests
 {
@@ -45,8 +45,7 @@ public class BatchTests
     public void OnANearlyFinishedSet_TheChanceOfAWastedBatchFallsSharplyWithSize()
     {
         // Where the risk actually lives. With one card left, a single pack is very likely to be
-        // wasted and ten packs much less so — which is the honest argument for a batch: not
-        // better odds per pack, but fewer sessions of nothing happening.
+        // wasted and ten packs much less so, which is what a batch trades away: not odds, but the
         var index = Snapshot.Index();
         var inA1 = index.BySet["A1"].DistinctBy(c => c.OwnershipKey).ToArray();
         var owned = new Collection(inA1.Skip(1).ToDictionary(c => c.OwnershipKey, _ => 1));

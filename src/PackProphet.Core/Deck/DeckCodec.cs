@@ -14,8 +14,8 @@ namespace PackProphet.Deck;
 ///                   Order is irrelevant to the scanner; ascending is emitted for stability.
 ///     Energy block: 1 byte count (0-3), then one id per energy type.
 ///
-/// This is the one part of the app tracking a format the game can change. Keeping it in a
-/// single file makes that a one-file fix, and the text-decklist importer is the fallback.
+/// This is the one part of the app tracking a format the game can change. Keeping it in a single
+/// file makes that a one-file fix.
 /// </summary>
 public static class DeckCodec
 {
@@ -135,8 +135,8 @@ public static class DeckCodec
                 throw new FormatException($"Card value {v} is not a multiple of ten; the format has changed.");
 
             // Symmetric with Create, which refuses a non-positive identity. Accepting one here let
-            // a deck be SAVED holding a card that can never resolve against the index: it shows as
-            // a permanently missing card with no name, and nothing in the app can explain why.
+            // a deck be saved holding a card that can never resolve against the index: it shows as
+            // a permanently missing card with no name.
             if (v <= 0)
                 throw new FormatException("Deck code contains a zero card identity.");
 

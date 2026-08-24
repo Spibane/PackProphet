@@ -8,10 +8,10 @@ using PackProphet.State;
 /// One collection as the swap finder needs to see it: what it holds, what it counts as done, what
 /// it still wants, and what it can pay with.
 ///
-/// The plan travels WITH the side rather than being shared. Two accounts are almost never
-/// collected to the same standard - an alt is usually a diamonds-only farm while the main chases
-/// stars - and using the main's plan to decide what the alt can spare would offer up cards the
-/// alt's own screens still report as missing.
+/// The plan travels with the side rather than being shared. Two accounts are rarely collected to
+/// the same standard — an alt is often a diamonds-only farm while the main chases stars — and using
+/// the main's plan to decide what the alt can spare would offer up cards the alt's own screens
+/// still report as missing.
 /// </summary>
 public sealed record DiffSide(
     string Id,
@@ -30,7 +30,7 @@ public sealed record DiffGift(PocketCard Card, int Copies, double PacksSaved, in
 {
     public string Rarity => Card.Rarity;
 
-    /// <summary>No pack can yield it, so a trade is the only route - the strongest case there is.</summary>
+    /// <summary>No pack can yield it, so a trade is the only route.</summary>
     public bool Unpullable => double.IsPositiveInfinity(PacksSaved);
 }
 
@@ -38,9 +38,8 @@ public sealed record DiffGift(PocketCard Card, int Copies, double PacksSaved, in
 /// One complete self-trade: a card each way, at the same rarity, with both sides' gates checked.
 /// </summary>
 /// <param name="OutgoingWanted">
-/// False means the return card is FILLER - a spare handed over only because the game demands a
-/// card back. The trade is still worth making, but it is one want satisfied rather than two, and
-/// the two must not be presented as equivalent.
+/// False means the return card is filler - a spare handed over only because the game demands a
+/// card back. The trade is still worth making, but it closes one want rather than two.
 /// </param>
 public sealed record SelfSwap(
     string Rarity,
@@ -53,30 +52,30 @@ public sealed record SelfSwap(
     TradeGate MineBlocking = TradeGate.None,
     TradeGate TheirsBlocking = TradeGate.None)
 {
-    /// <summary>Both sides gain something they wanted. The only trade with no cost at all.</summary>
+    /// <summary>Both sides gain something they wanted.</summary>
     public bool Mutual => OutgoingWanted;
 
     public bool Ready => MineBlocking == TradeGate.None && TheirsBlocking == TradeGate.None;
 
     /// <summary>
-    /// Packs saved across both accounts. Filler contributes nothing, which is the point: a mutual
-    /// swap of two 200-pack cards is worth twice a one-sided one, and the ranking must say so.
+    /// Packs saved across both accounts. Filler contributes nothing, so a mutual swap of two
+    /// 200-pack cards ranks above a one-sided one.
     /// </summary>
     public double Value => IncomingSaves + (OutgoingWanted ? OutgoingSaves : 0);
 }
 
 /// <param name="Unpayable">
 /// Cards the other side holds spare and this one wants, with nothing at that rarity to pay for
-/// them. Reported rather than dropped: the fix is to pull or buy any spare at that rung, which is
-/// actionable, whereas a silently shorter list looks like the cards were not there.
+/// them. Reported rather than dropped, since the fix — pull or buy any spare at that rung — is
+/// actionable.
 /// </param>
 /// <param name="Unwanted">
 /// Cards this side holds spare that the other side wants, left over after pairing. They are what
 /// makes the next swap possible once the other side has something to send back.
 /// </param>
 /// <param name="IncomingShares">
-/// Cards the other account can simply SEND, ranked by what they save. No card back, no dust, no
-/// stamina - so these are done first, always, and the only thing they cost is a day each.
+/// Cards the other account can send outright, ranked by what they save. No card back, no dust, no
+/// stamina, so these come first; each costs a day of the receiving allowance.
 /// </param>
 /// <param name="OutgoingShares">The same the other way, out of this account's spares.</param>
 public sealed record ProfileSwaps(
@@ -112,26 +111,22 @@ public sealed record ProfileSwaps(
 /// <summary>
 /// What one profile could trade to another, and what it must send back.
 ///
-/// The reason this is not simply "what does my alt have that my main needs" - the obvious framing,
-/// and the one every other tracker would stop at - is that a PTCGP trade is a SWAP. Both sides
-/// hand over a card, and the two must be the same rarity. So a list of the alt's spares that the
-/// main wants is only half a trade, and the missing half is frequently the binding one: an alt full
-/// of spare 2-stars is useless to a main that holds no spare 2-star to send back, however much the
-/// main wants them.
+/// A PTCGP trade is a swap: both sides hand over a card, and the two must be the same rarity. A
+/// list of the alt's spares that the main wants is therefore only half a trade, and the other half
+/// is often the binding one — an alt full of spare 2-stars is useless to a main that holds no spare
+/// 2-star to send back.
 ///
-/// That makes this a PAIRING problem per rarity, not a set difference. Three outcomes fall out of
-/// it, and they are genuinely different pieces of advice:
+/// That makes this a pairing problem per rarity rather than a set difference, with three outcomes:
 ///
-///   - a MUTUAL swap, where each side receives something it wanted. Free on both sides but the
-///     dust and one stamina each, and the best thing the feature can find.
-///   - a one-sided swap paid with FILLER, where the return card is a spare nobody wanted. Still
-///     worth doing, but it is one want closed, not two.
-///   - an UNPAYABLE want, where the rarity has nothing to send back at all. Not a trade yet, and
-///     saying so beats omitting the card.
+///   - a mutual swap, where each side receives something it wanted. Costs the dust and one stamina
+///     each.
+///   - a one-sided swap paid with filler, where the return card is a spare nobody wanted. Closes
+///     one want rather than two.
+///   - an unpayable want, where the rarity has nothing to send back at all. Reported rather than
+///     omitted.
 ///
 /// Both sides' dust and stamina are checked, because both are spent. A self-trade is the one place
-/// in the app where the resources of a profile other than the active one matter, and assuming the
-/// alt is funded would produce a plan that stalls halfway through.
+/// in the app where the resources of a profile other than the active one matter.
 /// </summary>
 public sealed class ProfileDiff
 {
@@ -158,23 +153,21 @@ public sealed class ProfileDiff
     /// </summary>
     public ProfileSwaps Compare(DiffSide mine, DiffSide theirs)
     {
-        // Deliberately not guarded against comparing a profile with itself: everything below then
-        // reports zero, because a card cannot be both spare and outstanding on the same side, and
-        // that is a truthful answer rather than an exception to handle in the UI.
+        // Not guarded against comparing a profile with itself: everything below then reports zero,
+        // because a card cannot be both spare and outstanding on the same side.
         var incoming = Gifts(giver: theirs, receiver: mine);
         var outgoing = Gifts(giver: mine, receiver: theirs);
 
-        // Anything a Share can carry leaves the pairing entirely, and that is the single most
-        // consequential line here. A Share needs no card back, no dust and no stamina, so between
-        // two of your own accounts it is strictly better than a trade wherever it applies -
-        // trading a spare 3-diamond for another 3-diamond would spend 1,200 dust and two stamina
-        // to move cards that could simply be sent. What remains in the pairing is what a Share
-        // cannot carry: stars, shinies and above.
+        // Anything a Share can carry leaves the pairing entirely. A Share needs no card back, no
+        // dust and no stamina, so between two of your own accounts it costs less than a trade
+        // wherever it applies — trading a spare 3-diamond for another 3-diamond would spend 1,200
+        // dust and two stamina to move cards that could be sent. What remains in the pairing is
+        // what a Share cannot carry: stars, shinies and above.
         var incomingShares = TakeShareable(incoming);
         var outgoingShares = TakeShareable(outgoing);
 
-        // Both pools, because a card being routed to a Share does not make it filler: offering it
-        // as payment as well would have the page hand the same card over twice.
+        // Both pools, because a card routed to a Share is not filler: offering it as payment as
+        // well would have the page hand the same card over twice.
         var wantedByThem = outgoing.SelectMany(kv => kv.Value).Concat(outgoingShares)
             .Select(g => g.Card.OwnershipKey).ToHashSet();
         var filler = Filler(mine, wantedByThem);
@@ -193,8 +186,8 @@ public sealed class ProfileDiff
                 .Select(u => (u.Card, u.PacksSaved, true))
                 .OrderByDescending(u => u.PacksSaved));
 
-            // Filler last, and the least valuable filler first: a spare is a spare, but parting
-            // with the dullest one leaves the interesting ones available for a mutual swap later.
+            // Filler last, and the least valuable filler first, so the interesting spares stay
+            // available for a mutual swap later.
             pay.AddRange(Units(filler.GetValueOrDefault(rarity) ?? [])
                 .Select(u => (u.Card, u.PacksSaved, false))
                 .OrderBy(u => u.PacksSaved));
@@ -214,10 +207,9 @@ public sealed class ProfileDiff
             }
         }
 
-        // Ranked before the gates are applied, because dust and stamina decide WHEN a swap happens,
-        // not whether it is the best one. Then walked in that order, deducting as it goes: the
-        // second trade of the day is blocked by the first having spent the stamina, and a plan that
-        // ignored that would promise five trades from a pool of two.
+        // Ranked before the gates are applied, because dust and stamina decide when a swap happens
+        // rather than whether it is the best one. Then walked in that order, deducting as it goes,
+        // so the second trade of the day is blocked by the first having spent the stamina.
         var ordered = swaps
             .OrderByDescending(s => s.Value)
             .ThenByDescending(s => s.Mutual)
@@ -260,8 +252,7 @@ public sealed class ProfileDiff
         foreach (var gift in outgoing.SelectMany(kv => kv.Value))
         {
             // Copies, not membership: two spares of a card the other side wants twice, with only
-            // one of them paired, leaves one still to send. Treating the card as fully sent would
-            // hide it, and treating it as fully unsent would offer it twice.
+            // one paired, leaves one still to send.
             var left = gift.Copies - sent.GetValueOrDefault(gift.Card.OwnershipKey);
             if (left > 0) unwanted.Add(gift with { Copies = left });
         }
@@ -274,8 +265,8 @@ public sealed class ProfileDiff
     /// <summary>
     /// What one side holds spare that the other is short of, grouped by rarity code.
     ///
-    /// By CODE and not by ladder rung, matching <see cref="TradeQueue.Surplus"/>: SR and SAR share
-    /// a rung, and the game may well refuse one as payment for the other.
+    /// By code rather than by ladder rung, matching <see cref="TradeQueue.Surplus"/>: SR and SAR
+    /// share a rung, and the game may refuse one as payment for the other.
     /// </summary>
     private Dictionary<string, List<DiffGift>> Gifts(DiffSide giver, DiffSide receiver)
     {
@@ -308,9 +299,8 @@ public sealed class ProfileDiff
     /// <summary>
     /// Spares that nobody wants but that a trade can still be paid with, grouped by rarity.
     ///
-    /// This is what turns a want into a trade when the rarity has no mutual match, so it is not a
-    /// consolation prize - without it the app would report a card as unobtainable while the payment
-    /// for it sat in the binder.
+    /// This is what turns a want into a trade when the rarity has no mutual match. Without it the
+    /// app would report a card as unobtainable while the payment for it sat in the binder.
     /// </summary>
     private Dictionary<string, List<DiffGift>> Filler(DiffSide giver, IReadOnlySet<string> wanted)
     {
@@ -331,13 +321,12 @@ public sealed class ProfileDiff
     }
 
     /// <summary>
-    /// Pulls the shareable rarities out of a gift pool, MUTATING it, so the caller is left with
+    /// Pulls the shareable rarities out of a gift pool, mutating it, so the caller is left with
     /// only what still has to be traded.
     ///
-    /// Removing them rather than merely also-listing them is the point: leaving a 3-diamond in the
-    /// pairing would have it consume a spare as payment and report dust and stamina for a card
-    /// that can be handed over for nothing. Two routes offered for one card, one of them strictly
-    /// worse, is how a tool talks someone into a bad trade.
+    /// They are removed rather than also-listed: leaving a 3-diamond in the pairing would have it
+    /// consume a spare as payment and report dust and stamina for a card that can be handed over
+    /// for nothing.
     /// </summary>
     private List<DiffGift> TakeShareable(Dictionary<string, List<DiffGift>> gifts)
     {
@@ -362,7 +351,7 @@ public sealed class ProfileDiff
 
     /// <summary>
     /// One entry per copy. Pairing is per trade, and a card held three times over is three separate
-    /// trades' worth of payment - collapsing them would silently cap the plan at one.
+    /// trades' worth of payment.
     /// </summary>
     private static IEnumerable<DiffGift> Units(IEnumerable<DiffGift> gifts) =>
         gifts.SelectMany(g => Enumerable.Repeat(g with { Copies = 1 }, Math.Max(1, g.Copies)));
@@ -377,7 +366,7 @@ public sealed class ProfileDiff
 
     /// <summary>
     /// Expected packs the receiver is spared. Infinity where no pack yields the card at all, which
-    /// is deliberate: that is the case where a trade is the only route in existence.
+    /// is the case where a trade is the only route in existence.
     /// </summary>
     private double Saves(PocketCard card)
     {

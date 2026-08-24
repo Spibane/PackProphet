@@ -1,6 +1,6 @@
-@* One regenerating stamina pool. Wonder and Trade are structurally identical — cap 5, one unit
-   per 12 hours, 12 hourglasses for one unit — and differ only in what spending them costs, so
-   they share this component rather than each having a near-duplicate of it. *@
+@* One regenerating stamina pool. Wonder and Trade are structurally identical — cap 5, one unit per
+   12 hours, 12 hourglasses for one unit — and differ only in what spending them costs, so they
+   share this component. *@
 
 <div class="pool">
     <div class="pool-head">
@@ -8,9 +8,9 @@
         <span class="rate">@Outlook.Balance of @Outlook.Cap</span>
     </div>
 
-    @* At the cap the advice inverts: a full pool has STOPPED regenerating, so waiting is a loss
-       rather than thrift. Below it, the slack is stated as reassurance — a pool three days from
-       full does not need checking twice a day. *@
+    @* At the cap the advice inverts: a full pool has stopped regenerating, so waiting is a loss
+       rather than thrift. Below it, the slack is stated instead — a pool three days from full does
+       not need checking twice a day. *@
     @if (Outlook.AtCap)
     {
         <div class="alert alert-warning py-1 px-2 small mb-2">

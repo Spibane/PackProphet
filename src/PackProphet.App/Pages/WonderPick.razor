@@ -130,17 +130,15 @@ else
                     <div class="stat">
                         <span class="label">expected value</span>
                         <span class="value">@Fmt(a.ExpectedValue) packs</span>
-                        @* Averaged over the 1-in-5, not the best card in the offer: hoping for
-                           the good one is how people talk about Wonder Picks and it is not what
-                           the odds say. *@
+                        @* Averaged over the 1-in-5 rather than the best card in the offer. *@
                         <span class="sub">averaged over the 1-in-@GameRules.WonderPickCardsShown</span>
                     </div>
                     <div class="stat">
                         <span class="label">per stamina</span>
                         <span class="value">@Fmt(a.ValuePerStamina)</span>
                         @* Never called a price. Wonder Stamina and Pack Hourglasses are separate
-                           currencies with no exchange rate, so packs-per-stamina is only ever a
-                           way to rank one offer against another. *@
+                           currencies with no exchange rate, so packs-per-stamina only ranks one
+                           offer against another. *@
                         <span class="sub">for comparing offers, not a price</span>
                     </div>
                     <div class="stat">

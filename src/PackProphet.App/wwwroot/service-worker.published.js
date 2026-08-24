@@ -1,9 +1,8 @@
 // Offline support for the published app.
 //
-// This gets used on a phone, beside the game, sometimes on bad hotel wifi — and the .NET
-// runtime is a multi-megabyte download, so a cold start with no cache is the app's worst
-// moment. Everything in the published output is precached on install, and the whole app is
-// then served from that cache.
+// The .NET runtime is a multi-megabyte download, so a cold start with no cache is slow. Everything
+// in the published output is precached on install, and the whole app is then served from that
+// cache.
 
 self.importScripts('./service-worker-assets.js');
 
@@ -20,14 +19,12 @@ const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 // includes an extensionless VERSION file, and the app reads it on every start. Matched by
 // extension alone it would be the one uncached request keeping the app from working offline.
 const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/, /\.svg$/, /^data\//];
-// Precaching is not free: the worker downloads every match on the first visit, so anything the
-// app never references is a straight cost to a phone on hotel wifi. Measured against the live
-// deploy, these came to about 663 KB of a 4.3 MB first visit — roughly a sixth of it — for files
-// no page ever loads.
+// Precaching is not free: the worker downloads every match on the first visit, so anything the app
+// never references is a straight cost. Measured against the live deploy, these came to about 663 KB
+// of a 4.3 MB first visit for files no page loads.
 //
-// The .map files are already absent, but only by accident: they end in .map, so no include pattern
-// matches them. Worth knowing, because renaming an include pattern could quietly pull 700 KB of
-// source maps into the cache.
+// The .map files are already absent, but only because they end in .map and no include pattern
+// matches them — renaming an include pattern could pull 700 KB of source maps into the cache.
 const offlineAssetsExclude = [
     /^service-worker\.js$/,
 

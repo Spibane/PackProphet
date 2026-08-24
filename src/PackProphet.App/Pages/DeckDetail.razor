@@ -42,8 +42,8 @@ else
         }
 
         @* Explicit save, with the state of the draft always visible. Editing used to persist on
-           every tap, which is convenient and dishonest: there was no way to tell whether a
-           change had stuck, and no way to back out of one. *@
+           every tap, which left no way to tell whether a change had stuck and no way to back out
+           of one. *@
         <span class="actions">
             <span class="save-state @(Dirty ? "dirty" : "")">
                 @if (Dirty)
@@ -197,8 +197,8 @@ else
                         <p class="small text-body-secondary mb-1">
                             In the game: <em>My Decks &rarr; Build New &rarr; Scan Code</em>.
                         </p>
-                        @* Tucked away: newer game versions no longer offer text codes at all,
-                           so this is for older clients rather than the normal route. *@
+                        @* Newer game versions no longer offer text codes, so this is for older
+                           clients rather than the normal route. *@
                         <details>
                             <summary class="small text-body-secondary">show the code as text</summary>
                             <textarea class="form-control form-control-sm mt-1" rows="3" readonly>@_shareCode</textarea>

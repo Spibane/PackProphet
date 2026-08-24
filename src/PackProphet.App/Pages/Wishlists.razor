@@ -21,8 +21,8 @@ else if (Id is null)
         </span>
     </div>
 
-    @* Same pair of views as the decks page, for the same reason: the table compares lists
-       against each other, the grid is how you recognise one. *@
+    @* Same pair of views as the decks page: the table compares lists against each other, the grid
+       is how you recognise one. *@
     @if (Session.Wishlists.Count > 0)
     {
         <div class="grid-toolbar">
@@ -38,8 +38,8 @@ else if (Id is null)
     }
 
     <div class="p-3">
-        @* A wishlist is the one target the app cannot derive, so the empty state has to say
-           what it is FOR rather than just that there is nothing here. *@
+        @* A wishlist is the one target the app cannot derive, so the empty state says what it is
+           for rather than only that there is nothing here. *@
         <p class="text-body-secondary small mb-3">
             A wishlist is any set of cards you want, for any reason &mdash; the chase cards, a
             binder page, the alternate arts of one Pokémon. The pack ranking prices it exactly
@@ -60,9 +60,9 @@ else if (Id is null)
                 @foreach (var list in _lists)
                 {
                     <div class="showcase @(list.Missing == 0 && list.Wanted > 0 ? "ready" : "")">
-                        @* The face is the rarest card still MISSING — a wishlist is a chase, so
-                           the card you have not got yet is the one that represents it. A finished
-                           list falls back to its rarest card outright. *@
+                        @* The face is the rarest card still missing — a wishlist is a chase, so the
+                           card you have not got yet represents it. A finished list falls back to
+                           its rarest card. *@
                         <a class="face" href="wishlists/@list.Id"
                            style="background-image:url('@(list.Face?.ArtUrl)')"
                            aria-label="Open @list.Name">
@@ -104,8 +104,8 @@ else if (Id is null)
                                 }
                             </div>
 
-                            @* The next few cards still wanted, rarest first. Enough to recognise
-                               the list by, not a contents listing. *@
+                            @* The next few cards still wanted, rarest first: enough to recognise
+                               the list by rather than a contents listing. *@
                             @if (list.Strip.Count > 0)
                             {
                                 <div class="strip">
@@ -165,7 +165,7 @@ else if (Id is null)
                             </td>
                             <td>
                                 @* The chase card, named. A count of missing cards says how far
-                                   there is to go; this says what it is you are going after. *@
+                                   there is to go; this says what you are going after. *@
                                 @if (list.Face is null)
                                 {
                                     <span class="text-body-tertiary small">&mdash;</span>
@@ -209,9 +209,9 @@ else
     <div class="page-head">
         <a class="btn btn-sm btn-outline-secondary" href="wishlists">&larr; wishlists</a>
 
-        @* Renaming in place, saved on blur rather than per keystroke: the name is persisted
-           state, and a save per character would serialise the whole profile as you type. The
-           input IS this page's title, which is why it sits where every other page's title is. *@
+        @* Renaming in place, saved on blur rather than per keystroke: the name is persisted state,
+           and a save per character would serialise the whole profile as you type. The input is this
+           page's title, so it sits where every other page's title is. *@
         <input class="form-control form-control-sm" style="max-width:16rem"
                value="@_list.Name" @onchange="Rename" aria-label="Wishlist name" />
 
@@ -240,8 +240,8 @@ else
         <div class="stat">
             <span class="label">expected packs</span>
             <span class="value">@Fmt(_packs)</span>
-            @* Same discipline as the Packs page: an estimate never appears without saying what
-               it covers, because a card no pack sells silently changes the scope. *@
+            @* As on the Packs page, an estimate never appears without saying what it covers, since
+               a card no pack sells changes the scope. *@
             <span class="sub">
                 @if (_unreachable > 0)
                 {
@@ -258,10 +258,9 @@ else
         </div>
     </div>
 
-    @* Two columns on desktop, list left and search right — the same shape as the deck builder,
-       and for the same reason: with the search below the list, adding a card grew the list and
-       pushed the search down, so adding a second copy meant hunting for the row that had just
-       moved. *@
+    @* Two columns on desktop, list left and search right — the same shape as the deck builder.
+       With the search below the list, adding a card grew the list and pushed the search down, so
+       adding a second copy meant hunting for the row that had just moved. *@
     <div class="edit-cols wish-edit p-3">
         <div class="list-col">
         @if (_cards.Count == 0)
@@ -304,14 +303,14 @@ else
 
                         <span class="id">@card.Set&thinsp;@card.Number</span>
 
-                        @* What it will cost. This is the whole reason to keep a wishlist in a
-                           tracker rather than in a notes app, so it belongs on the row itself
-                           and it is what the flexible column carries — the name being flexible
-                           was what left a hole across the middle of a wide screen. *@
+                        @* What it will cost, which is the reason to keep a wishlist in a tracker
+                           rather than in a notes app, so it is on the row itself and carries the
+                           flexible column — a flexible name column left a hole across the middle
+                           of a wide screen. *@
                         <span class="rt">@_routes.GetValueOrDefault(card.OwnershipKey)</span>
 
                         @* Owned copies only. The wanted number is already in the stepper to the
-                           right, so a "1 of 2" here said the same thing twice. *@
+                           right, so a "1 of 2" here would say the same thing twice. *@
                         <span class="own">
                             @if (owned >= wanted)
                             {
@@ -323,10 +322,8 @@ else
                             }
                         </span>
 
-                        @* Stepper rather than a cycler: there is no small ceiling to wrap
-                           around, so counting up to six by tapping past a limit and back to
-                           zero would be absurd. Extra copies are the point — trade fodder and
-                           flair material are ordinary reasons to want a fourth. *@
+                        @* Stepper rather than a cycler: there is no small ceiling to wrap around.
+                           Extra copies are ordinary — trade fodder and flair material. *@
                         <span class="want-n">
                             <button class="step" @onclick="() => Bump(card, -1)"
                                     aria-label="Want one fewer @card.Name">&minus;</button>
@@ -347,7 +344,7 @@ else
         </div>
 
         <div class="picker-col">
-            @* A bulk add of two hundred cards has to say what it did, or the only feedback is a
+            @* A bulk add of two hundred cards says what it did; otherwise the only feedback is a
                number changing in a summary box further up the page. *@
             @if (_added > 0)
             {

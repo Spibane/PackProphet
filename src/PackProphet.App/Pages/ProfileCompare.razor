@@ -48,7 +48,7 @@ else
     </div>
 
     @* Two mechanics, and the split between them is what the page is for. A Share is one-way and
-       free but stops at 4 diamonds; a trade is a same-rarity SWAP that costs both accounts dust
+       free but stops at 4 diamonds; a trade is a same-rarity swap that costs both accounts dust
        and a stamina. So "what does my alt have that my main needs" is not one list. *@
     <p class="p-3 pb-0 small text-body-secondary" style="max-width:52rem">
         Two ways to move a card between your own accounts, and which one applies is decided
@@ -74,9 +74,9 @@ else
     else
     {
         <div class="p-3 compare-page">
-            @* First, and deliberately: a Share costs nothing at all, so there is never a reason to
-               do a trade before one. Both directions are listed because each account has its own
-               daily allowance, so they do not compete. *@
+            @* Shares first: one costs nothing, so there is no reason to trade before taking one.
+               Both directions are listed because each account has its own daily allowance, so they
+               do not compete. *@
             @if (_swaps.IncomingShares.Count > 0 || _swaps.OutgoingShares.Count > 0)
             {
                 <div class="verdict take" aria-live="polite">
@@ -184,10 +184,10 @@ else
                     </span>
                 </div>
             }
-            @* Explicit rather than a bare else. Narrowing the branch above to "no trade AND
-               something stuck" left the else as the catch-all, so a shares-only comparison - no
-               trades and nothing unpayable, which is the ORDINARY case now that diamonds are
-               routed to Shares - fell through it and indexed an empty list. *@
+            @* Explicit rather than a bare else. Narrowing the branch above to "no trade and
+               something stuck" left the else as the catch-all, so a shares-only comparison — no
+               trades and nothing unpayable, the ordinary case now that diamonds are routed to
+               Shares — fell through it and indexed an empty list. *@
             else if (_swaps.Swaps.Count > 0)
             {
                 var best = _swaps.Swaps[0];
@@ -304,8 +304,8 @@ else
                 }
             }
 
-            @* Reported rather than dropped. Someone who can see the card in the other collection
-               and cannot see it here reads the absence as a bug, not as a rule. *@
+            @* Reported rather than dropped: a card visible in the other collection and absent here
+               reads as a bug rather than as a rule. *@
             @if (_swaps.Unpayable.Count > 0)
             {
                 <h2>Wanted, but nothing to pay with</h2>

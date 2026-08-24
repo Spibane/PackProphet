@@ -1,17 +1,15 @@
 // Managed image loader for the card grid.
 //
-// WHY THIS EXISTS: native loading="lazy" on a 3,761-tile grid lets a fast scroll
-// queue thousands of concurrent requests. Over HTTP/2 those all multiplex onto one
-// connection, and once the server's max-concurrent-stream limit is exceeded it sends
-// GOAWAY — which the browser reports as ERR_CONNECTION_CLOSED. Observed against
-// jsDelivr with hundreds of art fetches failing at once. The files were all fine;
-// the request pattern was the problem.
+// Native loading="lazy" on a 3,761-tile grid lets a fast scroll queue thousands of concurrent
+// requests. Over HTTP/2 those all multiplex onto one connection, and once the server's
+// max-concurrent-stream limit is exceeded it sends GOAWAY, which the browser reports as
+// ERR_CONNECTION_CLOSED. Observed against jsDelivr with hundreds of art fetches failing at once.
 //
-// Fixes it three ways:
+// Three mitigations:
 //   1. Hard cap on in-flight requests (MAX_INFLIGHT).
-//   2. IntersectionObserver, so only tiles actually near the viewport are queued.
-//   3. Tiles scrolled past are dropped from the queue before they ever start, so a
-//      fast flick does not spend the budget on cards you already went by.
+//   2. IntersectionObserver, so only tiles near the viewport are queued.
+//   3. Tiles scrolled past are dropped from the queue before they start, so a fast flick does not
+//      spend the budget on cards already passed.
 
 const MAX_INFLIGHT = 6;
 

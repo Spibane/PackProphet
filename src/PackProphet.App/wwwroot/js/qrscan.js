@@ -1,11 +1,11 @@
 // Reads a deck share code out of an image the user picked or pasted.
 //
-// This is the only place in the app that needs raw pixel access, which is why the one
-// JavaScript library in the project exists at all: the alternative was ZXing.Net plus
-// SkiaSharp, several megabytes of extra WASM paid for by every visitor.
+// This is the only place in the app that needs raw pixel access, and the reason the project
+// vendors one JavaScript library: the alternative was ZXing.Net plus SkiaSharp, several megabytes
+// of extra WASM paid for by every visitor.
 //
-// Nothing leaves the device. The image is drawn to an off-screen canvas and the pixels are
-// read locally — there is no upload, and the module works offline.
+// Nothing leaves the device. The image is drawn to an off-screen canvas and the pixels are read
+// locally, so the module works offline.
 export async function decode(dataUrl) {
     const jsQR = await load();
     if (!jsQR) return { ok: false, error: 'The QR reader could not be loaded.' };

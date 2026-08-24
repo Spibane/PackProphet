@@ -23,8 +23,8 @@ else
                 <a href="log">Log a pack</a> lands here, and this page also checks the odds
                 engine against what you actually pulled.
             </p>
-            @* A returning player has a real history the app has not seen. Saying so beats an
-               empty page that implies they have opened nothing. *@
+            @* A returning player has a real history the app has not seen, so the empty page says
+               so rather than implying they have opened nothing. *@
             @if (Session.Lifetime is { } baseline)
             {
                 <p class="text-body-secondary">
@@ -46,10 +46,10 @@ else
         else
         {
             <div class="summary mb-3">
-                @* All-time first when it is known, because it is the truer number. The logged
-                   count stays beside it rather than being replaced: everything else on this page
-                   is derived from logged packs, so the reader needs to see how much of the total
-                   those cover. *@
+                @* All-time first when it is known, since it is the fuller number. The logged count
+                   stays beside it rather than being replaced: everything else on this page is
+                   derived from logged packs, so the reader can see how much of the total those
+                   cover. *@
                 @if (Session.Lifetime is { } baseline)
                 {
                     <div class="stat">
@@ -76,10 +76,9 @@ else
                 <div class="stat">
                     <span class="label">cards per pack</span>
                     <span class="value">@_perPack.ToString("0.0")</span>
-                    @* A pack yields 4-6 cards, so a figure well below that is not a fact about
-                       the game — it means packs were logged without all their pulls, and every
-                       number on this page derived from cards is understated. Worth saying rather
-                       than letting the reader trust it. *@
+                    @* A pack yields 4-6 cards, so a figure well below that means packs were logged
+                       without all their pulls, and every number on this page derived from cards is
+                       understated. *@
                     <span class="sub @(_perPack < 4 && _log.Count > 2 ? "text-warning-emphasis" : "")">
                         @(_perPack < 4 && _log.Count > 2 ? "below 4 — some pulls look unlogged" : "4 to 6 is normal")
                     </span>
@@ -115,12 +114,11 @@ else
                 </div>
             </div>
 
-            @* Hits get a section rather than a number in a row of statistics. Everything else on
-               this page is accounting; this is the part worth looking at again — so it shows the
-               card, not a count of cards.
+            @* Hits get a section rather than a number in a row of statistics, and it shows the
+               card rather than a count of cards.
 
-               A COUNT and a rate rather than a personal best: once you pull a Crown a "best pull"
-               never moves again and stops being worth a glance. *@
+               A count and a rate rather than a personal best: once you pull a Crown a "best pull"
+               never moves again. *@
             <div class="hits-panel mb-3">
                 @if (_showcase is null)
                 {
@@ -154,8 +152,8 @@ else
 
                         @if (_hitList.Count > 1)
                         {
-                            @* Explicit, not automatic. Rotating on its own would move the page
-                               under the reader, and re-rolling on every render would make it
+                            @* Explicit rather than automatic. Rotating on its own would move the
+                               page under the reader, and re-rolling on every render would make it
                                flicker on unrelated updates. *@
                             <button class="btn btn-sm btn-outline-secondary align-self-start"
                                     @onclick="Shuffle">show me another</button>
@@ -184,9 +182,9 @@ else
                 }
             </div>
 
-            @* What counts as a hit is the USER'S call. Someone opening thirty packs a week feels
-               nothing below 2-star; someone on the free two a day has a good week on a 1-star.
-               A set of chips rather than a "N and above" slider, so "2-star and Crown but not
+            @* What counts as a hit is the user's call. Someone opening thirty packs a week feels
+               nothing below 2-star; someone on the free two a day has a good week on a 1-star. A
+               set of chips rather than an "N and above" slider, so "2-star and Crown but not
                shinies" is sayable. *@
             <details class="mb-3">
                 <summary class="small text-body-secondary">what counts as a hit?</summary>
@@ -204,8 +202,8 @@ else
                         }
                     </div>
                     <p class="small text-body-secondary mb-0">
-                        Defaults to everything above the diamonds. At least one must stay selected
-                        &mdash; a counter that can never move looks broken rather than chosen.
+                        Defaults to everything above the diamonds. At least one rung must stay
+                        selected.
                     </p>
                 </div>
             </details>
@@ -281,10 +279,10 @@ else
             <div class="section-head">
                 <h3 class="mb-0 h6">Did the odds hold up?</h3>
                 @* Only offered once there is a baseline to scale to and logged packs to scale
-                   FROM. Without both, the option would be a button that cannot answer. *@
+                   from. Without both, the option is a button that cannot answer. *@
                 @* One slice at a time. Series and sets sit in the same dropdown under their own
-                   headings rather than behind a second control: they are the same question asked
-                   at two zoom levels, and a set is as fine as the data goes - pull rates are
+                   headings rather than behind a second control: they are the same question at two
+                   zoom levels, and a set is as fine as the data goes, since pull rates are
                    published per set. *@
                 <select class="form-select form-select-sm ms-auto" style="max-width:12rem"
                         @onchange="OnScope" aria-label="Which sets to check">
@@ -331,8 +329,8 @@ else
             }
             else
             {
-                @* Every one of these is a reason the numbers are softer than the logged view, and
-                   all of them are stated because the reader cannot see any of them in the table. *@
+                @* Each of these is a reason the numbers are softer than the logged view, and none
+                   of them is visible in the table. *@
                 <p class="small text-body-secondary">
                     All @Session.LifetimePacks packs the game counted, split across sets by what
                     your collection holds: copies of a set's own cards, divided by how many of
@@ -367,7 +365,7 @@ else
                 {
                     @* Refused rather than approximated. With nothing owned there is no evidence
                        about which packs those were, and a total spread by guesswork would look
-                       exactly like a measurement. *@
+                       like a measurement. *@
                     <div class="alert alert-warning py-1 px-2 small">
                         Your collection has nothing in it that any pack could have produced, so
                         the total cannot be split across sets. The figures below are the logged
@@ -391,7 +389,7 @@ else
             else
             {
                 @* The pack count is what makes a row of wild differences readable: eleven packs of
-                   one set explains a swing that would look like a broken model without it. *@
+                   one set explains a swing that would otherwise look like a broken model. *@
                 <div class="small fw-semibold mt-2">
                     @ScopeLabel()
                     <span class="text-body-secondary fw-normal ms-1">
@@ -433,7 +431,7 @@ else
             </div>
 
             @* One switch rather than two kinds of delete button. Logging a pack both records the
-               opening AND adds the cards to the collection, so undoing a mistake usually means
+               opening and adds the cards to the collection, so undoing a mistake usually means
                undoing both — but not always: the cards might be genuinely owned and only the log
                entry wrong. The user says which. *@
             <label class="form-check form-switch small mb-2">
@@ -455,8 +453,9 @@ else
                 <tbody>
                     @foreach (var entry in _recent)
                     {
-                        @* Keyed on identity, not position: deleting a row shifts every row after
-                           it, and without a key the inputs would keep the previous row's value. *@
+                        @* Keyed on identity rather than position: deleting a row shifts every row
+                           after it, and without a key the inputs would keep the previous row's
+                           value. *@
                         <tr @key="entry">
                             <td>
                                 <input class="form-control form-control-sm" type="date" style="width:9.5rem"

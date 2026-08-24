@@ -146,9 +146,9 @@ else
 
     @if (_outstanding == 0)
     {
-        <div class="alert alert-success m-3" role="status">
+        <Notice Severity="Notice.Level.Success" Class="m-3">
             Nothing outstanding for this target. Raise the rarity or copies to aim higher.
-        </div>
+        </Notice>
     }
     else
     {
@@ -194,7 +194,7 @@ else
 
         @if (_unreachable.Count > 0)
         {
-            <div class="alert alert-warning mx-3">
+            <Notice Severity="Notice.Level.Warning" Class="mx-3">
                 <strong>@_unreachable.Sum(d => d.Remaining) card(s) cannot be obtained right now.</strong>
                 They are left out of the estimate above rather than silently counted &mdash; so
                 that figure covers @_priceable cards, not all @_outstanding. The packs that would
@@ -202,7 +202,7 @@ else
                 <strong>off sale</strong> means it is coming back, <strong>rates unknown</strong>
                 means the set is out and its odds have not been published yet, and
                 <strong>not out yet</strong> means nobody has these cards.
-            </div>
+            </Notice>
         }
 
         @if (_neverInPack.Count > 0)
@@ -210,7 +210,7 @@ else
             @* These have no pack row to appear in, because no pack has ever sold them. The only
                routes are a trade or another event, so they are called out rather than left to be
                inferred from an empty ranking. *@
-            <div class="alert alert-secondary mx-3">
+            <Notice Severity="Notice.Level.Info" Class="mx-3">
                 <strong>@_neverInPack.Count card(s) never came from a pack.</strong>
                 An event or a promo only &mdash; opening packs will never produce them.
                 <div class="supplied mt-2">
@@ -237,7 +237,7 @@ else
                 {
                     <div class="small mt-1">&hellip; and @(_neverInPack.Count - UnreachableShown) more.</div>
                 }
-            </div>
+            </Notice>
         }
 
         @* Every extra breakdown lives behind a button in one row here, at the top of the page,
@@ -432,7 +432,7 @@ else
 
                 @if (_capWarnings.Count > 0)
                 {
-                    <div class="alert alert-warning py-2 small">
+                    <Notice Severity="Notice.Level.Warning">
                         @foreach (var warning in _capWarnings)
                         {
                             <div>
@@ -450,7 +450,7 @@ else
                                 }
                             </div>
                         }
-                    </div>
+                    </Notice>
                 }
 
                 <table class="table table-sm align-middle w-auto">

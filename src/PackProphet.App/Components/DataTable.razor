@@ -1,0 +1,28 @@
+@* A table that scrolls itself rather than the page.
+
+   Twenty-six tables across thirteen pages, in seven different class combinations, and not one of
+   them had a scroll wrapper — so whether a page slid sideways on a phone came down to how many
+   columns it happened to need. The wrapper, the density, the numerals and the keyboard affordance
+   are all decided here.
+
+   tabindex is not optional: a scroll container whose content is plain text cannot be reached by
+   keyboard otherwise, since Chrome does not make scrollers focusable the way Firefox does. It also
+   needs a name, or a screen reader announces an unlabelled region. *@
+
+<div class="table-responsive" tabindex="0" role="region" aria-label="@Label">
+    <table class="table table-sm align-middle @(Fit ? "w-auto" : null) @Class">
+        @ChildContent
+    </table>
+</div>
+
+@code {
+    /// <summary>Names the scrollable region. Say what the rows are, not that it is a table.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    /// <summary>Shrink to the width of the content instead of filling the page.</summary>
+    [Parameter] public bool Fit { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

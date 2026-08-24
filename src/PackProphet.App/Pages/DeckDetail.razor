@@ -76,12 +76,14 @@ else
 
     @if (_pendingUrl is not null)
     {
-        <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 m-3 py-2" role="alert">
-            <strong>This deck has unsaved changes.</strong>
-            <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">save and leave</button>
-            <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">discard and leave</button>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">stay here</button>
-        </div>
+        <Notice Severity="Notice.Level.Warning" Class="m-3">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <strong>This deck has unsaved changes.</strong>
+                <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">save and leave</button>
+                <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">discard and leave</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">stay here</button>
+            </div>
+        </Notice>
     }
 
     <div class="edit-cols p-3">

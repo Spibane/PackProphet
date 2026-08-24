@@ -31,11 +31,11 @@ else
     @* Said plainly rather than assumed: the whole list arrived inside the link itself, so nothing
        about opening this page sent anything anywhere. What the owner already has is deliberately
        not part of it — this is a want-list, not their collection. *@
-    <div class="alert alert-info mx-3 small">
+    <Notice Severity="Notice.Level.Info" Class="mx-3">
         Nothing here can be edited. This was decoded entirely in your browser &mdash; opening the
         link uploaded nothing and contacted no server. Only the wanted cards travelled in the
         link, not @_shared.OwnerName's collection.
-    </div>
+    </Notice>
 
     @if (_rows.Count == 0)
     {

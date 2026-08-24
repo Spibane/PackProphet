@@ -368,19 +368,19 @@ else
                     @* Refused rather than approximated. With nothing owned there is no evidence
                        about which packs those were, and a total spread by guesswork would look
                        like a measurement. *@
-                    <div class="alert alert-warning py-1 px-2 small">
+                    <Notice Severity="Notice.Level.Warning" Dense="true">
                         Your collection has nothing in it that any pack could have produced, so
                         the total cannot be split across sets. The figures below are the logged
                         packs only.
-                    </div>
+                    </Notice>
                 }
             }
             @if (_unpriceable > 0)
             {
-                <div class="alert alert-secondary py-1 px-2 small">
+                <Notice Severity="Notice.Level.Info" Dense="true">
                     @_unpriceable logged pack(s) came from a set with no published pull rates, so
                     they are left out of the comparison entirely rather than counted as zero.
-                </div>
+                </Notice>
             }
             @if (_accuracy.Count == 0)
             {

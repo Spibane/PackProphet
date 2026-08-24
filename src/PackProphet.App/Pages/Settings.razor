@@ -262,17 +262,19 @@
 
     @if (_message is not null)
     {
-        <div class="alert alert-info py-2 small d-flex flex-wrap align-items-center gap-2" role="status">
-            <span>@_message</span>
-            @* The undo control sits next to the sentence that mentions it, rather than the message
-               naming an undo whose only control is on another page. *@
-            @if (_offerUndo && Session.CanUndo)
-            {
-                <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoLast">
-                    undo that
-                </button>
-            }
-        </div>
+        <Notice Severity="Notice.Level.Info">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span>@_message</span>
+                @* The undo control sits next to the sentence that mentions it, rather than the
+                   message naming an undo whose only control is on another page. *@
+                @if (_offerUndo && Session.CanUndo)
+                {
+                    <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoLast">
+                        undo that
+                    </button>
+                }
+            </div>
+        </Notice>
     }
 
     @if (Session.Ready)

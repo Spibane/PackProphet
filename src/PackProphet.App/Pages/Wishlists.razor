@@ -363,11 +363,11 @@ else
                number changing in a summary box further up the page. *@
             @if (_added > 0)
             {
-                <div class="alert alert-success py-2 small" role="status">
+                <Notice Severity="Notice.Level.Success">
                     Added @_added card(s) to <strong>@_list.Name</strong>.
                     <button class="btn btn-sm btn-link p-0 align-baseline"
                             @onclick="UndoAdd">undo</button>
-                </div>
+                </Notice>
             }
             @* All cards by default here, the opposite of the deck builder: a wishlist is mostly
                made of things you do not have yet. *@

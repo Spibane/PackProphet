@@ -13,7 +13,7 @@
        not need checking twice a day. *@
     @if (Outlook.AtCap)
     {
-        <div class="alert alert-warning py-1 px-2 small mb-2">
+        <Notice Severity="Notice.Level.Warning" Dense="true" Class="mb-2">
             <strong>Full, so nothing is regenerating.</strong>
             @if (Outlook.WastedSinceFull > 0)
             {
@@ -26,7 +26,7 @@
             {
                 <span>Every 12 hours from here is one you will not get back.</span>
             }
-        </div>
+        </Notice>
     }
     else
     {

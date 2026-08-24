@@ -26,7 +26,15 @@ public class ServiceWorkerPrecacheTests
         var list = Regex.Match(Source, $@"const {name} = \[(?<body>.*?)\];", RegexOptions.Singleline);
         Assert.True(list.Success, $"could not find {name} in the service worker");
 
-        return Regex.Matches(list.Groups["body"].Value, @"/(?<re>(?:[^/\\\n]|\\.)+)/")
+        // Comments first, or their own slashes are read as pattern delimiters: the line
+        // "and the grid/reboot/utilities" yielded a regex of "and the grid". That one was
+        // harmless because it matches no URL, but a comment mentioning a real path would
+        // silently add an exclusion the worker does not have.
+        var body = string.Join("\n", list.Groups["body"].Value
+            .Split('\n')
+            .Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+
+        return Regex.Matches(body, @"/(?<re>(?:[^/\\\n]|\\.)+)/")
             .Select(m => new Regex(m.Groups["re"].Value))
             .ToArray();
     }
@@ -48,8 +56,6 @@ public class ServiceWorkerPrecacheTests
     [InlineData("js/gridkeys.js")]
     [InlineData("lib/bootstrap/dist/css/bootstrap.min.css")]
     [InlineData("lib/bootstrap/dist/js/bootstrap.bundle.min.js")]
-    [InlineData("_content/Blazor.Bootstrap/blazor.bootstrap.js")]
-    [InlineData("_content/Blazor.Bootstrap/blazor.bootstrap.css")]
     // The vendored snapshot: without it, a first visit with no network shows an empty app.
     [InlineData("data/snapshot/cards.min.json")]
     [InlineData("data/snapshot/VERSION")]
@@ -59,11 +65,6 @@ public class ServiceWorkerPrecacheTests
     public void Is_precached(string url) => Assert.True(Precached(url), $"{url} must be precached");
 
     [Theory]
-    // Blazor.Bootstrap ships a PDF viewer and a sortable list. Neither component is used, and the
-    // pdf.js worker alone was the largest single asset in the deploy at ~283 KB.
-    [InlineData("_content/Blazor.Bootstrap/pdfjs-4.0.379.worker.min.js")]
-    [InlineData("_content/Blazor.Bootstrap/pdfjs-4.0.379.min.js")]
-    [InlineData("_content/Blazor.Bootstrap/blazor.bootstrap.sortable-list.js")]
     // Bootstrap is vendored whole and index.html links two files out of it.
     [InlineData("lib/bootstrap/dist/js/bootstrap.min.js")]
     [InlineData("lib/bootstrap/dist/js/bootstrap.js")]
@@ -94,6 +95,6 @@ public class ServiceWorkerPrecacheTests
         // rather than silently classifying everything as not-precached.
         Assert.NotEmpty(Patterns("offlineAssetsInclude"));
         Assert.NotEmpty(Patterns("offlineAssetsExclude"));
-        Assert.Contains(Patterns("offlineAssetsExclude"), p => p.ToString().Contains("pdfjs"));
+        Assert.Contains(Patterns("offlineAssetsExclude"), p => p.ToString().Contains("bootstrap"));
     }
 }

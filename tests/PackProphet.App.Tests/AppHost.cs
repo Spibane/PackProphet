@@ -81,7 +81,6 @@ public abstract class AppHost : TestContext
         Services.AddSingleton<NavHistory>();
         Services.AddSingleton<PaletteSwitch>();
         Services.AddSingleton<GridFocus>();
-        Services.AddBlazorBootstrap();
     }
 
     /// <summary>

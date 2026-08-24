@@ -10,8 +10,6 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-builder.Services.AddBlazorBootstrap();
-
 // Scoped, not Singleton. HttpClient above is registered Scoped by the template, and a singleton
 // may not depend on a scoped service — DI validation rejects it at startup, taking down every page.
 // In Blazor WebAssembly there is a single scope for the app's lifetime anyway, so Scoped gives the

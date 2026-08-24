@@ -68,6 +68,17 @@ body {
     flex-direction: column;
 }
 
+/* MainLayout wraps the whole page so the palette can mark it `inert`. That wrapper is an
+   accessibility device, not a layout box, and left as an ordinary block it re-introduced the
+   exact bug described above one level further down: it measured 972px inside an 812px #app, so
+   main started below the nav but was still a full viewport tall, and the last 160px of every
+   page sat under the fold where body's `overflow: hidden` clipped it with no scrollbar. Scrolling
+   could not reach it either, because the overhang was the scroll container itself.
+
+   `display: contents` removes the box and leaves the element — inertness is not a layout
+   property — so #app's flex children are the nav and main again, as they were before. */
+.app-shell { display: contents; }
+
 main {
     flex: 1 1 auto;
     min-height: 0;          /* lets a flex child actually shrink and scroll */

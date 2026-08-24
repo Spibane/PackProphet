@@ -40,6 +40,9 @@ public sealed class AppSession : IAsyncDisposable
     public PackOdds? Odds { get; private set; }
     public PackRanker? Ranker { get; private set; }
 
+    /// <summary>Splits a pack budget across pack keys. Null until data has loaded.</summary>
+    public PackAllocator? Allocator { get; private set; }
+
     /// <summary>Cheapest-route pricing. Null until data has loaded.</summary>
     public RouteCost? Routes { get; private set; }
 
@@ -148,6 +151,7 @@ public sealed class AppSession : IAsyncDisposable
         var rates = EffectiveRates();
         Odds = new PackOdds(Data.Index, rates);
         Ranker = new PackRanker(Data.Index, Odds);
+        Allocator = new PackAllocator(Data.Index, Odds);
         Routes = new RouteCost(Data.Index, Odds, Data.Rarities);
         Points = new PointsLedger(Data.Index, Data.Rarities);
         Wonder = new WonderPickEval(Data.Index, Routes);

@@ -4,74 +4,90 @@
 @inject NavHistory History
 @inject AppSession Session
 @inject GridFocus Focus
+@inject PaletteSwitch Switch
 @implements IDisposable
 
-@* Twelve nav links sit above every page, and Blazor does not move focus on navigation, so a
-   keyboard or screen-reader user otherwise tabs through the whole bar again on arrival.
+@* Everything except the palette itself, so it can be taken out of the accessibility tree —
+   inert, not just visually covered — while the palette is open. Without this a screen reader
+   or a Tab press that slips past the palette's own trap still finds a full page of live nav
+   links and content sitting right behind the dialog. *@
+<div inert="@Switch.IsOpen">
+    @* Twelve nav links sit above every page, and Blazor does not move focus on navigation, so a
+       keyboard or screen-reader user otherwise tabs through the whole bar again on arrival.
 
-   Bootstrap's own visually-hidden-focusable rather than a hand-rolled off-screen rule, which
-   depends on which ancestor happens to be positioned or clipped. *@
-<a class="skip-link visually-hidden-focusable" href="#main">Skip to content</a>
+       Bootstrap's own visually-hidden-focusable rather than a hand-rolled off-screen rule, which
+       depends on which ancestor happens to be positioned or clipped. *@
+    <a class="skip-link visually-hidden-focusable" href="#main">Skip to content</a>
 
-@* Straight to the cards. The grid sits behind roughly fifteen controls in the page's own toolbar —
-   a series picker, fourteen set tabs, the filters — so tabbing to it is impractical. Only offered
-   when a grid is mounted. *@
-@if (Focus.Available)
-{
-    <button class="skip-link visually-hidden-focusable" @onclick="() => Focus.FocusAsync()">
-        Skip to the cards &mdash; arrow keys move, digits set a count
-    </button>
-}
+    @* Straight to the cards. The grid sits behind roughly fifteen controls in the page's own
+       toolbar — a series picker, fourteen set tabs, the filters — so tabbing to it is
+       impractical. Only offered when a grid is mounted. *@
+    @if (Focus.Available)
+    {
+        <button class="skip-link visually-hidden-focusable" @onclick="() => Focus.FocusAsync()">
+            Skip to the cards &mdash; arrow keys move, digits set a count
+        </button>
+    }
 
-<NavMenu />
+    <NavMenu />
 
-@* Storage trouble is announced here rather than on any one page, because it applies to every edit
-   from now on rather than to what is on screen. role="alert" so a screen reader is told. *@
-@if (Session.SaveFailed || Session.StorageUnavailable || Session.LoadFailed)
-{
-    <div class="storage-alarm" role="alert">
-        @if (Session.SaveFailed)
-        {
-            <strong>Your changes are not being saved.</strong>
-            <span>
-                The browser refused the write, which usually means its storage for this site is
-                full. Export a backup now &mdash; anything you do until this clears will be lost on
-                reload.
-            </span>
-        }
-        else if (Session.StorageUnavailable)
-        {
-            <strong>This browser is not letting the app store anything.</strong>
-            <span>
-                Private browsing or blocked site data will do that. The app works for now, but
-                nothing will survive a reload, so export a backup before you close the tab.
-            </span>
-        }
-        else
-        {
-            <strong>Saved data was found but could not be read.</strong>
-            <span>
-                The app has started empty rather than refuse to open. The unreadable text has been
-                set aside untouched under <code>packprophet.state.unreadable</code> in this site's
-                local storage, so it can still be recovered by hand &mdash; importing a backup or
-                entering cards will not overwrite it.
-            </span>
-        }
-        <a href="settings">open settings</a>
-    </div>
-}
+    @* Storage trouble is announced here rather than on any one page, because it applies to every
+       edit from now on rather than to what is on screen. role="alert" so a screen reader is told. *@
+    @if (Session.SaveFailed || Session.StorageUnavailable || Session.LoadFailed)
+    {
+        <div class="storage-alarm" role="alert">
+            @if (Session.SaveFailed)
+            {
+                <strong>Your changes are not being saved.</strong>
+                <span>
+                    The browser refused the write, which usually means its storage for this site is
+                    full. Export a backup now &mdash; anything you do until this clears will be lost
+                    on reload.
+                </span>
+            }
+            else if (Session.StorageUnavailable)
+            {
+                <strong>This browser is not letting the app store anything.</strong>
+                <span>
+                    Private browsing or blocked site data will do that. The app works for now, but
+                    nothing will survive a reload, so export a backup before you close the tab.
+                </span>
+            }
+            else
+            {
+                <strong>Saved data was found but could not be read.</strong>
+                <span>
+                    The app has started empty rather than refuse to open. The unreadable text has
+                    been set aside untouched under <code>packprophet.state.unreadable</code> in
+                    this site's local storage, so it can still be recovered by hand &mdash;
+                    importing a backup or entering cards will not overwrite it.
+                </span>
+            }
+            <a href="settings">open settings</a>
+        </div>
+    }
 
-<main id="main" tabindex="-1">@Body</main>
-<BusyOverlay />
-@* Rendered once, above every page, because it is reachable from anywhere. *@
+    <main id="main" tabindex="-1">@Body</main>
+    <BusyOverlay />
+</div>
+@* Rendered once, above every page, because it is reachable from anywhere — outside the inert
+   wrapper, since it is the one thing that must stay interactive while it is open. *@
 <CommandPalette />
 @* Also markup-free: it owns the app-wide undo shortcut. *@
 <UndoHotkeys />
 
 @code {
-    protected override void OnInitialized() => Session.Changed += OnChanged;
+    protected override void OnInitialized()
+    {
+        Session.Changed += OnChanged;
+        Switch.OpenedChanged += OnChanged;
+    }
 
-    public void Dispose() => Session.Changed -= OnChanged;
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Switch.OpenedChanged -= OnChanged;
+    }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 }

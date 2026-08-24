@@ -125,7 +125,7 @@ else
                             <div class="actions">
                                 <a class="btn btn-sm btn-outline-secondary" href="decks/@deck.Id">open</a>
                                 <button class="btn btn-sm @(_confirming == deck.Id ? "btn-danger" : "btn-outline-danger")"
-                                        @onclick="() => ConfirmDelete(deck.Id)"
+                                        @onclick="() => ConfirmDelete(deck.Id)" aria-live="polite"
                                         title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete this deck")">
                                     @(_confirming == deck.Id ? "really?" : "delete")
                                 </button>
@@ -146,11 +146,11 @@ else
             <table class="table table-sm align-middle">
                 <thead>
                     <tr>
-                        <th>deck</th>
-                        <th class="num">cards</th>
-                        <th class="num">missing</th>
-                        <th>legality</th>
-                        <th></th>
+                        <th scope="col">deck</th>
+                        <th scope="col" class="num">cards</th>
+                        <th scope="col" class="num">missing</th>
+                        <th scope="col">legality</th>
+                        <th scope="col"><span class="visually-hidden">actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -168,7 +168,7 @@ else
                                 }
                                 else if (deck.Missing == 0)
                                 {
-                                    <span class="text-success fw-semibold">buildable</span>
+                                    <span class="text-success-emphasis fw-semibold">buildable</span>
                                 }
                                 else
                                 {
@@ -203,7 +203,7 @@ else
                                 @* Two taps, and the confirmation is scoped to this row: a shared
                                    flag would arm every delete button at once. *@
                                 <button class="btn btn-sm @(_confirming == deck.Id ? "btn-danger" : "btn-outline-danger")"
-                                        @onclick="() => ConfirmDelete(deck.Id)"
+                                        @onclick="() => ConfirmDelete(deck.Id)" aria-live="polite"
                                         title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete this deck")">
                                     @(_confirming == deck.Id ? "really?" : "delete")
                                 </button>

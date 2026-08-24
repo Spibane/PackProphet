@@ -153,10 +153,10 @@ else
                 <table class="table table-sm align-middle">
                     <thead>
                         <tr>
-                            <th>card</th>
-                            <th class="num">you own</th>
-                            <th class="num">still want</th>
-                            <th class="num">worth to you</th>
+                            <th scope="col">card</th>
+                            <th scope="col" class="num">you own</th>
+                            <th scope="col" class="num">still want</th>
+                            <th scope="col" class="num">worth to you</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -218,7 +218,7 @@ else
 
                 @if (_logged is not null)
                 {
-                    <div class="alert alert-success py-2 small mt-2 mb-0">@_logged</div>
+                    <div class="alert alert-success py-2 small mt-2 mb-0" role="alert">@_logged</div>
                 }
             }
         }

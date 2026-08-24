@@ -237,12 +237,12 @@ else
                 <table class="table table-sm align-middle">
                     <thead>
                         <tr>
-                            <th>@_swaps.Mine.Name gets</th>
-                            <th>@_swaps.Theirs.Name gets</th>
-                            <th>rarity</th>
-                            <th class="num" title="Expected packs the receiving account would not have to open">packs saved</th>
-                            <th class="num">dust each</th>
-                            <th>status</th>
+                            <th scope="col">@_swaps.Mine.Name gets</th>
+                            <th scope="col">@_swaps.Theirs.Name gets</th>
+                            <th scope="col">rarity</th>
+                            <th scope="col" class="num" title="Expected packs the receiving account would not have to open">packs saved</th>
+                            <th scope="col" class="num">dust each</th>
+                            <th scope="col">status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -318,7 +318,7 @@ else
                 </p>
                 <table class="table table-sm align-middle w-auto">
                     <thead>
-                        <tr><th>card</th><th>rarity</th><th class="num">packs saved</th></tr>
+                        <tr><th scope="col">card</th><th scope="col">rarity</th><th scope="col" class="num">packs saved</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var gift in _swaps.Unpayable)

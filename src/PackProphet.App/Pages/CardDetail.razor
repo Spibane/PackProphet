@@ -253,6 +253,10 @@ else
                         <tr class="@(option == _routes?.Cheapest ? "row-best" : "")">
                             <td style="width:7rem">
                                 <strong>@RouteName(option.Route)</strong>
+                                @if (option == _routes?.Cheapest)
+                                {
+                                    <span class="badge text-bg-primary ms-1">cheapest</span>
+                                }
                             </td>
                             <td>
                                 @if (!option.Available)

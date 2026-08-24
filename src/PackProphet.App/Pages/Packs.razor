@@ -146,7 +146,7 @@ else
 
     @if (_outstanding == 0)
     {
-        <div class="alert alert-success m-3">
+        <div class="alert alert-success m-3" role="alert">
             Nothing outstanding for this target. Raise the rarity or copies to aim higher.
         </div>
     }
@@ -267,7 +267,7 @@ else
             <div class="px-3 pb-3">
                 <table class="table table-sm w-auto">
                     <thead>
-                        <tr><th>rarity</th><th class="num">1 copy</th><th class="num">2 copies</th></tr>
+                        <tr><th scope="col">rarity</th><th scope="col" class="num">1 copy</th><th scope="col" class="num">2 copies</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var (rung, one, two) in _advisor)
@@ -312,10 +312,10 @@ else
                     <table class="table table-sm align-middle w-auto">
                         <thead>
                             <tr>
-                                <th>@GameRules.PacksPerBatch packs of</th>
-                                <th class="num">new cards expected</th>
-                                <th class="num">chance of nothing new</th>
-                                <th class="num">against the best</th>
+                                <th scope="col">@GameRules.PacksPerBatch packs of</th>
+                                <th scope="col" class="num">new cards expected</th>
+                                <th scope="col" class="num">chance of nothing new</th>
+                                <th scope="col" class="num">against the best</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -387,8 +387,8 @@ else
                     <table class="table table-sm align-middle w-auto">
                         <thead>
                             <tr>
-                                <th>pack</th>
-                                <th class="num">packs to buy</th>
+                                <th scope="col">pack</th>
+                                <th scope="col" class="num">packs to buy</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -456,10 +456,10 @@ else
                 <table class="table table-sm align-middle w-auto">
                     <thead>
                         <tr>
-                            <th>set</th>
-                            <th class="num">balance</th>
-                            <th class="num">packs to cap</th>
-                            <th>could buy now</th>
+                            <th scope="col">set</th>
+                            <th scope="col" class="num">balance</th>
+                            <th scope="col" class="num">packs to cap</th>
+                            <th scope="col">could buy now</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -515,10 +515,10 @@ else
                     <table class="table table-sm align-middle w-auto">
                         <thead>
                             <tr>
-                                <th>card</th>
-                                <th class="num">pull</th>
-                                <th class="num">points</th>
-                                <th class="num">packs saved per pack of points</th>
+                                <th scope="col">card</th>
+                                <th scope="col" class="num">pull</th>
+                                <th scope="col" class="num">points</th>
+                                <th scope="col" class="num">packs saved per pack of points</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -551,15 +551,15 @@ else
         <table class="table table-sm align-middle pack-table">
             <thead>
                 <tr>
-                    <th>pack</th>
-                    <th class="num">chance of a hit</th>
-                    <th class="num">packs per new card</th>
-                    <th class="num">to finish its share</th>
-                    <th class="num">cards it can give</th>
+                    <th scope="col">pack</th>
+                    <th scope="col" class="num">chance of a hit</th>
+                    <th scope="col" class="num">packs per new card</th>
+                    <th scope="col" class="num">to finish its share</th>
+                    <th scope="col" class="num">cards it can give</th>
                     @* The action, in its own column rather than among the badges in the name cell:
                        it sits in the same place on every row, and the name cell already carries up
                        to four badges. *@
-                    <th></th>
+                    <th scope="col"><span class="visually-hidden">actions</span></th>
                 </tr>
             </thead>
             <tbody>

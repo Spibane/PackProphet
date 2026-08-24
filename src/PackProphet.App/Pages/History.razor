@@ -250,10 +250,10 @@ else
             <table class="table table-sm w-auto align-middle">
                 <thead>
                     <tr>
-                        <th>set</th>
-                        <th class="num">packs</th>
-                        <th class="num">points earned</th>
-                        <th></th>
+                        <th scope="col">set</th>
+                        <th scope="col" class="num">packs</th>
+                        <th scope="col" class="num">points earned</th>
+                        <th scope="col"><span class="visually-hidden">share of total</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -269,7 +269,9 @@ else
                                which the points panel on Which pack owns. *@
                             <td class="num">@((row.Count * GameRules.PackPointsPerPack).ToString("N0"))</td>
                             <td style="width:10rem">
-                                <div class="row-bar"><span style="width:@Height(row.Count, _perSetMax)%"></span></div>
+                                @* Redundant with the packs column for anyone who cannot see the bar
+                                   fill, so it stays out of the accessibility tree entirely. *@
+                                <div class="row-bar" aria-hidden="true"><span style="width:@Height(row.Count, _perSetMax)%"></span></div>
                             </td>
                         </tr>
                     }
@@ -399,10 +401,10 @@ else
                 <table class="table table-sm w-auto align-middle">
                     <thead>
                         <tr>
-                            <th>rarity</th>
-                            <th class="num">@(_lifetimeActive ? "held" : "pulled")</th>
-                            <th class="num">expected</th>
-                            <th class="num">difference</th>
+                            <th scope="col">rarity</th>
+                            <th scope="col" class="num">@(_lifetimeActive ? "held" : "pulled")</th>
+                            <th scope="col" class="num">expected</th>
+                            <th scope="col" class="num">difference</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -448,7 +450,7 @@ else
 
             <table class="table table-sm align-middle">
                 <thead>
-                    <tr><th>when</th><th>pack</th><th>cards</th><th></th></tr>
+                    <tr><th scope="col">when</th><th scope="col">pack</th><th scope="col">cards</th><th scope="col"><span class="visually-hidden">actions</span></th></tr>
                 </thead>
                 <tbody>
                     @foreach (var entry in _recent)
@@ -478,7 +480,7 @@ else
                             </td>
                             <td class="text-end">
                                 <button class="btn btn-sm @(_confirming == entry ? "btn-danger" : "btn-outline-danger") py-0 px-2"
-                                        @onclick="() => ConfirmDelete(entry)"
+                                        @onclick="() => ConfirmDelete(entry)" aria-live="polite"
                                         title="@(_confirming == entry ? "Tap again to delete" : "Delete this logged pack")">
                                     @(_confirming == entry ? "really?" : "delete")
                                 </button>
@@ -1062,7 +1064,7 @@ else
         var delta = row.Observed - row.Expected;
         if (Math.Abs(delta) < 3 || row.Expected < 3) return "";
 
-        return delta > 0 ? "text-success" : "text-danger";
+        return delta > 0 ? "text-success-emphasis" : "text-danger-emphasis";
     }
 
     private IEnumerable<string> Named(PackOpenEvent entry) =>

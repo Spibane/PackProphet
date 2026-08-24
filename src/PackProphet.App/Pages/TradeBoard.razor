@@ -159,13 +159,13 @@ else
             <DataTable Label="In-game wishlist board">
                 <thead>
                     <tr>
-                        <th scope="col">card</th>
-                        <th scope="col">set</th>
-                        <th scope="col">rarity</th>
-                        <th scope="col" class="num" title="On average, how many packs before you get it — or the packs' worth of points to buy it outright, whichever is fewer">packs to get it</th>
-                        <th scope="col" title="A pull figure is an average you could beat or miss badly; a points figure is a guarantee after that many packs of the set">how</th>
-                        <th scope="col" class="num">dust to trade</th>
-                        <th scope="col">a card to give?</th>
+                        <th scope="col" data-pri="1">card</th>
+                        <th scope="col" data-pri="1">set</th>
+                        <th scope="col" data-pri="2">rarity</th>
+                        <th scope="col" class="num" data-pri="2" title="On average, how many packs before you get it — or the packs' worth of points to buy it outright, whichever is fewer">packs to get it</th>
+                        <th scope="col" data-pri="3" title="A pull figure is an average you could beat or miss badly; a points figure is a guarantee after that many packs of the set">how</th>
+                        <th scope="col" class="num" data-pri="3">dust to trade</th>
+                        <th scope="col" data-pri="3">a card to give?</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -195,16 +195,16 @@ else
                                     </span>
                                 }
                             </td>
-                            <td>@slot.Card.Set @slot.Card.Number</td>
-                            <td>
+                            <td data-pri="1">@slot.Card.Set @slot.Card.Number</td>
+                            <td data-pri="2">
                                 <span class="glyphs @Session.Index.GlyphClass(slot.Card)" title="@Session.Index.Symbol(slot.Card)">
                                     @Session.Index.Glyphs(slot.Card)
                                 </span>
                             </td>
-                            <td class="num">@Cost(slot.NormalCost)</td>
-                            <td class="small text-body-secondary">@How(slot)</td>
-                            <td class="num">@(slot.Dust > 0 ? slot.Dust.ToString("N0") : "free")</td>
-                            <td class="small">
+                            <td class="num" data-pri="2">@Cost(slot.NormalCost)</td>
+                            <td class="small text-body-secondary" data-pri="3">@How(slot)</td>
+                            <td class="num" data-pri="3">@(slot.Dust > 0 ? slot.Dust.ToString("N0") : "free")</td>
+                            <td class="small" data-pri="3">
                                 @if (slot.SparesAtRarity > 0)
                                 {
                                     @* What the number means, spelled out: these are your surplus

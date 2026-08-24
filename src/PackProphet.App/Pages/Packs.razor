@@ -551,11 +551,11 @@ else
         <DataTable Label="Packs ranked for your target" Class="pack-table">
             <thead>
                 <tr>
-                    <th scope="col">pack</th>
-                    <th scope="col" class="num">chance of a hit</th>
-                    <th scope="col" class="num">packs per new card</th>
-                    <th scope="col" class="num">to finish its share</th>
-                    <th scope="col" class="num">cards it can give</th>
+                    <th scope="col" data-pri="1">pack</th>
+                    <th scope="col" class="num" data-pri="1">chance of a hit</th>
+                    <th scope="col" class="num" data-pri="2">packs per new card</th>
+                    <th scope="col" class="num" data-pri="3">to finish its share</th>
+                    <th scope="col" class="num" data-pri="3">cards it can give</th>
                     @* The action, in its own column rather than among the badges in the name cell:
                        it sits in the same place on every row, and the name cell already carries up
                        to four badges. *@
@@ -630,10 +630,10 @@ else
                         @* Dashes rather than zeroes where a pack has no published rates. A zero
                            would say "this pack cannot help", when the truth is that nobody knows
                            the odds yet. *@
-                        <td class="num">@(s is null ? "—" : s.ChanceUseful.ToString("P1"))</td>
-                        <td class="num">@(s is null ? "—" : Fmt(s.PacksToNextUseful))</td>
-                        <td class="num">@(s is null ? "—" : Fmt(s.PacksToFinishItsShare))</td>
-                        <td class="num">@(s?.DemandsServed ?? row.CardsServed)</td>
+                        <td class="num" data-pri="1">@(s is null ? "—" : s.ChanceUseful.ToString("P1"))</td>
+                        <td class="num" data-pri="2">@(s is null ? "—" : Fmt(s.PacksToNextUseful))</td>
+                        <td class="num" data-pri="3">@(s is null ? "—" : Fmt(s.PacksToFinishItsShare))</td>
+                        <td class="num" data-pri="3">@(s?.DemandsServed ?? row.CardsServed)</td>
                         @* Straight to logging this pack. Offered on every row, including the ones
                            marked unavailable or unpriceable: what you actually opened is a fact,
                            and the app's assumption about the shelf should not stop it being

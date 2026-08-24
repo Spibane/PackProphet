@@ -234,7 +234,7 @@ else
                     week rather than for this evening.
                 </p>
 
-                <table class="table table-sm align-middle">
+                <DataTable Label="Possible swaps">
                     <thead>
                         <tr>
                             <th scope="col">@_swaps.Mine.Name gets</th>
@@ -293,7 +293,7 @@ else
                             </tr>
                         }
                     </tbody>
-                </table>
+                </DataTable>
 
                 @if (_readyOnly && Rows.Count == 0)
                 {
@@ -316,7 +316,7 @@ else
                     spare here. Any spare at that rung unlocks the swap; it does not have to be a
                     card anyone wants.
                 </p>
-                <table class="table table-sm align-middle w-auto">
+                <DataTable Label="Wanted, with nothing to pay with" Fit="true">
                     <thead>
                         <tr><th scope="col">card</th><th scope="col">rarity</th><th scope="col" class="num">packs saved</th></tr>
                     </thead>
@@ -337,7 +337,7 @@ else
                             </tr>
                         }
                     </tbody>
-                </table>
+                </DataTable>
             }
 
             @if (_swaps.Unwanted.Count > 0)

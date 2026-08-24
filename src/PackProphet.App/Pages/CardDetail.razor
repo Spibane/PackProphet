@@ -146,7 +146,7 @@ else
             else
             {
                 <h2 class="h6">@(_fact.IsPokemon ? "Pokémon" : "Trainer")</h2>
-                <table class="table table-sm w-auto">
+                <DataTable Label="Card stats" Fit="true">
                     <tbody>
                         @if (_fact.Subtype is { Length: > 0 } sub)
                         {
@@ -200,7 +200,7 @@ else
                             <tr><td>illustrator</td><td>@artist</td></tr>
                         }
                     </tbody>
-                </table>
+                </DataTable>
 
                 @if (_fact.HasAbility)
                 {
@@ -246,7 +246,7 @@ else
             <h2 class="h6">How to get it</h2>
             @* All four routes, including the ones that do not exist for this rarity, so the absence
                of a route is stated rather than left blank. *@
-            <table class="table table-sm align-middle">
+            <DataTable Label="Ways to get this card">
                 <tbody>
                     @foreach (var option in _routes?.Options ?? [])
                     {
@@ -288,7 +288,7 @@ else
                         </tr>
                     }
                 </tbody>
-            </table>
+            </DataTable>
 
             <p class="small text-body-secondary">
                 Only <strong>pull</strong> and <strong>pack points</strong> are priced in packs,

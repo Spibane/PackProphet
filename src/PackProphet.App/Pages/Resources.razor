@@ -121,7 +121,7 @@ else
         }
         else
         {
-            <table class="table table-sm w-auto align-middle">
+            <DataTable Label="Pack points per set" Fit="true">
                 <thead>
                     <tr>
                         <th scope="col">set</th>
@@ -188,7 +188,7 @@ else
                         </tr>
                     }
                 </tbody>
-            </table>
+            </DataTable>
         }
 
         @* A series at a time rather than a set at a time. Correcting balances means opening the
@@ -221,7 +221,7 @@ else
         @if (_dustSaved > 0)
         {
             <h2>Is shinedust actually the problem?</h2>
-            <table class="table table-sm w-auto align-middle">
+            <DataTable Label="Shinedust costs" Fit="true">
                 <thead>
                     <tr><th scope="col">rarity</th><th scope="col" class="num">dust each</th><th scope="col" class="num">trades funded</th></tr>
                 </thead>
@@ -235,7 +235,7 @@ else
                         </tr>
                     }
                 </tbody>
-            </table>
+            </DataTable>
             <p class="small text-body-secondary">
                 Compare those against the @Session.TradeOutlook.Reachable trade(s) your stamina can
                 pay for right now. Where the dust column is the larger number, dust is not what is

@@ -150,7 +150,7 @@
         }
     </p>
 
-    <table class="table table-sm align-middle">
+    <DataTable Label="Your collections">
         <thead>
             <tr>
                 <th scope="col">collection</th>
@@ -207,7 +207,7 @@
                 </tr>
             }
         </tbody>
-    </table>
+    </DataTable>
 
     @* No delete button while there is one collection: the app has nowhere to put a tap without
        one, so the offer could only be refused. *@
@@ -280,7 +280,7 @@
     @if (Session.Ready)
     {
         <h2>Card data</h2>
-        <table class="table table-sm w-auto">
+        <DataTable Label="Card data sources" Fit="true">
             <tbody>
                 <tr><td>source</td><td><strong>@SourceLabel</strong></td></tr>
                 <tr><td>cards</td><td>@Session.Index.All.Count entries</td></tr>
@@ -334,7 +334,7 @@
                     </tr>
                 }
             </tbody>
-        </table>
+        </DataTable>
         @* This app is AGPL-3.0-or-later, and section 13 requires that anyone interacting with it
            over a network be offered its Corresponding Source. That obligation applies to the
            running app rather than to the repository, so the offer is made here. *@

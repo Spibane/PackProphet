@@ -247,7 +247,7 @@ else
             </div>
 
             <h2>Packs per set</h2>
-            <table class="table table-sm w-auto align-middle">
+            <DataTable Label="Packs opened per set" Fit="true">
                 <thead>
                     <tr>
                         <th scope="col">set</th>
@@ -276,7 +276,7 @@ else
                         </tr>
                     }
                 </tbody>
-            </table>
+            </DataTable>
 
             <div class="section-head">
                 <h3 class="mb-0 h6">Did the odds hold up?</h3>
@@ -398,7 +398,7 @@ else
                         @_scopePacks.ToString("0.#") pack(s)@(_lifetimeActive ? " estimated" : "")
                     </span>
                 </div>
-                <table class="table table-sm w-auto align-middle">
+                <DataTable Label="Pulls against expected, by rarity" Fit="true">
                     <thead>
                         <tr>
                             <th scope="col">rarity</th>
@@ -421,7 +421,7 @@ else
                             </tr>
                         }
                     </tbody>
-                </table>
+                </DataTable>
             }
 
             <div class="section-head">
@@ -448,7 +448,7 @@ else
                 and matching it to the minute is not worth the fuss.
             </p>
 
-            <table class="table table-sm align-middle">
+            <DataTable Label="Recent packs">
                 <thead>
                     <tr><th scope="col">when</th><th scope="col">pack</th><th scope="col">cards</th><th scope="col"><span class="visually-hidden">actions</span></th></tr>
                 </thead>
@@ -488,7 +488,7 @@ else
                         </tr>
                     }
                 </tbody>
-            </table>
+            </DataTable>
             @if (_log.Count > RecentShown)
             {
                 <p class="small text-body-secondary">

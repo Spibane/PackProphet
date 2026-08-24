@@ -156,8 +156,7 @@ else
                in-game card list, and rank order would mean jumping between sets for every entry.
                Rank picks the cards; this order gets them typed. *@
             <h2>The board, in the order you will enter it</h2>
-            <div class="table-responsive" tabindex="0" role="region" aria-label="In-game wishlist board">
-            <table class="table table-sm align-middle">
+            <DataTable Label="In-game wishlist board">
                 <thead>
                     <tr>
                         <th scope="col">card</th>
@@ -229,8 +228,7 @@ else
                         </tr>
                     }
                 </tbody>
-            </table>
-            </div>
+            </DataTable>
 
             @* The limits of the one heuristic on this page. It is a guess about other players made
                from data about card drops, which is worth knowing before deciding whether to keep

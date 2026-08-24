@@ -28,11 +28,6 @@ const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /
 const offlineAssetsExclude = [
     /^service-worker\.js$/,
 
-    // Blazor.Bootstrap bundles a PDF viewer and a sortable list. Neither component is used here,
-    // and the pdf.js worker alone is the single largest asset in the deploy.
-    /pdfjs-/,
-    /blazor\.bootstrap\.sortable-list\./,
-
     // Bootstrap is vendored whole, and index.html links exactly two files out of it. The rest —
     // unminified copies, right-to-left variants, ESM builds, and the grid/reboot/utilities
     // subsets — is never requested by anything.

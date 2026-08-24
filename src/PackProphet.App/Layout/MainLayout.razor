@@ -11,7 +11,7 @@
    inert, not just visually covered — while the palette is open. Without this a screen reader
    or a Tab press that slips past the palette's own trap still finds a full page of live nav
    links and content sitting right behind the dialog. *@
-<div inert="@Switch.IsOpen">
+<div class="app-shell" inert="@Switch.IsOpen">
     @* Twelve nav links sit above every page, and Blazor does not move focus on navigation, so a
        keyboard or screen-reader user otherwise tabs through the whole bar again on arrival.
 

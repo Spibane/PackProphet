@@ -578,7 +578,10 @@
     private void MakeShareLink()
     {
         var code = SnapshotCodec.Encode(Session.Profile);
-        _shareLink = $"{Nav.BaseUri}share?d={code}";
+        // After a `#`, not in the query string: a real collection's code can run past what a
+        // server or proxy accepts on the request line (a 414), and a fragment is never sent to
+        // a server at all — the browser keeps it to itself.
+        _shareLink = $"{Nav.BaseUri}share#{code}";
     }
 
     private async Task Export()

@@ -1,5 +1,6 @@
 @page "/share"
 @inject AppSession Session
+@inject NavigationManager Nav
 
 <PageTitle>Shared collection · PackProphet</PageTitle>
 
@@ -76,19 +77,29 @@ else
 }
 
 @code {
-    [SupplyParameterFromQuery(Name = "d")] public string? D { get; set; }
-
     private PackProphet.State.SharedSnapshot? _snapshot;
     private int _totalOwned;
     private int _wanted;
     private int _satisfied;
     private List<(string Set, int Wanted, int Satisfied)> _bySet = [];
 
+    /// <summary>
+    /// The code sits after a `#`, not in the query string, because a full collection can run
+    /// past what a server or proxy accepts on the request line — a fragment is never sent to a
+    /// server at all, so it cannot 414. <see cref="SupplyParameterFromQueryAttribute"/> only
+    /// ever sees the query string, so the fragment has to be read from the browser's own URL.
+    /// </summary>
+    private string? CodeFromFragment()
+    {
+        var fragment = new Uri(Nav.Uri).Fragment;
+        return fragment.Length > 1 ? Uri.UnescapeDataString(fragment[1..]) : null;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await Session.InitAsync();
 
-        _snapshot = SnapshotCodec.TryDecode(D);
+        _snapshot = SnapshotCodec.TryDecode(CodeFromFragment());
         if (_snapshot is null) return;
 
         var owned = new PackProphet.Domain.Collection(_snapshot.Collection);

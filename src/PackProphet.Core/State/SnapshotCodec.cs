@@ -15,9 +15,15 @@ public sealed record SharedSnapshot(string Name, Dictionary<string, int> Collect
 /// Packs a snapshot into a URL-safe string and back, entirely client-side.
 ///
 /// There is no server to host a short link behind, so the whole payload has to travel in the
-/// link itself. A collection is mostly zeros and repeated small integers once serialized, which
-/// deflate compresses well, and the result is base64url so it survives being pasted into any
-/// query string without escaping.
+/// link itself. A collection is mostly repeated small integers over card-name keys once
+/// serialized, which deflate compresses well — Brotli would do better, but its native codec is
+/// not linked into the Blazor WebAssembly runtime and throws PlatformNotSupportedException
+/// there, which is the only runtime this ever has to work in. The result is base64url so it
+/// survives being pasted into any query string without escaping.
+///
+/// The caller is expected to put the code after a `#`, not in the query string: a full
+/// collection can run past what a server or proxy accepts on the request line (a 414), and a
+/// fragment is never sent to a server at all.
 /// </summary>
 public static class SnapshotCodec
 {

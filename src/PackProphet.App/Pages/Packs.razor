@@ -265,7 +265,7 @@ else
         @if (_advisorOpen && !IsWishScope)
         {
             <div class="px-3 pb-3">
-                <table class="table table-sm w-auto">
+                <DataTable Label="Cost per rarity, at one copy and two" Fit="true">
                     <thead>
                         <tr><th scope="col">rarity</th><th scope="col" class="num">1 copy</th><th scope="col" class="num">2 copies</th></tr>
                     </thead>
@@ -279,7 +279,7 @@ else
                             </tr>
                         }
                     </tbody>
-                </table>
+                </DataTable>
                 <p class="small text-body-secondary mb-0">
                     Expected packs to finish <em>that rarity alone</em>, opening the best available
                     pack each time &mdash; so it reads as the cost of adding a rarity to your
@@ -309,7 +309,7 @@ else
                 }
                 else
                 {
-                    <table class="table table-sm align-middle w-auto">
+                    <DataTable Label="Expected result per batch of packs" Fit="true">
                         <thead>
                             <tr>
                                 <th scope="col">@GameRules.PacksPerBatch packs of</th>
@@ -348,7 +348,7 @@ else
                                 </tr>
                             }
                         </tbody>
-                    </table>
+                    </DataTable>
                     <p class="small text-body-secondary mb-0">
                         One thing this cannot price: a batch takes away the chance to change your
                         mind after each pull. That costs nothing early on, when the same pack stays
@@ -384,7 +384,7 @@ else
                 }
                 else
                 {
-                    <table class="table table-sm align-middle w-auto">
+                    <DataTable Label="Packs to buy" Fit="true">
                         <thead>
                             <tr>
                                 <th scope="col">pack</th>
@@ -405,7 +405,7 @@ else
                                 </tr>
                             }
                         </tbody>
-                    </table>
+                    </DataTable>
                     <p class="small text-body-secondary mb-0">
                         Expected to satisfy @_allocation.ExpectedNewCards.ToString("N1") of the
                         @_outstanding outstanding demands
@@ -453,7 +453,7 @@ else
                     </Notice>
                 }
 
-                <table class="table table-sm align-middle w-auto">
+                <DataTable Label="Pack point balances per set" Fit="true">
                     <thead>
                         <tr>
                             <th scope="col">set</th>
@@ -494,7 +494,7 @@ else
                             </tr>
                         }
                     </tbody>
-                </table>
+                </DataTable>
 
                 <h2 class="mt-3 h6">Where points are worth spending</h2>
                 @if (_pointsShop.Count == 0)
@@ -512,7 +512,7 @@ else
                         while an Immersive returns 0.3, so ranking by price alone recommends
                         precisely the worst purchases. Anything at or below 1.0 is left out.
                     </p>
-                    <table class="table table-sm align-middle w-auto">
+                    <DataTable Label="Where points are worth spending" Fit="true">
                         <thead>
                             <tr>
                                 <th scope="col">card</th>
@@ -538,7 +538,7 @@ else
                                 </tr>
                             }
                         </tbody>
-                    </table>
+                    </DataTable>
                 }
             </div>
         }
@@ -548,8 +548,7 @@ else
             <hr />
         }
 
-        <div class="table-responsive" tabindex="0" role="region" aria-label="Packs ranked for your target">
-        <table class="table table-sm align-middle pack-table">
+        <DataTable Label="Packs ranked for your target" Class="pack-table">
             <thead>
                 <tr>
                     <th scope="col">pack</th>
@@ -698,8 +697,7 @@ else
                     }
                 }
             </tbody>
-        </table>
-        </div>
+        </DataTable>
 
     }
 }

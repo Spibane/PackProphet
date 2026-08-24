@@ -337,6 +337,19 @@ main:focus { outline: none; }
 
 /* A grid, not a flex row: with eight statistics the flex version wrapped into ragged rows whose
    columns did not line up. auto-fill keeps them aligned at any width without breakpoints. */
+/* Bootstrap's .table-responsive is an overflow-x scroller, and a scroller whose content is plain
+   text cannot be reached by keyboard unless it is focusable itself (WCAG 2.1.1) — Chrome does not
+   make scrollers focusable the way Firefox does. The wrappers therefore carry tabindex="0" and a
+   role, which means they also need a focus ring of their own.
+
+   The app's other two scrollers, .set-tabs and .pick-list, are deliberately NOT given this: every
+   child is a button, so tabbing already walks into them and the browser scrolls each one into
+   view. Adding tabindex there would only insert a stop that does nothing. */
+.table-responsive:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: -2px;
+}
+
 .summary {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));

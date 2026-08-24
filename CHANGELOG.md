@@ -6,6 +6,18 @@ until then the minor number tracks the roadmap phase.
 
 ## Unreleased
 
+- **Licence and source are now offered inside the app.** This is AGPL-3.0-or-later, and section 13
+  requires that anyone interacting with it over a network be offered the Corresponding Source —
+  the one obligation the AGPL adds over the GPL, and the one a hosted app is most likely to miss.
+  The repository documented all of it and none of it reached the running app, which is where the
+  obligation applies.
+- **The service worker stopped precaching about 663 KB nothing loads** — roughly a sixth of a
+  4.3 MB first visit. Blazor.Bootstrap's pdf.js worker and sortable list, and every vendored
+  Bootstrap variant other than the two files `index.html` links: unminified copies, right-to-left
+  builds, ESM builds, and the grid/reboot/utilities subsets. Its precache rules are now tested by
+  reading the regexes out of the worker itself, since that file runs neither in development nor in
+  CI — only on a real visitor's first load.
+
 - **The card grid is operable from the keyboard.** It was pointer-only: a tile was a div with a
   click handler, so entering a collection — the app's primary interaction — was impossible without
   a mouse or a touchscreen. Arrows move, digits set a count outright, Enter adds, `-` removes, `i`
@@ -23,7 +35,9 @@ until then the minor number tracks the roadmap phase.
   codebase — and nearly every defect found in review lived there, because a page that indexes an
   empty list compiles cleanly and passes every engine test. Pages are discovered by reflection, so
   one added later is covered without anyone remembering; each is rendered on a brand-new profile
-  and on a populated one. Every regression test was verified by reverting the fix and confirming
+  and on a populated one. Discovery is deduplicated by page type rather than by route, because
+  Collection answers both `/` and `/collection` and a repeated theory argument is dropped by the
+  runner — which quietly removed the app's main screen from every page-driven test. Every regression test was verified by reverting the fix and confirming
   the suite went red.
 - **CI now runs the tests before deploying.** It did not, which made a green suite optional.
 - The deck QR was **verified against the live game in both directions** — until then every codec

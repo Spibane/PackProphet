@@ -24,9 +24,14 @@ public class EveryPageRendersTests : AppHost
     {
         get
         {
+            // Distinct by type, not by route: Collection answers both "/" and "/collection",
+            // and xUnit drops theory cases whose arguments repeat — so without this the page
+            // is silently dropped from every page-driven theory rather than tested once.
             var data = new TheoryData<string>();
-            foreach (var (type, _) in Routable().Where(r => !r.Route.Contains('{')))
-                data.Add(type.FullName!);
+            foreach (var name in Routable().Where(r => !r.Route.Contains('{'))
+                                           .Select(r => r.Type.FullName!)
+                                           .Distinct())
+                data.Add(name);
             return data;
         }
     }

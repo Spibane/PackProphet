@@ -44,6 +44,14 @@
     <Using Include="PackProphet.State" />
   </ItemGroup>
 
+  <!-- The published service worker, so its precache rules can be tested. It only runs in a
+       published build, which means it is the one file in the app that never executes in
+       development and never executes in CI either. -->
+  <ItemGroup>
+    <Content Include="..\..\src\PackProphet.App\wwwroot\service-worker.published.js"
+             Link="service-worker.published.js" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- The same vendored snapshot the app ships, served to the loader over a fake HttpClient so a
        page renders against real card data rather than a handful of fixtures. -->
   <ItemGroup>

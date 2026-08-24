@@ -20,7 +20,27 @@ const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 // includes an extensionless VERSION file, and the app reads it on every start. Matched by
 // extension alone it would be the one uncached request keeping the app from working offline.
 const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/, /\.svg$/, /^data\//];
-const offlineAssetsExclude = [/^service-worker\.js$/];
+// Precaching is not free: the worker downloads every match on the first visit, so anything the
+// app never references is a straight cost to a phone on hotel wifi. Measured against the live
+// deploy, these came to about 663 KB of a 4.3 MB first visit — roughly a sixth of it — for files
+// no page ever loads.
+//
+// The .map files are already absent, but only by accident: they end in .map, so no include pattern
+// matches them. Worth knowing, because renaming an include pattern could quietly pull 700 KB of
+// source maps into the cache.
+const offlineAssetsExclude = [
+    /^service-worker\.js$/,
+
+    // Blazor.Bootstrap bundles a PDF viewer and a sortable list. Neither component is used here,
+    // and the pdf.js worker alone is the single largest asset in the deploy.
+    /pdfjs-/,
+    /blazor\.bootstrap\.sortable-list\./,
+
+    // Bootstrap is vendored whole, and index.html links exactly two files out of it. The rest —
+    // unminified copies, right-to-left variants, ESM builds, and the grid/reboot/utilities
+    // subsets — is never requested by anything.
+    /^lib\/bootstrap\/(?!dist\/css\/bootstrap\.min\.css$|dist\/js\/bootstrap\.bundle\.min\.js$)/,
+];
 
 // The base path, taken from the worker's own URL: the app is hosted under /<repo>/ on GitHub
 // Pages and at / in development, and hardcoding either one breaks the other.

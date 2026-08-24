@@ -292,10 +292,3 @@ function restore(state, idx, total) {
         if (first) mark(state, Number(first.getAttribute('data-idx')), true);
     });
 }
-
-/// Puts the cursor on a given index from .NET. Only works for a rendered tile, which is why Home
-/// and End are handled here rather than by asking .NET for the last index.
-export function focusIndex(host, idx) {
-    const state = host && host.__ppKeys;
-    if (state) mark(state, idx, true);
-}

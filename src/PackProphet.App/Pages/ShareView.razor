@@ -1,0 +1,108 @@
+@page "/share"
+@inject AppSession Session
+
+<PageTitle>Shared collection · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else if (_snapshot is null)
+{
+    <div class="page-head">
+        <h1 class="title">Shared collection</h1>
+    </div>
+    <div class="p-3">
+        <p>
+            This link could not be read. It may be truncated from being copied, edited by hand,
+            or made by a version of PackProphet this one no longer understands.
+        </p>
+    </div>
+}
+else
+{
+    <div class="page-head">
+        <h1 class="title">@_snapshot.Name</h1>
+        <span class="subtitle">shared read-only</span>
+    </div>
+
+    @* Said plainly rather than assumed: the whole collection arrived inside the link itself, so
+       nothing about opening this page sent anything anywhere. *@
+    <div class="alert alert-info mx-3 small">
+        Nothing here can be edited. This was decoded entirely in your browser &mdash; opening the
+        link uploaded nothing and contacted no server. Decks, wishlists, resources and history
+        were left out of the link; only the collection and what it counts as complete came along.
+    </div>
+
+    <div class="summary px-3 py-2">
+        <div class="stat">
+            <span class="label">cards owned</span>
+            <span class="value">@_totalOwned</span>
+        </div>
+        <div class="stat">
+            <span class="label">toward target</span>
+            <span class="value">@_satisfied of @_wanted</span>
+            <span class="sub">across every set with a plan</span>
+        </div>
+    </div>
+
+    @if (_bySet.Count == 0)
+    {
+        <p class="p-3 text-body-secondary">Nothing is being tracked toward a target yet.</p>
+    }
+    else
+    {
+        <table class="table table-sm align-middle w-auto mx-3">
+            <thead>
+                <tr>
+                    <th>set</th>
+                    <th class="num">progress</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _bySet)
+                {
+                    <tr>
+                        <td>
+                            <strong>@row.Set</strong>
+                            <span class="text-body-secondary small">@Session.Sets.DisplayName(row.Set)</span>
+                        </td>
+                        <td class="num">@row.Satisfied / @row.Wanted</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "d")] public string? D { get; set; }
+
+    private PackProphet.State.SharedSnapshot? _snapshot;
+    private int _totalOwned;
+    private int _wanted;
+    private int _satisfied;
+    private List<(string Set, int Wanted, int Satisfied)> _bySet = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.InitAsync();
+
+        _snapshot = SnapshotCodec.TryDecode(D);
+        if (_snapshot is null) return;
+
+        var owned = new PackProphet.Domain.Collection(_snapshot.Collection);
+        _totalOwned = _snapshot.Collection.Values.Where(v => v > 0).Sum();
+
+        foreach (var set in Session.Index.OpenableSets)
+        {
+            var plan = _snapshot.Targets.PlanFor(set);
+            var (wanted, satisfied) = new RarityLadderTarget(set, plan).Progress(Session.Index, owned);
+            if (wanted == 0) continue;
+
+            _bySet.Add((set, wanted, satisfied));
+            _wanted += wanted;
+            _satisfied += satisfied;
+        }
+    }
+}

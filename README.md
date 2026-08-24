@@ -180,9 +180,9 @@ only when a screenshot import is attempted.
 
 Phases 1 and 2 are complete. See [CHANGELOG.md](CHANGELOG.md).
 
-- **Phase 3** — shareable read-only snapshots, importing from other trackers, localisation,
-  accessibility pass. Budget allocation across packs is done: see "Which pack" &rarr; splitting
-  a budget.
+- **Phase 3** — importing from other trackers, localisation, accessibility pass. Done: budget
+  allocation across packs ("Which pack" &rarr; splitting a budget), and shareable read-only
+  snapshots (Settings &rarr; share a read-only link).
 - **Phase 4** — screenshot recognition of the in-game card list. Cloud sync last, since it is
   the first thing needing a backend.
 

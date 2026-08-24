@@ -11,7 +11,7 @@
 else
 {
     <div class="page-head">
-        <span class="title">History</span>
+        <h1 class="title">History</h1>
         <span class="subtitle">from the packs you have logged</span>
     </div>
 
@@ -23,10 +23,46 @@ else
                 <a href="log">Log a pack</a> lands here, and this page also checks the odds
                 engine against what you actually pulled.
             </p>
+            @* A returning player has a real history the app has not seen. Saying so beats an
+               empty page that implies they have opened nothing. *@
+            @if (Session.Lifetime is { } baseline)
+            {
+                <p class="text-body-secondary">
+                    The game counted <strong>@baseline.PacksOpened</strong> packs and
+                    <strong>@baseline.WonderPicks</strong> Wonder Picks before
+                    @baseline.At.ToLocalTime().ToString("d MMM yyyy"). Those are totals only, so
+                    nothing on this page can be broken down from them &mdash; that needs packs
+                    logged here.
+                </p>
+            }
+            else
+            {
+                <p class="text-body-secondary">
+                    Played before finding this? Put the game's own lifetime totals into
+                    <a href="settings">Settings</a> and they will be counted here.
+                </p>
+            }
         }
         else
         {
             <div class="summary mb-3">
+                @* All-time first when it is known, because it is the truer number. The logged
+                   count stays beside it rather than being replaced: everything else on this page
+                   is derived from logged packs, so the reader needs to see how much of the total
+                   those cover. *@
+                @if (Session.Lifetime is { } baseline)
+                {
+                    <div class="stat">
+                        <span class="label">packs, all time</span>
+                        <span class="value">@Session.LifetimePacks</span>
+                        <span class="sub">@baseline.PacksOpened imported</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Wonder Picks, all time</span>
+                        <span class="value">@Session.LifetimeWonderPicks</span>
+                        <span class="sub">@baseline.WonderPicks imported</span>
+                    </div>
+                }
                 <div class="stat">
                     <span class="label">packs logged</span>
                     <span class="value">@_log.Count</span>
@@ -174,7 +210,7 @@ else
                 </div>
             </details>
 
-            <h6>Packs per day</h6>
+            <h2>Packs per day</h2>
             <p class="small text-body-secondary">
                 Last @DaysShown days. The free allowance is
                 @GameRules.PacksPerDay(Session.Profile.Resources.Premium) a day
@@ -212,7 +248,7 @@ else
                 }
             </div>
 
-            <h6>Packs per set</h6>
+            <h2>Packs per set</h2>
             <table class="table table-sm w-auto align-middle">
                 <thead>
                     <tr>
@@ -242,13 +278,103 @@ else
                 </tbody>
             </table>
 
-            <h6>Did the odds hold up?</h6>
-            <p class="small text-body-secondary">
-                What you actually pulled against what the engine predicted for exactly the packs
-                you opened. Small samples swing wildly &mdash; a handful of packs says nothing
-                about a 0.3% rarity &mdash; so treat this as a sanity check on the model, not on
-                your luck.
-            </p>
+            <div class="section-head">
+                <h3 class="mb-0 h6">Did the odds hold up?</h3>
+                @* Only offered once there is a baseline to scale to and logged packs to scale
+                   FROM. Without both, the option would be a button that cannot answer. *@
+                @* One slice at a time. Series and sets sit in the same dropdown under their own
+                   headings rather than behind a second control: they are the same question asked
+                   at two zoom levels, and a set is as fine as the data goes - pull rates are
+                   published per set. *@
+                <select class="form-select form-select-sm ms-auto" style="max-width:12rem"
+                        @onchange="OnScope" aria-label="Which sets to check">
+                    <option value="" selected="@(_scope.Length == 0)">every set</option>
+                    <optgroup label="series">
+                        @foreach (var series in ScopedSeries())
+                        {
+                            <option value="series:@series" selected="@(_scope == $"series:{series}")">
+                                series @series
+                            </option>
+                        }
+                    </optgroup>
+                    <optgroup label="set">
+                        @foreach (var set in ScopedSets())
+                        {
+                            <option value="set:@set" selected="@(_scope == $"set:{set}")">@set</option>
+                        }
+                    </optgroup>
+                </select>
+                @if (Session.Lifetime is not null && _pricedPacks > 0)
+                {
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Sample">
+                        <button class="btn @(_lifetime ? "btn-outline-secondary" : "btn-secondary")"
+                                @onclick="() => SetLifetimeCheck(false)" aria-pressed="@(!_lifetime)"
+                                title="Only the packs logged here, where both sides are measured">
+                            logged packs
+                        </button>
+                        <button class="btn @(_lifetime ? "btn-secondary" : "btn-outline-secondary")"
+                                @onclick="() => SetLifetimeCheck(true)" aria-pressed="@_lifetime"
+                                title="Scaled up to every pack the game says you have opened">
+                            all @Session.LifetimePacks packs
+                        </button>
+                    </div>
+                }
+            </div>
+            @if (!_lifetime)
+            {
+                <p class="small text-body-secondary">
+                    What you actually pulled against what the engine predicted for exactly the packs
+                    you opened. Small samples swing wildly &mdash; a handful of packs says nothing
+                    about a 0.3% rarity &mdash; so treat this as a sanity check on the model, not on
+                    your luck.
+                </p>
+            }
+            else
+            {
+                @* Every one of these is a reason the numbers are softer than the logged view, and
+                   all of them are stated because the reader cannot see any of them in the table. *@
+                <p class="small text-body-secondary">
+                    All @Session.LifetimePacks packs the game counted, split across sets by what
+                    your collection holds: copies of a set's own cards, divided by how many of
+                    them one of its packs yields. Only the ratios are used, so the inflation from
+                    trades and Wonder Picks largely cancels &mdash; but two things are worth
+                    knowing:
+                </p>
+                <ul class="small text-body-secondary">
+                    <li>
+                        <strong>Held</strong> is your collection, not your pulls &mdash; the only
+                        record of an unlogged pack that exists. It counts cards from trades,
+                        Wonder Picks and the points shop and misses ones you traded away, so it
+                        runs high on the tradeable rungs. Promos and sets with no published rates
+                        are left out of both sides.
+                    </li>
+                    <li>
+                        Deluxe packs are estimated only from the cards <em>only they</em> can give
+                        &mdash; the parallel foils and their own new cards &mdash; because
+                        everything else in one is a reprint credited to the set it came from. And
+                        a Deluxe pack does not guarantee a foil, so they are counted at the rate
+                        the slot actually pays rather than one per pack.
+                    </li>
+                </ul>
+                @if (_mix.Count > 0)
+                {
+                    <p class="small text-body-secondary">
+                        Estimated split:
+                        @string.Join(" · ", _mix.Take(6).Select(m => $"{m.Set} {m.Packs:0}"))@(_mix.Count > 6 ? $" · and {_mix.Count - 6} more" : "")
+                    </p>
+                }
+                else
+                {
+                    @* Refused rather than approximated. With nothing owned there is no evidence
+                       about which packs those were, and a total spread by guesswork would look
+                       exactly like a measurement. *@
+                    <div class="alert alert-warning py-1 px-2 small">
+                        Your collection has nothing in it that any pack could have produced, so
+                        the total cannot be split across sets. The figures below are the logged
+                        packs only.
+                    </div>
+                }
+            }
             @if (_unpriceable > 0)
             {
                 <div class="alert alert-secondary py-1 px-2 small">
@@ -256,33 +382,50 @@ else
                     they are left out of the comparison entirely rather than counted as zero.
                 </div>
             }
-            <table class="table table-sm w-auto align-middle">
-                <thead>
-                    <tr>
-                        <th>rarity</th>
-                        <th class="num">pulled</th>
-                        <th class="num">expected</th>
-                        <th class="num">difference</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var row in _accuracy)
-                    {
+            @if (_accuracy.Count == 0)
+            {
+                <p class="small text-body-secondary">
+                    Nothing priceable to compare for @ScopeLabel().
+                </p>
+            }
+            else
+            {
+                @* The pack count is what makes a row of wild differences readable: eleven packs of
+                   one set explains a swing that would look like a broken model without it. *@
+                <div class="small fw-semibold mt-2">
+                    @ScopeLabel()
+                    <span class="text-body-secondary fw-normal ms-1">
+                        @_scopePacks.ToString("0.#") pack(s)@(_lifetimeActive ? " estimated" : "")
+                    </span>
+                </div>
+                <table class="table table-sm w-auto align-middle">
+                    <thead>
                         <tr>
-                            <td>
-                                <span class="glyphs @row.Rung.GlyphClass" title="@row.Rung.Symbol">@row.Rung.Glyphs</span>
-                                <span class="small text-body-secondary ms-1">@row.Rung.Symbol</span>
-                            </td>
-                            <td class="num">@row.Observed</td>
-                            <td class="num">@row.Expected.ToString("0.#")</td>
-                            <td class="num @DiffClass(row)">@Diff(row)</td>
+                            <th>rarity</th>
+                            <th class="num">@(_lifetimeActive ? "held" : "pulled")</th>
+                            <th class="num">expected</th>
+                            <th class="num">difference</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _accuracy)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="glyphs @row.Rung.GlyphClass" title="@row.Rung.Symbol">@row.Rung.Glyphs</span>
+                                    <span class="small text-body-secondary ms-1">@row.Rung.Symbol</span>
+                                </td>
+                                <td class="num">@row.Observed</td>
+                                <td class="num">@row.Expected.ToString("0.#")</td>
+                                <td class="num @DiffClass(row)">@Diff(row)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
 
             <div class="section-head">
-                <h6 class="mb-0">Recent packs</h6>
+                <h3 class="mb-0 h6">Recent packs</h3>
                 <button class="btn btn-sm @(_clearingAll ? "btn-danger" : "btn-outline-danger") ms-auto"
                         @onclick="ClearAll">
                     @(_clearingAll ? $"really delete all {_log.Count}?" : "delete all")
@@ -660,16 +803,145 @@ else
         _perSetMax = Math.Max(1, _perSet.Max(r => r.Count));
     }
 
+    /// <summary>
+    /// Whether the odds check is scaled to the game's lifetime pack count. OFF by default, and
+    /// deliberately not persisted: the logged view is the one where both columns are measured
+    /// rather than inferred, so it is what the page should show on arrival.
+    /// </summary>
+    private bool _lifetime;
+
+    /// <summary>
+    /// Whether the lifetime view actually took effect. It cannot when the collection is too empty
+    /// to split the total across sets, and the distinction has to be visible: labelling logged
+    /// pulls as lifetime figures would be the one dishonest thing this page could do.
+    /// </summary>
+    private bool _lifetimeActive;
+
+    /// <summary>
+    /// Which slice of the check is on screen: "" for everything, "series:A" or "set:A1" for one.
+    /// One table at a time rather than a stack of them - nineteen sets is a page nobody reads,
+    /// and comparing two of them is a matter of switching, not of scrolling.
+    /// </summary>
+    private string _scope = "";
+
+    /// <summary>Logged packs the engine can price, i.e. the sample a lifetime estimate rests on.</summary>
+    private int _pricedPacks;
+
+    /// <summary>
+    /// The check per SET, which every view is folded from. Held rather than rebuilt per scope so
+    /// switching slices costs nothing and the slices cannot disagree with the total.
+    /// </summary>
+    private Dictionary<string, Dictionary<int, double>> _expBySet = new(StringComparer.OrdinalIgnoreCase);
+
+    private Dictionary<string, Dictionary<int, int>> _obsBySet = new(StringComparer.OrdinalIgnoreCase);
+
+    private Dictionary<string, double> _packsBySet = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Packs behind the slice on screen: counted when logged, estimated when lifetime.</summary>
+    private double _scopePacks;
+
+    /// <summary>The estimated split across sets, or empty when the collection cannot support one.</summary>
+    private IReadOnlyList<SetShare> _mix = [];
+
+    private void SetLifetimeCheck(bool on)
+    {
+        if (_lifetime == on) return;
+        _lifetime = on;
+        BuildAccuracy();
+    }
+
+    private void OnScope(ChangeEventArgs e)
+    {
+        _scope = e.Value?.ToString() ?? "";
+        BuildSelected();
+    }
+
+    /// <summary>Sets the check has anything to say about, in release order.</summary>
+    private IEnumerable<string> ScopedSets() =>
+        _expBySet.Keys.Union(_obsBySet.Keys, StringComparer.OrdinalIgnoreCase)
+                 .OrderBy(Session.Sets.SortKey, StringComparer.Ordinal);
+
+    private IEnumerable<string> ScopedSeries() =>
+        ScopedSets().Select(Session.Sets.SeriesOf).Distinct().OrderBy(x => x, StringComparer.Ordinal);
+
+    private string ScopeLabel() => _scope switch
+    {
+        { Length: 0 } => "every set",
+        var v when v.StartsWith("series:") => $"series {v[7..]}",
+        var v => v[4..]
+    };
+
+    /// <summary>
+    /// Folds the per-set numbers into the one slice being shown. A set outside the slice is not
+    /// merely hidden, it is excluded from both columns - a difference shown against an expectation
+    /// from other sets would be meaningless.
+    /// </summary>
+    private void BuildSelected()
+    {
+        bool InScope(string set) => _scope switch
+        {
+            { Length: 0 } => true,
+            var v when v.StartsWith("series:") => Session.Sets.SeriesOf(set) == v[7..],
+            var v => set.Equals(v[4..], StringComparison.OrdinalIgnoreCase)
+        };
+
+        var exp = new Dictionary<int, double>();
+        var obs = new Dictionary<int, int>();
+        _scopePacks = 0;
+
+        foreach (var set in ScopedSets().Where(InScope))
+        {
+            _scopePacks += _packsBySet.GetValueOrDefault(set);
+
+            foreach (var (rung, n) in _expBySet.GetValueOrDefault(set) ?? [])
+                exp[rung] = exp.GetValueOrDefault(rung) + n;
+            foreach (var (rung, n) in _obsBySet.GetValueOrDefault(set) ?? [])
+                obs[rung] = obs.GetValueOrDefault(rung) + n;
+        }
+
+        _accuracy = Session.Index.Ladder.Rungs
+            .Where(r => obs.ContainsKey(r.Index) || exp.GetValueOrDefault(r.Index) > 0.05)
+            .Select(r => new Accuracy(r, obs.GetValueOrDefault(r.Index),
+                                         exp.GetValueOrDefault(r.Index)))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// The odds check, built per SET and then folded into whatever grouping is on screen.
+    ///
+    /// Per set rather than per pack because pull rates are published per set: every pack of a set
+    /// shares its rarity distribution, so the set is the smallest unit at which a rung comparison
+    /// means anything. It is also the unit both groupings are built from, which is what stops the
+    /// overall table and the broken-out ones from disagreeing.
+    /// </summary>
     private void BuildAccuracy()
     {
-        if (Session.Odds is null) { _accuracy = []; return; }
+        _accuracy = [];
+        _mix = [];
+        _lifetimeActive = false;
+        _unpriceable = 0;
+        _pricedPacks = 0;
+
+        if (Session.Odds is null) return;
 
         var ladder = Session.Index.Ladder;
-        var expected = new Dictionary<int, double>();
-        var observed = new Dictionary<int, int>();
-        _unpriceable = 0;
+        var expected = _expBySet = new(StringComparer.OrdinalIgnoreCase);
+        var observed = _obsBySet = new(StringComparer.OrdinalIgnoreCase);
+        var packs = _packsBySet = new(StringComparer.OrdinalIgnoreCase);
 
-        // One expectation per distinct pack, scaled by how many were opened.
+        void AddExpected(string set, int rung, double n)
+        {
+            if (!expected.TryGetValue(set, out var byRung)) expected[set] = byRung = [];
+            byRung[rung] = byRung.GetValueOrDefault(rung) + n;
+        }
+
+        void AddObserved(string set, int rung, int n)
+        {
+            if (!observed.TryGetValue(set, out var byRung)) observed[set] = byRung = [];
+            byRung[rung] = byRung.GetValueOrDefault(rung) + n;
+        }
+
+        // ---- expected -------------------------------------------------------------------
         foreach (var group in _log.GroupBy(e => $"{e.Set}:{e.Pack}"))
         {
             var rates = Session.Odds.ExpectedCopies(group.Key);
@@ -682,37 +954,80 @@ else
             }
 
             var opened = group.Count();
+            var set = group.Key.Split(':')[0];
+            _pricedPacks += opened;
+            packs[set] = packs.GetValueOrDefault(set) + opened;
+
             foreach (var (cardKey, rate) in rates)
             {
-                var card = Session.Index.ByKey.GetValueOrDefault(cardKey);
-                if (card is null) continue;
+                if (Session.Index.ByKey.GetValueOrDefault(cardKey) is not { } card) continue;
+                if (ladder.IndexOf(card.Rarity) is not int rung) continue;
 
-                var rung = ladder.IndexOf(card.Rarity);
-                if (rung is null) continue;
-
-                expected[rung.Value] = expected.GetValueOrDefault(rung.Value) + (rate * opened);
+                AddExpected(set, rung, rate * opened);
             }
         }
 
-        // Observed, from the cards actually recorded. Keyed by ownership key, which is what the
-        // log stores, so a reprint resolves to the same card either way.
-        var priceable = _log.Where(e => Session.Odds.ExpectedCopies($"{e.Set}:{e.Pack}").Count > 0);
-        foreach (var pulled in priceable.SelectMany(e => e.OwnershipKeys))
+        // ---- observed, from the cards actually recorded ---------------------------------
+        foreach (var entry in _log)
         {
-            var card = Session.Index.ByOwnershipKey.GetValueOrDefault(pulled)?.FirstOrDefault();
-            if (card is null) continue;
+            if (Session.Odds.ExpectedCopies($"{entry.Set}:{entry.Pack}").Count == 0) continue;
 
-            var rung = ladder.IndexOf(card.Rarity);
-            if (rung is null) continue;
+            foreach (var pulled in entry.OwnershipKeys)
+            {
+                var card = Session.Index.ByOwnershipKey.GetValueOrDefault(pulled)?.FirstOrDefault();
+                if (card is null) continue;
+                if (ladder.IndexOf(card.Rarity) is not int rung) continue;
 
-            observed[rung.Value] = observed.GetValueOrDefault(rung.Value) + 1;
+                // Credited to the pack that was opened, which for logged data is known exactly.
+                AddObserved(entry.Set, rung, 1);
+            }
         }
 
-        _accuracy = ladder.Rungs
-            .Where(r => observed.ContainsKey(r.Index) || expected.GetValueOrDefault(r.Index) > 0.05)
-            .Select(r => new Accuracy(r, observed.GetValueOrDefault(r.Index),
-                                          expected.GetValueOrDefault(r.Index)))
-            .ToArray();
+        // ---- scaled to a lifetime, which replaces BOTH sides ---------------------------
+        if (_lifetime && Session.Lifetime is not null && Session.PackMix is { } mixer)
+        {
+            _mix = mixer.Estimate(Session.Owned, Session.LifetimePacks);
+            if (_mix.Count > 0)
+            {
+                _lifetimeActive = true;
+                expected.Clear();
+                observed.Clear();
+                packs.Clear();
+
+                foreach (var share in _mix)
+                {
+                    packs[share.Set] = share.Packs;
+                    foreach (var (rung, rate) in mixer.RungRatesPerPack(share.Set))
+                        AddExpected(share.Set, rung, rate * share.Packs);
+                }
+
+                // Held, not pulled: nothing records what came out of a pack that was never
+                // logged. Attributed by the SAME origin rule the split uses, so a card's copies
+                // and its packs land in the same bucket.
+                foreach (var card in Session.Index.All.DistinctBy(c => c.OwnershipKey))
+                {
+                    var copies = Session.Owned.Of(card);
+                    if (copies <= 0) continue;
+                    if (ladder.IndexOf(card.Rarity) is not int rung) continue;
+
+                    var origin = mixer.OriginSet(card.OwnershipKey);
+                    if (origin is null || !expected.ContainsKey(origin)) continue;
+
+                    AddObserved(origin, rung, copies);
+                }
+            }
+        }
+
+        // A slice that no longer exists - a set whose only logged packs were just deleted -
+        // falls back to everything rather than showing an empty table for a set that is gone.
+        if (_scope.Length > 0 && !ScopedSets().Any(set => _scope switch
+        {
+            var v when v.StartsWith("series:") => Session.Sets.SeriesOf(set) == v[7..],
+            var v => set.Equals(v[4..], StringComparison.OrdinalIgnoreCase)
+        }))
+            _scope = "";
+
+        BuildSelected();
     }
 
     private string Rate()

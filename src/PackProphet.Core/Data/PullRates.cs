@@ -99,6 +99,28 @@ public sealed class PullRates
     }
 
     /// <summary>
+    /// How many cards a pack of this set can hold, across all its variants. Empty for an unpriced
+    /// set, which is the honest answer - we do not know.
+    ///
+    /// A SET of counts rather than one number, because a set genuinely has more than one: variants
+    /// hold 4, 5 or 6 cards, and "Regular Pack +1" is a real six-card pack at about 8%. A single
+    /// expected count would flag a perfectly ordinary opening as wrong.
+    /// </summary>
+    public IReadOnlySet<int> CardCounts(string set) =>
+        _bySet.TryGetValue(set, out var vs)
+            ? vs.Values.Select(v => v.Slots.Count).Where(n => n > 0).ToHashSet()
+            : new HashSet<int>();
+
+    /// <summary>
+    /// Cards in the variant you will almost certainly have opened - the one with the highest
+    /// appearance rate. Zero when the set has no published rates.
+    /// </summary>
+    public int LikelyCardCount(string set) =>
+        _bySet.TryGetValue(set, out var vs) && vs.Count > 0
+            ? vs.Values.OrderByDescending(v => v.AppearanceRate).First().Slots.Count
+            : 0;
+
+    /// <summary>
     /// Variants for a set, with appearance rates normalised to sum to exactly 1.0.
     /// Upstream sums to 99.999 for several sets; normalising keeps probabilities honest
     /// instead of leaking a fraction of a percent of probability mass.

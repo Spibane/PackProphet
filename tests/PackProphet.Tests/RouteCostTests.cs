@@ -1,3 +1,5 @@
+using PackProphet.Data;
+using PackProphet.Domain;
 using PackProphet.Engine;
 
 namespace PackProphet.Tests;
@@ -6,6 +8,8 @@ public class RouteCostTests
 {
     private static RouteCost Routes =>
         new(Snapshot.Index(), Snapshot.Odds(), Snapshot.Rarities());
+
+    private static CardIndex Ix => Snapshot.Index();
 
     private static PocketCard FirstOfRarity(string rarity, string set = "A1") =>
         Snapshot.Index().BySet[set].First(c => c.Rarity == rarity && c.IsPackObtainable);
@@ -158,5 +162,123 @@ public class RouteCostTests
         Assert.All(all.Where(r => r.Card.Rarity == "RR"), r => Assert.True(r.Value < 1.0));
         Assert.All(all.Where(r => r.Card.Rarity == "IM"), r => Assert.True(r.Value < 1.0));
         Assert.DoesNotContain(ranked, r => r.Card.Rarity is "RR" or "IM");
+    }
+
+    [Fact]
+    public void PromoCards_HaveNoPointsRoute()
+    {
+        // Points are earned by opening a set's packs and spent only within that set, so a set
+        // with no packs has no point economy. Every rarity carries a point price, which made it
+        // easy to quote 35 points for a promo — a route with no pack to earn it in and no shop
+        // to spend it at. Found by a Wonder Pick test valuing an unobtainable promo at 7 packs.
+        var index = Snapshot.Index();
+        var promo = index.All.First(c => CardIndex.IsPromoSet(c.Set));
+
+        var routes = Routes.For(promo, new Collection());
+        var points = routes.Options.Single(o => o.Route == AcquisitionRoute.PackPoints);
+
+        Assert.False(points.Available);
+        Assert.Equal(RouteBlock.NotSoldInPacks, points.Block);
+        // And with no pull route either, there is no packs-priced route at all — which is the
+        // honest answer for a card that only ever came from an event.
+        Assert.Null(routes.Cheapest);
+    }
+
+    [Fact]
+    public void CardsInOrdinarySets_StillHaveAPointsRoute()
+    {
+        var card = Snapshot.Index().BySet["A1"].First(c => c.IsPackObtainable);
+        var points = Routes.For(card, new Collection())
+            .Options.Single(o => o.Route == AcquisitionRoute.PackPoints);
+
+        Assert.True(points.Available);
+        Assert.True(points.Points > 0);
+    }
+
+    [Fact]
+    public void Shares_carry_the_diamonds_and_stop_there()
+    {
+        // A Share needs no card back, no dust and no stamina, so unlike every other route its
+        // availability is a pure rarity question - which is exactly why it must not be folded into
+        // the trade option, whose whole difficulty is having something to offer.
+        foreach (var code in new[] { "C", "U", "R", "RR" })
+        {
+            var card = Ix.All.First(c => c.Rarity == code && !c.IsPromo);
+            var share = Routes.For(card, new Collection())
+                .Options.Single(o => o.Route == AcquisitionRoute.Share);
+
+            Assert.True(share.Available, code);
+            Assert.Null(share.Dust);
+            Assert.Null(share.Stamina);
+        }
+
+        foreach (var code in new[] { "AR", "SR", "S", "IM", "UR" })
+        {
+            var card = Ix.All.First(c => c.Rarity == code);
+            var share = Routes.For(card, new Collection())
+                .Options.Single(o => o.Route == AcquisitionRoute.Share);
+
+            Assert.False(share.Available, code);
+            Assert.Equal(RouteBlock.NotShareable, share.Block);
+        }
+    }
+
+    [Fact]
+    public void A_share_is_never_the_cheapest_route_because_it_has_no_price_in_packs()
+    {
+        // It costs a friend's card and a day of your allowance, neither of which converts to
+        // packs. Quoting it as the cheapest route would make every diamond look free.
+        var card = Ix.All.First(c => c.Rarity == "RR" && !c.IsPromo && c.IsPackObtainable);
+
+        var routes = Routes.For(card, new Collection());
+
+        Assert.NotNull(routes.Cheapest);
+        Assert.NotEqual(AcquisitionRoute.Share, routes.Cheapest!.Route);
+        Assert.Null(routes.Options.Single(o => o.Route == AcquisitionRoute.Share).PacksEquivalent);
+    }
+
+    [Fact]
+    public void A_promo_is_offered_neither_a_trade_nor_a_share()
+    {
+        // The bug this pins: RouteCost checked only the RARITY, so a promo carrying an ordinary
+        // C/U/R code was quoted a shinedust price for a trade the game refuses outright — while
+        // the trade queue and the board advisor, which both remembered the promo rule, refused it.
+        // Two parts of the app disagreeing about the same card, and the wrong one was the part
+        // shown on card detail.
+        var promo = Ix.All.First(c => c.IsPromo && GameRules.IsTradeable(c.Rarity));
+        var routes = Routes.For(promo, new Collection());
+
+        var trade = routes.Options.Single(o => o.Route == AcquisitionRoute.Trade);
+        Assert.Equal(GameRules.PromosTradeable, trade.Available);
+        if (!GameRules.PromosTradeable) Assert.Equal(RouteBlock.NotTradeable, trade.Block);
+
+        // A diamond promo would otherwise look shareable on rarity alone, for the same reason.
+        var diamondPromo = Ix.All.FirstOrDefault(c => c.IsPromo && GameRules.IsShareable(c.Rarity));
+        if (diamondPromo is not null)
+        {
+            var share = Routes.For(diamondPromo, new Collection())
+                .Options.Single(o => o.Route == AcquisitionRoute.Share);
+
+            Assert.Equal(GameRules.PromosShareable, share.Available);
+        }
+    }
+
+    [Fact]
+    public void The_card_level_rule_is_the_one_every_caller_uses()
+    {
+        // Rarity alone is not the rule, and the two overloads must not be confused: this is the
+        // difference that produced the bug above.
+        var promo = Ix.All.First(c => c.IsPromo && GameRules.IsTradeable(c.Rarity));
+
+        Assert.True(GameRules.IsTradeable(promo.Rarity));
+        Assert.Equal(GameRules.PromosTradeable, GameRules.CanBeTraded(promo));
+
+        var ordinary = Ix.All.First(c => !c.IsPromo && c.Rarity == "R");
+        Assert.True(GameRules.CanBeTraded(ordinary));
+        Assert.True(GameRules.CanBeShared(ordinary));
+
+        var crown = Ix.All.First(c => c.Rarity == "UR");
+        Assert.False(GameRules.CanBeTraded(crown));
+        Assert.False(GameRules.CanBeShared(crown));
     }
 }

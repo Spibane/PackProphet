@@ -3,6 +3,34 @@
 
 <head>
     <meta charset="utf-8" />
+    <!-- A meta tag rather than a header, because GitHub Pages serves static files and gives no
+         way to set one. That costs frame-ancestors, which meta CSP ignores; everything below
+         applies normally.
+
+         What this actually buys, and what it does not. script-src has to keep 'unsafe-inline':
+         the .NET SDK injects a fingerprinted import map inline on every build, so its hash
+         changes with each publish and could not be pinned by hand. 'wasm-unsafe-eval' is what
+         the WebAssembly runtime needs. So this is not primarily an XSS control - and the app has
+         close to no injection surface anyway, since the only raw markup it renders is a QR SVG
+         built entirely from integers.
+
+         The value is in the NETWORK directives. Every card image and every dataset comes from one
+         community CDN over which this project has no control, and default-src plus connect-src
+         mean that even a tampered dataset cannot reach any other host: no beacon, no exfiltration,
+         no third-party script. img-src needs data: because a screenshot is handed to the QR
+         decoder as a data URL, and blob: because a backup is downloaded as one. -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob: https://cdn.jsdelivr.net;
+        connect-src 'self' https://cdn.jsdelivr.net;
+        font-src 'self';
+        manifest-src 'self';
+        worker-src 'self';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'none'" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PackProphet</title>
     <base href="/" />
@@ -43,6 +71,10 @@
     <script src="js/diag.js"></script>
     <script src="js/tooltip.js"></script>
     <script src="js/palette.js"></script>
+    <script src="js/undo.js"></script>
+    <script src="js/persist.js"></script>
+    <script src="js/countentry.js"></script>
+    <script src="js/scroll.js"></script>
     <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script src="_content/Blazor.Bootstrap/blazor.bootstrap.js"></script>

@@ -89,7 +89,7 @@ public static class CompletionEstimator
     }
 
     /// <summary>P(Poisson(lambda) &gt;= k), computed by summing the small lower tail.</summary>
-    internal static double PoissonTail(double lambda, int k)
+    public static double PoissonTail(double lambda, int k)
     {
         if (k <= 0) return 1.0;
         if (lambda <= 0) return 0.0;

@@ -24,16 +24,18 @@
    the visible choice can snap back to the first option even though the filter did
    change. Binding the select is the form that cannot drift. *@
 <div class="search-grid mb-2">
-    <input class="form-control form-control-sm" placeholder="name, or words from the card text"
+    <input class="form-control form-control-sm" placeholder="name, or words from the card text" aria-label="Search cards by name or rules text"
            @bind="_text" @bind:event="oninput" @bind:after="OnTyped" />
 
     <div class="btn-group btn-group-sm" role="group" aria-label="Card pool">
         <button class="btn @(_ownedOnly ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetPool(true)" title="Only cards you already own">
+                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@_ownedOnly"
+                title="Only cards you already own">
             I own
         </button>
         <button class="btn @(_ownedOnly ? "btn-outline-secondary" : "btn-secondary")"
-                @onclick="() => SetPool(false)" title="Every card in the game">
+                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@(!_ownedOnly)"
+                title="Every card in the game">
             all
         </button>
     </div>
@@ -76,6 +78,44 @@
         }
     </select>
 
+    @* Set and rarity. Both read straight off the card rather than from printed detail, so they
+       work while card detail is still downloading — which matters, because "every diamond in
+       A1" is exactly what someone does on a first visit. *@
+    <select class="form-select form-select-sm" @bind="_set" @bind:after="OnFilterChanged"
+            aria-label="Set">
+        <option value="">any set</option>
+        @foreach (var series in Session.Sets.Series)
+        {
+            <optgroup label="series @series">
+                @* Not named `code`: @code is a Razor directive, so a variable of that name is
+                   parsed as one and the file stops compiling. *@
+                @foreach (var setCode in Session.Sets.SetsIn(series))
+                {
+                    <option value="@setCode">@setCode &mdash; @Session.Sets.DisplayName(setCode)</option>
+                }
+            </optgroup>
+        }
+    </select>
+
+    <select class="form-select form-select-sm" @bind="_rarity" @bind:after="OnFilterChanged"
+            aria-label="Rarity">
+        <option value="">any rarity</option>
+        @* Families first, because they are what people actually want — "all diamonds" is four
+           rungs — and then the individual rungs for a precise pick. *@
+        <optgroup label="families">
+            @foreach (var family in Families)
+            {
+                <option value="@("g:" + family)">all @family.ToLowerInvariant()</option>
+            }
+        </optgroup>
+        <optgroup label="exactly">
+            @foreach (var rung in Session.Index.Ladder.Rungs)
+            {
+                <option value="@("r:" + rung.Index)">@rung.Symbol</option>
+            }
+        </optgroup>
+    </select>
+
     @* Trainers have no evolution stage, so under Trainer this control is not
        disabled-but-present, it is gone: a greyed-out box invites a click that can
        never do anything. *@
@@ -113,6 +153,8 @@
     <p class="small text-body-secondary mb-1">
         showing
         <strong>@(_ownedOnly ? "cards you own" : "all cards")</strong>
+        @if (_set.Length > 0) { <span>&middot; @_set</span> }
+        @if (_rarity.Length > 0) { <span>&middot; @RarityLabel</span> }
         @if (_kind.Length > 0) { <span>&middot; @_kind</span> }
         @if (_subtype.Length > 0) { <span>&middot; @_subtype</span> }
         @if (ShowStageInSummary) { <span>&middot; @_stage</span> }
@@ -159,6 +201,21 @@ else
        attack costs and damage, whether there is an ability, and how many you own —
        so a row is readable without hovering it. Element and stage are omitted
        precisely because they are already filters. *@
+    @* Bulk add, where the parent supports it. This is the only sane way to enter "all diamonds
+       from this set" — 226 cards, which nobody is tapping one at a time — and it applies to every
+       match, not just the ones on screen. *@
+    @if (OnPickAll.HasDelegate && _matches.Count > 0)
+    {
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <button class="btn btn-sm btn-primary" @onclick="PickAll">
+                add all @_matches.Count
+            </button>
+            <span class="small text-body-secondary">
+                everything matching these filters, in one step
+            </span>
+        </div>
+    }
+
     <div class="pick-list">
         @foreach (var card in _results)
         {
@@ -174,7 +231,8 @@ else
             <button class="pick-row @(owned == 0 ? "unowned" : "") @(picked > 0 ? "in-deck" : "")"
                     @onclick="() => Pick(card, nr)" disabled="@(!enabled)"
                     data-tip-img="@card.ArtUrl" data-tip="@card.Name">
-                <span class="pack-thumb deck-thumb" style="background-image:url('@card.ArtUrl')"></span>
+                <span class="pack-thumb deck-thumb @(Session.HasGoldFlair(card) ? "gold-flair" : "")"
+                      style="background-image:url('@card.ArtUrl')"></span>
 
                 <span class="nm">@card.Name</span>
 
@@ -242,8 +300,21 @@ else
 
                 @* Owned and in-deck are different facts and both matter here: the
                    pool can be "all cards", so a row may be one you do not have. *@
-                <span class="own" title="@(owned == 1 ? "you own 1 copy" : $"you own {owned} copies")">
-                    @(owned > 0 ? $"×{owned}" : "—")
+                @{
+                    var spread = Spread(owned, nr);
+                }
+                <span class="own" title="@OwnedTip(owned, spread)">
+                    @* The count is wrapped rather than left as bare text so it can hold its own
+                       fixed column: as an anonymous grid item it cannot be aligned, and the
+                       numbers drifted out of line on every row that gained a chip. *@
+                    <span class="n">@(owned > 0 ? $"×{owned}" : "—")</span>
+                    @* A deck slot is filled by the CARD, not by one printing of it, so this count
+                       pools every art. Saying so matters: the row shows a single set and number,
+                       and a bare "x3" beside it reads as three copies of THAT printing. *@
+                    @if (spread.Count > 1)
+                    {
+                        <span class="arts" data-tip="@SpreadTip(spread)">@spread.Count arts</span>
+                    }
                 </span>
                 <span class="ind">
                     @if (picked > 0)
@@ -265,6 +336,34 @@ else
 @code {
     /// <summary>Whether another copy of this identity may be added, per the deck's own rules.</summary>
     [Parameter] public Func<int, bool> CanAdd { get; set; } = _ => false;
+
+    /// <summary>
+    /// The owned printings behind an identity's pooled count, most-owned first. Empty in the
+    /// by-printing pool, where the count already refers to exactly the row you are looking at,
+    /// and for rows owned none of, so the lookup runs for a handful of rows rather than all.
+    /// </summary>
+    private IReadOnlyList<(PocketCard Card, int Count)> Spread(int owned, int nr)
+    {
+        if (ByPrinting || owned <= 0) return [];
+        if (!Session.Index.ByDeckBuilderNr.TryGetValue(nr, out var printings)) return [];
+
+        return printings
+            .DistinctBy(c => c.OwnershipKey)
+            .Select(c => (Card: c, Count: Session.CountOf(c)))
+            .Where(x => x.Count > 0)
+            .OrderByDescending(x => x.Count)
+            .ToArray();
+    }
+
+    private static string OwnedTip(int owned, IReadOnlyList<(PocketCard Card, int Count)> spread) =>
+        owned == 0 ? "you own none of this card"
+        : spread.Count > 1
+            ? $"you own {owned} copies across {spread.Count} different arts — any of them " +
+              "fills the deck slot"
+            : owned == 1 ? "you own 1 copy" : $"you own {owned} copies";
+
+    private static string SpreadTip(IReadOnlyList<(PocketCard Card, int Count)> spread) =>
+        string.Join("\n", spread.Select(x => $"{x.Card.Set} {x.Card.Number} ×{x.Count}"));
 
     /// <summary>Copies of this identity already in the deck.</summary>
     [Parameter] public Func<int, int> InDeck { get; set; } = _ => 0;
@@ -294,6 +393,12 @@ else
     [Parameter] public string Heading { get; set; } = "Add cards";
 
     /// <summary>
+    /// Add every match at once. Optional: the deck builder does not offer it, because a 20-card
+    /// deck has no use for "add all 226", while a wishlist is exactly where that is wanted.
+    /// </summary>
+    [Parameter] public EventCallback<IReadOnlyList<PocketCard>> OnPickAll { get; set; }
+
+    /// <summary>
     /// Start the pool at every card rather than only owned ones. A deck is usually built from
     /// what you have; a wishlist is by definition mostly what you have not.
     /// </summary>
@@ -311,10 +416,18 @@ else
     private string _kind = "";
     private string _subtype = "";
     private string _stage = "";
+    private string _set = "";
+    private string _rarity = "";
     private int _more;
     private int _elsewhere;
 
     private IReadOnlyList<PocketCard> _results = [];
+
+    /// <summary>
+    /// EVERY match, not just the page of them being shown. The bulk action operates on this:
+    /// "add all 226" that quietly added the 60 on screen would be a trap.
+    /// </summary>
+    private IReadOnlyList<PocketCard> _matches = [];
 
     protected override void OnInitialized()
     {
@@ -387,7 +500,61 @@ else
 
     // ---- searching ---------------------------------------------------------------------
 
-    private CardQuery Query => new(_text, Blank(_kind), Blank(_subtype), Blank(_stage), _ownedOnly);
+    private CardQuery Query => new(
+        _text, Blank(_kind), Blank(_subtype), Blank(_stage), _ownedOnly,
+        Blank(_set), RarityCodes());
+
+    /// <summary>
+    /// Rarity codes for the current selection. A family covers several rungs and a rung can
+    /// cover several codes, so both collapse to one flat set of codes here rather than the
+    /// search needing to know about the ladder.
+    /// </summary>
+    private IReadOnlySet<string>? RarityCodes()
+    {
+        if (!Session.Ready || _rarity.Length == 0) return null;
+
+        var rungs = Session.Index.Ladder.Rungs;
+
+        if (_rarity.StartsWith("g:", StringComparison.Ordinal))
+        {
+            var family = _rarity[2..];
+            return rungs.Where(r => r.Group.Equals(family, StringComparison.OrdinalIgnoreCase))
+                        .SelectMany(r => r.Codes)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        if (_rarity.StartsWith("r:", StringComparison.Ordinal)
+            && int.TryParse(_rarity[2..], out var index))
+            return rungs.Where(r => r.Index == index)
+                        .SelectMany(r => r.Codes)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return null;
+    }
+
+    /// <summary>Rarity families in ladder order, deduplicated — Diamond, Star, Shiny, Crown.</summary>
+    private IReadOnlyList<string> Families =>
+        !Session.Ready ? []
+        : Session.Index.Ladder.Rungs.Select(r => r.Group)
+              .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+    private string RarityLabel
+    {
+        get
+        {
+            if (!Session.Ready || _rarity.Length == 0) return "";
+            if (_rarity.StartsWith("g:", StringComparison.Ordinal))
+                return $"all {_rarity[2..].ToLowerInvariant()}";
+
+            return _rarity.StartsWith("r:", StringComparison.Ordinal)
+                   && int.TryParse(_rarity[2..], out var i)
+                   && Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == i) is { } rung
+                ? rung.Symbol
+                : "";
+        }
+    }
+
+    private Task PickAll() => OnPickAll.InvokeAsync(_matches);
 
     private static string? Blank(string value) => value.Length == 0 ? null : value;
 
@@ -401,7 +568,7 @@ else
         _elsewhere = 0;
 
         var query = Query;
-        if (!Session.Ready || query.IsEmpty) { _results = []; return; }
+        if (!Session.Ready || query.IsEmpty) { _results = []; _matches = []; return; }
 
         BuildPool();
 
@@ -434,7 +601,8 @@ else
             .ToArray();
 
         _more = Math.Max(0, ranked.Length - MaxResults);
-        _results = ranked.Take(MaxResults).Select(h => h.Card).ToArray();
+        _matches = ranked.Select(h => h.Card).ToArray();
+        _results = _matches.Take(MaxResults).ToArray();
 
         // A second full scan, so it only runs when the owned pool actually came up empty.
         if (_results.Count == 0 && query.OwnedOnly)
@@ -511,11 +679,12 @@ else
     }
 
     private bool HasFilters =>
-        _text.Length > 0 || _kind.Length > 0 || _subtype.Length > 0 || _stage.Length > 0;
+        _text.Length > 0 || _kind.Length > 0 || _subtype.Length > 0 || _stage.Length > 0
+        || _set.Length > 0 || _rarity.Length > 0;
 
     private void ClearFilters()
     {
-        _text = _kind = _subtype = _stage = "";
+        _text = _kind = _subtype = _stage = _set = _rarity = "";
         OnFilterChanged();
     }
 

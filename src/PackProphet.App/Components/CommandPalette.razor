@@ -19,6 +19,12 @@
                @bind="_query" @bind:event="oninput" @bind:after="Search"
                @onkeydown="OnKeyDown" aria-label="Search" />
 
+        @* Announced, not shown: the rows below are real buttons so they are already reachable and
+           read out, but nothing told a screen-reader user that the list had changed as they typed. *@
+        <p class="visually-hidden" aria-live="polite">
+            @(_items.Count == 0 ? "No matches" : $"{_items.Count} {(_items.Count == 1 ? "match" : "matches")}")
+        </p>
+
         @if (_items.Count == 0)
         {
             <p class="palette-empty">Nothing matches &ldquo;@_query&rdquo;.</p>
@@ -178,6 +184,10 @@
         ("Which pack", "packs", "the ranking"),
         ("Decks", "decks", "saved decks and the builder"),
         ("Wishlists", "wishlists", "cards you want, for any reason"),
+        ("Wonder Pick", "wonder", "take it or skip it"),
+        ("Trades", "trades", "which trade deserves your next stamina"),
+        ("In-game wishlist", "board", "what to put in the game's 20 trade slots"),
+        ("Resources", "resources", "stamina, hourglasses and shinedust"),
         ("History", "history", "what you have opened"),
         ("Settings", "settings", "targets, backup, appearance"),
     ];
@@ -196,8 +206,23 @@
             new("action", $"Theme: {Session.Theme}", "switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),
         };
 
-        if (Session.CanUndo) actions.Add(new("action", "Undo", "the last collection change", null, Session.Undo));
-        if (Session.CanRedo) actions.Add(new("action", "Redo", null, null, Session.Redo));
+        // Switching collections belongs here as much as anywhere: with two or three alts it is a
+        // frequent move, and the palette reaches it without the top bar having to grow a menu.
+        if (Session.MultipleProfiles)
+        {
+            actions.Add(new("action", "Compare collections", "trades you could make with yourself", "compare"));
+
+            foreach (var profile in Session.Profiles.Where(x => x.Id != Session.ActiveProfileId))
+            {
+                var id = profile.Id;
+                actions.Add(new("action", $"Switch to {profile.Name}",
+                                $"{profile.Collection.Values.Sum()} cards", null,
+                                () => Session.SwitchProfile(id)));
+            }
+        }
+
+        if (Session.CanUndo) actions.Add(new("action", "Undo", "ctrl+z, anywhere", null, Session.Undo));
+        if (Session.CanRedo) actions.Add(new("action", "Redo", "ctrl+shift+z", null, Session.Redo));
 
         return actions.Where(a => Matches(a.Label, q) || Matches(a.Sub ?? "", q));
     }

@@ -25,9 +25,9 @@ public sealed class AppSession : IAsyncDisposable
 
     // Undo history. Bounded: with drag-select and fast tapping, unbounded history would grow
     // without limit, and nobody needs to undo a thousand steps.
-    private const int MaxUndo = 50;
-    private readonly List<AppState> _undo = [];
-    private readonly List<AppState> _redo = [];
+    public const int UndoDepth = 50;
+
+    private readonly UndoHistory _history = new(UndoDepth);
 
     public AppSession(CardDataLoader loader, IStateStore store, IJSRuntime js)
     {
@@ -91,8 +91,8 @@ public sealed class AppSession : IAsyncDisposable
     /// </summary>
     public int CollectionRevision { get; private set; }
 
-    public bool CanUndo => _undo.Count > 0;
-    public bool CanRedo => _redo.Count > 0;
+    public bool CanUndo => _history.CanUndo;
+    public bool CanRedo => _history.CanRedo;
 
     /// <summary>Raised after any change, so pages can re-render.</summary>
     public event Action? Changed;
@@ -135,6 +135,15 @@ public sealed class AppSession : IAsyncDisposable
     /// </summary>
     private void RebuildEngine()
     {
+        // All hold a reference to the odds engine, so none can outlive one.
+        _packMix = null;
+        _trades = null;
+        _board = null;
+        _diff = null;
+        _evolution = null;
+        _gapsRevision = -1;
+        _fillKeysRevision = -1;
+
         if (Data is null) return;
 
         var rates = EffectiveRates();
@@ -142,6 +151,7 @@ public sealed class AppSession : IAsyncDisposable
         Ranker = new PackRanker(Data.Index, Odds);
         Routes = new RouteCost(Data.Index, Odds, Data.Rarities);
         Points = new PointsLedger(Data.Index, Data.Rarities);
+        Wonder = new WonderPickEval(Data.Index, Routes);
     }
 
     /// <summary>
@@ -219,6 +229,11 @@ public sealed class AppSession : IAsyncDisposable
             // Dropped so it is rebuilt against the facts that just arrived: a linter holding
             // the empty table would go on reporting every stage as unverifiable.
             _linter = null;
+            // Same reason: the gap finder reads evolves-from out of the facts table, so one built
+            // over the empty table would report a collection with no chains in it at all.
+            _evolution = null;
+            _gapsRevision = -1;
+            _fillKeysRevision = -1;
             Changed?.Invoke();
         }
         catch
@@ -230,12 +245,7 @@ public sealed class AppSession : IAsyncDisposable
     /// <summary>Apply a change to the active profile, recording it for undo.</summary>
     public void Mutate(Func<Profile, Profile> change, bool undoable = true)
     {
-        if (undoable)
-        {
-            _undo.Add(State);
-            if (_undo.Count > MaxUndo) _undo.RemoveAt(0);
-            _redo.Clear();
-        }
+        if (undoable) _history.Record(State);
 
         var previousCollection = Profile.Collection;
         var updated = change(Profile);
@@ -256,9 +266,8 @@ public sealed class AppSession : IAsyncDisposable
     /// <summary>Replace all state, e.g. from an imported backup. Undoable.</summary>
     public void ReplaceState(AppState imported)
     {
-        _undo.Add(State);
-        if (_undo.Count > MaxUndo) _undo.RemoveAt(0);
-        _redo.Clear();
+        // The one undoable step that legitimately changes preferences as well.
+        _history.Record(State, includesPrefs: true);
 
         State = imported;
         CollectionRevision++;
@@ -267,15 +276,14 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
-    public void Undo() => Step(_undo, _redo);
-    public void Redo() => Step(_redo, _undo);
+    public void Undo() => Apply(_history.Undo(State));
+    public void Redo() => Apply(_history.Redo(State));
 
-    private void Step(List<AppState> from, List<AppState> to)
+    private void Apply(AppState? restored)
     {
-        if (from.Count == 0) return;
-        to.Add(State);
-        State = from[^1];
-        from.RemoveAt(from.Count - 1);
+        if (restored is null) return;
+
+        State = restored;
         CollectionRevision++;
         RebuildCollection();
         QueueSave();
@@ -314,6 +322,24 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     public int CountOf(PocketCard card) => Owned.Of(card);
+
+    /// <summary>
+    /// Whether this card has earned its gold flair: ten copies of a one- to three-diamond card,
+    /// granted by the game automatically. Four-diamond cards and promos do not get it.
+    ///
+    /// Per PRINTING, not per identity, because the game grants it per card — owning five of the
+    /// plain print and five of the alternate art earns neither of them anything.
+    /// </summary>
+    public bool HasGoldFlair(PocketCard card)
+    {
+        if (Data is null) return false;
+
+        var rung = Index.Ladder.IndexOf(card.Rarity);
+        if (rung is null) return false;
+
+        var r = Index.Ladder.Rungs[rung.Value];
+        return GameRules.EarnsGoldFlair(r.Group, r.Count, Owned.Of(card), card.IsPromo);
+    }
 
     // ---- decks ------------------------------------------------------------------------
 
@@ -451,6 +477,31 @@ public sealed class AppSession : IAsyncDisposable
     public void SetWanted(string id, string ownershipKey, int copies) =>
         UpdateWishlist(id, w => WishlistEdit.SetWanted(w, ownershipKey, copies));
 
+    /// <summary>
+    /// Add many cards to a wishlist in ONE change: one undo step, one save, one re-render.
+    /// Adding "all diamonds in A1" a card at a time would be 226 mutations, 226 undo entries and
+    /// 226 debounced saves — and undoing it would take 226 presses.
+    /// </summary>
+    /// <param name="copies">
+    /// Applied as a floor, never a clobber: a card already wanted three times stays at three, so
+    /// a bulk sweep cannot quietly undo a deliberate choice.
+    /// </param>
+    public void AddToWishlist(string id, IEnumerable<string> ownershipKeys, int copies = 1)
+    {
+        var keys = ownershipKeys.Distinct(StringComparer.Ordinal).ToArray();
+        if (keys.Length == 0) return;
+
+        UpdateWishlist(id, list =>
+        {
+            var wanted = new Dictionary<string, int>(list.Wanted);
+            foreach (var key in keys)
+                wanted[key] = Math.Clamp(
+                    Math.Max(wanted.GetValueOrDefault(key), copies), 1, WishlistEdit.MaxCopies);
+
+            return list with { Wanted = wanted };
+        });
+    }
+
     private void UpdateWishlist(string id, Func<Wishlist, Wishlist> change) =>
         Mutate(p => p with
         {
@@ -491,6 +542,253 @@ public sealed class AppSession : IAsyncDisposable
         Data is not null && Index.ByOwnershipKey.TryGetValue(ownershipKey, out var cards)
             ? cards[0]
             : null;
+
+    // ---- wonder pick ------------------------------------------------------------------
+
+    /// <summary>Take-or-skip appraisal for a Wonder Pick offer. Null until data has loaded.</summary>
+    public WonderPickEval? Wonder { get; private set; }
+
+    /// <summary>Wonder Stamina the user last told us they had. Capped, never negative.</summary>
+    public int WonderStamina => Math.Clamp(Profile.Resources.Wonder.Balance, 0, GameRules.StaminaCap);
+
+    public void SetWonderStamina(int balance) =>
+        Mutate(p => p with
+        {
+            Resources = p.Resources with
+            {
+                // Restamped, because the pool regenerates on a clock: a balance without the moment
+                // it was true would have regeneration added to it that has not happened yet.
+                Wonder = (p.Resources.Wonder with
+                {
+                    Balance = Math.Clamp(balance, 0, GameRules.StaminaCap)
+                }).AsOfNow(DateTimeOffset.Now)
+            }
+        }, undoable: false);
+
+    // ---- The three resource systems ---------------------------------------------------------
+    // Pack, Wonder and Trade each have their own pool and their own hourglass, and nothing
+    // exchanges between them. Three projections, never a total.
+
+    public PoolOutlook WonderOutlook => ResourcePlan.Project(
+        Profile.Resources.Wonder, DateTimeOffset.Now,
+        GameRules.StaminaCap, GameRules.WonderHourglassesPerStamina);
+
+    public PoolOutlook TradeOutlook => ResourcePlan.Project(
+        Profile.Resources.Trade, DateTimeOffset.Now,
+        GameRules.StaminaCap, GameRules.TradeHourglassesPerStamina);
+
+    public PackOutlook PackOutlook => ResourcePlan.Packs(Profile.Resources, DateTimeOffset.Now);
+
+    /// <summary>
+    /// Record a stamina pool as it stands now. Balance and hourglasses are written together
+    /// because they are read off the same screen at the same moment, and the timestamp they share
+    /// is what makes the projection meaningful.
+    /// </summary>
+    public void SetPool(bool trade, int balance, int hourglasses)
+    {
+        var pool = new ResourcePool(
+            Math.Clamp(balance, 0, GameRules.StaminaCap),
+            Math.Max(0, hourglasses)).AsOfNow(DateTimeOffset.Now);
+
+        Mutate(p => p with
+        {
+            Resources = trade
+                ? p.Resources with { Trade = pool }
+                : p.Resources with { Wonder = pool }
+        }, undoable: false);
+    }
+
+    /// <summary>
+    /// The trade queue, bound to the current card data. Memoised like the other engines: it walks
+    /// every ownable card to find the surplus pool.
+    /// </summary>
+    public TradeQueue? Trades =>
+        Data is null || Odds is null ? null : _trades ??= new TradeQueue(Index, Odds, Data.Rarities);
+
+    private TradeQueue? _trades;
+
+    /// <summary>
+    /// Trades ranked for a target, best first. The plan resolver is per set, since targets are.
+    /// </summary>
+    public IReadOnlyList<TradeCandidate> RankTrades(ICompletionTarget target, int max = 20) =>
+        Trades?.Rank(target.Outstanding(Index, Owned), Owned, Profile.Resources,
+                     set => Profile.Targets.PlanFor(set), max)
+        ?? [];
+
+    /// <summary>
+    /// The in-game wishlist advisor, bound to current card data. Memoised: it prices every
+    /// outstanding card by every route.
+    /// </summary>
+    public TradeBoardAdvisor? Board =>
+        Data is null || Odds is null || Routes is null || Trades is null
+            ? null
+            : _board ??= new TradeBoardAdvisor(Index, Routes, Trades, Odds, Sets);
+
+    private TradeBoardAdvisor? _board;
+
+    /// <summary>
+    /// Board settings, persisted. Everything that changes WHAT is recommended has to be, or
+    /// reopening the page would report swaps caused by a forgotten setting rather than by the
+    /// collection changing.
+    /// </summary>
+    public int BoardLiquidSlots => Math.Clamp(State.Prefs.BoardLiquidSlots, 0, GameRules.TradeBoardSlots);
+
+    public double BoardMinimumCost => Math.Max(0, State.Prefs.BoardMinimumCost);
+
+    public string BoardFoils =>
+        State.Prefs.BoardFoils is "without" or "only" ? State.Prefs.BoardFoils : "with";
+
+    public void SetBoardSettings(int? liquidSlots = null, double? minimumCost = null, string? foils = null)
+    {
+        State = State with
+        {
+            Prefs = State.Prefs with
+            {
+                BoardLiquidSlots = liquidSlots ?? State.Prefs.BoardLiquidSlots,
+                BoardMinimumCost = minimumCost ?? State.Prefs.BoardMinimumCost,
+                BoardFoils = foils ?? State.Prefs.BoardFoils
+            }
+        };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    /// <summary>Ownership keys currently on the in-game board.</summary>
+    public IReadOnlyList<string> TradeBoard => Profile.TradeBoard;
+
+    /// <summary>
+    /// Record what is on the board now, after the change has been made IN THE GAME. Capped at the
+    /// game's own twenty, since a longer list could not be entered.
+    /// </summary>
+    public void SetTradeBoard(IEnumerable<string> ownershipKeys) =>
+        Mutate(p => p with
+        {
+            TradeBoard = ownershipKeys.Distinct(StringComparer.OrdinalIgnoreCase)
+                                      .Take(GameRules.TradeBoardSlots)
+                                      .ToList()
+        }, undoable: false);
+
+    /// <summary>
+    /// What the board should hold for a target. Today's date is passed in rather than read inside
+    /// the engine so the recommendation stays reproducible.
+    /// </summary>
+    /// <param name="foils">
+    /// with / without / only. Filtered HERE rather than in the advisor, because it is a question
+    /// about the game's interface - whether a foil printing can be wishlisted at all - not about
+    /// what a slot is worth. Filtering the demands before ranking also keeps the twenty slots full:
+    /// excluding foils afterwards would leave gaps.
+    /// </param>
+    public BoardPlan? RecommendBoard(
+        ICompletionTarget target, int liquidSlots, double minimumCost, string foils = "with")
+    {
+        if (Board is null) return null;
+
+        var demands = target.Outstanding(Index, Owned);
+
+        if (foils is "without" or "only" && Odds is { } odds)
+        {
+            var keys = odds.FoilOwnershipKeys;
+            var wantFoil = foils == "only";
+            demands = demands
+                .Where(d => keys.Contains(d.SuppliedBy[0].OwnershipKey) == wantFoil)
+                .ToArray();
+        }
+
+        return Board.Recommend(
+            demands, Owned,
+            set => Profile.Targets.PlanFor(set),
+            TradeBoard,
+            DateOnly.FromDateTime(DateTime.Now),
+            liquidSlots, minimumCost);
+    }
+
+    /// <summary>Pack-point balances per set, as tracked and as told to us.</summary>
+    public IReadOnlyDictionary<string, int> PointsBySet => Profile.Resources.PackPointsBySet;
+
+    /// <summary>
+    /// Correct one set's pack-point balance.
+    ///
+    /// Needed because points accrue only from packs logged HERE, while the real balance has been
+    /// running since the account started. Per set and never in aggregate: points are earned by
+    /// opening one set's packs and can be spent nowhere else, so a single total would describe a
+    /// currency the game does not have.
+    /// </summary>
+    public void SetPackPoints(string set, int points) =>
+        Mutate(p =>
+        {
+            var next = new Dictionary<string, int>(p.Resources.PackPointsBySet);
+            var value = Math.Clamp(points, 0, GameRules.PackPointsCap);
+
+            if (value == 0) next.Remove(set); else next[set] = value;
+
+            return p with { Resources = p.Resources with { PackPointsBySet = next } };
+        }, undoable: false);
+
+    /// <summary>
+    /// The pack side and the dust balance. Premium is here rather than in Prefs because it is a
+    /// fact about an account, and profiles are accounts - an alt without premium must not inherit
+    /// the main's pack rate.
+    /// </summary>
+    public void SetPackResources(int packHourglasses, int shinedust, bool premium) =>
+        Mutate(p => p with
+        {
+            Resources = p.Resources with
+            {
+                PackHourglasses = Math.Max(0, packHourglasses),
+                Shinedust = Math.Max(0, shinedust),
+                Premium = premium
+            }
+        }, undoable: false);
+
+    /// <summary>
+    /// Record an offer that was evaluated, taken or not.
+    ///
+    /// Offers SEEN are logged, not just offers taken: the reservation threshold is a percentile
+    /// of the distribution of what turns up, and a log of accepted offers only would be biased
+    /// upward by the very policy it sets.
+    /// </summary>
+    public void LogWonderOffer(IReadOnlyList<PocketCard> offer, int staminaCost, bool taken, PocketCard? received)
+    {
+        var keys = offer.Select(c => c.OwnershipKey).ToList();
+
+        Mutate(p =>
+        {
+            var log = new List<WonderOfferEvent>(p.WonderLog)
+            {
+                new(DateTimeOffset.Now, keys, staminaCost, taken, received?.OwnershipKey)
+            };
+
+            var next = p with { WonderLog = log };
+
+            // Taking one spends the stamina and adds the card, so the collection and the pool
+            // both follow from the same action rather than needing three separate edits.
+            if (taken)
+            {
+                next = next with
+                {
+                    Resources = next.Resources with
+                    {
+                        // Spending restamps the pool too: the balance is true as of now, and
+                        // leaving the old timestamp would credit the regeneration twice.
+                        Wonder = (next.Resources.Wonder with
+                        {
+                            Balance = Math.Max(0, next.Resources.Wonder.Balance - staminaCost)
+                        }).AsOfNow(DateTimeOffset.Now)
+                    }
+                };
+
+                if (received is not null)
+                {
+                    var collection = new Dictionary<string, int>(next.Collection);
+                    collection[received.OwnershipKey] =
+                        collection.GetValueOrDefault(received.OwnershipKey) + 1;
+                    next = next with { Collection = collection };
+                }
+            }
+
+            return next;
+        });
+    }
 
     /// <summary>A linter bound to the current card data, or null before it loads.</summary>
     public DeckLinter? Linter => Data is null ? null : _linter ??= new DeckLinter(Index, Facts);
@@ -588,6 +886,56 @@ public sealed class AppSession : IAsyncDisposable
     public int PackColumns =>
         State.Prefs.PackColumns > 0 ? State.Prefs.PackColumns : DefaultPackColumns;
 
+    /// <summary>The game's lifetime counters as entered, or null if never entered.</summary>
+    public LifetimeTotals? Lifetime => Profile.Lifetime;
+
+    /// <summary>
+    /// Record what the game's profile screen says. Read AS OF NOW: anything logged here after
+    /// this moment adds to it, anything before is already inside the number the game gave.
+    /// Passing zero for both clears the baseline.
+    /// </summary>
+    public void SetLifetime(int packs, int wonderPicks)
+    {
+        var cleared = packs <= 0 && wonderPicks <= 0;
+        Mutate(p => p with
+        {
+            Lifetime = cleared
+                ? null
+                : new LifetimeTotals(Math.Max(0, packs), Math.Max(0, wonderPicks),
+                                     DateTimeOffset.Now)
+        });
+    }
+
+    /// <summary>
+    /// Packs opened in total: the game's figure plus everything logged since it was read. Falls
+    /// back to the logged count alone when no baseline exists.
+    ///
+    /// Events are counted by timestamp rather than all of them, because the baseline is a
+    /// snapshot: a player who logs for a week and only then reads the game's counter would
+    /// otherwise have that week counted twice.
+    /// </summary>
+    public int LifetimePacks => Lifetime is { } b
+        ? b.PacksWith(Profile.PackLog)
+        : Profile.PackLog.Count;
+
+    /// <summary>
+    /// Wonder Picks taken in total. Only TAKEN offers count: the log records every offer seen,
+    /// which is what makes the reservation threshold learnable, but the game counts the ones
+    /// you actually spent stamina on.
+    /// </summary>
+    public int LifetimeWonderPicks => Lifetime is { } b
+        ? b.WonderPicksWith(Profile.WonderLog)
+        : Profile.WonderLog.Count(e => e.Taken);
+
+    /// <summary>
+    /// Splits a lifetime pack count across sets from what the collection holds. Null until card
+    /// data and odds are loaded; memoised, since it indexes every priceable pack.
+    /// </summary>
+    public PackMixEstimator? PackMix =>
+        Data is null || Odds is null ? null : _packMix ??= new PackMixEstimator(Index, Odds, Sets);
+
+    private PackMixEstimator? _packMix;
+
     public void SetPackColumns(int n)
     {
         if (n <= 0 || n == PackColumns) return;
@@ -662,9 +1010,79 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Foil printings — currently the Deluxe set's second prints of its 1-3 diamond cards — that
+    /// a target should ignore. Null when the user collects them, which is the default.
+    /// </summary>
+    /// <summary>
+    /// The parallel-foil policy for a target. Public so a page building its own targets — the
+    /// rarity advisor does — applies the same choice: two places deciding what a target contains
+    /// is how two figures on one screen come to disagree.
+    /// </summary>
+    public FoilPolicy? FoilRule =>
+        Odds is null ? null : new FoilPolicy(Odds.FoilOwnershipKeys, FoilCopies);
+
+    /// <summary>Copies wanted of each parallel foil. Zero means they are not collected.</summary>
+    public int FoilCopies => Math.Clamp(State.Prefs.FoilCopies, 0, MaxFoilCopies);
+
+    /// <summary>
+    /// Two, matching the rarity chips: beyond two copies of a printing is spare stock rather
+    /// than a want.
+    /// </summary>
+    public const int MaxFoilCopies = 2;
+
+    /// <summary>none → 1 → 2 → none, exactly as a rarity chip cycles.</summary>
+    public void CycleFoilCopies() =>
+        SetFoilCopies(FoilCopies >= MaxFoilCopies ? 0 : FoilCopies + 1);
+
+    /// <summary>Sets that have foils at all, so the choice is only offered where it applies.</summary>
+    public IReadOnlyList<string> FoilSets =>
+        Odds is null ? [] : Odds.SetsWithFoils.OrderBy(s => s, StringComparer.Ordinal).ToArray();
+
+    public void SetFoilCopies(int copies)
+    {
+        var next = Math.Clamp(copies, 0, MaxFoilCopies);
+        if (next == FoilCopies) return;
+
+        State = State with { Prefs = State.Prefs with { FoilCopies = next } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
     /// <summary>The active completion plan for one set, from the user's settings.</summary>
     public ICompletionTarget TargetForSet(string set) =>
-        new RarityLadderTarget(set, Profile.Targets.PlanFor(set));
+        new RarityLadderTarget(set, Profile.Targets.PlanFor(set), FoilRule);
+
+    /// <summary>
+    /// Cards wanted across these sets and how many are satisfied, using each set's OWN plan and
+    /// the parallel-foil setting.
+    ///
+    /// Asked of the target rather than recomputed, because the page that recomputed it got two
+    /// things wrong at once: it counted every parallel foil toward the total even when the foil
+    /// setting wanted none of them, and when several sets were in view it compared them all
+    /// against the DEFAULT plan while totalling them against their own.
+    /// </summary>
+    public (int Wanted, int Satisfied) TargetProgress(IEnumerable<string> sets)
+    {
+        var wanted = 0;
+        var satisfied = 0;
+
+        foreach (var set in sets)
+        {
+            var (w, s) = new RarityLadderTarget(set, Plan(set), FoilRule).Progress(Index, Owned);
+            wanted += w;
+            satisfied += s;
+        }
+
+        return (wanted, satisfied);
+    }
+
+    /// <summary>
+    /// Copies of one card the plan for its own set asks for, foil setting included. Zero means it
+    /// is not collected, which is what the "short of target" filter has to respect.
+    /// </summary>
+    public int RequiredCopies(PocketCard card) =>
+        new RarityLadderTarget(card.Set, Plan(card.Set), FoilRule).Required(Index, card);
 
     /// <summary>Copies wanted per rarity, for the whole collection or one set.</summary>
     public RarityPlan Plan(string? set = null) => Profile.Targets.PlanFor(set);
@@ -739,6 +1157,292 @@ public sealed class AppSession : IAsyncDisposable
     public ICompletionTarget TargetForEverything() =>
         new CompositeTarget(Index.OpenableSets.Select(TargetForSet).ToArray(), "everything");
 
+    // ---- Storage health -------------------------------------------------------------
+    // Every one of these is a state the app must ANNOUNCE rather than absorb. A tracker whose
+    // writes are failing looks identical to one that is working, right up until the reload.
+
+    /// <summary>True once a write has been refused, which means edits are not being kept.</summary>
+    public bool SaveFailed { get; private set; }
+
+    /// <summary>True when the browser provides no storage, so nothing survives a reload.</summary>
+    public bool StorageUnavailable => Diagnostics?.StorageUnavailable == true;
+
+    /// <summary>True when a saved payload was found that could not be read.</summary>
+    public bool LoadFailed => Diagnostics?.LoadFailed == true;
+
+    /// <summary>
+    /// The concrete browser store, when that is what is in use. Cast rather than added to
+    /// IStateStore: these are facts about localStorage, and a future sync backend would report
+    /// entirely different ones.
+    /// </summary>
+    private LocalStorageStateStore? Diagnostics => _store as LocalStorageStateStore;
+
+    private void RecordSaveResult(bool ok)
+    {
+        if (ok == !SaveFailed) return;
+
+        SaveFailed = !ok;
+        Changed?.Invoke();
+    }
+
+    /// <summary>Whether the Collection page shows the evolution-gap strip.</summary>
+    public bool ShowGapStrip => State.Prefs.ShowEvolutionGaps;
+
+    public void SetShowGapStrip(bool show)
+    {
+        if (show == ShowGapStrip) return;
+
+        State = State with { Prefs = State.Prefs with { ShowEvolutionGaps = show } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Evolution chains you own part of. Memoised over the card data; the REPORT is cached
+    /// separately, since it depends on the collection.
+    /// </summary>
+    public EvolutionGaps? Evolution =>
+        Data is null || Odds is null ? null : _evolution ??= new EvolutionGaps(Index, Facts, Odds);
+
+    private EvolutionGaps? _evolution;
+
+    private EvolutionReport? _gaps;
+    private int _gapsRevision = -1;
+
+    /// <summary>
+    /// The gap report for the collection as it stands, recomputed only when the collection
+    /// actually changes. It walks every ownable card, so running it per render - which a grid page
+    /// does dozens of times a second while sweeping - would be felt.
+    /// </summary>
+    public EvolutionReport? Gaps
+    {
+        get
+        {
+            if (Evolution is null) return null;
+            if (_gapsRevision == CollectionRevision) return _gaps;
+
+            _gaps = Evolution.Find(Owned);
+            _gapsRevision = CollectionRevision;
+            return _gaps;
+        }
+    }
+
+    /// <summary>
+    /// Ownership keys of every printing that would close a chain, for the collection filter. Every
+    /// printing, not just the easiest: any of them works, and someone opening a particular pack
+    /// wants to know which of its cards would do.
+    /// </summary>
+    public IReadOnlySet<string> GapFillKeys
+    {
+        get
+        {
+            // Cached with the report, not rebuilt per call. The collection filter asks this once
+            // per card, so building the set inside the property put a walk of every gap's every
+            // printing inside a 3,546-iteration loop.
+            if (_fillKeysRevision == CollectionRevision && _fillKeys is not null) return _fillKeys;
+
+            _fillKeys = Gaps is null
+                ? []
+                : Gaps.Gaps.SelectMany(g => g.Candidates).Select(c => c.OwnershipKey).ToHashSet();
+            _fillKeysRevision = CollectionRevision;
+            return _fillKeys;
+        }
+    }
+
+    private HashSet<string>? _fillKeys;
+    private int _fillKeysRevision = -1;
+
+    // ---- Profiles -------------------------------------------------------------------
+    // Alt accounts are commonplace in PTCGP, and you can trade with yourself, so a second
+    // collection is not a power-user nicety - it is how a lot of people play. Everything below
+    // edits AppState directly rather than going through Mutate, which by definition only ever
+    // touches the ACTIVE profile.
+
+    public IReadOnlyList<Profile> Profiles => State.Profiles;
+
+    public string ActiveProfileId => State.ActiveProfileId;
+
+    public bool MultipleProfiles => State.Profiles.Count > 1;
+
+    /// <summary>
+    /// Switch collections. Clears undo, deliberately: the history holds whole app states, so an
+    /// undo taken afterwards would restore the OTHER profile - silently switching back and
+    /// discarding whatever was just done here. Losing the history is the lesser surprise.
+    /// </summary>
+    public void SwitchProfile(string id)
+    {
+        if (id == State.ActiveProfileId || State.Profiles.All(p => p.Id != id)) return;
+
+        _history.Clear();
+
+        State = State with { ActiveProfileId = id };
+        CollectionRevision++;
+        RebuildCollection();
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// A new, empty collection. It inherits the current profile's completion plan rather than the
+    /// stock one: someone adding an alt has already said what they collect, and making them say it
+    /// again is the kind of re-entry that gets a feature abandoned.
+    /// </summary>
+    public string CreateProfile(string name, bool copyPlan = true)
+    {
+        var id = Guid.NewGuid().ToString("n")[..8];
+        var profile = Profile.NewDefault(id, Clean(name, "New collection"));
+
+        if (copyPlan)
+        {
+            profile = profile with
+            {
+                Targets = new TargetSettings(
+                    new Dictionary<int, int>(Profile.Targets.DefaultPlan),
+                    Profile.Targets.PlanBySet.ToDictionary(
+                        kv => kv.Key, kv => new Dictionary<int, int>(kv.Value)))
+            };
+        }
+
+        AddProfile(profile);
+        return id;
+    }
+
+    /// <summary>
+    /// Copy a whole collection, cards and all. The honest use is a what-if - trying a different
+    /// plan, or a different set of decks, without touching the real numbers.
+    /// </summary>
+    public string DuplicateProfile(string id, string? name = null)
+    {
+        var source = State.Profiles.FirstOrDefault(p => p.Id == id);
+        if (source is null) return State.ActiveProfileId;
+
+        var newId = Guid.NewGuid().ToString("n")[..8];
+
+        // Every collection here is a fresh dictionary or list, not a shared reference: the two
+        // profiles would otherwise edit the same collection and appear to change together.
+        var copy = source with
+        {
+            Id = newId,
+            Name = Clean(name, $"{source.Name} copy"),
+            Collection = new Dictionary<string, int>(source.Collection),
+            Decks = [.. source.Decks],
+            Wishlists = [.. source.Wishlists],
+            PackLog = [.. source.PackLog],
+            WonderLog = [.. source.WonderLog],
+            TradeBoard = [.. source.TradeBoard],
+            Targets = new TargetSettings(
+                new Dictionary<int, int>(source.Targets.DefaultPlan),
+                source.Targets.PlanBySet.ToDictionary(
+                    kv => kv.Key, kv => new Dictionary<int, int>(kv.Value)))
+        };
+
+        AddProfile(copy);
+        return newId;
+    }
+
+    public void RenameProfile(string id, string name)
+    {
+        var cleaned = Clean(name, null);
+        if (cleaned is null) return;
+
+        State = State with
+        {
+            Profiles = State.Profiles
+                .Select(p => p.Id == id ? p with { Name = cleaned } : p).ToList()
+        };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Delete a collection. Refuses the last one: an app with no profile has nowhere to put a
+    /// tap, and the state model has no way to express it.
+    /// </summary>
+    public bool DeleteProfile(string id)
+    {
+        if (State.Profiles.Count <= 1 || State.Profiles.All(p => p.Id != id)) return false;
+
+        var remaining = State.Profiles.Where(p => p.Id != id).ToList();
+
+        // Deleting cannot be undone through the undo stack, because the stack is cleared on the
+        // switch that follows. Said plainly in the UI rather than half-supported here.
+        _history.Clear();
+
+        var wasActive = State.ActiveProfileId == id;
+        State = State with
+        {
+            Profiles = remaining,
+            ActiveProfileId = wasActive ? remaining[0].Id : State.ActiveProfileId
+        };
+
+        if (wasActive)
+        {
+            CollectionRevision++;
+            RebuildCollection();
+        }
+
+        QueueSave();
+        Changed?.Invoke();
+        return true;
+    }
+
+    private void AddProfile(Profile profile)
+    {
+        State = State with { Profiles = [.. State.Profiles, profile] };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    private static string Clean(string? name, string? fallback) =>
+        string.IsNullOrWhiteSpace(name) ? fallback! : name.Trim();
+
+    /// <summary>
+    /// The self-trade finder. Memoised like the other engines - it walks every ownable card twice,
+    /// once per side.
+    /// </summary>
+    public ProfileDiff? Diff =>
+        Data is null || Odds is null || Trades is null
+            ? null
+            : _diff ??= new ProfileDiff(Index, Odds, Data.Rarities, Trades);
+
+    private ProfileDiff? _diff;
+
+    /// <summary>
+    /// Swaps between the active profile and another, from the active profile's point of view.
+    /// </summary>
+    public ProfileSwaps? CompareWith(string otherId)
+    {
+        if (Diff is null) return null;
+
+        var other = State.Profiles.FirstOrDefault(p => p.Id == otherId);
+        if (other is null || other.Id == Profile.Id) return null;
+
+        return Diff.Compare(SideFor(Profile), SideFor(other));
+    }
+
+    /// <summary>
+    /// One profile as the diff needs it, using ITS OWN plan and collection throughout. Reading the
+    /// active profile's plan for both sides is the obvious shortcut and it is wrong: an alt farmed
+    /// for diamonds only would have its stars counted as still wanted, so the main would never be
+    /// offered them.
+    /// </summary>
+    private DiffSide SideFor(Profile profile)
+    {
+        var owned = new Collection(profile.Collection);
+
+        // Promo sets are excluded along with the rest of the app's "everything", and it costs
+        // nothing here: promos are trade-ineligible, so no swap could involve one either way.
+        var parts = Index.OpenableSets
+            .Select(set => (ICompletionTarget)new RarityLadderTarget(
+                set, profile.Targets.PlanFor(set), FoilRule))
+            .ToArray();
+
+        var outstanding = new CompositeTarget(parts).Outstanding(Index, owned);
+
+        return new DiffSide(profile.Id, profile.Name, owned,
+                            set => profile.Targets.PlanFor(set), outstanding, profile.Resources);
+    }
+
     // Debounce: coalesce a burst of edits into one write.
     private void QueueSave()
     {
@@ -751,8 +1455,14 @@ public sealed class AppSession : IAsyncDisposable
             {
                 await Task.Delay(400, ct);
                 await _saveGate.WaitAsync(ct);
-                try { await _store.SaveAsync(State, ct); }
+                bool ok;
+                try { ok = await _store.SaveAsync(State, ct); }
                 finally { _saveGate.Release(); }
+
+                // Outside the gate. RecordSaveResult raises Changed, which runs page code, and
+                // notifying subscribers while holding a lock they could re-enter is how a
+                // deadlock gets built - even where today's handlers happen not to.
+                RecordSaveResult(ok);
             }
             catch (OperationCanceledException) { /* superseded by a later edit */ }
         }, ct);
@@ -762,9 +1472,13 @@ public sealed class AppSession : IAsyncDisposable
     public async Task FlushAsync()
     {
         _pendingSave?.Cancel();
+
+        bool ok;
         await _saveGate.WaitAsync();
-        try { await _store.SaveAsync(State); }
+        try { ok = await _store.SaveAsync(State); }
         finally { _saveGate.Release(); }
+
+        RecordSaveResult(ok);
     }
 
     public async ValueTask DisposeAsync()

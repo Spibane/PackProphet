@@ -12,6 +12,17 @@ public sealed class LocalStorageStateStore : IStateStore, IAsyncDisposable
 {
     private const string Key = "packprophet.state.v1";
 
+    /// <summary>
+    /// Where an unreadable payload is set aside before anything overwrites it.
+    ///
+    /// Booting fresh from corrupt data is the right call - refusing to open would be worse - but
+    /// on its own it destroys the evidence: the app comes up with an empty collection, the
+    /// debounce saves that empty state over the damaged one, and a collection that was partly
+    /// recoverable is gone for good. Truncated storage is a real outcome under quota pressure, so
+    /// the raw text is copied aside first and left alone.
+    /// </summary>
+    private const string SalvageKey = "packprophet.state.unreadable";
+
     private readonly IJSRuntime _js;
     private IJSObjectReference? _module;
 
@@ -26,20 +37,55 @@ public sealed class LocalStorageStateStore : IStateStore, IAsyncDisposable
         {
             var module = await ModuleAsync();
             var json = await module.InvokeAsync<string?>("load", ct, Key);
-            // A corrupt or future-schema payload yields null, and we start fresh rather than
-            // refuse to boot.
-            return StateSerializer.Deserialize(json) ?? AppState.Fresh();
+
+            var state = StateSerializer.Deserialize(json);
+            if (state is not null) return state;
+
+            // Non-empty but unreadable: something was there and we cannot use it. Copy it aside
+            // before the first save overwrites it. An empty slot is an ordinary first run and
+            // needs none of this.
+            if (!string.IsNullOrWhiteSpace(json))
+            {
+                LoadFailed = true;
+                try { await module.InvokeVoidAsync("save", ct, SalvageKey, json); }
+                catch (JSException) { /* nothing better to try */ }
+            }
+
+            return AppState.Fresh();
         }
         catch (JSException)
         {
+            // Storage is unavailable entirely - private mode, or site data blocked. The app still
+            // works for this session, but nothing will survive a reload, and the user has to be
+            // told rather than left to discover it.
+            StorageUnavailable = true;
             return AppState.Fresh();
         }
     }
 
-    public async Task SaveAsync(AppState state, CancellationToken ct = default)
+    /// <summary>
+    /// True once a payload was found that could not be read. Its raw text is kept under a separate
+    /// key so it can still be exported by hand.
+    /// </summary>
+    public bool LoadFailed { get; private set; }
+
+    /// <summary>True when the browser gives no storage at all, so nothing will survive a reload.</summary>
+    public bool StorageUnavailable { get; private set; }
+
+    public async Task<bool> SaveAsync(AppState state, CancellationToken ct = default)
     {
-        var module = await ModuleAsync();
-        await module.InvokeVoidAsync("save", ct, Key, StateSerializer.Serialize(state));
+        try
+        {
+            var module = await ModuleAsync();
+            // The return value was being discarded. localStorage refuses a write once the quota is
+            // reached, so every edit after that point was lost while the app carried on as though
+            // it had saved - the single worst failure mode a tracker has.
+            return await module.InvokeAsync<bool>("save", ct, Key, StateSerializer.Serialize(state));
+        }
+        catch (JSException)
+        {
+            return false;
+        }
     }
 
     public async Task ExportAsync(AppState state, string filename)

@@ -1,0 +1,458 @@
+@page "/compare"
+@implements IDisposable
+@inject AppSession Session
+
+<PageTitle>Compare collections · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else if (!Session.MultipleProfiles)
+{
+    <div class="page-head">
+        <h1 class="title">Compare collections</h1>
+        <span class="subtitle">trades you could make with yourself</span>
+    </div>
+    <div class="p-3">
+        <p>
+            There is only one collection, so there is nothing to compare yet. Alt accounts are
+            ordinary in this game and you can trade with yourself, which is what this page is for.
+        </p>
+        <a class="btn btn-sm btn-primary" href="settings">add a collection</a>
+    </div>
+}
+else
+{
+    <div class="page-head">
+        <h1 class="title">Compare collections</h1>
+        <span class="subtitle">@Session.Profile.Name against your other collections</span>
+    </div>
+
+    <div class="page-tools">
+        <label class="small text-body-secondary">compare with</label>
+        <select class="form-select form-select-sm" style="max-width:14rem" aria-label="Collection to compare with" @onchange="OnPick">
+            @foreach (var profile in Others)
+            {
+                <option value="@profile.Id" selected="@(profile.Id == _otherId)">@profile.Name</option>
+            }
+        </select>
+
+        <span class="bar-sep" aria-hidden="true"></span>
+
+        <label class="small">
+            <input type="checkbox" class="form-check-input me-1" checked="@_readyOnly"
+                   @onchange="e => _readyOnly = (bool)(e.Value ?? false)" />
+            only the ones both accounts can afford today
+        </label>
+    </div>
+
+    @* Two mechanics, and the split between them is what the page is for. A Share is one-way and
+       free but stops at 4 diamonds; a trade is a same-rarity SWAP that costs both accounts dust
+       and a stamina. So "what does my alt have that my main needs" is not one list. *@
+    <p class="p-3 pb-0 small text-body-secondary" style="max-width:52rem">
+        Two ways to move a card between your own accounts, and which one applies is decided
+        entirely by rarity. <strong>Shares</strong> carry 1 to 4 diamonds one way &mdash; nothing
+        comes back, nothing is spent, and each account can receive
+        @GameRules.SharesReceivedPerDay a day. Everything above that is a <strong>trade</strong>,
+        which is a swap: each account hands over one card, both cards must be the same rarity, and
+        both sides pay the rarity's shinedust and one Trade Stamina of their own. The balances used
+        are whatever each collection last recorded on its own Resources page.
+    </p>
+
+    @if (_swaps is null)
+    {
+        <p class="p-3">Working&hellip;</p>
+    }
+    else if (_swaps.Nothing)
+    {
+        <p class="p-3">
+            Nothing to move. Neither collection holds a spare the other still wants at a rarity
+            that can be shared or traded.
+        </p>
+    }
+    else
+    {
+        <div class="p-3 compare-page">
+            @* First, and deliberately: a Share costs nothing at all, so there is never a reason to
+               do a trade before one. Both directions are listed because each account has its own
+               daily allowance, so they do not compete. *@
+            @if (_swaps.IncomingShares.Count > 0 || _swaps.OutgoingShares.Count > 0)
+            {
+                <div class="verdict take" aria-live="polite">
+                    <div class="head">
+                        <span class="call">
+                            @ShareTotal @Card(ShareTotal) can just be sent
+                        </span>
+                        <span class="cost">free &mdash; no card back, no dust, no stamina</span>
+                    </div>
+                    <span class="why">
+                        @if (_swaps.IncomingShares.Count > 0)
+                        {
+                            <span>
+                                Start with <strong>@_swaps.IncomingShares[0].Card.Name</strong> from
+                                @_swaps.Theirs.Name, worth about
+                                @Fmt.PacksPhrase(_swaps.IncomingShares[0].PacksSaved) here.
+                            </span>
+                        }
+                        <span>
+                            One a day per account, so moving all of them takes about
+                            @_swaps.AllSharesDays @Day(_swaps.AllSharesDays) &mdash; the two
+                            directions run at the same time.
+                        </span>
+                    </span>
+                </div>
+
+                <h2>Free to send</h2>
+                <p class="small text-body-secondary">
+                    Diamonds only, and one way: a Share asks for nothing back, so none of these
+                    needs a card at the same rarity or a single shinedust. The accounts have to be
+                    friends in-game.
+                </p>
+
+                <div class="share-cols">
+                    <div>
+                        <p class="small fw-semibold mb-1">
+                            @_swaps.Theirs.Name sends &rarr; @_swaps.Mine.Name
+                            <span class="text-body-secondary fw-normal">
+                                (@_swaps.ShareDays @Day(_swaps.ShareDays))
+                            </span>
+                        </p>
+                        @if (_swaps.IncomingShares.Count == 0)
+                        {
+                            <p class="small text-body-secondary">Nothing this way.</p>
+                        }
+                        else
+                        {
+                            <ol class="small mb-0">
+                                @foreach (var gift in _swaps.IncomingShares)
+                                {
+                                    <li>
+                                        <a href="card/@gift.Card.Key">@gift.Card.Name</a>
+                                        <span class="text-body-secondary">
+                                            @gift.Card.Set &middot; @Session.Index.Symbol(gift.Card) &middot;
+                                            @Fmt.PacksPhrase(gift.PacksSaved)
+                                            @(gift.Copies > 1 ? $" · ×{gift.Copies}" : "")
+                                        </span>
+                                    </li>
+                                }
+                            </ol>
+                        }
+                    </div>
+                    <div>
+                        <p class="small fw-semibold mb-1">
+                            @_swaps.Mine.Name sends &rarr; @_swaps.Theirs.Name
+                        </p>
+                        @if (_swaps.OutgoingShares.Count == 0)
+                        {
+                            <p class="small text-body-secondary">Nothing this way.</p>
+                        }
+                        else
+                        {
+                            <ol class="small mb-0">
+                                @foreach (var gift in _swaps.OutgoingShares)
+                                {
+                                    <li>
+                                        <a href="card/@gift.Card.Key">@gift.Card.Name</a>
+                                        <span class="text-body-secondary">
+                                            @gift.Card.Set &middot; @Session.Index.Symbol(gift.Card) &middot;
+                                            @Fmt.PacksPhrase(gift.PacksSaved)
+                                            @(gift.Copies > 1 ? $" · ×{gift.Copies}" : "")
+                                        </span>
+                                    </li>
+                                }
+                            </ol>
+                        }
+                    </div>
+                </div>
+
+                @if (_swaps.Swaps.Count > 0 || _swaps.Unpayable.Count > 0)
+                {
+                    <h2>Trades, for what a Share cannot carry</h2>
+                }
+            }
+
+            @if (_swaps.Swaps.Count == 0 && _swaps.Unpayable.Count > 0)
+            {
+                <div class="verdict skip" aria-live="polite">
+                    <div class="head"><span class="call">No trade is possible yet</span></div>
+                    <span class="why">
+                        @_swaps.Unpayable.Count @Card(_swaps.Unpayable.Count) in
+                        @_swaps.Theirs.Name would fill a gap here, but they are above the diamonds
+                        so a Share cannot carry them, and @_swaps.Mine.Name holds no spare at those
+                        rarities to trade back.
+                    </span>
+                </div>
+            }
+            @* Explicit rather than a bare else. Narrowing the branch above to "no trade AND
+               something stuck" left the else as the catch-all, so a shares-only comparison - no
+               trades and nothing unpayable, which is the ORDINARY case now that diamonds are
+               routed to Shares - fell through it and indexed an empty list. *@
+            else if (_swaps.Swaps.Count > 0)
+            {
+                var best = _swaps.Swaps[0];
+                <div class="verdict @(best.Ready ? "take" : "skip")" aria-live="polite">
+                    <div class="head">
+                        <span class="call">
+                            @(best.Ready ? "Swap" : "Best swap once you can pay for it:")
+                            @best.Incoming.Name for @best.Outgoing.Name
+                        </span>
+                        <span class="cost">
+                            1 stamina each side &middot;
+                            @(best.Dust > 0 ? $"{best.Dust:N0} dust each side" : "no dust")
+                        </span>
+                    </div>
+                    <span class="why">
+                        @if (best.Mutual)
+                        {
+                            <span>
+                                Both accounts gain something they wanted &mdash; about
+                                @Fmt.PacksPhrase(best.IncomingSaves) saved here and
+                                @Fmt.PacksPhrase(best.OutgoingSaves) there.
+                            </span>
+                        }
+                        else
+                        {
+                            <span>
+                                Saves about @Fmt.PacksPhrase(best.IncomingSaves) here.
+                                @_swaps.Theirs.Name gets @best.Outgoing.Name, which it did not ask
+                                for &mdash; it is there because the game demands a card back.
+                            </span>
+                        }
+                        @if (!best.Ready)
+                        {
+                            <span>@Blocked(best)</span>
+                        }
+                    </span>
+                </div>
+
+                <p class="small text-body-secondary">
+                    @_swaps.Swaps.Count @Swap(_swaps.Swaps.Count) found, @_swaps.Mutual of them
+                    wanted by both sides.
+                    <strong>@_swaps.ReadyNow</strong> can be done today &mdash; trade stamina
+                    regenerates one per 12 hours on each account, so a long list is a plan for the
+                    week rather than for this evening.
+                </p>
+
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>@_swaps.Mine.Name gets</th>
+                            <th>@_swaps.Theirs.Name gets</th>
+                            <th>rarity</th>
+                            <th class="num" title="Expected packs the receiving account would not have to open">packs saved</th>
+                            <th class="num">dust each</th>
+                            <th>status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var swap in Rows)
+                        {
+                            <tr class="@(swap.Ready ? "" : "trade-blocked")">
+                                <td>
+                                    <a href="card/@swap.Incoming.Key">@swap.Incoming.Name</a>
+                                    <span class="small text-body-secondary ms-1">@swap.Incoming.Set</span>
+                                </td>
+                                <td>
+                                    <a href="card/@swap.Outgoing.Key">@swap.Outgoing.Name</a>
+                                    <span class="small text-body-secondary ms-1">@swap.Outgoing.Set</span>
+                                    @if (swap.Mutual)
+                                    {
+                                        <span class="badge text-bg-success ms-2"
+                                              title="Wanted on that side too, so the swap closes two gaps for one stamina each">
+                                            wanted
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-secondary ms-2"
+                                              title="Not wanted there — it is the payment, sent only because the game requires a card back">
+                                            payment
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="glyphs @Session.Index.GlyphClass(swap.Incoming)" title="@Session.Index.Symbol(swap.Incoming)">
+                                        @Session.Index.Glyphs(swap.Incoming)
+                                    </span>
+                                </td>
+                                <td class="num">
+                                    @Fmt.Packs(swap.IncomingSaves, Fmt.NoPackRoute)@(swap.Mutual ? $" + {Fmt.Packs(swap.OutgoingSaves, Fmt.NoPackRoute)}" : "")
+                                </td>
+                                <td class="num">@(swap.Dust > 0 ? swap.Dust.ToString("N0") : "—")</td>
+                                <td>
+                                    @if (swap.Ready)
+                                    {
+                                        <span class="text-success-emphasis">ready</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@Blocked(swap)</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (_readyOnly && Rows.Count == 0)
+                {
+                    <p class="text-body-secondary">
+                        None of the @_swaps.Swaps.Count swaps can be paid for on both accounts
+                        today. Uncheck the filter to see what to save toward.
+                    </p>
+                }
+            }
+
+            @* Reported rather than dropped. Someone who can see the card in the other collection
+               and cannot see it here reads the absence as a bug, not as a rule. *@
+            @if (_swaps.Unpayable.Count > 0)
+            {
+                <h2>Wanted, but nothing to pay with</h2>
+                <p class="small text-body-secondary">
+                    @_swaps.Theirs.Name holds these spare and @_swaps.Mine.Name still wants them.
+                    They are above 4 diamonds, so a Share cannot carry them, and a trade needs a
+                    card of the <em>same rarity</em> going back &mdash; of which there is none
+                    spare here. Any spare at that rung unlocks the swap; it does not have to be a
+                    card anyone wants.
+                </p>
+                <table class="table table-sm align-middle w-auto">
+                    <thead>
+                        <tr><th>card</th><th>rarity</th><th class="num">packs saved</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var gift in _swaps.Unpayable)
+                        {
+                            <tr>
+                                <td>
+                                    <a href="card/@gift.Card.Key">@gift.Card.Name</a>
+                                    <span class="small text-body-secondary ms-1">@gift.Card.Set</span>
+                                </td>
+                                <td>
+                                    <span class="glyphs @Session.Index.GlyphClass(gift.Card)" title="@Session.Index.Symbol(gift.Card)">
+                                        @Session.Index.Glyphs(gift.Card)
+                                    </span>
+                                </td>
+                                <td class="num">@Fmt.Packs(gift.PacksSaved, Fmt.NoPackRoute)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            @if (_swaps.Unwanted.Count > 0)
+            {
+                <h2>Yours to send, once something comes back</h2>
+                <p class="small text-body-secondary">
+                    @_swaps.Theirs.Name wants these and @_swaps.Mine.Name has them spare, but every
+                    swap at those rarities was already paired above. They are what makes the next
+                    swap possible when @_swaps.Theirs.Name pulls something you need.
+                </p>
+                <ul class="small mb-0">
+                    @foreach (var gift in _swaps.Unwanted.Take(30))
+                    {
+                        <li>
+                            <a href="card/@gift.Card.Key">@gift.Card.Name</a>
+                            <span class="text-body-secondary">
+                                @gift.Card.Set &middot; @Session.Index.Symbol(gift.Card)
+                                @(gift.Copies > 1 ? $" · {gift.Copies} spare" : "")
+                            </span>
+                        </li>
+                    }
+                </ul>
+                @if (_swaps.Unwanted.Count > 30)
+                {
+                    <p class="small text-body-tertiary">
+                        and @(_swaps.Unwanted.Count - 30) more.
+                    </p>
+                }
+            }
+        </div>
+    }
+}
+
+@code {
+    private string? _otherId;
+    private bool _readyOnly;
+    private ProfileSwaps? _swaps;
+
+    private IReadOnlyList<Profile> Others =>
+        Session.Profiles.Where(p => p.Id != Session.ActiveProfileId).ToArray();
+
+    private IReadOnlyList<SelfSwap> Rows =>
+        _swaps is null ? []
+        : _readyOnly ? _swaps.Swaps.Where(s => s.Ready).ToArray()
+        : _swaps.Swaps;
+
+    protected override void OnInitialized() => Session.Changed += OnChanged;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.InitAsync();
+        Rebuild();
+    }
+
+    private void OnChanged()
+    {
+        // The active collection can change from the top bar while this page is open, which
+        // reverses the direction of every row — so the comparison is rebuilt, not just redrawn.
+        Rebuild();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnPick(ChangeEventArgs e)
+    {
+        _otherId = e.Value?.ToString();
+        Rebuild();
+    }
+
+    private void Rebuild()
+    {
+        if (!Session.Ready || !Session.MultipleProfiles)
+        {
+            _swaps = null;
+            return;
+        }
+
+        // Falls back whenever the chosen collection is gone or has become the active one, which
+        // happens the moment someone switches to it from the top bar.
+        if (_otherId is null || Others.All(p => p.Id != _otherId)) _otherId = Others[0].Id;
+
+        _swaps = Session.CompareWith(_otherId!);
+    }
+
+    private string Blocked(SelfSwap swap)
+    {
+        // Named per side, because the fix is on one specific account and a combined verdict could
+        // not point at it.
+        var mine = Reason(swap.MineBlocking, _swaps!.Mine.Name);
+        var theirs = Reason(swap.TheirsBlocking, _swaps!.Theirs.Name);
+
+        return (mine, theirs) switch
+        {
+            (null, null) => "ready",
+            (not null, null) => mine!,
+            (null, not null) => theirs!,
+            _ => $"{mine}, and {theirs}"
+        };
+    }
+
+    private static string? Reason(TradeGate gate, string who) => gate switch
+    {
+        TradeGate.NotEnoughDust => $"{who} is short of dust",
+        TradeGate.NoStamina => $"{who} has no trade stamina",
+        _ => null
+    };
+
+    private static string Card(int n) => n == 1 ? "card" : "cards";
+
+    private static string Swap(int n) => n == 1 ? "swap" : "swaps";
+
+    private static string Day(int n) => n == 1 ? "day" : "days";
+
+    private int ShareTotal =>
+        _swaps is null ? 0
+        : _swaps.IncomingShares.Sum(g => g.Copies) + _swaps.OutgoingShares.Sum(g => g.Copies);
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

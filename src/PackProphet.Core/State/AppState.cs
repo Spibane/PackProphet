@@ -49,6 +49,19 @@ public sealed record WonderOfferEvent(
 public sealed record ResourcePool(int Balance, int Hourglasses)
 {
     public static readonly ResourcePool Empty = new(0, 0);
+
+    /// <summary>
+    /// When this balance was true. Without it a stamina figure is unusable the moment it is
+    /// typed: the pool regenerates on a clock, so "3 of 5" means one thing said now and another
+    /// said two days ago, and the difference is the whole point of projecting it.
+    ///
+    /// Null means the figure has no known age and is taken at face value. An optional property
+    /// rather than a constructor parameter, so existing saves load unchanged.
+    /// </summary>
+    public DateTimeOffset? AsOf { get; init; }
+
+    /// <summary>Restamped whenever the balance is written, or the projection would double count.</summary>
+    public ResourcePool AsOfNow(DateTimeOffset now) => this with { AsOf = now };
 }
 
 public sealed record Resources(
@@ -138,6 +151,17 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     public bool WishGrid { get; init; }
 
     /// <summary>
+    /// Copies wanted of each PARALLEL FOIL — the Deluxe set's second printings of its 1-3 diamond
+    /// cards. Zero ignores them; one is the default.
+    ///
+    /// A count rather than a switch, and separate from the rarity plan, because a foil is not the
+    /// rarity it shares: it is 139 extra cards sold only in a limited-time pack. Someone wanting
+    /// two of every diamond may well want one parallel foil, or none, and a shared number cannot
+    /// say either.
+    /// </summary>
+    public int FoilCopies { get; init; } = 1;
+
+    /// <summary>
     /// Sets priced with BORROWED rates, mapped to the set the rates came from.
     ///
     /// Opt-in per set, because it trades accuracy for coverage and only the user can say which
@@ -152,6 +176,36 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     public Dictionary<string, string> AssumedRateDonors { get; init; } = [];
 
     /// <summary>
+    /// Slots on the in-game wishlist reserved for widely-held cards rather than the dearest ones.
+    ///
+    /// Persisted, and that is a correctness matter rather than a convenience: the board advisor
+    /// reports SWAPS against what is already on the board, so a setting that reset on navigation
+    /// would have the page demand changes caused by nothing but its own forgetfulness.
+    /// </summary>
+    public int BoardLiquidSlots { get; init; } = PackProphet.Engine.TradeBoardAdvisor.DefaultLiquidSlots;
+
+    /// <summary>
+    /// Packs-equivalent floor below which a card is not worth a board slot. Zero is no floor,
+    /// which is the default - see the note on TradeBoardAdvisor.Recommend for why an absolute
+    /// threshold can empty the board entirely.
+    /// </summary>
+    public double BoardMinimumCost { get; init; }
+
+    /// <summary>"with", "without" or "only" - how the board treats parallel foils.</summary>
+    public string BoardFoils { get; init; } = "with";
+
+    /// <summary>
+    /// Show the evolution-gap strip on the Collection page. True by default - it is the one place
+    /// the information appears unprompted, and it is genuinely useful the first time.
+    ///
+    /// Dismissible and PERSISTED because for a small collection the gaps are a standing fact
+    /// rather than a problem: nearly every evolution is missing a stage early on, so the strip
+    /// would never go away on its own. A notice that cannot be closed is a notice that gets
+    /// ignored, which costs more than hiding it.
+    /// </summary>
+    public bool ShowEvolutionGaps { get; init; } = true;
+
+    /// <summary>
     /// Limited-time packs the user has confirmed are currently on sale, by pack key.
     ///
     /// Empty by default, i.e. assumed NOT available: Deluxe packs are absent far more often
@@ -160,6 +214,41 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     /// visible rather than silent.
     /// </summary>
     public List<string> AvailableLimitedPacks { get; init; } = [];
+}
+
+/// <summary>
+/// The game's own lifetime counters, copied in by the player.
+///
+/// Why a BASELINE with a timestamp rather than a plain total: someone who has played for months
+/// before finding this app has thousands of packs behind them and nothing logged, so every count
+/// here reads as a fraction of the truth. Recording what the game says, and the moment it was
+/// read, lets a total be stated honestly - the baseline plus everything logged since - without
+/// double-counting packs that were already inside the game's figure when it was read.
+///
+/// What it deliberately CANNOT do is attribute anything. The game reports how many packs, not
+/// which packs, so a baseline can never feed a per-set figure, the points ledger, or any
+/// odds-versus-reality comparison. Those stay strictly logged-only, and the UI says which is
+/// which.
+/// </summary>
+/// <param name="At">When the counters were read, so later logging adds rather than overlaps.</param>
+public sealed record LifetimeTotals(int PacksOpened, int WonderPicks, DateTimeOffset At)
+{
+    /// <summary>
+    /// Total packs opened: this baseline plus the ones logged AFTER it was read.
+    ///
+    /// The timestamp filter is the whole point. A player who logs for a week and only then reads
+    /// the game's counter would otherwise have that week counted twice, once inside the game's
+    /// figure and once from the log.
+    /// </summary>
+    public int PacksWith(IEnumerable<PackOpenEvent> log) =>
+        PacksOpened + log.Count(e => e.At > At);
+
+    /// <summary>
+    /// Total Wonder Picks taken. Only taken ones count: the log holds every offer SEEN, which is
+    /// what makes the reservation threshold learnable, but the game counts the stamina you spent.
+    /// </summary>
+    public int WonderPicksWith(IEnumerable<WonderOfferEvent> log) =>
+        WonderPicks + log.Count(e => e.Taken && e.At > At);
 }
 
 /// <summary>
@@ -177,6 +266,23 @@ public sealed record Profile(
     List<WonderOfferEvent> WonderLog,
     Resources Resources)
 {
+    /// <summary>
+    /// Cards currently on the game's own 20-slot wishlist, by ownership key.
+    ///
+    /// Stored because there is no import path into the game: the board is retyped by hand, so the
+    /// app has to know what is already on it to recommend SWAPS rather than a fresh list of twenty.
+    /// Retyping the whole board because one card's rank moved is what would get the feature
+    /// abandoned.
+    /// </summary>
+    public List<string> TradeBoard { get; init; } = [];
+
+    /// <summary>
+    /// The game's own lifetime counters, or null if never entered. An optional property rather
+    /// than a constructor parameter, so existing saves deserialize unchanged and no schema bump
+    /// is needed.
+    /// </summary>
+    public LifetimeTotals? Lifetime { get; init; }
+
     public static Profile NewDefault(string id = "default", string name = "My collection") =>
         new(id, name, new(), TargetSettings.Default, [], [], [], [], Resources.Empty);
 }

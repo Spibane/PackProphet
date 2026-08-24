@@ -1,0 +1,138 @@
+@* One regenerating stamina pool. Wonder and Trade are structurally identical — cap 5, one unit
+   per 12 hours, 12 hourglasses for one unit — and differ only in what spending them costs, so
+   they share this component rather than each having a near-duplicate of it. *@
+
+<div class="pool">
+    <div class="pool-head">
+        <span class="nm">@Title</span>
+        <span class="rate">@Outlook.Balance of @Outlook.Cap</span>
+    </div>
+
+    @* At the cap the advice inverts: a full pool has STOPPED regenerating, so waiting is a loss
+       rather than thrift. Below it, the slack is stated as reassurance — a pool three days from
+       full does not need checking twice a day. *@
+    @if (Outlook.AtCap)
+    {
+        <div class="alert alert-warning py-1 px-2 small mb-2">
+            <strong>Full, so nothing is regenerating.</strong>
+            @if (Outlook.WastedSinceFull > 0)
+            {
+                <span>
+                    About @Outlook.WastedSinceFull more would have arrived by now if you had spent
+                    some &mdash; that is gone, and the meter stays stopped until you do.
+                </span>
+            }
+            else
+            {
+                <span>Every 12 hours from here is one you will not get back.</span>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="small text-body-secondary mb-2">
+            Next in @Short(Outlook.UntilNext) &middot; full in @Short(Outlook.UntilFull).
+            @if (Outlook.UntilFull is { TotalHours: > 24 })
+            {
+                <span>No hurry until then &mdash; nothing is being wasted yet.</span>
+            }
+        </p>
+    }
+
+    <div class="pool-figures">
+        <div class="fig">
+            <span class="v">@Outlook.Balance</span>
+            <span class="l">available now</span>
+        </div>
+        <div class="fig">
+            <span class="v">@Outlook.FromHourglasses</span>
+            <span class="l">more from hourglasses</span>
+        </div>
+        <div class="fig">
+            <span class="v">@Outlook.Reachable</span>
+            <span class="l">spendable if you cash them</span>
+        </div>
+    </div>
+
+    <p class="small text-body-secondary">@Note</p>
+
+    @* What was entered, and when, so a projected balance is never mistaken for a measured one. *@
+    @if (Outlook.Balance != Outlook.Entered)
+    {
+        <p class="small text-body-tertiary mb-1">
+            You told us @Outlook.Entered; the rest is regeneration since. Re-enter it if the game
+            disagrees.
+        </p>
+    }
+
+    <div class="pool-entry">
+        <label class="small">
+            balance
+            <select class="form-select form-select-sm" @onchange="OnBalance">
+                @for (var n = 0; n <= Outlook.Cap; n++)
+                {
+                    <option value="@n" selected="@(n == _balance)">@n</option>
+                }
+            </select>
+        </label>
+        <label class="small">
+            hourglasses
+            <input type="number" min="0" class="form-control form-control-sm"
+                   value="@_hourglasses" @onchange="OnHourglasses" />
+        </label>
+        <button class="btn btn-sm btn-primary" @onclick="Save">save</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    [Parameter, EditorRequired] public PoolOutlook Outlook { get; set; } = default!;
+
+    [Parameter] public int HourglassesPerUnit { get; set; } = GameRules.WonderHourglassesPerStamina;
+
+    /// <summary>What spending this pool costs, which is the only thing that differs between them.</summary>
+    [Parameter] public string Note { get; set; } = "";
+
+    [Parameter] public EventCallback<(int Balance, int Hourglasses)> OnSave { get; set; }
+
+    private int _balance;
+    private string _hourglasses = "";
+    private bool _touched;
+
+    protected override void OnParametersSet()
+    {
+        // The projected balance is the sensible starting point for a correction, but only until
+        // the user touches the control: re-seeding it afterwards would fight their typing every
+        // time the session raised Changed.
+        if (_touched) return;
+
+        _balance = Outlook.Balance;
+
+        // The raw balance, never FromHourglasses times twelve: that division floors, so seeding
+        // the field from it silently rounded 1,751 down to 1,740 and the next save stored the
+        // rounded figure.
+        _hourglasses = Outlook.Hourglasses > 0 ? Outlook.Hourglasses.ToString() : "";
+    }
+
+    private void OnBalance(ChangeEventArgs e)
+    {
+        _touched = true;
+        if (int.TryParse(e.Value?.ToString(), out var n)) _balance = Math.Clamp(n, 0, Outlook.Cap);
+    }
+
+    private void OnHourglasses(ChangeEventArgs e)
+    {
+        _touched = true;
+        _hourglasses = e.Value?.ToString() ?? "";
+    }
+
+    private async Task Save()
+    {
+        await OnSave.InvokeAsync((_balance, Num.Count(_hourglasses)));
+        // Released so the panel follows the saved figure again, which is now also the projection.
+        _touched = false;
+    }
+
+    private static string Short(TimeSpan? t) => Fmt.Span(t);
+}

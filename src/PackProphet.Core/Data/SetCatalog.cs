@@ -1,5 +1,7 @@
 namespace PackProphet.Data;
 
+using PackProphet.Domain;
+
 /// <summary>One entry from sets.json.</summary>
 public sealed class SetInfo
 {
@@ -103,6 +105,48 @@ public sealed class SetCatalog
         Info(setCode)?.IsReleased(today) ?? true;
 
     public DateOnly? ReleaseDateOf(string setCode) => Info(setCode)?.ReleasedOn;
+
+    /// <summary>
+    /// A sortable key putting sets in release order within their series, with the series' promo
+    /// set last: A1, A1a, A2 ... A4b, PROMO-A, B1, B1a ... PROMO-B.
+    ///
+    /// One definition, shared, because two places were sorting sets by different rules — a list
+    /// sorted by "set" was ordering A1-1, A2-1, A3-1 because it compared card numbers and ignored
+    /// the set entirely.
+    ///
+    /// The numeric part is zero-padded rather than compared as text: ordinally "A10" sorts before
+    /// "A2", which is not a problem with today's sets and silently becomes one at A10.
+    ///
+    /// Promos sort last within their series rather than by date. PROMO-A shares its release date
+    /// with A1 because that is when promos started, not because it belongs first — and a promo set
+    /// keeps growing long after the numbered sets it sits beside.
+    /// </summary>
+    public string SortKey(string setCode) =>
+        _sortKeys.TryGetValue(setCode, out var cached) ? cached : _sortKeys[setCode] = BuildSortKey(setCode);
+
+    /// <summary>
+    /// Memoised per set, because this is called once per CARD while sorting a list.
+    ///
+    /// It parses the code with a regex, and a list of 1,862 cards re-sorted on every render meant
+    /// 1,862 regex matches per keystroke and per tap — enough to make adding a copy visibly lag on
+    /// the WebAssembly interpreter. There are twenty-two sets, so the cache is two dozen entries.
+    /// </summary>
+    private readonly Dictionary<string, string> _sortKeys = new(StringComparer.OrdinalIgnoreCase);
+
+    private string BuildSortKey(string setCode)
+    {
+        var series = SeriesOf(setCode);
+        var promo = CardIndex.IsPromoSet(setCode) ? "1" : "0";
+
+        var match = System.Text.RegularExpressions.Regex.Match(setCode, @"^([A-Za-z]+)(\d+)([A-Za-z]*)$");
+        if (!match.Success) return $"{series}{promo}{setCode}";
+
+        var number = int.TryParse(match.Groups[2].Value, out var n) ? n : 0;
+        return $"{series}{promo}{number:D4}{match.Groups[3].Value}";
+    }
+
+    /// <summary>The same ordering applied to a card, so a flat list of cards sorts by set then number.</summary>
+    public string SortKey(PocketCard card) => $"{SortKey(card.Set)}{card.Number:D5}";
 
     /// <summary>
     /// Series implied by a set code: the leading letters, except that "PROMO-A" belongs to

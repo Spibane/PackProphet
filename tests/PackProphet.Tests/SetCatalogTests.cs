@@ -120,4 +120,66 @@ public class SetCatalogTests
         Assert.Null(info.ReleasedOn);
         Assert.True(info.IsReleased(new DateOnly(2026, 1, 1)));
     }
+
+    [Fact]
+    public void SortKey_PutsSetsInReleaseOrderWithinTheirSeries()
+    {
+        var sets = Real();
+        var ordered = new[] { "A1", "A1a", "A2", "A2a", "A2b", "A3", "A3a", "A3b", "A4", "A4a", "A4b" };
+
+        Assert.Equal(ordered, ordered.OrderBy(sets.SortKey, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public void SortKey_PutsAPromoSetLastInItsSeries()
+    {
+        // Not by date: PROMO-A shares A1's release date because that is when promos began, and a
+        // promo set keeps growing long after the numbered sets beside it.
+        var sets = Real();
+        var seriesA = new[] { "PROMO-A", "A2", "A1", "A4b" };
+
+        Assert.Equal(
+            new[] { "A1", "A2", "A4b", "PROMO-A" },
+            seriesA.OrderBy(sets.SortKey, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public void SortKey_KeepsSeriesTogether()
+    {
+        var sets = Real();
+        var mixed = new[] { "B1", "PROMO-A", "A1", "PROMO-B", "A4b", "B4" };
+
+        Assert.Equal(
+            new[] { "A1", "A4b", "PROMO-A", "B1", "B4", "PROMO-B" },
+            mixed.OrderBy(sets.SortKey, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public void SortKey_PadsTheNumberSoATenthSetDoesNotSortBeforeTheSecond()
+    {
+        // Ordinally "A10" precedes "A2". Harmless today and silently wrong the moment a series
+        // reaches ten sets, which is the sort of thing nobody notices for a release or two.
+        var sets = Real();
+
+        Assert.Equal(
+            new[] { "A2", "A9", "A10" },
+            new[] { "A10", "A2", "A9" }.OrderBy(sets.SortKey, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public void SortKey_OrdersCardsBySetThenNumber()
+    {
+        var sets = Real();
+        var index = Snapshot.Index();
+
+        var a1 = index.BySet["A1"];
+        var a2 = index.BySet["A2"];
+
+        var first = a1.OrderBy(c => c.Number).First();
+        var last = a1.OrderBy(c => c.Number).Last();
+        var nextSet = a2.OrderBy(c => c.Number).First();
+
+        Assert.True(string.CompareOrdinal(sets.SortKey(first), sets.SortKey(last)) < 0);
+        Assert.True(string.CompareOrdinal(sets.SortKey(last), sets.SortKey(nextSet)) < 0);
+    }
 }

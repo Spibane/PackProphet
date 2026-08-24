@@ -195,4 +195,69 @@ public class CardSearchTests
 
         Assert.False(CardSearch.Matches(Card("Drowzee"), fact, new CardQuery(Text: "asleep")));
     }
+
+    // ---- set and rarity facets -------------------------------------------------------
+
+    [Fact]
+    public void SetFacet_KeepsOnlyThatSet()
+    {
+        var index = Snapshot.Index();
+        var query = new CardQuery(Set: "A1");
+
+        var hits = index.All.Where(c => CardSearch.Matches(c, null, query)).ToArray();
+
+        Assert.NotEmpty(hits);
+        Assert.All(hits, c => Assert.Equal("A1", c.Set));
+    }
+
+    [Fact]
+    public void RarityFacet_TakesAWholeFamilyAtOnce()
+    {
+        // "All diamonds" is the useful selection, and it is four rungs and several codes — which
+        // is why the facet is a set of codes rather than one code.
+        var index = Snapshot.Index();
+        var diamonds = index.Ladder.Rungs
+            .Where(r => r.GlyphClass == "diamond")
+            .SelectMany(r => r.Codes)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var query = new CardQuery(Set: "A1", RarityCodes: diamonds);
+        var hits = index.All.Where(c => CardSearch.Matches(c, null, query)).ToArray();
+
+        Assert.NotEmpty(hits);
+        Assert.All(hits, c => Assert.Contains(c.Rarity, diamonds));
+        // And it really is a subset: A1 has stars and crowns too.
+        Assert.True(hits.Length < index.BySet["A1"].Count);
+    }
+
+    [Fact]
+    public void SetAndRarity_WorkWithNoPrintedDetailAtAll()
+    {
+        // Both come off the card rather than from card detail, so "every diamond in A1" works on
+        // a first visit while the detail payload is still downloading.
+        var card = Snapshot.Index().BySet["A1"].First(c => c.Rarity == "C");
+
+        Assert.True(CardSearch.Matches(card, fact: null,
+            new CardQuery(Set: "A1", RarityCodes: new HashSet<string> { "C" })));
+    }
+
+    [Fact]
+    public void FacetsAreAnded_SoNarrowingNeverWidens()
+    {
+        var index = Snapshot.Index();
+        var wrongSet = new CardQuery(Set: "A2", RarityCodes: new HashSet<string> { "C" });
+
+        Assert.DoesNotContain(index.BySet["A1"], c => CardSearch.Matches(c, null, wrongSet));
+    }
+
+    [Fact]
+    public void AQueryWithOnlyASetIsNotEmpty()
+    {
+        // IsEmpty gates whether the picker searches at all, so a set-only or rarity-only query
+        // has to count as a real query — that is the whole basis of "add every diamond in A1".
+        Assert.False(new CardQuery(Set: "A1").IsEmpty);
+        Assert.False(new CardQuery(RarityCodes: new HashSet<string> { "C" }).IsEmpty);
+        Assert.True(new CardQuery().IsEmpty);
+        Assert.True(new CardQuery(RarityCodes: new HashSet<string>()).IsEmpty);
+    }
 }

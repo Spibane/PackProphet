@@ -4,6 +4,73 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
+## 0.2.0 — 2026-08-23
+
+Phase 2: daily-use depth. The same odds engine pointed at the decisions you make between packs.
+
+### New screens
+
+- **Wonder Pick** — tap the five cards on offer for a take-or-skip verdict. Cost is set by the
+  highest rarity *in the offer* rather than by what it is worth to you, so the overpriced-offer
+  flag falls straight out of the pricing rule and is sharpest at the top of the range.
+- **Resources** — the three currency systems side by side, never summed, because nothing
+  converts between them. Leads with the waste: a full pool has *stopped* regenerating, and that
+  loss is computable, while a pool at two of five has 36 hours of slack and needs no attention.
+- **Trades** — which single trade deserves your next stamina. Stamina caps trading at ~2/day
+  while dust accumulates, so the scarce thing is trades, not currency. Grouped by pack, set or
+  rarity, since the best trade in each is rarely near the top of a global ranking.
+- **In-game wishlist** — the game's own 20-slot board, filled by cost-to-get-otherwise, with a
+  minority of slots reserved for cards someone will actually offer. Output is a transcription
+  list in set order with swap-level diffs, because the board is retyped by hand.
+- **Compare collections** — self-trades between profiles, with full profile management.
+
+### Additions to existing screens
+
+- **Lifetime totals** — enter the game's own counters and the odds check scales to them,
+  splitting a lifetime pack count across sets from what the collection implies. Logged and
+  imported figures are never mixed, and per-set figures stay logged-only.
+- **Evolution gaps** on Collection and Card detail, with a grid filter for the printings that
+  would close a chain.
+- **Rarity plan chips** moved to Settings as well as Packs, since they drive every page.
+- **Pack points** panel gained a "packs until you can afford the rarest card you still need"
+  column, and now respects the rarity plan — it had been recommending cards the plan excluded.
+- Deep link from the pack ranking straight to logging that pack.
+
+### Shares
+
+A mechanic added to the game mid-phase, and it is not a variety of trade. A Share is one-way:
+a friend sends a 1–4 diamond card and receives **nothing** back, capped at one received per day
+per account. So it costs no shinedust, no stamina and no card given up — which means wherever it
+applies, trading is *strictly worse*, and any surface offering both routes for one card is
+recommending the bad one. Diamonds are therefore removed from the self-trade pairing altogether
+rather than listed twice, and the trade queue flags them so a 4-diamond is never bought for
+5,000 dust when someone would hand it over.
+
+### Bugs found by probing real data
+
+- **Fossils are Trainers, and a Trainer can close an evolution gap.** Omanyte evolves from Helix
+  Fossil. Excluding trainers from the name tables reported eleven missing fossils to a player
+  who owned every card in the game.
+- **Obtainability must outrank rarity** when recommending which printing to chase: the promo
+  Charmeleon is a 1-diamond while every openable one is a 2-diamond, so ranking by rarity
+  recommended the one card that cannot be got.
+- **The points ledger ignored the rarity plan**, so it advised saving for rarities the user had
+  explicitly excluded — and the Packs page was applying one set's plan to every set.
+- **Hourglass balances were rounded on save.** The field was seeded from a floored division, so
+  1,751 came back as 1,740 and eleven hourglasses vanished on every save.
+- **A stamina pool was blamed for time it spent filling**, reporting waste to someone who had
+  never been at the cap.
+
+### Notes
+
+- The evolution-gap bar is dismissible and stays dismissed. Early on nearly every chain is
+  missing a stage, so it is a standing fact rather than a problem — and a notice that cannot be
+  closed is a notice that gets ignored.
+- **Binder view was cut.** The Collection page already lists every card of a set in set-then-
+  number order, owned and unowned, with a columns picker; the binder's remaining delta was row-
+  width parity with a number that varies by device. What was left was decoration, which is the
+  category this project refuses.
+
 ## 0.1.0 — 2026-08-23
 
 First working version: the whole core loop, from an empty collection to "open this pack".

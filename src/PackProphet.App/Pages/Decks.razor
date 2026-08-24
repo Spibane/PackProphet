@@ -11,7 +11,7 @@
 else
 {
     <div class="page-head">
-        <span class="title">Decks</span>
+        <h1 class="title">Decks</h1>
         <span class="subtitle">@Session.Profile.Decks.Count saved</span>
 
         <span class="actions">
@@ -28,9 +28,11 @@ else
         <div class="grid-toolbar">
             <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
                 <button class="btn @(Session.DeckGrid ? "btn-outline-secondary" : "btn-secondary")"
-                        @onclick="() => Session.SetDeckGrid(false)" title="A table, for comparing">list</button>
+                        @onclick="() => Session.SetDeckGrid(!Session.DeckGrid)"
+                        aria-pressed="@(!Session.DeckGrid)" title="A table, for comparing">list</button>
                 <button class="btn @(Session.DeckGrid ? "btn-secondary" : "btn-outline-secondary")"
-                        @onclick="() => Session.SetDeckGrid(true)" title="Cards, for recognising">grid</button>
+                        @onclick="() => Session.SetDeckGrid(!Session.DeckGrid)"
+                        aria-pressed="@Session.DeckGrid" title="Cards, for recognising">grid</button>
             </div>
         </div>
     }
@@ -47,10 +49,10 @@ else
         }
         else if (Session.DeckGrid)
         {
-            <h6>
+            <h2 class="h6">
                 Your decks
                 <span class="small text-body-secondary fw-normal">closest to buildable first</span>
-            </h6>
+            </h2>
 
             <div class="showcase-grid">
                 @foreach (var deck in _decks)
@@ -137,10 +139,10 @@ else
         {
             @* Closest-to-buildable order, not alphabetical: being told you are one card away is
                the most motivating thing this app can say, so it leads. *@
-            <h6>
+            <h2 class="h6">
                 Your decks
                 <span class="small text-body-secondary fw-normal">closest to buildable first</span>
-            </h6>
+            </h2>
             <table class="table table-sm align-middle">
                 <thead>
                     <tr>

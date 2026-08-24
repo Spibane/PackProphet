@@ -13,19 +13,25 @@
 else
 {
     <div class="page-head">
-        <span class="title">Collection</span>
+        <h1 class="title">Collection</h1>
         @* Where you are and how far along, in the header rather than tucked in with the
            filters: it is the answer the page exists to give, and the filters bar is where you
            look to change something, not to read a total. *@
-        <span class="subtitle" title="Cards you own here, and progress against the rarities you have chosen to collect">
-            @Label(_set) &middot; @OwnedInSet of @TotalInSet owned
+        <span class="subtitle" title="Distinct cards you own here, total copies including duplicates, and progress against the rarities you have chosen to collect">
+            @Label(_set)
+            &middot; @Stats.Owned of @Stats.Cards owned
+            @* Copies as well as cards, because they answer different questions: one is how far
+               through the set you are, the other is how much you are actually holding — and with
+               gold flair needing ten of a card, duplicates are worth counting rather than being
+               invisible. *@
+            &middot; @Stats.Copies copies
             &middot; target @TargetOwned / @TargetTotal
         </span>
         <span class="actions">
             <button class="btn btn-sm btn-outline-secondary" disabled="@(!Session.CanUndo)"
-                    @onclick="Session.Undo" title="Undo">&#8630;</button>
+                    @onclick="Session.Undo" title="Undo (Ctrl+Z)">&#8630;</button>
             <button class="btn btn-sm btn-outline-secondary" disabled="@(!Session.CanRedo)"
-                    @onclick="Session.Redo" title="Redo">&#8631;</button>
+                    @onclick="Session.Redo" title="Redo (Ctrl+Shift+Z)">&#8631;</button>
         </span>
     </div>
 
@@ -35,7 +41,7 @@ else
     <div class="page-tools">
         @* A series at a time. One row of every set ever printed already wraps to three lines
            and only gets worse; grouping keeps it to one row per series indefinitely. *@
-        <select class="form-select form-select-sm" style="max-width:9rem" @onchange="OnSeries">
+        <select class="form-select form-select-sm" style="max-width:9rem" aria-label="Series" @onchange="OnSeries">
             <option value="@AllSets" selected="@(_series == AllSets)">every series</option>
             @foreach (var series in Session.Sets.Series)
             {
@@ -74,28 +80,120 @@ else
         </div>
     </div>
 
+    @* Collection-wide, not scoped to the visible set: evolution does not care which set a card
+       came from, and scoping it would hide the gap whose fix lives one tab over. Collapsed by
+       default because the grid is what the page is for. *@
+    @if (Session.ShowGapStrip && Session.Gaps is { Complete: false } gaps)
+    {
+        <div class="gap-strip">
+            <button class="hd" @onclick="() => _showGaps = !_showGaps"
+                    aria-expanded="@_showGaps">
+                <span class="chev" aria-hidden="true">@(_showGaps ? "▾" : "▸")</span>
+                <strong>@gaps.BlockedCards</strong>
+                @(gaps.BlockedCards == 1 ? "card you own cannot evolve" : "cards you own cannot evolve")
+                <span class="text-body-secondary">
+                    &mdash; @gaps.Gaps.Count missing
+                    @(gaps.Gaps.Count == 1 ? "link" : "links"), across every set
+                </span>
+            </button>
+
+            @* Early on nearly every evolution is missing a stage, so this is a standing fact rather
+               than something that resolves - it would never leave on its own. The filter and the
+               Settings toggle are both still there, so dismissing hides the bar, not the feature. *@
+            <button class="x" @onclick="() => Session.SetShowGapStrip(false)"
+                    title="Hide this bar for good. The 'fills an evolution gap' filter still works, and Settings brings it back."
+                    aria-label="Hide the evolution gap bar">&times;</button>
+
+            @if (_showGaps)
+            {
+                <p class="small text-body-secondary mb-2">
+                    Any printing of the missing card works &mdash; the game evolves on the printed
+                    name &mdash; so the cheapest one is as good as the art rare.
+                    @if (_own != "gaps")
+                    {
+                        <button class="btn btn-sm btn-outline-primary py-0 ms-1"
+                                @onclick="ShowGapFills">show them in the grid</button>
+                    }
+                </p>
+
+                <ul class="gap-list">
+                    @foreach (var gap in gaps.Gaps)
+                    {
+                        <li>
+                            @if (gap.Easiest is { } easiest)
+                            {
+                                <a href="card/@easiest.Key">@gap.MissingName</a>
+                                <span class="rr">@RarityName(easiest)</span>
+                                <span class="text-body-secondary">from @easiest.Set</span>
+                            }
+                            else
+                            {
+                                <span>@gap.MissingName</span>
+                            }
+
+                            @if (gap.NoPackRoute)
+                            {
+                                <span class="badge text-bg-warning"
+                                      title="No printing of it comes from a pack you can open, so opening will never produce one">
+                                    no pack has it
+                                </span>
+                            }
+
+                            <span class="text-body-secondary">
+                                &mdash; blocks @string.Join(", ", gap.Blocks.Select(b => b.Name))
+                            </span>
+
+                            @if (gap.Requires is { } deeper)
+                            {
+                                <span class="text-body-secondary">
+                                    (and it needs @deeper, which you also lack)
+                                </span>
+                            }
+                        </li>
+                    }
+                </ul>
+
+                @if (gaps.Unverified > 0)
+                {
+                    <p class="small text-body-tertiary mb-0">
+                        @gaps.Unverified of @gaps.Checked owned Pokémon have no stage data published
+                        yet, so a gap among them cannot be detected. A clean list is not proof there
+                        are none.
+                    </p>
+                }
+            }
+        </div>
+    }
+
     <CardGrid Cards="Filtered" CountOf="Session.CountOf" Columns="Session.GridColumns"
-              OnAdjust="OnAdjust" OnSweep="OnSweep"
+              OnAdjust="OnAdjust" OnSweep="OnSweep" OnSet="OnSet"
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
               RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
+              SortKeyOf="Session.Sets.SortKey"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady">
         @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
            header, the set tabs, a filter row and a control row, this page put five bars above
            the first card; sharing one bar halves that without hiding anything. *@
         <Filters>
             <input class="form-control form-control-sm" style="max-width:14rem"
-                   placeholder="search name" value="@_search" @oninput="OnSearch" />
+                   placeholder="search name" aria-label="Search card names" value="@_search" @oninput="OnSearch" />
 
-            <select class="form-select form-select-sm" style="max-width:11rem" @onchange="OnOwnFilter">
+            <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Filter by what you own" @onchange="OnOwnFilter">
                 <option value="all">all cards</option>
                 <option value="missing">missing only</option>
                 <option value="owned">owned only</option>
                 <option value="dupes">duplicates</option>
                 <option value="needed">short of target</option>
+                @* Only offered when there is something to see. A permanently empty filter that
+                   silently returns nothing reads as a broken control. *@
+                @if (Session.Gaps is { Complete: false })
+                {
+                    <option value="gaps">fills an evolution gap</option>
+                }
             </select>
 
-            <select class="form-select form-select-sm" style="max-width:10rem" @onchange="OnRarityFilter">
+            <select class="form-select form-select-sm" style="max-width:10rem" aria-label="Filter by rarity" @onchange="OnRarityFilter">
                 <option value="">all rarities</option>
                 @foreach (var rung in Session.Index.Ladder.Rungs)
                 {
@@ -107,7 +205,7 @@ else
                given away, not packs you can open, so filtering by them tells you nothing. *@
             @if (!ViewingAll && !CardIndex.IsPromoSet(_set))
             {
-                <select class="form-select form-select-sm" style="max-width:12rem" @onchange="OnPackFilter">
+                <select class="form-select form-select-sm" style="max-width:12rem" aria-label="Filter by pack" @onchange="OnPackFilter">
                     <option value="">all packs</option>
                     @foreach (var p in PacksInSet)
                     {
@@ -120,7 +218,7 @@ else
         </Filters>
         <ToolbarExtras>
             @* Columns only mean something in the grid layout. *@
-            <select class="form-select form-select-sm" style="max-width:6rem" @onchange="OnColumns"
+            <select class="form-select form-select-sm" style="max-width:6rem" aria-label="Columns in the grid" @onchange="OnColumns"
                     hidden="@Session.ListView">
                 @foreach (var n in new[] { 3, 4, 5, 6, 8, 10 })
                 {
@@ -160,6 +258,21 @@ else
 
     private string[] _sets = [];
 
+    private bool _showGaps;
+
+    private void ShowGapFills()
+    {
+        _own = "gaps";
+        // Across every set, or the filter would show only the fills that happen to live in the
+        // tab you were on and look as though the rest had vanished.
+        _series = AllSets;
+        _set = AllSets;
+    }
+
+    private string RarityName(PocketCard card) =>
+        Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Codes.Contains(card.Rarity))?.Symbol
+            ?? card.Rarity;
+
     /// <summary>
     /// Which set to open on, so a link can land on one. The command palette needs it, and it
     /// also makes a particular set shareable and bookmarkable — the tab bar alone cannot be
@@ -183,8 +296,7 @@ else
             _series = Session.Sets.SeriesOf(_set);
             _allCards = Session.Index.All
                 .DistinctBy(c => c.OwnershipKey)
-                .OrderBy(c => SetOrder(c.Set), StringComparer.Ordinal)
-                .ThenBy(c => c.Number)
+                .OrderBy(Session.Sets.SortKey, StringComparer.Ordinal)
                 .ToArray();
         }
     }
@@ -206,8 +318,9 @@ else
         _pack = "";
     }
 
-    // Promo sets last; otherwise the natural release order the codes already imply.
-    private static string SetOrder(string set) => set.StartsWith("PROMO") ? "zz" + set : set;
+    // Set ordering comes from the catalogue now, so the tabs, the card lists and the grid's own
+    // "set" column all agree: release order within a series, promos last in theirs.
+    private string SetOrder(string set) => Session.Sets.SortKey(set);
 
     private Task SelectSet(string set, string? series = null)
     {
@@ -261,13 +374,30 @@ else
 
     private IReadOnlyList<PocketCard> _allCards = [];
 
-    private IReadOnlyList<PocketCard> SeriesCards =>
-        Session.Sets.SetsIn(_series)
-            .SelectMany(s => Session.Index.BySet.TryGetValue(s, out var c) ? c : [])
-            .DistinctBy(c => c.OwnershipKey)
-            .OrderBy(c => c.Set, StringComparer.Ordinal)
-            .ThenBy(c => c.Number)
-            .ToArray();
+    /// <summary>
+    /// Every card in the series, in set order then number: A1-1 … A4b-379, then the series' promo
+    /// set. Sorted by the catalogue's key rather than by set code, which put A10 before A2 and had
+    /// no opinion about where promos belong.
+    /// </summary>
+    private IReadOnlyList<PocketCard> SeriesCards
+    {
+        get
+        {
+            // Cached per series. It was rebuilt on every access — a SelectMany, a DistinctBy and
+            // a sort of ~1,900 cards — and InSet is read several times per render.
+            if (_seriesCardsFor == _series) return _seriesCards;
+
+            _seriesCardsFor = _series;
+            return _seriesCards = Session.Sets.SetsIn(_series)
+                .SelectMany(s => Session.Index.BySet.TryGetValue(s, out var c) ? c : [])
+                .DistinctBy(c => c.OwnershipKey)
+                .OrderBy(Session.Sets.SortKey, StringComparer.Ordinal)
+                .ToArray();
+        }
+    }
+
+    private IReadOnlyList<PocketCard> _seriesCards = [];
+    private string _seriesCardsFor = "\u0000";
 
     private double ProgressOf(IReadOnlyList<PocketCard> cards) =>
         cards.Count == 0 ? 0 : (double)cards.Count(c => Session.CountOf(c) > 0) / cards.Count;
@@ -276,8 +406,51 @@ else
         InSet.Where(c => c.IsPackObtainable).SelectMany(c => c.Packs!)
              .Distinct().OrderBy(p => p, StringComparer.Ordinal);
 
-    private int TotalInSet => InSet.DistinctBy(c => c.OwnershipKey).Count();
-    private int OwnedInSet => InSet.DistinctBy(c => c.OwnershipKey).Count(c => Session.CountOf(c) > 0);
+    /// <param name="Cards">Distinct ownable cards in scope.</param>
+    /// <param name="Owned">How many of those you hold at least one of.</param>
+    /// <param name="Copies">Total copies held, duplicates included.</param>
+    private sealed record Counts(int Cards, int Owned, int Copies);
+
+    private Counts _counts = new(0, 0, 0);
+    private string _countsFor = "";
+
+    /// <summary>
+    /// The three figures in the header, computed in ONE pass and cached.
+    ///
+    /// They are read during render, and "all cards" is 3,500 entries — so a property per figure
+    /// meant three de-duplicating scans on every keystroke in the search box. Recomputed only
+    /// when the scope or the collection actually changes.
+    /// </summary>
+    private Counts Stats
+    {
+        get
+        {
+            var signature = $"{_set}|{_series}|{Session.CollectionRevision}";
+            if (signature == _countsFor) return _counts;
+
+            var cards = 0;
+            var owned = 0;
+            var copies = 0;
+
+            // De-duplicated by ownership key: a card reprinted in a later set is one card you
+            // own, so counting entries would inflate both the total and the copies.
+            foreach (var card in InSet.DistinctBy(c => c.OwnershipKey))
+            {
+                cards++;
+                var n = Session.CountOf(card);
+                if (n <= 0) continue;
+
+                owned++;
+                copies += n;
+            }
+
+            _countsFor = signature;
+            return _counts = new Counts(cards, owned, copies);
+        }
+    }
+
+    private int TotalInSet => Stats.Cards;
+    private int OwnedInSet => Stats.Owned;
 
     // Progress against the chosen rarities, which is usually the number that matters: "42 of
     // 120 owned" is discouraging if 900 of the set are rarities you never wanted.
@@ -288,16 +461,14 @@ else
         _ => [_set]
     };
 
-    private IEnumerable<PocketCard> TargetCards =>
-        TargetSets
-            .SelectMany(s => Session.Index.WantedInSet(s, Session.Plan(s).WantedTiers))
-            .DistinctBy(c => c.OwnershipKey);
+    // Both figures come from the target itself. Working them out here is what let them disagree
+    // with every other screen: the foil setting was ignored, and across several sets the owned
+    // count was measured against the default plan while the total used each set's own.
+    private (int Wanted, int Satisfied) TargetStat => Session.TargetProgress(TargetSets);
 
-    private int TargetTotal => TargetCards.Count();
+    private int TargetTotal => TargetStat.Wanted;
 
-    private int TargetOwned => TargetCards.Count(c =>
-        Session.CountOf(c) >= Session.Plan(ViewingAll ? null : _set)
-                                     .Copies(Session.Index.Ladder.IndexOf(c.Rarity) ?? 0));
+    private int TargetOwned => TargetStat.Satisfied;
 
     private double Progress(string set)
     {
@@ -306,11 +477,51 @@ else
         return distinct.Count == 0 ? 0 : (double)distinct.Count(c => Session.CountOf(c) > 0) / distinct.Count;
     }
 
+    private IReadOnlyList<PocketCard> _filtered = [];
+    private string _filteredFor = "\u0000";
+
+    /// <summary>
+    /// Cards to show, cached.
+    ///
+    /// This is read during render, and a tap re-renders the page — so before caching, every added
+    /// copy re-filtered and re-sorted the whole set. The signature includes the collection only
+    /// when the active filter actually depends on counts: with "all cards" showing, owning one
+    /// more of something cannot change WHICH cards are listed, just the number on one tile.
+    /// </summary>
     private IReadOnlyList<PocketCard> Filtered
     {
         get
         {
-            var plan = Session.Plan(ViewingAll ? null : _set);
+            var countsMatter = _own is "missing" or "owned" or "dupes" or "needed" or "gaps";
+            var signature = $"{_set}|{_series}|{_search}|{_own}|{_rarity}|{_pack}|" +
+                            (countsMatter ? $"{Session.CollectionRevision}|{PlanSignature()}" : "");
+
+            if (signature == _filteredFor) return _filtered;
+
+            _filteredFor = signature;
+            return _filtered = Build();
+        }
+    }
+
+    /// <summary>
+    /// Everything the "short of target" filter reads, as text, so the cached list is dropped when
+    /// any of it changes.
+    ///
+    /// Per-SET plans, not just the visible one: in the all-sets view the filter now honours each
+    /// set's own override, so a signature built from one plan would leave a stale list on screen
+    /// after another set's plan changed. The foil count is in here for the same reason.
+    /// </summary>
+    private string PlanSignature()
+    {
+        var plans = TargetSets.Select(set =>
+            set + ":" + string.Join('.', Session.Plan(set).CopiesByTier
+                .OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}")));
+
+        return string.Join('|', plans) + $"|foil{Session.FoilCopies}";
+    }
+
+    private IReadOnlyList<PocketCard> Build()
+    {
             var q = InSet.AsEnumerable();
 
             if (!string.IsNullOrWhiteSpace(_search))
@@ -327,23 +538,37 @@ else
                 "missing" => q.Where(c => Session.CountOf(c) == 0),
                 "owned" => q.Where(c => Session.CountOf(c) > 0),
                 "dupes" => q.Where(c => Session.CountOf(c) > 1),
-                // "Short of target" must respect WHICH rarities are wanted, not just the
-                // copy count — otherwise a rarity you deliberately ignore still shows as
-                // outstanding work.
+                // Every printing that would close a chain, not only the easiest one: any of them
+                // works, and someone about to open a particular pack wants to know which of ITS
+                // cards would do.
+                "gaps" => q.Where(c => Session.GapFillKeys.Contains(c.OwnershipKey)),
+                // "Short of target" must respect WHICH rarities are wanted, not just the copy
+                // count — otherwise a rarity you deliberately ignore still shows as outstanding
+                // work. Asked of the target, so a parallel foil nobody wants is not listed as
+                // missing and a per-set override is honoured even in the all-sets view.
                 "needed" => q.Where(c =>
                 {
-                    var t = Session.Index.Ladder.IndexOf(c.Rarity);
-                    return t is not null && Session.CountOf(c) < plan.Copies(t.Value);
+                    var required = Session.RequiredCopies(c);
+                    return required > 0 && Session.CountOf(c) < required;
                 }),
                 _ => q
             };
 
-            return q.OrderBy(c => c.Number).ToArray();
-        }
+            // Set THEN number. Ordering by number alone was the whole bug: it discarded the set
+            // ordering the lists were built with, so "All A" came out A1-1, A2-1, A3-1. Within a
+            // single set the two are identical, which is why it went unnoticed.
+            return q.OrderBy(Session.Sets.SortKey, StringComparer.Ordinal).ToArray();
     }
 
     private void OnAdjust((PocketCard Card, int Delta) e) =>
         Session.Adjust([e.Card.OwnershipKey], e.Delta);
+
+    /// <summary>
+    /// A typed count. Its own undo step per row, deliberately: entering a collection is a long
+    /// session of individual corrections, and collapsing them would make one mistyped row
+    /// unrecoverable without discarding the rest.
+    /// </summary>
+    private void OnSet((PocketCard Card, int Count) e) => Session.SetCount(e.Card, e.Count);
 
     // One undo step for the whole sweep, which is the point of doing it in one call.
     private void OnSweep((IReadOnlyList<PocketCard> Cards, int Delta) e) =>

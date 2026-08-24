@@ -94,6 +94,92 @@ public sealed class PackRanker
             .ToArray();
     }
 
+    /// <param name="ExpectedNewCards">
+    /// Cards you do not yet have enough of that a batch of this size is expected to complete.
+    /// Not <c>n x</c> the single-pack figure: a pack holds several cards, a duplicate inside the
+    /// batch counts once, and demand shrinks as it is met.
+    /// </param>
+    /// <param name="ChanceOfNothing">
+    /// Chance the whole batch advances nothing at all. The number that makes a batch feel bad,
+    /// and the one a per-pack probability hides.
+    /// </param>
+    public sealed record BatchOutcome(
+        string PackKey,
+        int Packs,
+        double ExpectedNewCards,
+        double ChanceOfNothing);
+
+    /// <summary>
+    /// What committing a fixed number of packs to ONE pack key is expected to yield.
+    ///
+    /// The game's ten-at-once option costs exactly ten packs and adds no guarantee, so it cannot
+    /// beat ten singles of the same pack on odds — those are the same ten draws. The question it
+    /// does answer is the one across SETS: ten of this pack against ten of that one, which is
+    /// what <see cref="Batches"/> is for.
+    ///
+    /// What is deliberately NOT modelled is the value of re-choosing mid-batch. Quantifying that
+    /// means solving how to split n packs across packs optimally, which is a different problem —
+    /// Phase 3's allocator. A first attempt credited every card with its best source across the
+    /// whole batch, which for an A1 target spanning three packs assumed thirty packs' worth of
+    /// coverage and reported that committing lost half the value. It cannot be priced that
+    /// cheaply, so it is not priced here at all.
+    /// </summary>
+    public BatchOutcome Batch(
+        ICompletionTarget target, Collection owned, string packKey,
+        int packs = GameRules.PacksPerBatch) =>
+        Batch(target.Outstanding(_index, owned), packKey, packs);
+
+    private BatchOutcome Batch(IReadOnlyList<Demand> outstanding, string packKey, int packs)
+    {
+        if (outstanding.Count == 0 || packs <= 0)
+            return new BatchOutcome(packKey, packs, 0, 1);
+
+        var rates = _odds.ExpectedCopies(packKey);
+
+        // Per-demand arrival rate from THIS pack, pooled across every printing it can yield.
+        var expected = 0.0;
+        foreach (var demand in outstanding)
+        {
+            var lambda = demand.SuppliedBy.Sum(c => rates.GetValueOrDefault(c.Key));
+            if (lambda <= 0) continue;
+
+            // P(enough copies arrive within the batch). Summing these gives the expected COUNT
+            // of demands met, which is what "new cards" means to a collector.
+            expected += CompletionEstimator.PoissonTail(lambda * packs, demand.Remaining);
+        }
+
+        // Packs are independent draws, so a batch misses entirely only if every pack in it does.
+        var perPack = _odds.ChanceOfUseful(packKey, outstanding);
+        var nothing = Math.Pow(1 - perPack, packs);
+
+        return new BatchOutcome(packKey, packs, expected, nothing);
+    }
+
+    /// <summary>
+    /// Every purchasable pack's batch outcome, best first. One pass over the target, because
+    /// these figures are only useful beside each other: the decision the batch option forces is
+    /// which SET to commit ten packs to.
+    /// </summary>
+    public IReadOnlyList<BatchOutcome> Batches(
+        ICompletionTarget target, Collection owned,
+        int packs = GameRules.PacksPerBatch,
+        IReadOnlySet<string>? unavailablePacks = null)
+    {
+        var outstanding = target.Outstanding(_index, owned);
+        if (outstanding.Count == 0) return [];
+
+        var results = new List<BatchOutcome>();
+        foreach (var pack in _odds.PriceablePacks)
+        {
+            if (unavailablePacks is not null && unavailablePacks.Contains(pack)) continue;
+
+            var outcome = Batch(outstanding, pack, packs);
+            if (outcome.ExpectedNewCards > 0) results.Add(outcome);
+        }
+
+        return results.OrderByDescending(b => b.ExpectedNewCards).ToArray();
+    }
+
     /// <summary>
     /// Cheapest expected packs to finish the PRICEABLE part of a target, assuming you always
     /// open the best available pack. A lower bound rather than a plan: it credits each demand

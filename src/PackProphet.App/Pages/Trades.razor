@@ -1,0 +1,543 @@
+@page "/trades"
+@implements IDisposable
+@inject AppSession Session
+@inject UiBusy Busy
+
+<PageTitle>Trades · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else
+{
+    <div class="page-head">
+        <h1 class="title">Trades</h1>
+        <span class="subtitle">which one deserves your next stamina</span>
+    </div>
+
+    <div class="page-tools">
+        <select class="form-select form-select-sm" style="max-width:16rem" aria-label="What to trade for" @onchange="OnScope">
+            <option value="everything">everything I collect</option>
+            @if (Session.Wishlists.Count > 0)
+            {
+                <optgroup label="wishlists">
+                    @foreach (var list in Session.Wishlists)
+                    {
+                        <option value="wish:@list.Id" selected="@(_scope == $"wish:{list.Id}")">
+                            @list.Name
+                        </option>
+                    }
+                </optgroup>
+            }
+            <optgroup label="sets">
+                @foreach (var set in Session.Index.OpenableSets.OrderBy(Session.Sets.SortKey, StringComparer.Ordinal))
+                {
+                    <option value="set:@set" selected="@(_scope == $"set:{set}")">@set</option>
+                }
+            </optgroup>
+        </select>
+
+        <span class="bar-sep" aria-hidden="true"></span>
+
+        @* The two facts the whole page turns on, where they can be read rather than remembered. *@
+        <span class="avail-chip @(_stamina.Balance > 0 ? "on" : "off")">
+            <span class="ttl">trade stamina</span>
+            <span>@_stamina.Balance of @_stamina.Cap</span>
+        </span>
+        <span class="avail-chip off">
+            <span class="ttl">shinedust</span>
+            <span>@Session.Profile.Resources.Shinedust.ToString("N0")</span>
+        </span>
+        <a class="btn btn-sm btn-outline-secondary" href="resources">edit</a>
+    </div>
+
+    @* A single global ranking is not enough here. Sorted by how hard a card is to pull, the top
+       of the list is always the same handful of near-unpullable cards — the 139 parallel foils
+       swamp it outright — which answers "what is rarest" when the question was "what should I do
+       about each pack, each rarity, each set". So the ranking is one view of several. *@
+    <div class="page-tools">
+        <select class="form-select form-select-sm" style="max-width:12rem" aria-label="Group the rows by" @onchange="OnView">
+            <option value="all" selected="@(_view == "all")">everything, ranked</option>
+            <option value="rarity" selected="@(_view == "rarity")">best per rarity</option>
+            <option value="pack" selected="@(_view == "pack")">best per pack</option>
+            <option value="set" selected="@(_view == "set")">best per set</option>
+        </select>
+
+        <select class="form-select form-select-sm" style="max-width:13rem" aria-label="Rank by" @onchange="OnSort">
+            <option value="packs" selected="@(_sort == "packs")">hardest to pull</option>
+            <option value="points" selected="@(_sort == "points")">furthest off by points</option>
+            <option value="dust" selected="@(_sort == "dust")">dearest in dust</option>
+            <option value="cheap" selected="@(_sort == "cheap")">cheapest in dust</option>
+        </select>
+
+        <span class="bar-sep" aria-hidden="true"></span>
+
+        <select class="form-select form-select-sm" style="max-width:9rem" aria-label="Filter by rarity" @onchange="OnRarity">
+            <option value="" selected="@(_rarity.Length == 0)">any rarity</option>
+            @foreach (var rung in Session.Index.Ladder.Rungs)
+            {
+                <option value="@rung.Index" selected="@(_rarity == rung.Index.ToString())">
+                    @rung.Symbol
+                </option>
+            }
+        </select>
+
+        @* Foils are the specific reason this page needed filtering: 139 cards, all at diamond
+           rarities so no rarity filter separates them, and all sold in one limited-time pack that
+           makes them the hardest things in the game to pull. *@
+        @if (ShowFoilFilter)
+        {
+            <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
+                    @onclick="() => SetFoils(NextFoilMode())"
+                    title="Parallel foils are diamond-rarity but come only from the limited-time Deluxe pack, so they dominate any ranking by pull difficulty">
+                Parallel Foils: @_foils
+            </button>
+        }
+
+        <button class="btn btn-sm @(_readyOnly ? "btn-secondary" : "btn-outline-secondary")"
+                @onclick="() => SetReadyOnly(!_readyOnly)" aria-pressed="@_readyOnly"
+                title="Hide trades you cannot make today">
+            @(_readyOnly ? "doable only" : "all rows")
+        </button>
+    </div>
+
+    <div class="p-3 trades-page" style="max-width:64rem">
+        @* Stamina is the scarce thing, so the page opens by saying how much of it there is. This
+           inverts the obvious framing: the question is not what you can afford, it is which one
+           of the affordable things is worth a slot that arrives twice a day. *@
+        <p class="small text-body-secondary">
+            Every trade costs exactly <strong>1 stamina</strong> whatever the rarity, and stamina
+            regenerates one per 12 hours &mdash; so about two trades a day, while shinedust simply
+            piles up. That makes trades the scarce thing, not currency. Value below is
+            <strong>expected packs saved</strong>, which is also value per stamina, since the cost
+            is flat.
+        </p>
+
+        @if (_stamina.AtCap)
+        {
+            <div class="alert alert-warning py-2 small">
+                <strong>Trade stamina is full, so it has stopped regenerating.</strong>
+                @if (_stamina.WastedSinceFull > 0)
+                {
+                    <span>
+                        Roughly @_stamina.WastedSinceFull more would have arrived by now. Spending
+                        one starts the clock again.
+                    </span>
+                }
+            </div>
+        }
+
+        @if (_shown.Count == 0)
+        {
+            <p class="text-body-secondary">
+                Nothing outstanding to trade for in this scope. Either it is complete, or
+                everything left in it is a rarity that cannot be traded.
+            </p>
+        }
+        else
+        {
+            @* The answer, stated once and prominently. A ranked table is a reference; the point of
+               the page is the single next action. *@
+            @if (_shown[0].Candidate.Ready)
+            {
+                <div class="verdict take" aria-live="polite">
+                    <div class="head">
+                        <span class="call">Trade for @_shown[0].Candidate.Want.Name</span>
+                        <span class="cost">
+                            1 stamina &middot;
+                            @(_shown[0].Candidate.Dust > 0 ? $"{_shown[0].Candidate.Dust:N0} dust" : "no dust")
+                        </span>
+                    </div>
+                    <span class="why">
+                        @if (_shown[0].Candidate.Shareable)
+                        {
+                            <span>
+                                &mdash; or better, <strong>ask for it as a Share</strong>. It is
+                                @Session.Index.Symbol(_shown[0].Candidate.Want), so a friend can send it for
+                                nothing: no card back, no dust, no stamina, one a day. Trade only if
+                                nobody will.
+                            </span>
+                        }
+                        else
+                        {
+                            <span>
+                                Saves about @Fmt.PacksPhrase(_shown[0].Candidate.PacksSaved), the most of
+                                anything you can trade for right now. Offer one of your
+                                @_shown[0].Candidate.CouldOffer.Count spare
+                                @Session.Index.Symbol(_shown[0].Candidate.Want) cards.
+                            </span>
+                        }
+                    </span>
+                </div>
+            }
+            else
+            {
+                <div class="verdict skip" aria-live="polite">
+                    <div class="head">
+                        <span class="call">No trade to make right now</span>
+                    </div>
+                    <span class="why">
+                        The best target is @_shown[0].Candidate.Want.Name, and @Explain(_shown[0].Candidate).
+                    </span>
+                </div>
+            }
+
+            @* Whether dust is actually the thing stopping you, which is usually NOT the case:
+               stamina allows about two trades a day while dust merely accumulates. Saying so
+               plainly beats presenting dust as a cost it is not. *@
+            @if (_shown[0].Candidate.Dust > 0)
+            {
+                var price = _shown[0].Candidate.Dust;
+                var funded = ResourcePlan.DustRunway(Session.Profile.Resources.Shinedust, price);
+                <p class="small text-body-secondary">
+                    @if (TradeQueue.DustIsTheConstraint(
+                            Session.Profile.Resources.Shinedust, price, _stamina.Reachable))
+                    {
+                        <span>
+                            <strong>Dust is the constraint here.</strong> Your balance funds
+                            @funded @(funded == 1 ? "trade" : "trades") at @price.ToString("N0")
+                            each, fewer than the @_stamina.Reachable you could pay for in stamina.
+                        </span>
+                    }
+                    else
+                    {
+                        <span>
+                            Dust is not what is stopping you: your balance funds
+                            @(funded >= 100 ? "well over 100" : funded.ToString())
+                            @(funded == 1 ? "trade" : "trades") at @price.ToString("N0") each,
+                            against @_stamina.Reachable stamina you could spend today. Treat the
+                            dust column as a check, not a cost.
+                        </span>
+                    }
+                </p>
+            }
+
+            @if (_view != "all")
+            {
+                <p class="small text-body-secondary">
+                    One row per @(_view == "rarity" ? "rarity" : _view) &mdash; the best trade
+                    available in each, by the measure chosen above. A group is absent when nothing
+                    in it is outstanding and tradeable.
+                </p>
+            }
+
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        @if (_view != "all")
+                        {
+                            <th>@(_view == "rarity" ? "rarity" : _view)</th>
+                        }
+                        <th>card</th>
+                        <th>rarity</th>
+                        @* A column rather than a badge on the name. Most rows are shareable, so as a
+                           badge it repeated down the whole table and crowded the one cell people
+                           read; as a column it is scannable, and the rows that say no stand out. *@
+                        <th title="Whether a friend could simply send it: 1-4 diamonds only">share?</th>
+                        <th class="num" title="Expected packs you would not have to open">packs saved</th>
+                        <th class="num" title="Pack points still to earn in this card's own set before the shop could sell it">points short</th>
+                        <th class="num">dust</th>
+                        <th>what you could offer</th>
+                        <th>status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _shown)
+                    {
+                        <tr class="@(row.Candidate.Ready ? "" : "trade-blocked")">
+                            @if (_view != "all")
+                            {
+                                <td class="fw-semibold">@row.Group</td>
+                            }
+                            <td>
+                                <a href="card/@row.Candidate.Want.Key">@row.Candidate.Want.Name</a>
+                                <span class="small text-body-secondary ms-1">@row.Candidate.Want.Set</span>
+                                @if (row.Candidate.CopiesShort > 1)
+                                {
+                                    <span class="small text-body-secondary ms-1">
+                                        &times;@row.Candidate.CopiesShort short
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <span class="glyphs @Session.Index.GlyphClass(row.Candidate.Want)" title="@Session.Index.Symbol(row.Candidate.Want)">
+                                    @Session.Index.Glyphs(row.Candidate.Want)
+                                </span>
+                            </td>
+                            <td class="small">
+                                @if (row.Candidate.Shareable)
+                                {
+                                    <span class="text-success-emphasis"
+                                          title="A friend sends it and gets nothing back — no card at this rarity, no dust, no stamina. One a day. Ask before spending on a trade.">
+                                        ask instead
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-body-secondary"
+                                          title="Above 4 diamonds, so a Share cannot carry it. Trading or opening packs is the only way.">
+                                        no
+                                    </span>
+                                }
+                            </td>
+                            <td class="num">@Fmt.Packs(row.Candidate.PacksSaved, Fmt.NoPackRoute)</td>
+                            <td class="num">
+                                @if (row.Candidate.Points == 0)
+                                {
+                                    <span class="text-body-secondary" title="No pack-point price">&mdash;</span>
+                                }
+                                else if (row.Candidate.PointsShort == 0)
+                                {
+                                    <span class="text-success-emphasis" title="Your balance in this set already covers it">buy it</span>
+                                }
+                                else
+                                {
+                                    <span title="@row.Candidate.PointsShort points, about @row.Candidate.PacksOfPointsShort packs of @row.Candidate.Want.Set">
+                                        @row.Candidate.PointsShort.ToString("N0")
+                                    </span>
+                                }
+                            </td>
+                            <td class="num">@(row.Candidate.Dust > 0 ? row.Candidate.Dust.ToString("N0") : "free")</td>
+                            <td class="small">
+                                @if (row.Candidate.CouldOffer.Count == 0)
+                                {
+                                    <span class="text-body-secondary">no spare at this rarity</span>
+                                }
+                                else
+                                {
+                                    @* Named, not counted: the decision is which card you are
+                                       willing to give up, and a bare number cannot answer that. *@
+                                    <span>
+                                        @string.Join(", ", row.Candidate.CouldOffer.Take(3).Select(c => c.Name))
+                                        @(row.Candidate.CouldOffer.Count > 3 ? $" +{row.Candidate.CouldOffer.Count - 3}" : "")
+                                    </span>
+                                }
+                            </td>
+                            <td class="small">@Explain(row.Candidate)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <p class="small text-body-secondary">
+                <strong>share?</strong> says whether a friend could simply send the card &mdash; 1
+                to 4 diamonds, nothing back, no dust and no stamina, one a day. Most rows say
+                <em>ask instead</em>, because most cards are diamonds: trading for one of those
+                spends two resources to get what a Share gives free. The rows saying <em>no</em> are
+                the ones a trade is genuinely for.
+            </p>
+            <p class="small text-body-secondary">
+                Blocked rows are kept rather than hidden: "you have the dust and a spare but no
+                stamina until tonight" is an answer, and a target that silently vanished would not
+                be.
+            </p>
+        }
+    </div>
+}
+
+@code {
+    private string _scope = "everything";
+
+    /// <summary>Every candidate for the scope, unfiltered. Filtering is a view, not a re-rank.</summary>
+    private IReadOnlyList<TradeCandidate> _all = [];
+
+    /// <summary>What the table shows: filtered, grouped and sorted.</summary>
+    private IReadOnlyList<Row> _shown = [];
+
+    private PoolOutlook _stamina = default!;
+
+    /// <param name="Group">The rarity, pack or set this row is the best of. Empty in the flat view.</param>
+    private sealed record Row(string Group, TradeCandidate Candidate);
+
+    private string _view = "all";
+    private string _sort = "packs";
+    private string _rarity = "";
+    private bool _readyOnly;
+
+    /// <summary>with / without / only. Three states because all three are useful views.</summary>
+    private string _foils = "with";
+
+    /// <summary>
+    /// Whether the filter can do anything. Two conditions, and the second is the one that matters:
+    /// foils have to exist in the data at all, AND the user has to be collecting them. With the
+    /// Parallel Foils chip off they are not in the target's demands, so no foil row can appear and
+    /// the filter would be a control with nothing to filter.
+    /// </summary>
+    private bool ShowFoilFilter => Session.FoilSets.Count > 0 && Session.FoilCopies > 0;
+
+    /// <summary>Rows in the flat view. Long enough to scan, short enough not to be a card list.</summary>
+    private const int FlatLimit = 40;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+        Rebuild();
+    }
+
+    private void OnChanged()
+    {
+        Rebuild();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Rebuild()
+    {
+        if (!Session.Ready) return;
+
+        _stamina = Session.TradeOutlook;
+
+        // A filter that has just disappeared must not go on filtering. Left at "only", turning the
+        // chip off would empty the table with no visible cause.
+        if (!ShowFoilFilter) _foils = "with";
+
+        // Everything, not the top few: the best trade for a given pack is usually nowhere near the
+        // top of a global ranking, so grouping has to happen over the whole list.
+        _all = Session.RankTrades(CurrentTarget(), int.MaxValue);
+        Reshape();
+    }
+
+    /// <summary>
+    /// Filter, group, sort. Kept apart from ranking so changing a view costs nothing: the
+    /// expensive part is walking every outstanding demand, and none of these controls changes it.
+    /// </summary>
+    private void Reshape()
+    {
+        var foils = Session.Odds?.FoilOwnershipKeys ?? new HashSet<string>();
+
+        var filtered = _all.Where(c =>
+        {
+            if (_readyOnly && !c.Ready) return false;
+
+            if (_rarity.Length > 0
+                && Session.Index.Ladder.IndexOf(c.Want.Rarity)?.ToString() != _rarity)
+                return false;
+
+            var isFoil = foils.Contains(c.Want.OwnershipKey);
+            return _foils switch
+            {
+                "without" => !isFoil,
+                "only" => isFoil,
+                _ => true
+            };
+        });
+
+        // Grouped views take the best of each group by the CURRENT measure, so switching the sort
+        // changes which card represents a pack rather than only reordering the list. Anything else
+        // would show "the hardest to pull in this pack" while claiming to rank by points.
+        IEnumerable<Row> rows = _view switch
+        {
+            "rarity" => Best(filtered, c => [Session.Index.Symbol(c.Want)]),
+            "set" => Best(filtered, c => [c.Want.Set]),
+            "pack" => Best(filtered, c => Session.Index.PacksYielding(c.Want.OwnershipKey).ToArray()),
+            _ => Order(filtered).Take(FlatLimit).Select(c => new Row("", c))
+        };
+
+        _shown = rows.ToArray();
+    }
+
+    /// <summary>
+    /// One row per group, the best of it. A card in three packs is a candidate in all three: it
+    /// really is the answer for each of them, and hiding it from two would leave those packs
+    /// looking as though they had nothing to offer.
+    /// </summary>
+    private IEnumerable<Row> Best(
+        IEnumerable<TradeCandidate> candidates, Func<TradeCandidate, IReadOnlyList<string>> groupsOf)
+    {
+        var best = new Dictionary<string, TradeCandidate>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var candidate in Order(candidates))
+            foreach (var group in groupsOf(candidate))
+                // Order() already sorted, so the first one to claim a group is its best.
+                best.TryAdd(group, candidate);
+
+        return best
+            .OrderBy(kv => GroupKey(kv.Key), StringComparer.Ordinal)
+            .Select(kv => new Row(Label(kv.Key), kv.Value));
+    }
+
+    /// <summary>
+    /// Groups sort in a meaningful order rather than alphabetically: sets and packs by release,
+    /// rarities up the ladder.
+    /// </summary>
+    private string GroupKey(string group) => _view switch
+    {
+        "rarity" => (Session.Index.Ladder.Rungs
+            .FirstOrDefault(r => r.Symbol == group)?.Index ?? 99).ToString("D2"),
+        "pack" => Session.Sets.SortKey(group.Split(':')[0]) + group,
+        _ => Session.Sets.SortKey(group)
+    };
+
+    /// <summary>A pack key is "SET:Name", which is not what anyone calls it.</summary>
+    private static string Label(string group) =>
+        group.Split(':') is [var set, var pack] ? $"{set} {pack}" : group;
+
+    private IEnumerable<TradeCandidate> Order(IEnumerable<TradeCandidate> candidates) => _sort switch
+    {
+        // Doable first in every ordering: the page's question is what to do next, and a trade you
+        // cannot make is not an answer to it whatever it scores.
+        "points" => candidates.OrderByDescending(c => c.Ready).ThenByDescending(c => c.PointsShort),
+        "dust" => candidates.OrderByDescending(c => c.Ready).ThenByDescending(c => c.Dust),
+        "cheap" => candidates.OrderByDescending(c => c.Ready).ThenBy(c => c.Dust)
+                             .ThenByDescending(c => c.PacksSaved),
+        _ => candidates.OrderByDescending(c => c.Ready).ThenByDescending(c => c.PacksSaved)
+    };
+
+    private void OnView(ChangeEventArgs e) { _view = e.Value?.ToString() ?? "all"; Reshape(); }
+
+    private void OnSort(ChangeEventArgs e) { _sort = e.Value?.ToString() ?? "packs"; Reshape(); }
+
+    private void OnRarity(ChangeEventArgs e) { _rarity = e.Value?.ToString() ?? ""; Reshape(); }
+
+    private void SetReadyOnly(bool on) { _readyOnly = on; Reshape(); }
+
+    private void SetFoils(string mode) { _foils = mode; Reshape(); }
+
+    private string NextFoilMode() => _foils switch
+    {
+        "with" => "without",
+        "without" => "only",
+        _ => "with"
+    };
+
+    private ICompletionTarget CurrentTarget() => _scope switch
+    {
+        var s when s.StartsWith("wish:") =>
+            Session.Wishlists.FirstOrDefault(w => w.Id == s[5..]) is { } list
+                ? Session.TargetForWishlist(list)
+                : Session.TargetForEverything(),
+        var s when s.StartsWith("set:") => Session.TargetForSet(s[4..]),
+        _ => Session.TargetForEverything()
+    };
+
+    private Task OnScope(ChangeEventArgs e)
+    {
+        _scope = e.Value?.ToString() ?? "everything";
+
+        // Ranking walks every outstanding demand and the whole surplus pool, so "everything"
+        // is real work rather than a filter change.
+        return Busy.RunAsync("Ranking trades…", Rebuild);
+    }
+
+    /// <summary>
+    /// Why a row cannot be acted on, naming the gate rather than the fact of being blocked. The
+    /// four gates are fixed by completely different things, so the advice differs completely.
+    /// </summary>
+    private string Explain(TradeCandidate row) => row.Blocking switch
+    {
+        TradeGate.None => "ready",
+        TradeGate.NotTradeable =>
+            $"{Session.Index.Symbol(row.Want)} cannot be traded — packs and points are the only routes",
+        TradeGate.NoSpareAtRarity =>
+            $"needs a spare {Session.Index.Symbol(row.Want)} to offer, and you have none going free",
+        TradeGate.NotEnoughDust =>
+            $"{(row.Dust - Session.Profile.Resources.Shinedust).ToString("N0")} more dust needed",
+        TradeGate.NoStamina => _stamina.UntilNext is { } t
+            ? $"out of stamina — next one in {Fmt.Span(t)}"
+            : "out of stamina",
+        _ => ""
+    };
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

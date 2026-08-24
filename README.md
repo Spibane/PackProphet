@@ -56,7 +56,49 @@ points, warns at the cap, and updates every recommendation immediately.
 ### History
 Packs over time, what you pulled against what the model predicted, and a showcase of your best
 hits — with what counts as a "hit" being your call, because a 1-star is a good day to one
-player and noise to someone opening thirty packs a week.
+player and noise to someone opening thirty packs a week. If you played before finding this app,
+enter the game's own lifetime counters and the odds check will scale to them, with logged and
+imported figures always kept apart.
+
+### Wonder Pick
+Tap the five cards on offer and get a take-or-skip verdict. The cost is set by the highest
+rarity *in the offer*, not by what it is worth to you, so an offer priced at four stamina
+because of a 2-star you already own is expensive for reasons that do not benefit you. That is
+the flag worth having, and it is sharpest at the top of the price range.
+
+### Resources
+The three currency systems side by side — Pack, Wonder and Trade — and never summed, because
+nothing converts between them. The number that changes behaviour is the waste: a full pool has
+*stopped* regenerating, so every 12 hours it sits there is a unit nobody gets back. A pool at
+two of five, by contrast, has 36 hours of slack, and the app says so rather than nagging.
+
+### Trades
+Which single trade deserves your next stamina. Stamina caps trading at about two a day while
+shinedust merely accumulates, so the scarce thing is *trades*, not currency — and that inverts
+the usual question from "can I afford this?" to "which one is worth the slot?". A **share?**
+column says when to skip the trade entirely: 1–4 diamond cards can be Shared, which costs no
+dust, no stamina and no card given back.
+
+### In-game wishlist
+The game's own 20-slot public trade board, filled with the eligible cards that cost the most to
+get any other way. A listing costs nothing but a slot and slots do not expire, so a
+low-probability high-value request is a free lottery ticket — but a board where *nothing* will
+ever be offered converts nothing, so a minority of slots is reserved for widely-held cards.
+Recommendations come as **swaps** against what is already listed, since the board is retyped by
+hand.
+
+### Multiple collections
+Alt accounts are ordinary, and you can trade with yourself. Comparing two collections is not a
+set difference, because a trade is a *swap*: both sides hand over a card and the rarities must
+match, so the return card is as much a constraint as the wanted one. Diamonds skip that
+entirely — a **Share** is one-way and free — so the two mechanics are reported separately, with
+shares first and trades left holding only what a share cannot carry.
+
+### Evolution gaps
+Evolutions you own but cannot play, because you do not own what they evolve from. The grid
+cannot show this: a Charizard sits there looking like an asset until you try to build a deck.
+Reported per missing card, with the cheapest printing that would fill it — and it walks the
+whole chain, so a Stage 2 with neither lower stage says you are two cards away, not one.
 
 ---
 
@@ -131,11 +173,8 @@ loaded only when a screenshot import is attempted.
 
 ## Roadmap
 
-Phase 1 — the core loop — is complete. See [CHANGELOG.md](CHANGELOG.md).
+Phases 1 and 2 are complete. See [CHANGELOG.md](CHANGELOG.md).
 
-- **Phase 2** — Wonder Pick evaluator (take/skip with a reservation threshold), resource planner
-  for the three non-convertible currency systems, trade helper ranking which single trade
-  deserves your next stamina, multiple profiles with a diff, binder view.
 - **Phase 3** — budget allocation across packs, shareable read-only snapshots, importing from
   other trackers, localisation, accessibility pass.
 - **Phase 4** — screenshot recognition of the in-game card list, to remove the onboarding

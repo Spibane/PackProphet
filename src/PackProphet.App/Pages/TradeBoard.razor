@@ -1,0 +1,418 @@
+@page "/board"
+@implements IDisposable
+@inject AppSession Session
+@inject UiBusy Busy
+
+<PageTitle>In-game wishlist · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <p class="p-4">Loading card data&hellip;</p>
+}
+else
+{
+    <div class="page-head">
+        <h1 class="title">In-game wishlist</h1>
+        <span class="subtitle">@GameRules.TradeBoardSlots slots, seen by anyone looking to trade</span>
+    </div>
+
+    <div class="page-tools">
+        <select class="form-select form-select-sm" style="max-width:16rem" aria-label="What the board should chase" @onchange="OnScope">
+            <option value="everything">everything I collect</option>
+            @if (Session.Wishlists.Count > 0)
+            {
+                <optgroup label="wishlists">
+                    @foreach (var list in Session.Wishlists)
+                    {
+                        <option value="wish:@list.Id" selected="@(_scope == $"wish:{list.Id}")">
+                            @list.Name
+                        </option>
+                    }
+                </optgroup>
+            }
+            <optgroup label="sets">
+                @foreach (var set in Session.Index.OpenableSets.OrderBy(Session.Sets.SortKey, StringComparer.Ordinal))
+                {
+                    <option value="set:@set" selected="@(_scope == $"set:{set}")">@set</option>
+                }
+            </optgroup>
+        </select>
+
+        <span class="bar-sep" aria-hidden="true"></span>
+
+        @* Both knobs are exposed because neither default is right for everyone: a patient
+           collector and someone who wants a trade this week want different boards. *@
+        <label class="small text-body-secondary" for="liquid">slots for likely offers</label>
+        <select id="liquid" class="form-select form-select-sm" style="width:4.5rem"
+                @onchange="OnLiquid">
+            @for (var n = 0; n <= 8; n++)
+            {
+                <option value="@n" selected="@(n == _liquidSlots)">@n</option>
+            }
+        </select>
+
+        @* Parallel foils are diamond-rarity, so no rarity filter separates them, and they come
+           only from a limited-time pack - which makes them among the dearest things here and prone
+           to filling the board. Offered only when they are being collected at all. *@
+        @if (ShowFoilFilter)
+        {
+            <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
+                    @onclick="CycleFoils"
+                    title="Foils are listed as the 1-3 diamond cards they are printed as. Exclude them if the game will not let you wishlist a foil printing.">
+                Parallel Foils: @_foils
+            </button>
+        }
+
+        <label class="small text-body-secondary" for="floor">ignore under</label>
+        <select id="floor" class="form-select form-select-sm" style="width:7rem" @onchange="OnFloor">
+            <option value="0" selected="@(_floor == 0)">no floor</option>
+            <option value="15" selected="@(_floor == 15)">15 packs</option>
+            <option value="50" selected="@(_floor == 50)">50 packs</option>
+            <option value="150" selected="@(_floor == 150)">150 packs</option>
+        </select>
+    </div>
+
+    <div class="p-3 board-page" style="max-width:64rem">
+        <p class="small text-body-secondary">
+            The game's wishlist is not a tracking list, it is an advertisement: the only thing it
+            does is make other players offer you those cards. A listing costs nothing but a slot and
+            slots never expire, so the best board is simply the @GameRules.TradeBoardSlots
+            <strong>tradeable cards you still want that cost the most to get any other way</strong>
+            &mdash; an unaccepted request loses you nothing. A few slots are held back for cards
+            someone plausibly has spare, so the board actually converts something.
+        </p>
+
+        @if (ShowFoilFilter)
+        {
+            <p class="small text-body-secondary">
+                <strong>Parallel foils</strong> appear here as the 1-3 diamond cards they are
+                printed as &mdash; that is the rarity the data gives them, and it is what decides
+                both trade eligibility and the dust price. They also come from one limited-time
+                pack, which makes them expensive to get any other way, so they crowd the top of the
+                list. Whether the game lets you put a foil printing on your wishlist specifically is
+                not something the card data records, so if it will not, exclude them above.
+            </p>
+        }
+
+        @if (_plan is null)
+        {
+            <p class="text-body-secondary">Nothing to recommend yet.</p>
+        }
+        else if (_plan.Slots.Count == 0)
+        {
+            <p class="text-body-secondary">
+                Nothing in this scope can go on the board &mdash; either it is complete, or
+                everything left in it is untradeable.
+                @if (_floor > 0)
+                {
+                    <span>The @_floor-pack floor may also be excluding everything; try "no floor".</span>
+                }
+            </p>
+        }
+        else
+        {
+            @* What to change, first and separately. The board is retyped by hand in the game, so
+               the useful output is a couple of edits, not twenty rows to transcribe again. *@
+            @if (_plan.Unchanged)
+            {
+                <div class="verdict take">
+                    <div class="head"><span class="call">Your board is already right</span></div>
+                    <span class="why">
+                        All @_plan.Keep.Count slots still earn their place. Nothing to retype.
+                    </span>
+                </div>
+            }
+            else
+            {
+                <div class="verdict skip">
+                    <div class="head">
+                        <span class="call">@_plan.Add.Count to add, @_plan.Drop.Count to remove</span>
+                        <span class="cost">@_plan.Keep.Count already right</span>
+                    </div>
+                    <span class="why">
+                        @if (_plan.Drop.Count > 0)
+                        {
+                            <span>
+                                <strong>Remove:</strong>
+                                @string.Join(", ", _plan.Drop.Select(c => c.Name)).
+                            </span>
+                        }
+                        @if (_plan.Add.Count > 0)
+                        {
+                            <span>
+                                <strong>Add:</strong>
+                                @string.Join(", ", _plan.Add.Select(s => s.Card.Name)).
+                            </span>
+                        }
+                    </span>
+                </div>
+
+                <button class="btn btn-sm btn-primary mb-3" @onclick="AcceptPlan">
+                    I have made these changes in the game
+                </button>
+            }
+
+            @* Ordered by set and number, NOT by rank: the board is entered by walking the in-game
+               card list, and the ranking order would have you jumping between sets for every
+               entry. Rank picks the cards; this order gets them typed. *@
+            <h2>The board, in the order you will enter it</h2>
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th>card</th>
+                        <th>set</th>
+                        <th>rarity</th>
+                        <th class="num" title="On average, how many packs before you get it — or the packs' worth of points to buy it outright, whichever is fewer">packs to get it</th>
+                        <th title="A pull figure is an average you could beat or miss badly; a points figure is a guarantee after that many packs of the set">how</th>
+                        <th class="num">dust to trade</th>
+                        <th>a card to give?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var slot in Transcription())
+                    {
+                        <tr class="@(OnBoard(slot) ? "" : "board-new")">
+                            <td>
+                                <a href="card/@slot.Card.Key">@slot.Card.Name</a>
+                                @* No "add" badge: on a first run every row is an addition, and the
+                                   summary above already names the changes. The row tint marks them
+                                   without spending a word on each one. *@
+                                @* Labelled by what is actually known - roughly how many copies are
+                                   out there - rather than by a prediction about other players. See
+                                   the note under the table for how weak the estimate is. *@
+                                @if (slot.Band == BoardBand.Liquid)
+                                {
+                                    <span class="badge text-bg-secondary ms-1"
+                                          title="Estimated from the card's drop rate and how long its set has been on sale — so more copies exist in other people's collections. It says nothing about whether anyone will part with one.">
+                                        widely held
+                                    </span>
+                                }
+                                @if (IsFoil(slot.Card))
+                                {
+                                    <span class="badge text-bg-info ms-1"
+                                          title="A Deluxe-pack parallel foil, listed as its printed diamond rarity">
+                                        foil
+                                    </span>
+                                }
+                            </td>
+                            <td>@slot.Card.Set @slot.Card.Number</td>
+                            <td>
+                                <span class="glyphs @Session.Index.GlyphClass(slot.Card)" title="@Session.Index.Symbol(slot.Card)">
+                                    @Session.Index.Glyphs(slot.Card)
+                                </span>
+                            </td>
+                            <td class="num">@Cost(slot.NormalCost)</td>
+                            <td class="small text-body-secondary">@How(slot)</td>
+                            <td class="num">@(slot.Dust > 0 ? slot.Dust.ToString("N0") : "free")</td>
+                            <td class="small">
+                                @if (slot.SparesAtRarity > 0)
+                                {
+                                    @* What the number means, spelled out: these are YOUR surplus
+                                       cards at the same rarity, one of which the trade would cost
+                                       you. A bare count next to a rarity glyph read as neither. *@
+                                    <span title="You hold @slot.SparesAtRarity surplus @Session.Index.Symbol(slot.Card) card(s), and a trade would cost you one of them">
+                                        yes &mdash; @slot.SparesAtRarity spare
+                                        @Session.Index.Symbol(slot.Card) to give
+                                    </span>
+                                }
+                                else
+                                {
+                                    @* Flagged, not removed: you may pull a spare tomorrow, and the
+                                       request is what generates the offer in the first place. *@
+                                    <span class="text-warning-emphasis"
+                                          title="A trade is a swap at the same rarity, and you have no surplus @Session.Index.Symbol(slot.Card) to hand over">
+                                        no spare @Session.Index.Symbol(slot.Card) to give
+                                    </span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @* The honest limits of the one heuristic on this page. It is a guess about other
+               players made from data about card drops, and the reader deserves to know that before
+               deciding whether to keep the slots reserved. *@
+            @if (_plan.Slots.Any(s => s.Band == BoardBand.Liquid))
+            {
+                <p class="small text-body-secondary">
+                    <strong>About the @_plan.Slots.Count(s => s.Band == BoardBand.Liquid)
+                    &ldquo;widely held&rdquo; slots.</strong>
+                    A board of nothing but the dearest cards may convert nothing, so some slots go to
+                    cards more copies of which are likely to exist &mdash; estimated as the drop rate
+                    times how long the set has been on sale. That estimate is weak: it does not know
+                    whether other players still need the card, whether they hold a spare, or whether
+                    they would give it up. It is also in tension with the rest of the page, since a
+                    widely held card is by definition cheaper to get yourself. Set the reserve to
+                    <strong>0</strong> above for a board ranked purely by what a card costs you.
+                </p>
+            }
+
+            @if (_plan.Slots.Any(s => s.SparesAtRarity == 0))
+            {
+                <p class="small text-body-secondary">
+                    A trade needs a card of the same rarity to give away, so slots marked
+                    <em>no spare to give</em> are requests you could not currently honour. They are
+                    kept anyway &mdash; the request is what produces the offer, and a spare may
+                    turn up before anyone bites.
+                </p>
+            }
+
+            @if (_plan.Excluded.Count > 0)
+            {
+                <h2>Wanted, but cannot be listed</h2>
+                <p class="small text-body-secondary">
+                    Named rather than quietly dropped: a card missing from the board with no
+                    explanation reads as a bug.
+                </p>
+                <ul class="small text-body-secondary">
+                    @foreach (var group in _plan.Excluded.GroupBy(x => x.Reason).OrderBy(g => g.Key))
+                    {
+                        @* Every name, not the first few. A truncated list is the worst of both:
+                           it neither tells you which cards are affected nor stays out of the way.
+                           These groups are small by nature - only 3-star and Crown are excluded on
+                           rarity - so the full list costs a line or two. *@
+                        <li>
+                            <strong>@group.Count() card(s)</strong> &mdash; @group.Key
+                            <div class="text-body-tertiary">
+                                @string.Join(", ", group.Select(x => x.Card.Name)
+                                                        .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase))
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    </div>
+}
+
+@code {
+    private string _scope = "everything";
+    private BoardPlan? _plan;
+
+    @* Read straight from saved settings rather than copied into local fields: all three change
+       what is recommended, so a stale copy would put the table out of step with the swap list. *@
+    private int _liquidSlots => Session.BoardLiquidSlots;
+
+    private double _floor => Session.BoardMinimumCost;
+
+    /// <summary>with / without / only, as on the Trades page.</summary>
+    private string _foils => Session.BoardFoils;
+
+    /// <summary>
+    /// Only offered when foils are being collected: with the Parallel Foils chip off they are not
+    /// in the target's demands, so nothing here could be a foil.
+    /// </summary>
+    private bool ShowFoilFilter => Session.FoilSets.Count > 0 && Session.FoilCopies > 0;
+
+    private bool IsFoil(PocketCard card) =>
+        Session.Odds?.FoilOwnershipKeys.Contains(card.OwnershipKey) == true;
+
+    /// <summary>
+    /// Which route the figure beside it came from. The distinction matters: an average is not a
+    /// promise, and the points shop is a promise rather than an average.
+    /// </summary>
+    private static string How(BoardSlot slot) => slot.Unpullable
+        ? "no other route"
+        : slot.CostRoute == AcquisitionRoute.PackPoints
+            ? "points shop, guaranteed"
+            : "pulling, on average";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+        Rebuild();
+    }
+
+    private void OnChanged()
+    {
+        Rebuild();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Rebuild()
+    {
+        if (!Session.Ready) return;
+
+        // A filter that has just disappeared must not go on filtering.
+        if (!ShowFoilFilter && _foils != "with") Session.SetBoardSettings(foils: "with");
+
+        _plan = Session.RecommendBoard(CurrentTarget(), _liquidSlots, _floor, _foils);
+    }
+
+    private ICompletionTarget CurrentTarget() => _scope switch
+    {
+        var s when s.StartsWith("wish:") =>
+            Session.Wishlists.FirstOrDefault(w => w.Id == s[5..]) is { } list
+                ? Session.TargetForWishlist(list)
+                : Session.TargetForEverything(),
+        var s when s.StartsWith("set:") => Session.TargetForSet(s[4..]),
+        _ => Session.TargetForEverything()
+    };
+
+    /// <summary>
+    /// Selection order is by value; this is the order you will TYPE it in, walking the in-game
+    /// card list set by set. Two different jobs, so two different orders.
+    /// </summary>
+    private IEnumerable<BoardSlot> Transcription() =>
+        (_plan?.Slots ?? []).OrderBy(s => Session.Sets.SortKey(s.Card), StringComparer.Ordinal);
+
+    private bool OnBoard(BoardSlot slot) =>
+        Session.TradeBoard.Contains(slot.Card.OwnershipKey, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Records the board as the app recommended it. Deliberately a confirmation of work already
+    /// done in the game rather than an "apply": nothing here can change the game, and a button
+    /// implying otherwise would leave the two out of step.
+    /// </summary>
+    private Task AcceptPlan()
+    {
+        if (_plan is null) return Task.CompletedTask;
+
+        var keys = _plan.Slots.Select(s => s.Card.OwnershipKey).ToArray();
+        return Busy.RunAsync("Saving your board…", () =>
+        {
+            Session.SetTradeBoard(keys);
+            Rebuild();
+        });
+    }
+
+    private Task OnScope(ChangeEventArgs e)
+    {
+        _scope = e.Value?.ToString() ?? "everything";
+        return Busy.RunAsync("Choosing slots…", Rebuild);
+    }
+
+    private Task OnLiquid(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n)) Session.SetBoardSettings(liquidSlots: n);
+        return Busy.RunAsync("Choosing slots…", Rebuild);
+    }
+
+    private Task CycleFoils()
+    {
+        var next = _foils switch { "with" => "without", "without" => "only", _ => "with" };
+        Session.SetBoardSettings(foils: next);
+        return Busy.RunAsync("Choosing slots…", Rebuild);
+    }
+
+    private Task OnFloor(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), out var n)) Session.SetBoardSettings(minimumCost: n);
+        return Busy.RunAsync("Choosing slots…", Rebuild);
+    }
+
+    /// <summary>
+    /// Unbounded cost is stated in words. An infinity symbol reads as a bug, and what matters is
+    /// that trading is the only way in — see the note in TradeBoardAdvisor on why no tradeable card
+    /// is in that position today.
+    /// </summary>
+    private static string Cost(double packs) =>
+        double.IsInfinity(packs) ? "no other route"
+        : packs >= 1000 ? $"{packs:N0} packs"
+        : packs >= 10 ? $"{packs:0} packs"
+        : $"{packs:0.#} packs";
+
+    public void Dispose() => Session.Changed -= OnChanged;
+}

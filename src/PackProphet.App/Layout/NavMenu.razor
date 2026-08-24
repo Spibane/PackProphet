@@ -8,6 +8,16 @@
     <NavLink class="nav-item" href="collection" Match="NavLinkMatch.All">Collection</NavLink>
     <NavLink class="nav-item" href="packs">Which pack</NavLink>
     <NavLink class="nav-item" href="decks">Decks</NavLink>
+    <NavLink class="nav-item" href="wonder">Wonder</NavLink>
+    <NavLink class="nav-item" href="trades">Trades</NavLink>
+    <NavLink class="nav-item" href="board">In-game list</NavLink>
+    @* Only with something to compare. A link that always reads "Compare" and always says "you
+       have one collection" is a permanent dead end in a nav that is already long. *@
+    @if (Session.MultipleProfiles)
+    {
+        <NavLink class="nav-item" href="compare">Compare</NavLink>
+    }
+    <NavLink class="nav-item" href="resources">Resources</NavLink>
     <NavLink class="nav-item" href="wishlists">Wishlists</NavLink>
     <NavLink class="nav-item" href="history">History</NavLink>
     <NavLink class="nav-item" href="settings">Settings</NavLink>
@@ -25,6 +35,22 @@
         </span>
         <span class="hint">ctrl K</span>
     </button>
+
+    @* Switching collections is frequent enough to belong in the chrome; creating and deleting
+       are not, and live on the Settings page. Hidden entirely with one collection, so the
+       majority who never make an alt pay nothing for the feature. *@
+    @if (Session.MultipleProfiles)
+    {
+        <select class="profile-switch" @onchange="PickProfile"
+                title="Active collection" aria-label="Active collection">
+            @foreach (var profile in Session.Profiles)
+            {
+                <option value="@profile.Id" selected="@(profile.Id == Session.ActiveProfileId)">
+                    @profile.Name
+                </option>
+            }
+        </select>
+    }
 
     @* One cycling button rather than three, because the nav has to survive a phone width.
        The label names the CURRENT setting, and the tooltip names what a tap will do — a
@@ -67,6 +93,11 @@
     public void Dispose() => Session.Changed -= OnChanged;
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void PickProfile(ChangeEventArgs e)
+    {
+        if (e.Value?.ToString() is { Length: > 0 } id) Session.SwitchProfile(id);
+    }
 
     // auto -> light -> dark -> auto. Auto is first because it is the default and the one most
     // people should stay on; the explicit modes are for overriding the OS deliberately.

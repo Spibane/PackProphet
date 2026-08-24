@@ -11,15 +11,36 @@ using PackProphet.Domain;
 /// and nothing in between — and forcing those into "up to tier N" would silently demand cards
 /// they never wanted.
 /// </summary>
+/// <summary>
+/// How many copies of a PARALLEL FOIL are wanted, independently of its rarity rung.
+///
+/// Its own number rather than a yes/no, because a foil is not the rarity it shares. Someone
+/// chasing two of every diamond may want one of each parallel foil, or none — the printing is a
+/// separate collectible sold only in a limited-time pack, so inheriting the rung's copy count
+/// answers a question nobody asked.
+/// </summary>
+/// <param name="Keys">Ownership keys that are parallel foils.</param>
+/// <param name="Copies">Copies wanted of each; zero leaves them out of the target entirely.</param>
+public sealed record FoilPolicy(IReadOnlySet<string> Keys, int Copies)
+{
+    public bool Applies => Keys.Count > 0;
+}
+
 public sealed class RarityLadderTarget : ICompletionTarget
 {
     private readonly string _set;
     private readonly RarityPlan _plan;
+    private readonly FoilPolicy? _foils;
 
-    public RarityLadderTarget(string set, RarityPlan plan)
+    /// <param name="foils">
+    /// Copies wanted of the parallel foils, which are counted separately from their rung. Null
+    /// means they follow the rung, which is what the app did before the setting existed.
+    /// </param>
+    public RarityLadderTarget(string set, RarityPlan plan, FoilPolicy? foils = null)
     {
         _set = set;
         _plan = plan;
+        _foils = foils is { Applies: true } ? foils : null;
     }
 
     /// <summary>Builds the "everything up to here" shape. A convenience, not the model.</summary>
@@ -28,6 +49,47 @@ public sealed class RarityLadderTarget : ICompletionTarget
 
     public string Describe() => $"{_set}, {_plan.WantedTiers.Count} rarity tier(s)";
 
+    /// <summary>
+    /// Copies of one card this target asks for, or zero if it wants none.
+    ///
+    /// Public because the Collection page needs the SAME answer for its progress counters and its
+    /// "short of target" filter. It used to work the rule out for itself, and the two drifted: the
+    /// page counted all 139 parallel foils toward the target while the engine, honouring the foil
+    /// setting, had dropped them from demand entirely - so one screen reported work outstanding
+    /// that another called complete.
+    /// </summary>
+    public int Required(CardIndex index, PocketCard card)
+    {
+        if (index.Ladder.IndexOf(card.Rarity) is not int tier) return 0;
+
+        // A parallel foil takes its own count, not its rung's.
+        return _foils?.Keys.Contains(card.OwnershipKey) == true
+            ? _foils!.Copies
+            : _plan.Copies(tier);
+    }
+
+    /// <summary>
+    /// Cards this target asks for, and how many of those are satisfied. Shares
+    /// <see cref="Required"/> with <see cref="Outstanding"/> so a progress figure and a demand
+    /// list can never disagree.
+    /// </summary>
+    public (int Wanted, int Satisfied) Progress(CardIndex index, Collection owned)
+    {
+        var wanted = 0;
+        var satisfied = 0;
+
+        foreach (var card in index.WantedInSet(_set, _plan.WantedTiers))
+        {
+            var required = Required(index, card);
+            if (required <= 0) continue;
+
+            wanted++;
+            if (owned.Of(card) >= required) satisfied++;
+        }
+
+        return (wanted, satisfied);
+    }
+
     public IReadOnlyList<Demand> Outstanding(CardIndex index, Collection owned)
     {
         var result = new List<Demand>();
@@ -35,10 +97,7 @@ public sealed class RarityLadderTarget : ICompletionTarget
         // yield, so a reprint is demanded once and promos never appear as "missing".
         foreach (var card in index.WantedInSet(_set, _plan.WantedTiers))
         {
-            var tier = index.Ladder.IndexOf(card.Rarity);
-            if (tier is null) continue;
-
-            var required = _plan.Copies(tier.Value);
+            var required = Required(index, card);
             if (required <= 0) continue;
 
             var remaining = required - owned.Of(card);

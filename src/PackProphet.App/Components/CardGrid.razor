@@ -25,13 +25,18 @@
        on a touch device — shift-click is both undiscoverable and unavailable on a phone. *@
     @if (AllowRemove)
     {
+        @* Either half flips it. A segmented control that ignores a tap on the side already
+           chosen is a control that does nothing half the time you touch it — and with two
+           states, "the other one" is never ambiguous. *@
         <div class="btn-group btn-group-sm" role="group" aria-label="Tap action">
             <button class="btn @(Removing ? "btn-outline-secondary" : "btn-success")"
-                    @onclick="() => Removing = false" title="Tapping a card adds a copy">
+                    @onclick="() => Removing = !Removing" aria-pressed="@(!Removing)"
+                    title="@(Removing ? "Switch back to adding a copy per tap" : "Tapping a card adds a copy")">
                 add
             </button>
             <button class="btn @(Removing ? "btn-danger" : "btn-outline-secondary")"
-                    @onclick="() => Removing = true" title="Tapping a card removes a copy">
+                    @onclick="() => Removing = !Removing" aria-pressed="@Removing"
+                    title="@(Removing ? "Tapping a card removes a copy" : "Switch to removing a copy per tap")">
                 remove
             </button>
         </div>
@@ -39,9 +44,10 @@
 
     <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
         <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
-                @onclick="() => SetList(false)" title="Card images in a grid">grid</button>
+                @onclick="() => SetList(!ListView)" aria-pressed="@(!ListView)"
+                title="Card images in a grid">grid</button>
         <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetList(true)"
+                @onclick="() => SetList(!ListView)" aria-pressed="@ListView"
                 title="Compact rows with names and exact counts — easier to scan, and usable with images off">
             list
         </button>
@@ -53,19 +59,26 @@
     {
         <div class="btn-group btn-group-sm" role="group" aria-label="Row height">
             <button class="btn @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
-                    @onclick="() => SetRoomy(false)"
+                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@(!Roomy)"
                     title="Short rows — most cards per screen">compact</button>
             <button class="btn @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
-                    @onclick="() => SetRoomy(true)"
+                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Roomy"
                     title="Taller rows with attack and ability text shown in full">roomy</button>
         </div>
     }
 
-    <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
-            @onclick="ToggleSweep"
-            title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
-        sweep @(Sweeping ? "on" : "off")
-    </button>
+    @* Hidden where it cannot do anything: in grid mode an unarmed mouse drag already
+       range-selects, so on a device with no touch input the button would be a control that
+       changes nothing. It stays in list mode (where a mouse drag means "select this text"
+       until armed) and on anything with a touchscreen (where a drag is a scroll until armed). *@
+    @if (ShowSweepToggle)
+    {
+        <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
+                @onclick="ToggleSweep"
+                title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
+            sweep @(Sweeping ? "on" : "off")
+        </button>
+    }
     @ToolbarExtras
     <span class="ms-auto small text-body-secondary">
         @if (ListView && FactOf is not null && !FactsReady)
@@ -84,7 +97,9 @@
     </span>
 </div>
 
-<div class="grid-wrap @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "")" @ref="_gridEl">
+@* "listing" is read by gridsweep.js, not by CSS: a mouse drag over list rows must obey the
+   sweep toggle, while a drag over the tile grid need not. See the comment on onDown there. *@
+<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "")" @ref="_gridEl">
     @if (Cards.Count == 0)
     {
         <p class="p-4 text-body-secondary">Nothing matches those filters.</p>
@@ -130,7 +145,8 @@
                  data-idx="@idx">
                 @* The image is pointer-events:none so sweep hit-testing lands on the row, so
                    the hover target has to be this wrapper rather than the image itself. *@
-                <span class="c-thumb" data-tip-img="@card.ArtUrl" data-tip="@card.Name">
+                <span class="c-thumb @(Gold(card, count) ? "gold-flair" : "")"
+                      data-tip-img="@card.ArtUrl" data-tip="@card.Name">
                     <img class="thumb" data-src="@card.ArtUrl" alt="" decoding="async" draggable="false" />
                 </span>
                 @* The name is the link. A tile tap means "I own one more", so detail needs its
@@ -218,7 +234,24 @@
                     }
                 </span>
 
-                <span class="c-ct">@(count > 0 ? count.ToString() : "—")</span>
+                @* Typeable where the page supports setting an absolute count, which is what
+                   makes entering an existing collection bearable: click the field, then
+                   "9 ⏎ 12 ⏎ 2 ⏎" straight down the list. Enter commits and moves to the row
+                   below. Falls back to plain text where only relative changes make sense, as on
+                   the log-a-pack screen, where a count is what you own rather than what you set. *@
+                <span class="c-ct">
+                    @if (OnSet.HasDelegate)
+                    {
+                        <input class="c-count" data-count-input type="text" inputmode="numeric"
+                               value="@(count > 0 ? count.ToString() : "")" placeholder="—"
+                               @onchange="e => SetFrom(card, e)" @onclick:stopPropagation="true"
+                               aria-label="Copies of @card.Name owned" />
+                    }
+                    else
+                    {
+                        <span>@(count > 0 ? count.ToString() : "—")</span>
+                    }
+                </span>
                 <span class="c-acts">
                     <button class="btn btn-sm btn-outline-secondary py-0 px-2"
                             @onclick="() => Bump(card, -1)" @onclick:stopPropagation="true"
@@ -238,6 +271,7 @@
                 {
                     <CardTile @key="card.Key" Card="card" Index="idx"
                               Count="CountOf(card)"
+                              Gold="@Gold(card, CountOf(card))"
                               Picked="@(PickedOf?.Invoke(card) ?? 0)"
                               ShowInfo="@(!Sweeping)"
                               OnHold="OpenDetail"
@@ -284,6 +318,50 @@
     /// <summary>Rarity rung, for drawing the game's own symbols instead of a code.</summary>
     [Parameter] public Func<PocketCard, RarityRung?>? RungOf { get; set; }
 
+    /// <summary>
+    /// Canonical set-then-number ordering, from the set catalogue. Without it this component
+    /// sorted the "set" column by card NUMBER alone, which interleaved every set: A1-1, A2-1,
+    /// A3-1. Falls back to the card's own set code so the grid still works unwired.
+    /// </summary>
+    [Parameter] public Func<PocketCard, string>? SortKeyOf { get; set; }
+
+    private string OrderKey(PocketCard card) =>
+        SortKeyOf?.Invoke(card) ?? $"{card.Set}{card.Number:D5}";
+
+    /// <summary>
+    /// Set an absolute owned count. Optional: where it is absent the list shows the count as
+    /// text, because a page whose taps mean "one more came out of this pack" has no sensible
+    /// answer to "set this to 12".
+    /// </summary>
+    [Parameter] public EventCallback<(PocketCard Card, int Count)> OnSet { get; set; }
+
+    /// <summary>
+    /// Reads a typed count. An empty field means zero — clearing it is how you say "none" — and
+    /// anything unparseable is ignored rather than treated as zero, so a stray keystroke cannot
+    /// silently wipe a row.
+    /// </summary>
+    private Task SetFrom(PocketCard card, ChangeEventArgs e)
+    {
+        var text = (e.Value?.ToString() ?? "").Trim();
+        if (text.Length == 0) return OnSet.InvokeAsync((card, 0));
+
+        return int.TryParse(text, out var n)
+            ? OnSet.InvokeAsync((card, Math.Clamp(n, 0, MaxCopies)))
+            : Task.CompletedTask;
+    }
+
+    /// <summary>The same ceiling the sweep uses, so both paths agree on what a typo looks like.</summary>
+    private const int MaxCopies = 99;
+
+    /// <summary>
+    /// Whether a card has earned its gold flair. Derived from the rarity ladder this component
+    /// already has rather than from a new delegate on every page: ten copies of a one- to
+    /// three-diamond card that is not a promo, and nothing else.
+    /// </summary>
+    private bool Gold(PocketCard card, int count) =>
+        RungOf?.Invoke(card) is { } rung
+        && GameRules.EarnsGoldFlair(rung.Group, rung.Count, count, card.IsPromo);
+
     /// <summary>Energy for a Pokémon, trainer kind otherwise. Blank where data is missing.</summary>
     [Parameter] public Func<PocketCard, string>? TypeOf { get; set; }
 
@@ -325,8 +403,11 @@
     /// <summary>When set, a tap or sweep removes a copy instead of adding one.</summary>
     private bool Removing { get; set; }
 
-    /// <summary>Shift still works as a one-off inversion for anyone who knows it.</summary>
-    private int DeltaFor(bool shift) => Removing ^ shift ? -1 : +1;
+    /// <summary>
+    /// Shift-click and right-click are one-off inversions of the current mode, so a single
+    /// mistaken count can be fixed without switching the whole grid to remove and back.
+    /// </summary>
+    private int DeltaFor(bool invert) => Removing ^ invert ? -1 : +1;
 
     private float RowHeight => 1000f / Math.Max(1, Columns) * 1.42f + 8f;
 
@@ -339,16 +420,37 @@
         _listChanged = signature != _lastListSignature;
         _lastListSignature = signature;
 
+        // Whether the CONTENT changed, as opposed to how it is laid out. Switching sets left the
+        // scroll position where it was, so a new set opened halfway down itself; toggling grid
+        // and list, on the other hand, should keep your place rather than throwing you to the
+        // top — which is why layout is deliberately absent from this signature.
+        var content = $"{Cards.Count}|{(Cards.Count > 0 ? Cards[0].Key : "")}|" +
+                      $"{(Cards.Count > 0 ? Cards[^1].Key : "")}";
+        _contentChanged = content != _lastContentSignature;
+        _lastContentSignature = content;
+
         Rechunk();
     }
 
     private bool _listChanged;
+    private bool _contentChanged;
+    private string _lastContentSignature = "";
 
     /// <summary>
     /// A long press on a tile opens card detail. The tile detects the hold; navigating is this
     /// component's job because the tile is deliberately ignorant of routing.
     /// </summary>
     private void OpenDetail(PocketCard card) => Nav.NavigateTo($"card/{card.Key}");
+
+    /// <summary>
+    /// Back to the top of the new list. Both scrollers are reset: the grid has its own, and the
+    /// page's main element scrolls too on narrow screens where the bars stack.
+    /// </summary>
+    private async Task ScrollToTopAsync()
+    {
+        try { await JS.InvokeVoidAsync("ppScroll.toTop", _gridEl); }
+        catch { /* cosmetic; never worth taking the grid down for */ }
+    }
 
     private Task SetList(bool on) => ListViewChanged.InvokeAsync(on);
 
@@ -413,7 +515,8 @@
         Func<PocketCard, object> key = _sort switch
         {
             ListSort.Name => c => c.Name,
-            ListSort.Number => c => c.Number,
+            // The column is labelled "set", so it sorts by set FIRST and number within it.
+            ListSort.Number => OrderKey,
             ListSort.Type => c => TypeOf?.Invoke(c) ?? "",
             ListSort.Stage => c => StageOf?.Invoke(c) ?? "",
             ListSort.Rarity => c => RungOf?.Invoke(c)?.Index ?? -1,
@@ -422,10 +525,11 @@
             _ => c => c.Number
         };
 
-        // Set and number as the tie-break, so equal keys keep a stable, meaningful order.
+        // Set-then-number as the tie-break, so equal keys keep a stable, meaningful order — and
+        // the same ordering the "set" column itself uses, rather than a second rule.
         q = _descending
-            ? q.OrderByDescending(key).ThenBy(c => c.Set).ThenBy(c => c.Number)
-            : q.OrderBy(key).ThenBy(c => c.Set).ThenBy(c => c.Number);
+            ? q.OrderByDescending(key).ThenBy(OrderKey, StringComparer.Ordinal)
+            : q.OrderBy(key).ThenBy(OrderKey, StringComparer.Ordinal);
 
         return q.ToList();
     }
@@ -453,11 +557,30 @@
     {
         if (_attached)
         {
+            if (_contentChanged)
+            {
+                _contentChanged = false;
+                // Before the image work: the loader queues what is near the viewport, so
+                // scrolling first means it queues the top of the new list rather than wherever
+                // the old one had been left.
+                await ScrollToTopAsync();
+            }
+
             if (_listChanged)
             {
                 _listChanged = false;
                 await RefreshImagesAsync();
                 await PrefetchAsync();
+            }
+
+            // A mode armed in list view must not survive into a grid that hides its button:
+            // the state would be unreachable, and .sweeping still changes the cursor and
+            // touch-action.
+            if (Sweeping && !ShowSweepToggle)
+            {
+                Sweeping = false;
+                if (_sweep is not null) await _sweep.InvokeVoidAsync("setSweep", false);
+                StateHasChanged();
             }
             return;
         }
@@ -466,6 +589,7 @@
         _self = DotNetObjectReference.Create(this);
         _sweep = await JS.InvokeAsync<IJSObjectReference>("import", "./js/gridsweep.js");
         await _sweep.InvokeVoidAsync("attach", _gridEl, _self);
+        _touchCapable = await _sweep.InvokeAsync<bool>("hasCoarsePointer");
 
         _images = await JS.InvokeAsync<IJSObjectReference>("import", "./js/imgloader.js");
         await _images.InvokeVoidAsync("init", _gridEl);
@@ -517,15 +641,24 @@
 
     private const int PrefetchLimit = 700;
 
+    /// <summary>
+    /// True until the device tells us otherwise, so the button never flickers into existence
+    /// on the phones that need it most — the check needs JS and so cannot run before the
+    /// first render.
+    /// </summary>
+    private bool _touchCapable = true;
+
+    private bool ShowSweepToggle => ListView || _touchCapable;
+
     private async Task ToggleSweep()
     {
         Sweeping = !Sweeping;
         if (_sweep is not null) await _sweep.InvokeVoidAsync("setSweep", Sweeping);
     }
 
-    private Task Activate((int Index, bool Shift) a) =>
+    private Task Activate((int Index, bool Invert) a) =>
         a.Index >= 0 && a.Index < Cards.Count
-            ? OnAdjust.InvokeAsync((Cards[a.Index], DeltaFor(a.Shift)))
+            ? OnAdjust.InvokeAsync((Cards[a.Index], DeltaFor(a.Invert)))
             : Task.CompletedTask;
 
     /// <summary>Called once by gridsweep.js when a drag is released.</summary>

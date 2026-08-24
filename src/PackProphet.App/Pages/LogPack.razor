@@ -12,7 +12,7 @@
 else if (_pack is null)
 {
     <div class="page-head">
-        <span class="title">Log a pack</span>
+        <h1 class="title">Log a pack</h1>
         <span class="subtitle">which pack did you open?</span>
     </div>
 
@@ -21,7 +21,7 @@ else if (_pack is null)
        pack name like "Mewtwo" does not. Defaults to the newest series, since that is
        where packs are usually being opened. *@
     <div class="page-tools">
-        <select class="form-select form-select-sm" style="max-width:11rem" @onchange="OnSeries">
+        <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Series" @onchange="OnSeries">
             @foreach (var series in Session.Sets.Series)
             {
                 <option value="@series" selected="@(_series == series)">series @series</option>
@@ -58,7 +58,7 @@ else if (_pack is null)
             five cards takes seconds instead of hunting through 3,761.
         </span>
 
-        <select class="form-select form-select-sm" style="max-width:7rem" @onchange="OnCols">
+        <select class="form-select form-select-sm" style="max-width:7rem" aria-label="Columns in the grid" @onchange="OnCols">
             @foreach (var n in new[] { 2, 3, 4, 5, 6, 8 })
             {
                 <option value="@n" selected="@(n == Session.PackColumns)">@n cols</option>
@@ -108,7 +108,7 @@ else
 {
     <div class="page-head">
         <button class="btn btn-sm btn-outline-secondary" @onclick="Reset">&larr; change pack</button>
-        <span class="title">@_pack.Split(':')[1]</span>
+        <h1 class="title">@_pack.Split(':')[1]</h1>
         <span class="subtitle">@_pack.Split(':')[0] &middot; tap each card that came out</span>
         <span class="actions">
             <span class="small">picked @_picked.Count</span>
@@ -117,6 +117,15 @@ else
             </button>
         </span>
     </div>
+
+    @* A soft warning, never a block. Logging a different number of cards than the pack held is the
+       one way to quietly corrupt the odds check on History - the observed side comes straight from
+       what was tapped here, so four taps on a five-card pack reads later as the model having been
+       wrong. Not blocked, because a partial log is sometimes exactly what someone means to do. *@
+    @if (MiscountHint is { } hint)
+    {
+        <div class="alert alert-warning py-1 px-2 small mb-0 mx-3 mt-2" role="alert">@hint</div>
+    }
 
     @if (_picked.Count > 0)
     {
@@ -165,6 +174,7 @@ else
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
               RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
+              SortKeyOf="Session.Sets.SortKey"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady" />
 }
 
@@ -176,17 +186,55 @@ else
     private readonly List<PocketCard> _picked = [];
     private (int cards, string set, int points, bool capped)? _justLogged;
 
+    /// <summary>
+    /// A pack to open on arrival, so the Packs page can hand off the pack it just recommended
+    /// instead of making you find it again in the picker.
+    /// </summary>
+    [Parameter, SupplyParameterFromQuery(Name = "pack")]
+    public string? FromQuery { get; set; }
+
+    /// <summary>
+    /// The query value already acted on. Without this, choosing "a different pack" would be
+    /// undone by the next render: the URL still carries the parameter, and re-applying it would
+    /// silently drag you back to the pack you had just left.
+    /// </summary>
+    private string? _applied;
+
     protected override async Task OnInitializedAsync()
     {
         Session.Changed += OnChanged;
         Busy.Changed += OnChanged;   // buttons disable while work is in flight
         await Session.InitAsync();
         if (Session.Ready)
+        {
             // Openable packs only. Promo "Vol. N" groupings describe how a promo was given
             // away, not something you can decide to open.
             _packs = Session.Index.OpenablePackKeys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
             // Newest series first: that is where packs are actually being opened.
             _series = Session.Sets.Series.LastOrDefault() ?? "A";
+        }
+
+        ApplyQuery();
+    }
+
+    protected override void OnParametersSet() => ApplyQuery();
+
+    /// <summary>
+    /// Open the pack named in the URL, once. An unknown key is IGNORED rather than reported:
+    /// a stale bookmark should land on the picker, which is where you were going anyway.
+    /// </summary>
+    private void ApplyQuery()
+    {
+        if (!Session.Ready || FromQuery is null || FromQuery == _applied) return;
+
+        _applied = FromQuery;
+        if (_packs.Contains(FromQuery, StringComparer.Ordinal))
+        {
+            // The series follows the pack, so backing out of it lands on the list that contains
+            // it rather than on whichever series happened to be newest.
+            _series = Session.Sets.SeriesOf(FromQuery.Split(':')[0]);
+            ChooseCore(FromQuery);
+        }
     }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
@@ -220,8 +268,10 @@ else
         _pack = pack;
         _justLogged = null;
         _picked.Clear();
+        // Set then number, not number alone: a Deluxe pack contains reprints from earlier sets,
+        // so ordering by number interleaves them.
         _inPack = Session.Index.ByPack.TryGetValue(pack, out var cards)
-            ? cards.OrderBy(c => c.Number).ToArray()
+            ? cards.OrderBy(Session.Sets.SortKey, StringComparer.Ordinal).ToArray()
             : [];
     }
 
@@ -242,6 +292,31 @@ else
     }
 
     private int PickedCount(PocketCard card) => _picked.Count(c => c.Key == card.Key);
+
+    /// <summary>
+    /// Says so when the number of cards picked is not a number this pack can hold. Null while the
+    /// count is plausible, or while the set has no published rates to check against.
+    /// </summary>
+    private string? MiscountHint
+    {
+        get
+        {
+            if (_pack is null || _picked.Count == 0 || Session.Odds is null) return null;
+
+            var set = _pack.Split(':')[0];
+            var counts = Session.Odds.Rates.CardCounts(set);
+            if (counts.Count == 0 || counts.Contains(_picked.Count)) return null;
+
+            var sizes = counts.Count == 1
+                ? $"{counts.First()} cards"
+                : string.Join(" or ", counts.OrderBy(n => n)) + " cards";
+
+            return $"A {set} pack holds {sizes}, and you have picked {_picked.Count}. " +
+                   "Log it anyway if that is what you meant — but the odds check on History " +
+                   "compares what you record against what the model predicted, so a miscount " +
+                   "there looks like the model being wrong.";
+        }
+    }
 
     private void Unpick(PocketCard card)
     {

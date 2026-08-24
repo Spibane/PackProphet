@@ -7,7 +7,15 @@ namespace PackProphet.State;
 public interface IStateStore
 {
     Task<AppState> LoadAsync(CancellationToken ct = default);
-    Task SaveAsync(AppState state, CancellationToken ct = default);
+
+    /// <summary>
+    /// Persist the state. Returns FALSE when the write did not happen.
+    ///
+    /// A bool rather than void, and it is not ceremony: the browser refuses a write once the
+    /// storage quota is reached, and a caller that cannot see the refusal goes on accepting edits
+    /// it will never keep. The one thing a tracker must never do is look like it saved."
+    /// </summary>
+    Task<bool> SaveAsync(AppState state, CancellationToken ct = default);
 }
 
 /// <summary>In-memory store, for tests and for a first run before storage is available.</summary>
@@ -19,9 +27,9 @@ public sealed class InMemoryStateStore : IStateStore
 
     public Task<AppState> LoadAsync(CancellationToken ct = default) => Task.FromResult(_state);
 
-    public Task SaveAsync(AppState state, CancellationToken ct = default)
+    public Task<bool> SaveAsync(AppState state, CancellationToken ct = default)
     {
         _state = state;
-        return Task.CompletedTask;
+        return Task.FromResult(true);
     }
 }

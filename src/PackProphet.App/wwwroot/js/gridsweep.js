@@ -34,9 +34,27 @@ function clearPaint() {
     for (const t of host.querySelectorAll('[data-idx].sel')) t.classList.remove('sel');
 }
 
+// Controls inside a row keep their own behaviour. This function preventDefaults every
+// pointerdown to stop the browser dragging card art, and focusing a field is a DEFAULT action —
+// so without this guard the typed count field highlighted on hover and could never be clicked
+// into. Buttons and links survived only because their click still fired.
+const CONTROLS = 'input, textarea, select, button, a, [contenteditable="true"]';
+
+// List rows are full of selectable text, so a mouse drag there means "select this text" far
+// more often than it means "sweep these rows". Hijacking it destroyed the selection AND
+// range-selected rows nobody asked for, with the sweep toggle plainly reading "off".
+// Tiles have no text and no scroll gesture to lose, so an unarmed mouse drag over the grid
+// stays a selection — that is the desktop bulk-entry gesture, and it costs nothing there.
+function listing() {
+    return !!host && host.classList.contains('listing');
+}
+
 function onDown(e) {
-    if (e.pointerType === 'touch' && !sweepEnabled) return; // let the page scroll
+    // Touch always needs the toggle, or the page cannot be scrolled. The mouse needs it too
+    // in list mode, for the reason above.
+    if (!sweepEnabled && (e.pointerType === 'touch' || listing())) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.target && e.target.closest && e.target.closest(CONTROLS)) return;
     const i = idxAt(e.clientX, e.clientY);
     if (i < 0) return;
 
@@ -90,6 +108,16 @@ export function attach(element, dotnetRef) {
     // Listen on window for up/cancel: the finger often lifts outside the grid.
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
+}
+
+// Whether this device has a coarse pointer AT ALL — a capability, not the primary input, so
+// a touchscreen laptop still answers true. Grid sweeping is only ever *needed* for touch,
+// since an unarmed mouse drag already range-selects tiles, so a device with no touch input
+// has no use for the toggle in grid mode. Deliberately any-pointer rather than pointer:
+// keying it to the primary input would hide the toggle on a hybrid and leave a finger with
+// no way to sweep at all.
+export function hasCoarsePointer() {
+    return window.matchMedia('(any-pointer: coarse)').matches;
 }
 
 export function setSweep(on) {

@@ -227,17 +227,17 @@ else
                         {
                             <th scope="col">@(_view == "rarity" ? "rarity" : _view)</th>
                         }
-                        <th scope="col">card</th>
-                        <th scope="col">rarity</th>
+                        <th scope="col" data-pri="1">card</th>
+                        <th scope="col" data-pri="2">rarity</th>
                         @* A column rather than a badge on the name. Most rows are shareable, so as
                            a badge it repeated down the whole table; as a column it is scannable,
                            and the rows that say no stand out. *@
-                        <th scope="col" title="Whether a friend could simply send it: 1-4 diamonds only">share?</th>
-                        <th scope="col" class="num" title="Expected packs you would not have to open">packs saved</th>
-                        <th scope="col" class="num" title="Pack points still to earn in this card's own set before the shop could sell it">points short</th>
-                        <th scope="col" class="num">dust</th>
-                        <th scope="col">what you could offer</th>
-                        <th scope="col">status</th>
+                        <th scope="col" data-pri="3" title="Whether a friend could simply send it: 1-4 diamonds only">share?</th>
+                        <th scope="col" class="num" data-pri="2" title="Expected packs you would not have to open">packs saved</th>
+                        <th scope="col" class="num" data-pri="3" title="Pack points still to earn in this card's own set before the shop could sell it">points short</th>
+                        <th scope="col" class="num" data-pri="3">dust</th>
+                        <th scope="col" data-pri="3">what you could offer</th>
+                        <th scope="col" data-pri="1">status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -258,12 +258,12 @@ else
                                     </span>
                                 }
                             </td>
-                            <td>
+                            <td data-pri="2">
                                 <span class="glyphs @Session.Index.GlyphClass(row.Candidate.Want)" title="@Session.Index.Symbol(row.Candidate.Want)">
                                     @Session.Index.Glyphs(row.Candidate.Want)
                                 </span>
                             </td>
-                            <td class="small">
+                            <td class="small" data-pri="3">
                                 @if (row.Candidate.Shareable)
                                 {
                                     <span class="text-success-emphasis"
@@ -279,8 +279,8 @@ else
                                     </span>
                                 }
                             </td>
-                            <td class="num">@Fmt.Packs(row.Candidate.PacksSaved, Fmt.NoPackRoute)</td>
-                            <td class="num">
+                            <td class="num" data-pri="2">@Fmt.Packs(row.Candidate.PacksSaved, Fmt.NoPackRoute)</td>
+                            <td class="num" data-pri="3">
                                 @if (row.Candidate.Points == 0)
                                 {
                                     <span class="text-body-secondary" title="No pack-point price">&mdash;</span>
@@ -296,8 +296,8 @@ else
                                     </span>
                                 }
                             </td>
-                            <td class="num">@(row.Candidate.Dust > 0 ? row.Candidate.Dust.ToString("N0") : "free")</td>
-                            <td class="small">
+                            <td class="num" data-pri="3">@(row.Candidate.Dust > 0 ? row.Candidate.Dust.ToString("N0") : "free")</td>
+                            <td class="small" data-pri="3">
                                 @if (row.Candidate.CouldOffer.Count == 0)
                                 {
                                     <span class="text-body-secondary">no spare at this rarity</span>

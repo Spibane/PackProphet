@@ -1000,6 +1000,25 @@ tr.row-best {
     background-size: contain; background-position: center; background-repeat: no-repeat;
 }
 
+/* ================================================================= column priority
+
+   Which columns survive a narrow screen, said once for every table in the app rather than per
+   table. A cell is tagged with how important it is — 1 carries the decision the page exists to
+   support, 2 supports it, 3 is detail — and this rule does the rest.
+
+   The alternative was a media query per table, which means writing twenty-six of them and
+   remembering the twenty-seventh. Priorities keep the judgement with the page, which is the part
+   that genuinely differs, and put the mechanism in one place, which is the part that does not.
+
+   Tables still scroll inside their own wrapper, so nothing is lost by dropping a column here — it
+   is a matter of what has to be scrolled to, not what can be reached. Priority 1 is never hidden.
+
+   Applied only where a table measurably overflows a phone. A table that already fits is left with
+   all its columns, since hiding one would cost information for nothing. */
+@media (width < 600px) {
+    .table-responsive [data-pri="3"] { display: none; }
+}
+
 /* ================================================================= page sections
 
    Each section is fenced by a rule above its heading. Without it a long page was one continuous

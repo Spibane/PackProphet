@@ -44,6 +44,24 @@
     color: var(--bs-danger-text-emphasis, #7a1420);
 }
 
+/* ================================================================= breakpoints
+
+   Three named widths. Everything new uses these; the older rules below still sit on nine ad hoc
+   widths (560, 640, 700, 760, 800, 820, 900, 1000, 1100) and are migrated rule by rule rather than
+   in bulk, because the widths are not interchangeable — the theme label hides at 700 and the card
+   detail column collapses at 760, and collapsing both onto one "tablet" range would hide the theme
+   label on a 1000px laptop.
+
+       phone    width <  600px
+       tablet   600px <= width < 1057px
+       desk     width >= 1057px
+
+   1057 is measured rather than chosen: it is the width at which the twelve-link nav stops wrapping.
+   None of the three match Bootstrap's grid, which the app does not use for layout.
+
+   Conditions are written in range syntax — (width <= 700px) rather than (max-width: 700px). Same
+   semantics, and a min/max pair cannot leave a 0.02px hole between them. */
+
 /* ================================================================= layout
    One scroll container, never two. The grid takes exactly the space left over rather than
    guessing with calc(100vh - Nrem), which can never match the real chrome height. */
@@ -139,7 +157,7 @@ main > * { flex-shrink: 0; }
 .app-nav .theme-btn .theme-label { text-transform: lowercase; }
 .app-nav .theme-btn .glyph { display: inline-flex; align-items: center; }
 .app-nav .theme-btn svg { display: block; }
-@media (max-width: 700px) { .app-nav .theme-btn .theme-label { display: none; } }
+@media (width <= 700px) { .app-nav .theme-btn .theme-label { display: none; } }
 
 /* Matches the theme button rather than Bootstrap's form-select, so the two controls in the nav
    are the same height and weight. It is capped in width because a collection name can be long
@@ -159,7 +177,7 @@ main > * { flex-shrink: 0; }
     display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.6rem;
     margin-bottom: .8rem;
 }
-@media (max-width: 800px) { .share-cols { grid-template-columns: 1fr; } }
+@media (width <= 800px) { .share-cols { grid-template-columns: 1fr; } }
 
 /* Bootstrap's .visually-hidden-focusable does the showing and hiding; this only dresses it, and
    only while it is on screen. Rolling the hiding by hand was a mistake once already: an absolutely
@@ -335,7 +353,7 @@ main:focus { outline: none; }
 .page-head .actions {
     display: flex; align-items: center; gap: .4rem; flex: none; margin-left: auto;
 }
-@media (max-width: 560px) {
+@media (width <= 560px) {
     /* The subtitle is explanatory, and a phone header has room for the title and the buttons
        or for prose, not both. */
     .page-head .subtitle { display: none; }
@@ -541,7 +559,7 @@ main:focus { outline: none; }
    Measured on a real grid: a 4px overlap from 7 columns down, widening once .cnt's min-width
    takes over below ~113px. Hiding .info under the threshold dissolves it at every column count
    rather than fixing the arithmetic for the ones someone checked. */
-@container (max-width: 200px) {
+@container (width <= 200px) {
     .card-tile .info { display: none; }
 }
 
@@ -835,7 +853,7 @@ main:focus { outline: none; }
 /* Type cell: icon then label, with the label first to be sacrificed on narrow screens. */
 .card-line .c-ty { display: flex; align-items: center; gap: .25rem; }
 .card-line .ty-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 700px) { .card-line .ty-name { display: none; } }
+@media (width <= 700px) { .card-line .ty-name { display: none; } }
 
 /* ================================================================= pack picker and table */
 
@@ -942,7 +960,7 @@ tr.row-best {
 }
 .supplied-row .nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .supplied-row .rt { color: var(--bs-secondary-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 700px) {
+@media (width <= 700px) {
     /* The route note wraps under the name rather than being clipped to nothing. */
     .supplied-row { grid-template-columns: 1.7rem minmax(0, 1fr) 3.5rem; }
     .supplied-row .rt { grid-column: 2 / -1; white-space: normal; }
@@ -1029,7 +1047,7 @@ tr.row-best {
             transparent 60%),
         var(--bs-tertiary-bg);
 }
-@media (max-width: 640px) { .hits-panel { grid-template-columns: minmax(0, 1fr); } }
+@media (width <= 640px) { .hits-panel { grid-template-columns: minmax(0, 1fr); } }
 
 /* Ratio matched to the art so nothing is cropped. */
 .hits-panel .hit-art {
@@ -1041,7 +1059,7 @@ tr.row-best {
     background-size: cover; background-position: center; background-repeat: no-repeat;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
 }
-@media (max-width: 640px) { .hits-panel .hit-art { width: 7.5rem; } }
+@media (width <= 640px) { .hits-panel .hit-art { width: 7.5rem; } }
 
 .hits-panel .hit-detail { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
 .hits-panel .label { font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bs-secondary-color); }
@@ -1121,8 +1139,8 @@ tr.row-best {
 
 /* Density drops as the chart narrows: weekly marks go first, then month starts, and the two end
    dates always survive so the range is still readable. */
-@media (max-width: 900px) { .bars-axis .minor { display: none; } }
-@media (max-width: 560px) { .bars-axis .major { display: none; } }
+@media (width <= 900px) { .bars-axis .minor { display: none; } }
+@media (width <= 560px) { .bars-axis .major { display: none; } }
 
 /* The empty part of the track has to be visible, or a set with little progress looks like no
    bar at all rather than a nearly empty one. */
@@ -1142,8 +1160,8 @@ tr.row-best {
     gap: 1.25rem;
     align-items: start;
 }
-@media (max-width: 1100px) { .card-detail { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); } }
-@media (max-width: 760px)  { .card-detail { grid-template-columns: minmax(0, 1fr); } }
+@media (width <= 1100px) { .card-detail { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); } }
+@media (width <= 760px)  { .card-detail { grid-template-columns: minmax(0, 1fr); } }
 
 /* Ratio matched to the art so `contain` and `cover` coincide and nothing is cropped. */
 .card-detail .big-art {
@@ -1285,7 +1303,7 @@ tr.row-best {
    own results at 22rem, so the column can never be taller than the viewport. */
 .edit-cols .picker-col { position: sticky; top: .5rem; }
 
-@media (max-width: 1000px) {
+@media (width <= 1000px) {
     .edit-cols { grid-template-columns: minmax(0, 1fr); }
     .edit-cols .picker-col { position: static; }
 }
@@ -1418,7 +1436,7 @@ tr.row-best {
     border-bottom: 1px dotted currentColor;
 }
 
-@media (max-width: 900px) {
+@media (width <= 900px) {
     /* HP and the set number are the first to go: both are reference detail rather than the
        reason to pick a card. */
     /* HP goes before the set code: which set a printing is from still distinguishes rows,
@@ -1426,7 +1444,7 @@ tr.row-best {
     .pick-row { grid-template-columns: 1.7rem minmax(5rem, 1.2fr) 3.2rem minmax(0, 1.4fr) 2.8rem 2.2rem 4.6rem; }
     .pick-row .hp { display: none; }
 }
-@media (max-width: 560px) {
+@media (width <= 560px) {
     .pick-row { grid-template-columns: 1.7rem minmax(0, 1fr) minmax(0, 1.1fr) 2.2rem; }
     .pick-row .rr, .pick-row .ind { display: none; }
 }
@@ -1504,15 +1522,15 @@ tr.row-best {
    old track sizes. Attacks, ability and HP go first: they are reference detail, not what you
    scan a collection by. Type and rarity survive to the smallest size. */
 
-@media (max-width: 1100px) {
+@media (width <= 1100px) {
     .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem 4.6rem 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) 1.8rem 2.4rem 4.2rem; }
     .card-line .c-a2 { display: none; }
 }
-@media (max-width: 900px) {
+@media (width <= 900px) {
     .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem 4.6rem 1.8rem 2.4rem 4.2rem; }
     .card-line .c-a1, .card-line .c-a2, .card-line .c-ab, .card-line .c-hp { display: none; }
 }
-@media (max-width: 560px) {
+@media (width <= 560px) {
     .card-line { grid-template-columns: var(--art-w) minmax(5rem,1fr) 4.2rem 3.6rem 1.8rem 2.2rem 4rem; }
     .card-line .c-id, .card-line .c-st { display: none; }
     .card-line .c-ty { font-size: .84rem; }
@@ -1553,7 +1571,7 @@ tr.row-best {
 #tip img + .tip-text { border-top: 1px solid var(--bs-border-color); margin-top: .35rem; }
 
 @media (height <= 700px) { #tip img { height: 15rem; } }
-@media (max-width: 560px)  { #tip img { height: 13rem; } }
+@media (width <= 560px)  { #tip img { height: 13rem; } }
 
 /* The list thumbnail is a hover target, so it needs to sit in the grid like the image did. */
 .card-line .c-thumb { display: block; width: var(--art-w); height: var(--art-h); }
@@ -1626,7 +1644,7 @@ tr.row-best {
     font-weight: 600; font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 820px) {
+@media (width <= 820px) {
     /* The cost note is the first to go, not the last: it is the longest thing here and the
        card's own page still carries it. */
     .wish-row {
@@ -1636,7 +1654,7 @@ tr.row-best {
     .wish-row .rt { display: none; }
 }
 
-@media (max-width: 560px) {
+@media (width <= 560px) {
     .wish-row {
         grid-template-columns: 1.7rem minmax(4rem, 1fr) 1.4rem 3.2rem 2.6rem 5.4rem 1.8rem;
     }
@@ -1659,7 +1677,7 @@ tr.row-best {
 }
 /* The printed shortcut goes first on a narrow screen: there is no Ctrl+K on a phone, so it is
    the one part of the button that means nothing there. */
-@media (max-width: 700px) { .app-nav .palette-btn .hint { display: none; } }
+@media (width <= 700px) { .app-nav .palette-btn .hint { display: none; } }
 
 /* A button, not a div, so it is reachable by keyboard and announced — see the markup. */
 .palette-back {
@@ -1729,7 +1747,7 @@ tr.row-best {
     border: 1px solid var(--bs-border-color); border-radius: .2rem;
     padding: 0 .25rem; margin-right: .15rem; font-size: .78rem;
 }
-@media (max-width: 560px) {
+@media (width <= 560px) {
     /* The keyboard legend is meaningless on a touch device. */
     .palette-foot { display: none; }
     .palette { top: 1.5rem; }
@@ -1775,7 +1793,7 @@ tr.row-best {
 .avail-chip.off .st { color: var(--bs-secondary-color); }
 .avail-chip:hover { border-color: var(--bs-primary); }
 
-@media (max-width: 1000px) {
+@media (width <= 1000px) {
     /* Stacked, the wishlist's search goes FIRST. Otherwise the original complaint comes straight
        back on a phone: a list above the search still pushes it down every time a card is added.
        With the search on top, the list grows below it and nothing under your finger moves.

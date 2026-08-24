@@ -499,6 +499,23 @@ main:focus { outline: none; }
     .card-tile .info { display: none; }
 }
 
+/* Below a certain tile size the info button and the count badge cannot both have the bottom edge,
+   so the info button yields — the same call already made for touch, on the other axis.
+
+   The two are laid out against the same 73% line: .info is centred with a 46% minimum, so its
+   right edge sits at 0.73W, while .cnt is 27% wide inset 4px from the right, putting its left
+   edge at 0.73W - 4. That is a 4px overlap at EVERY width, not a rounding artefact — the comment
+   below reasons that a 27% badge "never touches" the info button, which is true of the width and
+   forgets the inset. It only stops mattering above ~200px, where .cnt hits its 3.15rem max-width
+   and stops growing into the gap.
+
+   Measured on a real grid: a 4px overlap from 7 columns down, widening once .cnt's min-width
+   takes over below ~113px. Hiding .info under the threshold dissolves it at every column count
+   rather than fixing the arithmetic for the ones someone checked. */
+@container (max-width: 200px) {
+    .card-tile .info { display: none; }
+}
+
 /* How many you own: the most important thing on the tile, and it used to be the smallest — a
    .82rem badge that had to be squinted at on a phone.
 

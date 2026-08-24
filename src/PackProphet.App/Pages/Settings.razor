@@ -153,9 +153,9 @@
     <table class="table table-sm align-middle">
         <thead>
             <tr>
-                <th>collection</th>
-                <th class="text-end">cards</th>
-                <th></th>
+                <th scope="col">collection</th>
+                <th scope="col" class="text-end">cards</th>
+                <th scope="col"><span class="visually-hidden">actions</span></th>
             </tr>
         </thead>
         <tbody>
@@ -251,7 +251,7 @@
             import backup
             <InputFile OnChange="Import" style="display:none" accept=".json" />
         </label>
-        <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmReset">
+        <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmReset" aria-live="polite">
             @* Names the collection once there is more than one: "erase collection" beside a list
                of three reads as all of them, and it only ever erases the active one. *@
             @(_confirmingReset
@@ -262,7 +262,7 @@
 
     @if (_message is not null)
     {
-        <div class="alert alert-info py-2 small d-flex flex-wrap align-items-center gap-2">
+        <div class="alert alert-info py-2 small d-flex flex-wrap align-items-center gap-2" role="alert">
             <span>@_message</span>
             @* The undo control sits next to the sentence that mentions it, rather than the message
                naming an undo whose only control is on another page. *@

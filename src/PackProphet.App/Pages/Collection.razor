@@ -234,7 +234,7 @@ else
                     fill target
                 </button>
                 <button class="btn btn-sm btn-outline-danger" @onclick="ClearSet"
-                        disabled="@Busy.IsBusy"
+                        disabled="@Busy.IsBusy" aria-live="polite"
                         title="Set every card in this set back to zero. Undo works.">
                     @(_confirmClear ? "clear — sure?" : "clear set")
                 </button>

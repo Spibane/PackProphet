@@ -140,12 +140,12 @@ else
 
     @if (_justLogged is not null)
     {
-        <div class="alert alert-success mx-3 my-2 py-2 small">
+        <div class="alert alert-success mx-3 my-2 py-2 small" role="alert">
             Logged @_justLogged.Value.cards cards.
             Pack points for @_justLogged.Value.set: <strong>@_justLogged.Value.points</strong>
             @if (_justLogged.Value.capped)
             {
-                <span class="text-danger">
+                <span class="text-danger-emphasis">
                     &mdash; at the @GameRules.PackPointsCap cap, so further packs of this set earn nothing. Spend before opening.
                 </span>
             }

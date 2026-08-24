@@ -93,12 +93,12 @@
         }
         @if (Removing)
         {
-            <span class="text-danger fw-semibold">tapping removes a copy &middot; </span>
+            <span class="text-danger-emphasis fw-semibold">tapping removes a copy &middot; </span>
         }
         @Cards.Count cards
         @if (_imgFailed > 0)
         {
-            <span class="text-danger"> · @_imgFailed art failed</span>
+            <span class="text-danger-emphasis"> · @_imgFailed art failed</span>
         }
     </span>
 </div>

@@ -20,6 +20,10 @@ else if (_draft is null)
 else
 {
     <div class="page-head">
+        @* The visible title doubles as an editable field, which leaves no plain heading for a
+           screen reader to land on when navigating by headings — every other page opens with an
+           h1, this one otherwise wouldn't. *@
+        <h1 class="visually-hidden">@_draft.Name</h1>
         <a class="btn btn-sm btn-outline-secondary" href="decks">&larr; decks</a>
         <input class="form-control form-control-sm" style="max-width:16rem"
                value="@_draft.Name" @onchange="Rename" aria-label="Deck name" />
@@ -52,7 +56,7 @@ else
                 }
                 else if (_justSaved)
                 {
-                    <span class="small text-success">saved</span>
+                    <span class="small text-success-emphasis">saved</span>
                 }
             </span>
 
@@ -63,7 +67,7 @@ else
 
             @if (!IsNew)
             {
-                <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmDelete">
+                <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmDelete" aria-live="polite">
                     @(_confirmingDelete ? "really delete?" : "delete")
                 </button>
             }
@@ -72,7 +76,7 @@ else
 
     @if (_pendingUrl is not null)
     {
-        <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 m-3 py-2">
+        <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 m-3 py-2" role="alert">
             <strong>This deck has unsaved changes.</strong>
             <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">save and leave</button>
             <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">discard and leave</button>
@@ -144,7 +148,7 @@ else
                                 <td class="num" style="width:5.5rem">
                                     @* Owned against needed, side by side: which rows are short
                                        is the question this page exists to answer. *@
-                                    <span class="@(entry.Owned >= entry.Count ? "text-success" : "text-warning-emphasis")">
+                                    <span class="@(entry.Owned >= entry.Count ? "text-success-emphasis" : "text-warning-emphasis")">
                                         @entry.Owned / @entry.Count
                                     </span>
                                 </td>
@@ -170,7 +174,7 @@ else
             {
                 @if (_report.Findings.Count == 0)
                 {
-                    <p class="small text-success mb-0">Legal, and every rule was checkable.</p>
+                    <p class="small text-success-emphasis mb-0">Legal, and every rule was checkable.</p>
                 }
                 @foreach (var finding in _report.Findings)
                 {
@@ -221,7 +225,7 @@ else
                 </p>
                 <table class="table table-sm align-middle">
                     <thead>
-                        <tr><th>card</th><th class="num">need</th><th>cheapest route</th></tr>
+                        <tr><th scope="col">card</th><th scope="col" class="num">need</th><th scope="col">cheapest route</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var (entry, route) in _missing)
@@ -249,7 +253,7 @@ else
                 {
                     <table class="table table-sm align-middle pack-table">
                         <thead>
-                            <tr><th>pack</th><th class="num">chance of a hit</th><th class="num">cards it can give</th></tr>
+                            <tr><th scope="col">pack</th><th scope="col" class="num">chance of a hit</th><th scope="col" class="num">cards it can give</th></tr>
                         </thead>
                         <tbody>
                             @foreach (var standing in _ranked.Take(8))
@@ -260,6 +264,10 @@ else
                                               style="background-image:url('@Session.PackArtUrl(standing.PackKey)')"></span>
                                         <strong>@standing.PackName</strong>
                                         <span class="small text-body-secondary">@standing.Set</span>
+                                        @if (standing == _ranked[0])
+                                        {
+                                            <span class="badge text-bg-primary ms-1">best</span>
+                                        }
                                     </td>
                                     <td class="num">@standing.ChanceUseful.ToString("P1")</td>
                                     <td class="num">@standing.DemandsServed</td>

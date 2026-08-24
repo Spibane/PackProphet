@@ -121,7 +121,7 @@ else if (Id is null)
                                 <a class="btn btn-sm btn-outline-secondary" href="wishlists/@list.Id">open</a>
                                 <a class="btn btn-sm btn-outline-primary" href="packs?wish=@list.Id">rank</a>
                                 <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
-                                        @onclick="() => ConfirmDelete(list.Id)"
+                                        @onclick="() => ConfirmDelete(list.Id)" aria-live="polite"
                                         title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this wishlist")">
                                     @(_confirming == list.Id ? "really?" : "delete")
                                 </button>
@@ -136,11 +136,11 @@ else if (Id is null)
             <table class="table table-sm align-middle">
                 <thead>
                     <tr>
-                        <th>wishlist</th>
-                        <th class="num">cards wanted</th>
-                        <th class="num">still missing</th>
-                        <th>rarest still wanted</th>
-                        <th></th>
+                        <th scope="col">wishlist</th>
+                        <th scope="col" class="num">cards wanted</th>
+                        <th scope="col" class="num">still missing</th>
+                        <th scope="col">rarest still wanted</th>
+                        <th scope="col"><span class="visually-hidden">actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -156,7 +156,7 @@ else if (Id is null)
                                 }
                                 else if (list.Missing == 0)
                                 {
-                                    <span class="text-success fw-semibold">complete</span>
+                                    <span class="text-success-emphasis fw-semibold">complete</span>
                                 }
                                 else
                                 {
@@ -185,7 +185,7 @@ else if (Id is null)
                                 @* Two taps, and the confirmation is scoped to this row: a shared
                                    flag would arm every delete button at once. *@
                                 <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
-                                        @onclick="() => ConfirmDelete(list.Id)"
+                                        @onclick="() => ConfirmDelete(list.Id)" aria-live="polite"
                                         title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this wishlist")">
                                     @(_confirming == list.Id ? "really?" : "delete")
                                 </button>
@@ -225,7 +225,7 @@ else
             @* Two taps, like the deck editor's delete: the list took work to build and there
                is no undo prompt after the fact. *@
             <button class="btn btn-sm @(_confirming == _list.Id ? "btn-danger" : "btn-outline-danger")"
-                    @onclick="() => ConfirmDelete(_list.Id)">
+                    @onclick="() => ConfirmDelete(_list.Id)" aria-live="polite">
                 @(_confirming == _list.Id ? "really delete?" : "delete")
             </button>
         </span>
@@ -363,7 +363,7 @@ else
                number changing in a summary box further up the page. *@
             @if (_added > 0)
             {
-                <div class="alert alert-success py-2 small">
+                <div class="alert alert-success py-2 small" role="alert">
                     Added @_added card(s) to <strong>@_list.Name</strong>.
                     <button class="btn btn-sm btn-link p-0 align-baseline"
                             @onclick="UndoAdd">undo</button>

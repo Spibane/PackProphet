@@ -124,14 +124,14 @@ else
             <table class="table table-sm w-auto align-middle">
                 <thead>
                     <tr>
-                        <th>set</th>
-                        <th class="num">points</th>
-                        <th class="num">packs until capped</th>
+                        <th scope="col">set</th>
+                        <th scope="col" class="num">points</th>
+                        <th scope="col" class="num">packs until capped</th>
                         @* The goal per set: points are only spendable inside the set that earned
                            them, so "how far off" is a per-set question with a per-set answer. *@
-                        <th>rarest still wanted</th>
-                        <th class="num" title="Packs of THIS set to open before that card is affordable — points cannot cross-fund">packs to afford it</th>
-                        <th class="num" title="Cards from this set you still need that the balance already covers">can buy now</th>
+                        <th scope="col">rarest still wanted</th>
+                        <th scope="col" class="num" title="Packs of THIS set to open before that card is affordable — points cannot cross-fund">packs to afford it</th>
+                        <th scope="col" class="num" title="Cards from this set you still need that the balance already covers">can buy now</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -223,7 +223,7 @@ else
             <h2>Is shinedust actually the problem?</h2>
             <table class="table table-sm w-auto align-middle">
                 <thead>
-                    <tr><th>rarity</th><th class="num">dust each</th><th class="num">trades funded</th></tr>
+                    <tr><th scope="col">rarity</th><th scope="col" class="num">dust each</th><th scope="col" class="num">trades funded</th></tr>
                 </thead>
                 <tbody>
                     @foreach (var (label, price) in TradePrices())

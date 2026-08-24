@@ -99,33 +99,40 @@
     }
 
     [JSInvokable]
-    public Task ToggleFromHotkey()
+    public async Task ToggleFromHotkey()
     {
-        if (_open) Close(); else Open();
-        return InvokeAsync(StateHasChanged);
+        if (_open) await Close(); else Open();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void Open()
     {
         _open = true;
+        Switch.SetOpen(true);
         _query = "";
         _selected = 0;
         _focusPending = true;
         Search();
     }
 
-    private void Close()
+    private async Task Close()
     {
         _open = false;
+        Switch.SetOpen(false);
         _items = [];
+        // Otherwise focus is left on whatever was last inside the palette — usually gone from the
+        // DOM a moment later — dropping a keyboard user back at the top of the page instead of
+        // where they opened the palette from.
+        try { await JS.InvokeVoidAsync("ppPalette.restoreFocus"); }
+        catch { /* the palette is an accelerator; the app works without it */ }
     }
 
-    private void OnKeyDown(KeyboardEventArgs e)
+    private async Task OnKeyDown(KeyboardEventArgs e)
     {
         switch (e.Key)
         {
             case "Escape":
-                Close();
+                await Close();
                 break;
             case "ArrowDown":
                 if (_items.Count > 0) _selected = (_selected + 1) % _items.Count;
@@ -134,14 +141,14 @@
                 if (_items.Count > 0) _selected = (_selected - 1 + _items.Count) % _items.Count;
                 break;
             case "Enter":
-                if (_selected < _items.Count) Run(_items[_selected]);
+                if (_selected < _items.Count) await Run(_items[_selected]);
                 break;
         }
     }
 
-    private void Run(Item item)
+    private async Task Run(Item item)
     {
-        Close();
+        await Close();
         // Closed first, so an action that changes state renders against a dismissed palette
         // rather than briefly showing stale results over the page it just changed.
         if (item.Do is not null) { item.Do(); return; }

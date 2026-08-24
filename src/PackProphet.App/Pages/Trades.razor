@@ -225,19 +225,19 @@ else
                     <tr>
                         @if (_view != "all")
                         {
-                            <th>@(_view == "rarity" ? "rarity" : _view)</th>
+                            <th scope="col">@(_view == "rarity" ? "rarity" : _view)</th>
                         }
-                        <th>card</th>
-                        <th>rarity</th>
+                        <th scope="col">card</th>
+                        <th scope="col">rarity</th>
                         @* A column rather than a badge on the name. Most rows are shareable, so as
                            a badge it repeated down the whole table; as a column it is scannable,
                            and the rows that say no stand out. *@
-                        <th title="Whether a friend could simply send it: 1-4 diamonds only">share?</th>
-                        <th class="num" title="Expected packs you would not have to open">packs saved</th>
-                        <th class="num" title="Pack points still to earn in this card's own set before the shop could sell it">points short</th>
-                        <th class="num">dust</th>
-                        <th>what you could offer</th>
-                        <th>status</th>
+                        <th scope="col" title="Whether a friend could simply send it: 1-4 diamonds only">share?</th>
+                        <th scope="col" class="num" title="Expected packs you would not have to open">packs saved</th>
+                        <th scope="col" class="num" title="Pack points still to earn in this card's own set before the shop could sell it">points short</th>
+                        <th scope="col" class="num">dust</th>
+                        <th scope="col">what you could offer</th>
+                        <th scope="col">status</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -12,4 +12,19 @@ public sealed class PaletteSwitch
     public event Action? Requested;
 
     public void Toggle() => Requested?.Invoke();
+
+    /// <summary>
+    /// Whether the palette is currently open, so the layout can hide the rest of the page from
+    /// the accessibility tree while it is up — a real modal, not just something drawn on top.
+    /// </summary>
+    public bool IsOpen { get; private set; }
+
+    public event Action? OpenedChanged;
+
+    public void SetOpen(bool open)
+    {
+        if (IsOpen == open) return;
+        IsOpen = open;
+        OpenedChanged?.Invoke();
+    }
 }

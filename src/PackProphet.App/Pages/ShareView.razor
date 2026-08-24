@@ -60,9 +60,9 @@ else
         <table class="table table-sm align-middle mx-3">
             <thead>
                 <tr>
-                    <th>card</th>
-                    <th class="num">wants</th>
-                    <th class="num">you own</th>
+                    <th scope="col">card</th>
+                    <th scope="col" class="num">wants</th>
+                    <th scope="col" class="num">you own</th>
                 </tr>
             </thead>
             <tbody>
@@ -77,6 +77,10 @@ else
                             <span class="text-body-secondary small">
                                 @row.Card.Set &middot; @Session.Index.Symbol(row.Card)
                             </span>
+                            @if (row.YouOwn > 0)
+                            {
+                                <span class="badge text-bg-primary ms-1">you can offer this</span>
+                            }
                         </td>
                         <td class="num">@row.Wanted</td>
                         <td class="num">

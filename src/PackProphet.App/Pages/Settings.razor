@@ -2,7 +2,6 @@
 @implements IDisposable
 @inject AppSession Session
 @inject LocalStorageStateStore Store
-@inject NavigationManager Nav
 
 <PageTitle>Settings · PackProphet</PageTitle>
 
@@ -273,30 +272,6 @@
                     undo that
                 </button>
             }
-        </div>
-    }
-
-    <h2>Share a read-only link</h2>
-    <p class="small text-body-secondary">
-        A link that shows @(Session.MultipleProfiles ? Session.Profile.Name : "your collection")
-        and progress to whoever opens it, with no edit controls and no account on either end.
-        The whole collection travels inside the link itself &mdash; still nothing is uploaded
-        anywhere, so anyone you don't send it to has no way to see it.
-    </p>
-    <div class="d-flex gap-2 flex-wrap mb-2">
-        <button class="btn btn-sm btn-outline-primary" @onclick="MakeShareLink">
-            get a link
-        </button>
-    </div>
-    @if (_shareLink is not null)
-    {
-        <div class="mb-4">
-            <input class="form-control form-control-sm" readonly value="@_shareLink"
-                   onfocus="this.select()" aria-label="Shareable read-only link" />
-            <p class="small text-body-secondary mt-1 mb-0">
-                Tap the field to select it, then copy. Decks, wishlists and history are left out
-                &mdash; only the collection and what counts as complete are shared.
-            </p>
         </div>
     }
 
@@ -572,17 +547,6 @@
     private string SourceLabel => Session.Data!.Source == DataSource.Cdn
         ? "live community database"
         : $"bundled snapshot{(Session.Data.Version is { } v ? $" (v{v})" : "")} — CDN unreachable";
-
-    private string? _shareLink;
-
-    private void MakeShareLink()
-    {
-        var code = SnapshotCodec.Encode(Session.Profile);
-        // After a `#`, not in the query string: a real collection's code can run past what a
-        // server or proxy accepts on the request line (a 414), and a fragment is never sent to
-        // a server at all — the browser keeps it to itself.
-        _shareLink = $"{Nav.BaseUri}share#{code}";
-    }
 
     private async Task Export()
     {

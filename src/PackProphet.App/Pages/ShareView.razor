@@ -1,17 +1,18 @@
 @page "/share"
+@implements IDisposable
 @inject AppSession Session
 @inject NavigationManager Nav
 
-<PageTitle>Shared collection · PackProphet</PageTitle>
+<PageTitle>Shared wishlist · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
     <p class="p-4">Loading card data&hellip;</p>
 }
-else if (_snapshot is null)
+else if (_shared is null)
 {
     <div class="page-head">
-        <h1 class="title">Shared collection</h1>
+        <h1 class="title">Shared wishlist</h1>
     </div>
     <div class="p-3">
         <p>
@@ -23,71 +24,85 @@ else if (_snapshot is null)
 else
 {
     <div class="page-head">
-        <h1 class="title">@_snapshot.Name</h1>
-        <span class="subtitle">shared read-only</span>
+        <h1 class="title">@_shared.ListName</h1>
+        <span class="subtitle">wanted by @_shared.OwnerName &mdash; shared read-only</span>
     </div>
 
-    @* Said plainly rather than assumed: the whole collection arrived inside the link itself, so
-       nothing about opening this page sent anything anywhere. *@
+    @* Said plainly rather than assumed: the whole list arrived inside the link itself, so nothing
+       about opening this page sent anything anywhere. What the owner already has is deliberately
+       not part of it — this is a want-list, not their collection. *@
     <div class="alert alert-info mx-3 small">
         Nothing here can be edited. This was decoded entirely in your browser &mdash; opening the
-        link uploaded nothing and contacted no server. Decks, wishlists, resources and history
-        were left out of the link; only the collection and what it counts as complete came along.
+        link uploaded nothing and contacted no server. Only the wanted cards travelled in the
+        link, not @_shared.OwnerName's collection.
     </div>
 
-    <div class="summary px-3 py-2">
-        <div class="stat">
-            <span class="label">cards owned</span>
-            <span class="value">@_totalOwned</span>
-        </div>
-        <div class="stat">
-            <span class="label">toward target</span>
-            <span class="value">@_satisfied of @_wanted</span>
-            <span class="sub">across every set with a plan</span>
-        </div>
-    </div>
-
-    @if (_bySet.Count == 0)
+    @if (_rows.Count == 0)
     {
-        <p class="p-3 text-body-secondary">Nothing is being tracked toward a target yet.</p>
+        <p class="p-3 text-body-secondary">
+            Nothing in this list is a card the current card data knows about.
+        </p>
     }
     else
     {
-        <table class="table table-sm align-middle w-auto mx-3">
+        <div class="summary px-3 py-2">
+            <div class="stat">
+                <span class="label">cards wanted</span>
+                <span class="value">@_rows.Count</span>
+            </div>
+            <div class="stat">
+                <span class="label">you could help with</span>
+                <span class="value">@_canHelpWith</span>
+                <span class="sub">cards you already own at least one of</span>
+            </div>
+        </div>
+
+        <table class="table table-sm align-middle mx-3">
             <thead>
                 <tr>
-                    <th>set</th>
-                    <th class="num">progress</th>
+                    <th>card</th>
+                    <th class="num">wants</th>
+                    <th class="num">you own</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var row in _bySet)
+                @foreach (var row in _rows)
                 {
-                    <tr>
+                    <tr class="@(row.YouOwn > 0 ? "row-best" : "")">
                         <td>
-                            <strong>@row.Set</strong>
-                            <span class="text-body-secondary small">@Session.Sets.DisplayName(row.Set)</span>
+                            <span class="pack-thumb deck-thumb"
+                                  data-tip-img="@row.Card.ArtUrl" data-tip="@row.Card.Name"
+                                  style="background-image:url('@row.Card.ArtUrl')"></span>
+                            <strong>@row.Card.Name</strong>
+                            <span class="text-body-secondary small">
+                                @row.Card.Set &middot; @Session.Index.Symbol(row.Card)
+                            </span>
                         </td>
-                        <td class="num">@row.Satisfied / @row.Wanted</td>
+                        <td class="num">@row.Wanted</td>
+                        <td class="num">
+                            @(row.YouOwn > 0 ? row.YouOwn.ToString() : "—")
+                        </td>
                     </tr>
                 }
             </tbody>
         </table>
+        <p class="small text-body-secondary mx-3">
+            Rows you own at least one of are highlighted &mdash; those are what you have to offer.
+        </p>
     }
 }
 
 @code {
-    private PackProphet.State.SharedSnapshot? _snapshot;
-    private int _totalOwned;
-    private int _wanted;
-    private int _satisfied;
-    private List<(string Set, int Wanted, int Satisfied)> _bySet = [];
+    private PackProphet.State.SharedWishlist? _shared;
+    private sealed record Row(PocketCard Card, int Wanted, int YouOwn);
+    private List<Row> _rows = [];
+    private int _canHelpWith;
 
     /// <summary>
-    /// The code sits after a `#`, not in the query string, because a full collection can run
-    /// past what a server or proxy accepts on the request line — a fragment is never sent to a
-    /// server at all, so it cannot 414. <see cref="SupplyParameterFromQueryAttribute"/> only
-    /// ever sees the query string, so the fragment has to be read from the browser's own URL.
+    /// The code sits after a `#`, not in the query string, because a link should never risk a
+    /// 414 no matter how it grows — a fragment is never sent to a server at all.
+    /// <see cref="SupplyParameterFromQueryAttribute"/> only ever sees the query string, so the
+    /// fragment has to be read from the browser's own URL.
     /// </summary>
     private string? CodeFromFragment()
     {
@@ -97,23 +112,44 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // A fragment-only URL change is a same-document navigation in every browser, so clicking
+        // a second share link while this page is already open would otherwise go on showing the
+        // first one's decoded content forever — Blazor still reports it through LocationChanged
+        // even though nothing reloads.
+        Nav.LocationChanged += OnLocationChanged;
+
         await Session.InitAsync();
-
-        _snapshot = SnapshotCodec.TryDecode(CodeFromFragment());
-        if (_snapshot is null) return;
-
-        var owned = new PackProphet.Domain.Collection(_snapshot.Collection);
-        _totalOwned = _snapshot.Collection.Values.Where(v => v > 0).Sum();
-
-        foreach (var set in Session.Index.OpenableSets)
-        {
-            var plan = _snapshot.Targets.PlanFor(set);
-            var (wanted, satisfied) = new RarityLadderTarget(set, plan).Progress(Session.Index, owned);
-            if (wanted == 0) continue;
-
-            _bySet.Add((set, wanted, satisfied));
-            _wanted += wanted;
-            _satisfied += satisfied;
-        }
+        Decode();
     }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        Decode();
+        StateHasChanged();
+    }
+
+    private void Decode()
+    {
+        _shared = WishlistCodec.TryDecode(CodeFromFragment());
+        _rows = [];
+        _canHelpWith = 0;
+        if (_shared is null || !Session.Ready) return;
+
+        foreach (var (key, wanted) in _shared.Wanted)
+        {
+            if (wanted <= 0) continue;
+            if (!Session.Index.ByOwnershipKey.TryGetValue(key, out var printings)) continue;
+
+            var card = printings[0];
+            _rows.Add(new Row(card, wanted, Session.Owned[key]));
+        }
+
+        _rows = _rows
+            .OrderByDescending(r => r.YouOwn > 0)
+            .ThenBy(r => r.Card.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        _canHelpWith = _rows.Count(r => r.YouOwn > 0);
+    }
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
 }

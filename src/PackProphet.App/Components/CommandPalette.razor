@@ -10,11 +10,12 @@
 
 @if (_open)
 {
-    @* The backdrop closes on click, which is why it is a button: a div with a click handler is
-       invisible to the keyboard and to a screen reader. *@
-    <button class="palette-back" @onclick="Close" aria-label="Close the command palette"></button>
-
-    <div class="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+    @* A real <dialog>, opened with showModal(). The focus trap, Escape, the inert background, the
+       ::backdrop and focus restoration on close are all the platform's rather than ours — this
+       used to be a hand-rolled trap in palette.js plus an inert wrapper around the whole layout.
+       aria-modal is deliberately absent: showModal() already conveys modality, and setting it by
+       hand on a native dialog is redundant. *@
+    <dialog class="palette" @ref="_dialog" aria-label="Command palette" @onclose="OnDialogClose">
         <input class="palette-input" @ref="_input" placeholder="Jump to a card, set, deck, or action&hellip;"
                @bind="_query" @bind:event="oninput" @bind:after="Search"
                @onkeydown="OnKeyDown" @onkeydown:stopPropagation="true" aria-label="Search" />
@@ -59,7 +60,7 @@
             <span><kbd>enter</kbd> go</span>
             <span><kbd>esc</kbd> close</span>
         </div>
-    </div>
+    </dialog>
 }
 
 @code {
@@ -71,6 +72,7 @@
     private int _selected;
     private List<Item> _items = [];
     private ElementReference _input;
+    private ElementReference _dialog;
 
     private DotNetObjectReference<CommandPalette>? _self;
     private bool _focusPending;
@@ -93,8 +95,11 @@
         if (_focusPending && _open)
         {
             _focusPending = false;
-            try { await JS.InvokeVoidAsync("ppPalette.focus", _input); }
-            catch { /* nothing to do if focus is refused */ }
+            // showModal() first: it is what puts the dialog in the top layer, makes the rest of
+            // the document inert and records where focus came from. Focusing the input afterwards
+            // just moves the caret within an already-open dialog.
+            try { await JS.InvokeVoidAsync("ppPalette.open", _dialog, _input); }
+            catch { /* the palette is an accelerator; the app works without it */ }
         }
     }
 
@@ -108,23 +113,35 @@
     private void Open()
     {
         _open = true;
-        Switch.SetOpen(true);
         _query = "";
         _selected = 0;
         _focusPending = true;
         Search();
     }
 
+    /// <summary>
+    /// Closes the dialog itself. The browser then fires its close event, and <see cref="OnDialogClose"/>
+    /// does the state teardown — so a dismissal we initiate and one the user triggers with Escape
+    /// or a backdrop click take exactly the same path.
+    /// </summary>
     private async Task Close()
     {
+        if (!_open) return;
+        try { await JS.InvokeVoidAsync("ppPalette.close", _dialog); }
+        catch { ClearOpenState(); /* if the interop is gone, at least stop rendering it */ }
+    }
+
+    /// <summary>
+    /// The dialog's own close event: Escape, a backdrop click, or <see cref="Close"/>. Focus goes
+    /// back to whatever opened the palette without any help from us — the browser restores it as
+    /// part of closing a modal dialog, which is what the old requestAnimationFrame dance was for.
+    /// </summary>
+    private void OnDialogClose() => ClearOpenState();
+
+    private void ClearOpenState()
+    {
         _open = false;
-        Switch.SetOpen(false);
         _items = [];
-        // Otherwise focus is left on whatever was last inside the palette — usually gone from the
-        // DOM a moment later — dropping a keyboard user back at the top of the page instead of
-        // where they opened the palette from.
-        try { await JS.InvokeVoidAsync("ppPalette.restoreFocus"); }
-        catch { /* the palette is an accelerator; the app works without it */ }
     }
 
     private async Task OnKeyDown(KeyboardEventArgs e)

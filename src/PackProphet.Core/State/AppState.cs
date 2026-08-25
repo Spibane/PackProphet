@@ -214,6 +214,16 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     /// surfaces the toggle so the assumption is visible.
     /// </summary>
     public List<string> AvailableLimitedPacks { get; init; } = [];
+
+    /// <summary>
+    /// Packs pinned to the front of the Log a pack picker, by pack key, most recently pinned last.
+    ///
+    /// The picker is scoped to one series, and a pin deliberately escapes that scope: someone
+    /// working through a series they are not currently opening still opens the same one or two
+    /// packs every day, and having to change the series dropdown first is the whole cost the pin
+    /// removes. Order is preserved rather than sorted, so a pin lands where you put it.
+    /// </summary>
+    public List<string> PinnedPacks { get; init; } = [];
 }
 
 /// <summary>

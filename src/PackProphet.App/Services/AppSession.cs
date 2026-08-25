@@ -995,6 +995,29 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Packs pinned to the front of the log picker, in the order they were pinned.
+    /// </summary>
+    public IReadOnlyList<string> PinnedPacks => State.Prefs.PinnedPacks;
+
+    public bool IsPackPinned(string packKey) => State.Prefs.PinnedPacks.Contains(packKey);
+
+    /// <summary>
+    /// Pin or unpin a pack. Pinning appends rather than inserts, so the pins keep the order they
+    /// were made in and an existing pin does not move when a second one is added.
+    /// </summary>
+    public void SetPackPinned(string packKey, bool pinned)
+    {
+        if (string.IsNullOrWhiteSpace(packKey) || pinned == IsPackPinned(packKey)) return;
+
+        var next = State.Prefs.PinnedPacks.Where(p => p != packKey).ToList();
+        if (pinned) next.Add(packKey);
+
+        State = State with { Prefs = State.Prefs with { PinnedPacks = next } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
     public bool IsLimitedPackAvailable(string packKey) =>
         State.Prefs.AvailableLimitedPacks.Contains(packKey);
 

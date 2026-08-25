@@ -428,6 +428,17 @@ main:focus { outline: none; }
 }
 .page-tools, .grid-toolbar { flex-wrap: wrap; }
 
+/* A header that stays put. Opt-in per page, because it is only worth the top of the screen where
+   the header carries the control that finishes the job and the task is long enough to scroll —
+   logging a pack, where the alternative is scrolling back past every card you just tapped to
+   reach "add to collection".
+
+   The toolbar below it is sticky too, so it has to be told where the header ends. That number is
+   the header's own fixed height, which is a contract rather than an accident: .page-head is
+   always exactly one row, hence a header that can be relied on to be 3rem plus its border. */
+.page-head.sticky-head { position: sticky; top: 0; z-index: 25; }
+.page-head.sticky-head ~ .grid-toolbar { top: calc(3rem + 1px); }
+
 /* Divides the two halves of a shared control bar: what is shown, then how. Without it the
    filters and the layout buttons read as one undifferentiated row of eight controls. */
 .bar-sep {
@@ -1128,6 +1139,31 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 /* Column count is chosen by the user, as in the collection grid, rather than fixed by an
    auto-fill guess — a booster is worth seeing at a decent size. */
 .pack-picker { display: grid; gap: .5rem; grid-template-columns: repeat(4, 1fr); }
+
+/* The tile and its pin. Two controls, so two elements: a button inside a button is invalid and
+   the browser throws one of them away. The cell is what the grid lays out; the tile fills it. */
+.pack-cell { position: relative; display: flex; }
+.pack-cell .pack-choice { flex: 1 1 auto; min-width: 0; }
+
+/* A pinned pack is drawn as pinned wherever it appears, because it appears out of its series:
+   without the border it would read as a pack that belongs to the series you are looking at. */
+.pack-cell.pinned .pack-choice { border-color: var(--bs-primary); }
+
+/* Top left, opposite the limited-time badge, and small enough to leave the art alone. */
+.pin-pack {
+    position: absolute; top: .2rem; left: .2rem; z-index: 1;
+    width: 1.6rem; height: 1.6rem;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: .25rem;
+    background: color-mix(in srgb, var(--bs-body-bg) 72%, transparent);
+    color: var(--bs-secondary-color);
+    font-size: 1rem; line-height: 1;
+    padding: 0;
+}
+.pin-pack:hover { color: var(--bs-body-color); }
+.pin-pack.on { color: var(--bs-primary); }
+.pin-pack:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+
 .pack-choice {
     position: relative;
     display: flex; flex-direction: column; align-items: center; gap: .2rem;

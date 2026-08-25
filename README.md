@@ -54,7 +54,8 @@ PackProphet collection loaded, it highlights which of it they already own a copy
 
 ### Log a pack
 Pick the pack, tap the cards that came out of it, done. Accrues pack points, warns at the cap,
-and updates every recommendation immediately.
+and updates every recommendation immediately. Pin the packs you open daily and they lead the
+picker whatever series you are looking at.
 
 ### History
 Packs over time, what you pulled against what the model predicted, and a showcase of your best

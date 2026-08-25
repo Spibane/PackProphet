@@ -176,7 +176,9 @@ public static class StateSerializer
             : prefs with
             {
                 AssumedRateDonors = prefs.AssumedRateDonors ?? [],
-                AvailableLimitedPacks = prefs.AvailableLimitedPacks ?? []
+                AvailableLimitedPacks = prefs.AvailableLimitedPacks ?? [],
+                PinnedPacks = (prefs.PinnedPacks ?? [])
+                    .Where(k => !string.IsNullOrWhiteSpace(k)).ToList()
             };
 
     /// <summary>

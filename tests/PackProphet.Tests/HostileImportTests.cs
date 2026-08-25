@@ -155,14 +155,30 @@ public class HostileImportTests
         // first pack was ever ranked.
         var state = Load("""
         {"schemaVersion":3,"activeProfileId":"a","prefs":{"theme":"dark",
-         "assumedRateDonors":null,"availableLimitedPacks":null},
+         "assumedRateDonors":null,"availableLimitedPacks":null,"pinnedPacks":null},
          "profiles":[{"id":"a","name":"A","collection":{},"targets":null,"decks":[],
          "wishlists":[],"packLog":[],"wonderLog":[],"resources":null}]}
         """);
 
         Assert.Empty(state.Prefs.AssumedRateDonors);
         Assert.Empty(state.Prefs.AvailableLimitedPacks);
+        Assert.Empty(state.Prefs.PinnedPacks);
         Assert.Equal("dark", state.Prefs.Theme);
+    }
+
+    [Fact]
+    public void A_blank_pinned_pack_is_dropped()
+    {
+        // A pin is a pack key the log picker matches against its own list. A blank one matches
+        // nothing and can never be unpinned from the UI, so it would sit in the save forever.
+        var state = Load("""
+        {"schemaVersion":3,"activeProfileId":"a",
+         "prefs":{"pinnedPacks":["A1:Charizard","","   ",null]},
+         "profiles":[{"id":"a","name":"A","collection":{},"targets":null,"decks":[],
+         "wishlists":[],"packLog":[],"wonderLog":[],"resources":null}]}
+        """);
+
+        Assert.Equal(["A1:Charizard"], state.Prefs.PinnedPacks);
     }
 
     [Fact]

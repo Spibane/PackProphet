@@ -31,7 +31,26 @@
 
     window.addEventListener('error', e => {
         if (e.target && e.target.tagName === 'IMG') return; // broken art is expected, not an error
-        show('js', e.message, e.filename ? `${e.filename}:${e.lineno}` : '');
+
+        // A bare "Script error" with no file and no line is what a browser reports when it will
+        // not say more: the throw came from a script it considers cross-origin, or from outside
+        // the page entirely. Reported as-is it is unactionable -- it says only that something,
+        // somewhere, went wrong. So say what is knowable and name the reason the rest is missing,
+        // rather than printing a message with no content in it.
+        const opaque = !e.filename && (!e.message || /^script error/i.test(e.message));
+        if (opaque) {
+            show('js', 'Script error (no detail available)',
+                 'The browser withheld the source. This is what it reports for a throw it treats\n' +
+                 'as cross-origin, including some it raises itself -- an extension, or the OS share\n' +
+                 'sheet. Nothing in this app is loaded from another origin, so it is very likely\n' +
+                 'not ours. Page: ' + location.pathname + ' | standalone: ' +
+                 (window.matchMedia('(display-mode: standalone)').matches ? 'yes' : 'no'));
+            return;
+        }
+
+        show('js', e.message,
+             (e.filename ? `${e.filename}:${e.lineno}:${e.colno}` : '') +
+             (e.error && e.error.stack ? `\n${e.error.stack.split('\n').slice(0, 4).join('\n')}` : ''));
     });
     window.addEventListener('unhandledrejection', e => {
         const r = e.reason;

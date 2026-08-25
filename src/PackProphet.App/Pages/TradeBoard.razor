@@ -283,8 +283,6 @@ else
             {
                 <h2>Wanted, but cannot be listed</h2>
                 <p class="small text-body-secondary">
-                    Named rather than quietly dropped: a card missing from the board with no
-                    explanation reads as a bug.
                 </p>
                 <ul class="small text-body-secondary">
                     @foreach (var group in _plan.Excluded.GroupBy(x => x.Reason).OrderBy(g => g.Key))

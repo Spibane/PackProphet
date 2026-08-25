@@ -52,11 +52,6 @@ else if (_pack is null)
     @* Column count sits with the grid it lays out, as it does over the card grid. It changes
        nothing about which packs are shown. *@
     <div class="grid-toolbar">
-        <span class="small text-body-secondary me-auto">
-            Picking the pack narrows the choices to the ~100 cards it can contain, so logging
-            five cards takes seconds instead of hunting through 3,761.
-        </span>
-
         <select class="form-select form-select-sm" style="max-width:7rem" aria-label="Columns in the grid" @onchange="OnCols">
             @foreach (var n in new[] { 2, 3, 4, 5, 6, 8 })
             {

@@ -642,6 +642,9 @@ summary:hover .hint { border-color: var(--bs-primary); color: var(--bs-body-colo
 .rarity-plan > summary .scope { color: var(--bs-secondary-color); }
 
 .rarity-plan .rarity-chips { padding-top: .4rem; }
+/* The availability chips sit under the plan inside the same panel now, so they need the gap the
+   bar used to give them. */
+.rarity-plan .avail { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; padding-top: .2rem; }
 
 /* The sentence that makes a per-set plan findable. Sized down and quieted: it is instruction
    rather than state, and it is read once. */
@@ -1967,7 +1970,14 @@ tr.row-best {
    that rule is with the container query. */
 .wish-row:hover { background: var(--bs-secondary-bg); }
 .wish-row .nm { font-size: .98rem; font-weight: 600; }
-.wish-row .ty { display: inline-flex; align-items: center; }
+/* NOT display on the cell. A <td> set to inline-flex stops being a table cell, so it drops out of
+   the row's height calculation: these two came out 25.8px and 34.6px in a 46.6px row, and since a
+   cell draws its own bottom border, the row line sat 16px and 12px high in those two columns while
+   being level in the other seven. That is the ragged rule the row looked like it had.
+
+   The cell stays a cell. What needs to be a flex row is the content inside it, which for the type
+   column is a single pip that needs no layout at all. */
+.wish-row .ty > * { display: inline-flex; align-items: center; vertical-align: middle; }
 .wish-row .id, .wish-row .rt { color: var(--bs-secondary-color); }
 .wish-row .id { font-variant-numeric: tabular-nums; font-size: .86rem; }
 .wish-row .rt { font-size: .88rem; }
@@ -1985,8 +1995,11 @@ tr.row-best {
    the row height and leave the whole list looking loosely spaced. */
 
 /* The count sits between the two buttons, so it must not size from its content — a jump from
-   9 to 10 would otherwise move the + button out from under the finger about to tap it. */
-.wish-row .want-n { display: inline-flex; align-items: center; gap: .15rem; }
+   9 to 10 would otherwise move the + button out from under the finger about to tap it.
+   The flex box is an inner wrapper for the same reason as the type column above: a <td> given a
+   flex display leaves the row and its border stops lining up with its neighbours'. */
+.wish-row .want-n { white-space: nowrap; }
+.wish-row .want-n > .stepper { display: inline-flex; align-items: center; gap: .15rem; vertical-align: middle; }
 .wish-row .want-n .n {
     min-width: 1.5rem; text-align: center;
     font-weight: 600; font-variant-numeric: tabular-nums;
@@ -2045,7 +2058,32 @@ tr.row-best {
     box-shadow: 0 1px 0 0 var(--bs-primary);
 }
 
-.palette-list { overflow-y: auto; max-height: min(26rem, 60dvh); }
+/* The scrollbar was drawing the second box. A classic bar takes 15px out of the client width, so
+   every row's highlight stopped 15px short of the right edge while the input above and the footer
+   below ran the full width -- a rail down one side and rows inset from it, which reads as a panel
+   nested inside the dialog rather than as the dialog's own list.
+
+   Thin, with a transparent track, so what is left is the thumb and nothing to mistake for an edge.
+   The gutter is reserved either way, so rows do not shift when a short result set stops
+   overflowing. */
+.palette-list {
+    overflow-y: auto;
+    max-height: min(26rem, 60dvh);
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--bs-body-color) 22%, transparent) transparent;
+    scrollbar-gutter: stable;
+}
+.palette-list::-webkit-scrollbar { width: 8px; }
+.palette-list::-webkit-scrollbar-track { background: transparent; }
+.palette-list::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--bs-body-color) 22%, transparent);
+    border-radius: 4px;
+}
+
+/* The gutter is reserved on the list and on nothing else, so the rows stopped short of a right
+   edge that the input above and the footer below both reached. Matching the inset on all three
+   makes one column of content instead of a panel inside a panel. */
+.palette-input { padding-inline-end: calc(.9rem + 11px); }
 .palette-empty { padding: .9rem; margin: 0; color: var(--bs-secondary-color); }
 
 .palette-item {
@@ -2069,7 +2107,7 @@ tr.row-best {
 .palette-item .pack-thumb { width: 1.6rem; height: 2.24rem; }
 
 .palette-foot {
-    display: flex; gap: 1rem; padding: .35rem .9rem;
+    display: flex; gap: 1rem; padding: .35rem calc(.9rem + 11px) .35rem .9rem;
     border-top: 1px solid var(--bs-border-color);
     background: var(--bs-tertiary-bg);
     font-size: .8rem; color: var(--bs-secondary-color);
@@ -2145,17 +2183,24 @@ tr.row-best {
    the body colour rather than the secondary one, because it is the page's own claim about why it
    exists, not supporting detail — and because the subtitle that would normally carry that is
    hidden below 600px. */
+/* A framed panel rather than a rule down one side. It carries a dismiss, and a x floating beside
+   unbounded prose gives no clue how much of the page it would take with it -- the border is what
+   says "this much". */
 .lead-note {
     position: relative;
     font-size: 1.02rem; line-height: 1.45;
     color: var(--bs-body-color);
     max-inline-size: var(--measure-text);
-    padding-inline: .6rem 2rem;
+    margin-block: .25rem .9rem;
+    padding: .7rem 2.2rem .7rem .8rem;
+    border: 1px solid var(--bs-border-color);
     border-inline-start: 3px solid var(--bs-primary);
+    border-radius: .4rem;
+    background: var(--bs-tertiary-bg);
 }
 /* Same dismiss as the gap strip, in the same place, so the two read as one kind of thing. */
 .lead-note > .x {
-    position: absolute; top: -.1rem; right: .25rem;
+    position: absolute; top: .25rem; right: .35rem;
     padding: 0 .25rem; border: 0; background: none; cursor: pointer;
     color: var(--bs-secondary-color); font-size: 1.2rem; line-height: 1.3;
 }

@@ -68,6 +68,19 @@
    because they show the same thing and there is no reason for them to disagree about how much room
    it needs. Two of them also restate the track inside media queries, which is how the first fix
    here missed them: the width was declared in five places and corrected in one. */
+/* Why some column widths are tokens and most are not.
+
+   A token earns its place when the track can be too small for its own content, because the failure
+   is silent: the row's ellipsis rule truncates rather than overflows, so a 4-diamond card renders
+   as a 2-diamond one and nothing looks broken. rarity, type, the art column and the pick column
+   are all that shape, and all four were wrong at some width before they became tokens.
+
+   The remaining literals -- set+number at 4.6rem, stage at 4rem, hp at 2.4rem, the buttons at
+   4.2rem -- hold bounded content that fits with room to spare. Measured across 36 rows at 900px
+   and 1280px, none of them clips. Turning those into tokens would be uniformity rather than a fix,
+   and would leave the file implying that every number in it is load-bearing when four of them are.
+
+   The rule, if a new column is added: token it if its content can outgrow it. */
 :root { --rarity-col: 4.1rem; }
 
 /* The type column carries a coloured pip and, above 700px, the element's name beside it. Below
@@ -2147,7 +2160,16 @@ tr.row-best {
    The tab bar is a flex sibling AFTER main rather than a fixed overlay, so it takes its 56px out of
    the flex chain and main's scroller ends exactly above it. A fixed bar would sit over the last row
    of cards, which is the bug this whole pass exists to remove. */
-/* Fixed rather than a flex sibling, now that the page scrolls: as a sibling it would scroll away
+/* Why there is a bottom bar below 1057px and an ordinary nav row above it, rather than the side
+   rail this was first sketched as.
+
+   Measured at 1280x900: the nav row costs 47px of height. A rail wide enough for the same labels
+   costs about 190px of width -- and on the collection that is a whole column, six tiles per row
+   becoming five. Height is the scarce axis on a phone, which is why the bar exists there; width is
+   the scarce axis for a card grid, which is why a rail would be a poor trade on a desktop. The
+   nav row already fits one line above 1057px, which is the width it was measured to need.
+
+   Fixed rather than a flex sibling, now that the page scrolls: as a sibling it would scroll away
    with everything else. Fixed brings back the hazard it was originally shaped to avoid -- a bar
    sitting on top of the last screenful -- so main reserves exactly its height below, and the two
    figures come from one token so they cannot drift apart. */

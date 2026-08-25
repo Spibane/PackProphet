@@ -108,7 +108,13 @@ else
     <div class="page-head">
         <button class="btn btn-sm btn-outline-secondary" @onclick="Reset">&larr; change pack</button>
         <h1 class="title">@_pack.Split(':')[1]</h1>
-        <span class="subtitle">@_pack.Split(':')[0] &middot; tap each card that came out</span>
+        @* The instruction has to match the view. In the tile grid a tap on a card picks it; in
+           list mode a tap on a row does nothing and the row's own + is what picks. Telling
+           someone to tap in a view where tapping does nothing is worse than saying nothing. *@
+        <span class="subtitle">
+            @_pack.Split(':')[0] &middot;
+            @(Session.ListView ? "add each card that came out" : "tap each card that came out")
+        </span>
         <span class="actions">
             <span class="small">picked @_picked.Count</span>
             <button class="btn btn-sm btn-success" disabled="@(_picked.Count == 0 || Busy.IsBusy)" @onclick="Commit">
@@ -117,14 +123,21 @@ else
         </span>
     </div>
 
-    @* A soft warning rather than a block. Logging a different number of cards than the pack held
-       corrupts the odds check on History: the observed side comes straight from what was tapped
-       here, so four taps on a five-card pack reads later as the model having been wrong. Not
-       blocked, since a partial log is sometimes intended. *@
-    @if (MiscountHint is { } hint)
+    @* Raised on the way out rather than while picking. The count is wrong for the whole time you
+       are tapping -- one card into a five-card pack it is already "not five" -- so a live warning
+       fires immediately, pushes the card list down, and is on screen for the entire task while
+       being about none of it. It is a question about saving, so it is asked when you save.
+
+       Not a block. A partial log is sometimes what you meant, so the second press goes through. *@
+    @if (_miscount is { } warning)
     {
         <PageShell Class="py-2">
-            <Notice Severity="Notice.Level.Warning" Dense="true" Class="mb-0">@hint</Notice>
+            <Notice Severity="Notice.Level.Warning" Dense="true" Class="mb-0">
+                @warning
+                <button class="btn btn-sm btn-warning ms-2 py-0" @onclick="CommitAnyway">
+                    log @_picked.Count anyway
+                </button>
+            </Notice>
         </PageShell>
     }
 
@@ -270,6 +283,7 @@ else
     {
         _pack = pack;
         _justLogged = null;
+        _miscount = null;
         _picked.Clear();
         // Set then number, not number alone: a Deluxe pack contains reprints from earlier sets,
         // so ordering by number interleaves them.
@@ -278,18 +292,20 @@ else
             : [];
     }
 
-    private void Reset() { _pack = null; _picked.Clear(); _justLogged = null; }
+    private void Reset() { _pack = null; _picked.Clear(); _justLogged = null; _miscount = null; }
 
     // Tapping a card in this view means "this came out of the pack", not "+1 owned" — the
     // collection is only touched once the pack is committed, so a mis-tap costs nothing.
     private void OnTap((PocketCard Card, int Delta) e)
     {
+        _miscount = null;
         if (e.Delta < 0) { Unpick(e.Card); return; }
         _picked.Add(e.Card);
     }
 
     private void OnSweep((IReadOnlyList<PocketCard> Cards, int Delta) e)
     {
+        _miscount = null;
         if (e.Delta < 0) { foreach (var c in e.Cards) Unpick(c); return; }
         _picked.AddRange(e.Cards);
     }
@@ -323,11 +339,32 @@ else
 
     private void Unpick(PocketCard card)
     {
+        _miscount = null;
         var i = _picked.FindLastIndex(c => c.Key == card.Key);
         if (i >= 0) _picked.RemoveAt(i);
     }
 
-    private Task Commit() =>
+    /// <summary>
+    /// The miscount question, once it has been asked. Null while there is nothing to ask or while
+    /// the count is plausible; cleared whenever the selection changes, so answering it for four
+    /// cards does not silently answer it for six.
+    /// </summary>
+    private string? _miscount;
+
+    private Task Commit()
+    {
+        if (_pack is null || _picked.Count == 0) return Task.CompletedTask;
+
+        // Asked once. The second press is CommitAnyway, which arrives with the answer.
+        if (_miscount is null && MiscountHint is { } hint)
+        {
+            _miscount = hint;
+            return Task.CompletedTask;
+        }
+        return CommitAnyway();
+    }
+
+    private Task CommitAnyway() =>
         _pack is null || _picked.Count == 0 ? Task.CompletedTask
         : Busy.RunAsync($"Adding {_picked.Count} cards\u2026", CommitCore);
 
@@ -369,6 +406,7 @@ else
 
         var nowPoints = Session.Profile.Resources.PackPointsBySet.GetValueOrDefault(set);
         _justLogged = (count, set, nowPoints, nowPoints >= GameRules.PackPointsCap);
+        _miscount = null;
         _picked.Clear();
     }
 

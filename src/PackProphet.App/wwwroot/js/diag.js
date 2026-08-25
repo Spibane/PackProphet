@@ -63,14 +63,32 @@
         // rather than printing a message with no content in it.
         const opaque = !e.filename && (!e.message || /^script error/i.test(e.message));
         if (opaque) {
+            // The browser hides the source, but not everything about the event. Three things
+            // separate the possibilities, and none of them needs the source:
+            //
+            //   target      window means a script threw. An element means a RESOURCE failed to
+            //               load -- and then the element says which one.
+            //   error       an Error object is present for same-origin throws and absent for
+            //               cross-origin ones. Absent plus target=window is a genuine foreign
+            //               script, which this app does not have unless something injected one.
+            //   foreign     any script tag on the page whose src is not from here. An extension
+            //               injecting one is the remaining way this app sees an error it did not
+            //               cause.
+            const t = e.target;
+            const targetDesc = !t || t === window ? 'window (a script threw)'
+                : (t.tagName || '?') + (t.src || t.href ? ' src=' + String(t.src || t.href).slice(0, 120)
+                                                        : ' (no src)') + ' -- a resource failed to load';
+            const foreign = [...document.scripts]
+                .map(x => x.src).filter(Boolean)
+                .filter(u => { try { return new URL(u, location.href).origin !== location.origin; } catch { return true; } });
+
             show('js', 'Script error (no detail available)',
-                 'The browser withheld the source. This is what it reports for a throw it treats\n' +
-                 'as cross-origin, including some it raises itself -- an extension, or the OS share\n' +
-                 'sheet. Nothing in this app is loaded from another origin, so it is very likely\n' +
-                 'not ours. Page: ' + location.pathname + ' | standalone: ' +
+                 'target: ' + targetDesc +
+                 '\nError object: ' + (e.error ? (e.error.stack || e.error.message || String(e.error)).split('\n').slice(0,3).join('\n') : 'none (so the throw was cross-origin)') +
+                 '\nforeign scripts on the page: ' + (foreign.length ? foreign.join(', ') : 'none') +
+                 '\nPage: ' + location.pathname + ' | standalone: ' +
                  (window.matchMedia('(display-mode: standalone)').matches ? 'yes' : 'no') +
-                 '\n' + timing() +
-                 '\nIf it was backgrounded a moment before this, the OS raised it, not the app.');
+                 '\n' + timing());
             return;
         }
 

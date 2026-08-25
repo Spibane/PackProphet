@@ -4,7 +4,67 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
-## Unreleased
+## 0.3.0 — 2026-08-25
+
+Phase 3, and a layout pass over all seventeen routes. Every figure below was measured in the
+running app at 375x812 unless another width is named.
+
+### New
+
+- **Shareable read-only wishlists.** A list travels whole inside the link and is decoded in the
+  recipient's browser; nothing is uploaded and no account exists. The payload sits after the `#`
+  so it never reaches a server as a query string, which also fixed a 414 on a real list.
+- **An in-game name per collection**, carried into the share link. A want-list told the reader
+  exactly what to send and gave them no way to find you: the only name in the payload was the
+  collection's, which is what you called a save slot.
+- **Split a pack budget across packs** — how many of each to buy for a fixed number of packs,
+  rather than sinking all of them into whichever pack currently ranks first.
+
+### Layout
+
+- **Every page was clipping 160px below the fold.** An unstyled wrapper plus a vendored
+  `height: 100vh` from a package nothing used. Removing the package alone made it worse.
+- **A bottom tab bar below 1057px**, and above it a top nav cut to the same four destinations in
+  the same order, from one shared menu component. Twelve links inline needed 1242px of a 1265px
+  row, so the bar wrapped at every width — well above the point the tab bar takes over.
+- **One page shell with three named measures**, replacing fifteen ad hoc `max-width` values
+  across twenty-six declarations. Body blocks now clear a display cutout; they were padding with
+  a flat `1rem`, so in landscape on a notched phone they sat under it while the bars above did
+  not.
+- **Column priority is a container query, not a media query.** A table's width comes from its
+  container: the wishlist editor is two columns above 1000px, so at a 1280px window its table had
+  614px and needed 680, and every row wrapped — worse the wider the screen.
+- **The set row, the rarity plan and the board's tuning knobs fold away**, each summarised by its
+  own state. Collection opens on the newest openable set rather than the first one printed.
+- Collection chrome 499 → 156px. Which pack's tools three rows → one at 1280px. Which pack 855 →
+  341px, Trades 559 → 288px, the in-game list 911 → 501px. Breakpoints 11 → 9.
+
+### Accessibility
+
+- **The card grid is operable from the keyboard.** It was pointer-only: a tile was a div with a
+  click handler. Arrows move, digits set a count outright, Enter adds, `-` removes, `i` opens
+  card detail. One tab stop with `aria-activedescendant`, a visible **keyboard** button naming
+  the keys, a skip link, and a command-palette action.
+- **The -/+ buttons meet WCAG 2.5.8.** Two of their four spellings measured 26.67 x 23.00 px,
+  under the 24 x 24 floor, in a 50px row with the buttons centred in it. One class now, sized by
+  one variable, guarded by a test on the variable.
+- **The command palette is a real `<dialog>`.** The focus trap, Escape, the inert background, the
+  backdrop and focus restoration are the platform's; a hand-rolled trap and an inert wrapper
+  around the whole layout went with it.
+- Tables carry real headers, scroll inside their own wrapper rather than sliding the page, and
+  are reachable by keyboard. Eighteen ad hoc alerts became one `Notice` component that also picks
+  whether a message interrupts a screen reader or waits its turn.
+- Two table cells had been given a flex display, which takes a cell out of its row: they measured
+  25.8px and 34.6px in a 46.6px row, so the rule sat high in those two columns and level in the
+  other seven.
+
+### Copy
+
+- **Paragraphs over 40 words: 45 → 15.** Kept what tells you about the game, your data, or what
+  to do; dropped what a badge already says, what justifies the design, and the clause that
+  restates the previous one.
+
+### Also in this release
 
 - **Licence and source are offered inside the app.** Settings now carries a "Licence and
   source" section linking the licence text, the repository, every upstream data source and the
@@ -16,16 +76,6 @@ until then the minor number tracks the roadmap phase.
   copies, right-to-left builds, ESM builds, and the grid/reboot/utilities subsets). The
   precache rules are now tested by reading the regexes out of the worker itself, since that
   file runs neither in development nor in CI.
-
-- **The card grid is operable from the keyboard.** It was previously pointer-only: a tile was a
-  div with a click handler. Arrows move, digits set a count outright, Enter adds, `-` removes,
-  `i` opens card detail, Home and End jump. The grid is one tab stop with
-  `aria-activedescendant` naming the cursor, rather than a roving tabindex that Blazor would
-  have to re-render to move. The key legend appears only while the grid has focus, and every
-  tile has an accessible name reading name, set, rarity and copies held. Keyboard entry can be
-  started three ways: a visible **keyboard** button in the grid toolbar whose tooltip names the
-  keys, a skip link one tab from page load, and a command-palette action. Pressing `i` opens a
-  card and Escape returns, with the cursor restored to the card you were reading about.
 
 - **Render tests for the App project** (bUnit), which previously had none. Pages are discovered
   by reflection, so a page added later is covered automatically; each is rendered on a

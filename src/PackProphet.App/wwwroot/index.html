@@ -45,7 +45,12 @@
     <meta name="theme-color" content="#4338ca" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="PackProphet" />
-    <link href="PackProphet.styles.css" rel="stylesheet" />
+    <!-- No PackProphet.styles.css link. That bundle is Blazor's scoped-CSS output, and it is only
+         emitted when something in the build actually has scoped CSS: a .razor.css file here, or a
+         referenced component library that ships one. Dropping the unused Blazor.Bootstrap package
+         removed the last of those, so the file stopped being generated while the link stayed --
+         a 404 on every page load, on every route. Add the link back alongside the first
+         .razor.css file, not before. -->
     <script type="importmap"></script>
     <!-- Loaded in the head, before anything paints: it reads the saved theme and stamps
          data-bs-theme on the root element so a dark-mode user never sees a white flash on

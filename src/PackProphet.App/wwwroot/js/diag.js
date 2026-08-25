@@ -78,14 +78,22 @@
             const targetDesc = !t || t === window ? 'window (a script threw)'
                 : (t.tagName || '?') + (t.src || t.href ? ' src=' + String(t.src || t.href).slice(0, 120)
                                                         : ' (no src)') + ' -- a resource failed to load';
-            const foreign = [...document.scripts]
-                .map(x => x.src).filter(Boolean)
-                .filter(u => { try { return new URL(u, location.href).origin !== location.origin; } catch { return true; } });
+            // document.scripts lists <script> ELEMENTS only, and this app loads almost all of its
+            // JavaScript as dynamically imported ES modules, which create no element. Resource
+            // timing sees those, so ask it instead -- and include fetches, since a cross-origin
+            // fetch is the other way code from elsewhere reaches this page.
+            const sameOrigin = u => { try { return new URL(u, location.href).origin === location.origin; } catch { return false; } };
+            const foreign = [...document.scripts].map(x => x.src).filter(Boolean).filter(u => !sameOrigin(u));
+            const foreignLoads = performance.getEntriesByType('resource')
+                .filter(r => ['script', 'fetch', 'xmlhttprequest', 'other'].includes(r.initiatorType))
+                .filter(r => !sameOrigin(r.name))
+                .map(r => r.initiatorType + ' ' + new URL(r.name).origin);
+            const foreignSummary = [...new Set(foreign.concat(foreignLoads))];
 
             show('js', 'Script error (no detail available)',
                  'target: ' + targetDesc +
                  '\nError object: ' + (e.error ? (e.error.stack || e.error.message || String(e.error)).split('\n').slice(0,3).join('\n') : 'none (so the throw was cross-origin)') +
-                 '\nforeign scripts on the page: ' + (foreign.length ? foreign.join(', ') : 'none') +
+                 '\nforeign code loaded (elements, modules, fetches): ' + (foreignSummary.length ? foreignSummary.join(', ') : 'none') +
                  '\nPage: ' + location.pathname + ' | standalone: ' +
                  (window.matchMedia('(display-mode: standalone)').matches ? 'yes' : 'no') +
                  '\n' + timing());

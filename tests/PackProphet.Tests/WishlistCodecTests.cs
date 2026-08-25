@@ -58,6 +58,35 @@ public class WishlistCodecTests
     }
 
     [Fact]
+    public void The_in_game_name_survives_the_round_trip()
+    {
+        // The field a shared list is useless without: it is the only thing in the payload that
+        // tells the reader who to send the card to.
+        var list = new Wishlist("id", "Trades", new Dictionary<string, int> { ["A1:001.webp"] = 2 });
+
+        var back = WishlistCodec.TryDecode(WishlistCodec.Encode("My alt", list, "Spibane"));
+
+        Assert.NotNull(back);
+        Assert.Equal("Spibane", back!.InGameName);
+        Assert.Equal("My alt", back.OwnerName);
+    }
+
+    [Fact]
+    public void A_link_made_before_the_in_game_name_existed_still_decodes()
+    {
+        // The field was added to a record that is already out in shared links. Those links carry
+        // no such property, and a decode that threw would turn every one of them into "this link
+        // is broken" rather than "this link predates a field".
+        var list = new Wishlist("id", "Trades", new Dictionary<string, int> { ["A1:001.webp"] = 1 });
+
+        var back = WishlistCodec.TryDecode(WishlistCodec.Encode("Alex", list));
+
+        Assert.NotNull(back);
+        Assert.Null(back!.InGameName);
+        Assert.Equal("Alex", back.OwnerName);
+    }
+
+    [Fact]
     public void A_realistic_wishlist_makes_a_short_link()
     {
         // The whole point of sharing a wishlist rather than a collection: this should stay small

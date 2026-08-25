@@ -79,7 +79,17 @@
    plus its caret, which needs 49px. That is what keeps the column at 3.2rem rather than the 1.5rem
    the pip alone would want, and it is the reason this reclaims 16px a row instead of 50. */
 :root { --type-col: 5.4rem; }
-@media (width <= 700px) { :root { --type-col: 3.2rem; } }
+/* Below 700px the element name is hidden in both the cells and the heading, so the column is a
+   pip and its key — no longer wide enough to hold a word. */
+@media (width <= 700px) { :root { --type-col: 2.2rem; } }
+
+/* The pick column shows "+N" only while something is being picked, and CardGrid is used in two
+   places: the collection, which passes no picked source at all, and the pack log, which does. On
+   the collection it was therefore 1.8rem of permanently empty column. Collapsing the track rather
+   than hiding the cell keeps every row aligned with the header — a display:none would shift each
+   following item into the previous track. */
+.card-line { --pick-col: 0px; }
+.grid-wrap.picking .card-line { --pick-col: 1.8rem; }
 
 :root {
     --measure-form: 38rem;
@@ -695,7 +705,7 @@ main:focus { outline: none; }
         minmax(7rem, 1fr)    /* attack 1     */
         minmax(7rem, 1fr)    /* attack 2     */
         minmax(6rem, .8fr)   /* ability      */
-        1.8rem               /* picked       */
+        var(--pick-col)     /* picked       */
         2.4rem               /* have         */
         4.2rem;              /* +/- buttons  */
     /* The art track is a variable because roomy widens it, and restating four responsive
@@ -1592,11 +1602,11 @@ tr.row-best {
    scan a collection by. Type and rarity survive to the smallest size. */
 
 @media (width <= 1100px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) 1.8rem 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) var(--pick-col) 2.4rem 4.2rem; }
     .card-line .c-a2 { display: none; }
 }
 @media (width <= 900px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) 1.8rem 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) var(--pick-col) 2.4rem 4.2rem; }
     .card-line .c-a1, .card-line .c-a2, .card-line .c-ab, .card-line .c-hp { display: none; }
 }
 @media (width <= 560px) {
@@ -1606,7 +1616,7 @@ tr.row-best {
        than out of a column, since each of the seven earns its place: the pick count is empty in
        the collection but not when this grid is embedded in a picker. */
     .card-line {
-        grid-template-columns: var(--art-w) minmax(4rem,1fr) var(--rarity-col) 1.8rem 2rem 3.6rem;
+        grid-template-columns: var(--art-w) minmax(4rem,1fr) var(--type-col) var(--rarity-col) var(--pick-col) 2rem 3.6rem;
         gap: .3rem;
         padding-inline: .35rem;
     }
@@ -1618,7 +1628,7 @@ tr.row-best {
        That is also what buys the name back: seven columns did not fit 375px even with the name at
        its minimum, so the list scrolled sideways and the +/- buttons sat off-canvas. Six fit, and
        the name gets the difference. */
-    .card-line .c-id, .card-line .c-st, .card-line .c-ty { display: none; }
+    .card-line .c-id, .card-line .c-st { display: none; }
 }
 
 /* ================================================================= hover detail
@@ -2241,3 +2251,16 @@ tr.row-best {
 }
 .empty-state .what { margin: 0; font-size: .95rem; }
 .empty-state .act { margin-top: .75rem; }
+
+/* The type column's heading: a circle split three ways, sized and shaped exactly like the pips
+   below it so it reads as their key rather than as one more type. Three wedges rather than a
+   single colour, because any one colour would name a type the column is not filtered to. */
+.card-line .ty-key {
+    width: 1.05rem; height: 1.05rem;
+    flex: none; display: inline-flex;
+    border-radius: 50%; overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, .3);
+    vertical-align: middle;
+}
+.card-line .ty-key svg { width: 100%; height: 100%; display: block; }
+.card-line.head .c-ty { display: flex; align-items: center; gap: .3rem; }

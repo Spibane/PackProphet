@@ -108,7 +108,7 @@
 @* tabindex, role and aria-activedescendant are set from js/gridkeys.js, which owns the cursor —
    see the note there on why a roving tabindex does not suit a virtualised grid. The container is
    the single tab stop for however many thousand cards are in scope. *@
-<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "")"
+<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(PickedOf is null ? "" : "picking")"
      id="@_gridId" role="grid"
      aria-label="@(ListView ? "Card list" : "Card grid") — arrow keys to move, digits to set a count"
      @ref="_gridEl">
@@ -142,7 +142,20 @@
             <span class="c-thumb" role="columnheader"></span>
             <button class="c-nm" role="columnheader" @onclick="() => SortBy(ListSort.Name)">name @Caret(ListSort.Name)</button>
             <button class="c-id" role="columnheader" @onclick="() => SortBy(ListSort.Number)">set @Caret(ListSort.Number)</button>
-            <button class="c-ty" role="columnheader" @onclick="() => SortBy(ListSort.Type)">type @Caret(ListSort.Type)</button>
+            @* The column is a row of pips, so its heading is one too — a three-wedge key rather
+               than a named type, which would read as a filter. The word joins it when there is
+               room, and the accessible name is always "type" regardless of which are showing. *@
+            <button class="c-ty" role="columnheader" @onclick="() => SortBy(ListSort.Type)">
+                <span class="ty-key" aria-hidden="true">
+                    <svg viewBox="0 0 16 16" focusable="false">
+                        <path d="M8 8 L8 1 A7 7 0 0 1 14.06 11.5 Z" fill="#63bc5a" />
+                        <path d="M8 8 L14.06 11.5 A7 7 0 0 1 1.94 11.5 Z" fill="#ff9c54" />
+                        <path d="M8 8 L1.94 11.5 A7 7 0 0 1 8 1 Z" fill="#4d90d5" />
+                    </svg>
+                </span>
+                <span class="ty-name" aria-hidden="true">type</span>
+                <span class="visually-hidden">type</span>@Caret(ListSort.Type)
+            </button>
             <button class="c-st" role="columnheader" @onclick="() => SortBy(ListSort.Stage)">stage @Caret(ListSort.Stage)</button>
             <button class="c-rr" role="columnheader" @onclick="() => SortBy(ListSort.Rarity)">rarity @Caret(ListSort.Rarity)</button>
             <button class="c-hp" role="columnheader" @onclick="() => SortBy(ListSort.Health)">hp @Caret(ListSort.Health)</button>

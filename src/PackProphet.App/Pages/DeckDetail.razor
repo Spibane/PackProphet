@@ -155,10 +155,9 @@ else
                                     </span>
                                 </td>
                                 <td class="text-end" style="width:6rem">
-                                    <button class="btn btn-sm btn-outline-secondary py-0 px-2"
-                                            @onclick="() => Remove(entry.Nr)" aria-label="Remove one">&minus;</button>
-                                    <button class="btn btn-sm btn-outline-secondary py-0 px-2"
-                                            @onclick="() => Add(entry.Nr)"
+                                    <button class="step" @onclick="() => Remove(entry.Nr)"
+                                            aria-label="Remove one">&minus;</button>
+                                    <button class="step" @onclick="() => Add(entry.Nr)"
                                             disabled="@(!CanAdd(entry.Nr))" aria-label="Add one">+</button>
                                 </td>
                             </tr>

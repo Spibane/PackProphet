@@ -131,6 +131,26 @@ public class LayoutInvariantTests
         Assert.Equal(roomy + 1, declaredRoomy);
     }
 
+    [Fact]
+    public void Every_stepper_size_clears_the_minimum_target()
+    {
+        // WCAG 2.5.8 asks for 24x24 CSS px, and the -/+ buttons were 23 tall for as long as they
+        // were spelled `btn btn-sm py-0` by hand in each of four places. They are one class now,
+        // sized by one variable, so the only way back to a failing target is a caller lowering the
+        // variable -- which reads as a harmless bit of tightening and is not.
+        var declarations = Regex.Matches(WithoutComments(Css), @"--step-size:\s*([\d.]+)rem");
+        Assert.True(declarations.Count > 0, "no --step-size declared; the shared stepper is gone");
+
+        foreach (Match d in declarations)
+        {
+            var px = double.Parse(d.Groups[1].Value) * 16;
+            Assert.True(px >= 24,
+                $"--step-size: {d.Groups[1].Value}rem is {px}px, under the 24px floor in " +
+                "WCAG 2.5.8. The gap between two steppers is far under 24px too, so the " +
+                "spacing exception does not cover it.");
+        }
+    }
+
     private static int Height(string pattern)
     {
         var m = Regex.Match(WithoutComments(Css), pattern, RegexOptions.Singleline);

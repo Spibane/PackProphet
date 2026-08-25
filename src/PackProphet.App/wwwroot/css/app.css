@@ -525,6 +525,40 @@ main:focus { outline: none; }
     border-radius: .3rem; padding: .15rem .4rem;
 }
 
+/* ================================================================= steppers
+
+   The -/+ control that adjusts a count appears in four places: the collection list, a card's own
+   page, a deck's card table and a wishlist row. Each had grown its own spelling, and two of them
+   -- the two built from `btn btn-sm py-0` -- came out 23px tall. That is under the 24x24 CSS px
+   floor in WCAG 2.5.8, and the `.2rem` gap is too small for the spacing exception to cover it, so
+   the most-tapped control in the app was the one failing. The collection row is 50px with the
+   buttons centred in it, so 27px of the row was empty above and below a target too small to hit.
+
+   One class, sized by a variable rather than by each caller. The default is the size the tightest
+   caller can afford: on a phone the collection row's button track is 3.6rem and the row was tuned
+   to fit 375px exactly, so two buttons plus their gap must stay inside 57.6px. 1.6rem square gives
+   25.6px each and 3.2px of slack -- past the floor without widening a track and putting the
+   sideways scroll back. Somewhere with room says so by raising the variable.
+
+   Square, and sized in one property for both axes, because these sit in a row with each other and
+   with the wishlist's x: a target that meets the floor on one axis and not the other is the bug
+   this replaces. */
+:root { --step-size: 1.6rem; }
+
+.step {
+    width: var(--step-size); height: var(--step-size); flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--bs-border-color); border-radius: .2rem;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .95rem; line-height: 1; padding: 0; cursor: pointer;
+}
+.step:hover:not(:disabled) { border-color: var(--bs-primary); color: var(--bs-primary); }
+.step:disabled { opacity: .35; cursor: default; }
+/* Removing an entry is not the same kind of act as changing a number by one, so it is quieter
+   until you are on it and then it is red. */
+.step.remove { color: var(--bs-secondary-color); }
+.step.remove:hover { border-color: var(--bs-danger); color: var(--bs-danger); }
+
 /* ================================================================= card grid (tiles) */
 
 /* No longer a scroller. overscroll-behavior went with it: it existed to stop a scroll gesture
@@ -1305,7 +1339,10 @@ tr.row-best {
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center; background-repeat: no-repeat;
 }
-.card-detail .own-row { display: flex; align-items: center; gap: .5rem; margin: .6rem 0 .4rem; }
+/* The one caller with room to spare. This is a dedicated control on a full page rather than a
+   cell in a row, and its buttons were already 31px before they were shared, so taking the
+   constrained default here would shrink a target that was never too small. */
+.card-detail .own-row { --step-size: 2rem; display: flex; align-items: center; gap: .5rem; margin: .6rem 0 .4rem; }
 .card-detail .own-row .label { font-size: .9rem; color: var(--bs-secondary-color); }
 .card-detail .own-row .count { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 1.2rem; text-align: center; }
 
@@ -1760,20 +1797,9 @@ tr.row-best {
 .wish-row.got { background: color-mix(in srgb, var(--bs-success) 7%, transparent); }
 .wish-row.got:hover { background: color-mix(in srgb, var(--bs-success) 12%, transparent); }
 
-/* The stepper's own buttons rather than btn-sm: Bootstrap's padding made three controls in a
-   row taller than the art beside them, which is what set the row height and left the whole
-   list looking loosely spaced. These are square, so - + and x line up with each other. */
-.wish-row .step {
-    width: 1.5rem; height: 1.5rem; flex: none;
-    display: inline-flex; align-items: center; justify-content: center;
-    border: 1px solid var(--bs-border-color); border-radius: .2rem;
-    background: var(--bs-body-bg); color: var(--bs-body-color);
-    font-size: .95rem; line-height: 1; padding: 0; cursor: pointer;
-}
-.wish-row .step:hover:not(:disabled) { border-color: var(--bs-primary); color: var(--bs-primary); }
-.wish-row .step:disabled { opacity: .35; cursor: default; }
-.wish-row .step.remove { color: var(--bs-secondary-color); }
-.wish-row .step.remove:hover { border-color: var(--bs-danger); color: var(--bs-danger); }
+/* The wishlist takes the shared stepper at its default size. The reason that default is small
+   enough for this row: the art beside it is 2.2rem, and a control taller than the art would set
+   the row height and leave the whole list looking loosely spaced. */
 
 /* The count sits between the two buttons, so it must not size from its content — a jump from
    9 to 10 would otherwise move the + button out from under the finger about to tap it. */

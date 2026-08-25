@@ -180,6 +180,11 @@ only when a screenshot import is attempted.
 
 ---
 
+## Known issues
+
+Open problems, each with what has already been ruled out, live in
+[KNOWN-ISSUES.md](KNOWN-ISSUES.md) so a second attempt at one starts where the first stopped.
+
 ## Roadmap
 
 Phases 1 and 2 are complete. See [CHANGELOG.md](CHANGELOG.md).

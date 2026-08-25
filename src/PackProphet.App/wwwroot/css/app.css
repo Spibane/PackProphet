@@ -2044,6 +2044,18 @@ tr.row-best {
 .pack-row-muted td { opacity: .68; }
 .pack-row-muted .badge { opacity: 1; }
 
+/* The one paragraph on a page that has to be read before the controls below it. Sized up and in
+   the body colour rather than the secondary one, because it is the page's own claim about why it
+   exists, not supporting detail — and because the subtitle that would normally carry that is
+   hidden below 600px. */
+.lead-note {
+    font-size: 1.02rem; line-height: 1.45;
+    color: var(--bs-body-color);
+    max-inline-size: var(--measure-text);
+    padding-inline-start: .6rem;
+    border-inline-start: 3px solid var(--bs-primary);
+}
+
 /* ================================================================= wonder pick
 
    The offer: five card slots, filled by tapping the search below. Empty slots are drawn rather

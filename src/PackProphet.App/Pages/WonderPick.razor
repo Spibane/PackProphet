@@ -12,7 +12,11 @@ else
 {
     <div class="page-head">
         <h1 class="title">Wonder Pick</h1>
-        <span class="subtitle">take it or skip it?</span>
+        @* The game shows the five cards and how many of each you hold. What it cannot show is
+           whether spending one of a capped, slowly-refilling stamina on THIS offer beats holding
+           it for the next one -- which depends on the offers you have been seeing, not on this
+           one. That is the whole of what this page adds, so it is what the page says it does. *@
+        <span class="subtitle">is this offer worth a stamina, or is a better one coming?</span>
         <span class="actions">
             @* The pool the whole decision turns on, entered here rather than on a settings page:
                the threshold changes with it, and at the cap the advice inverts. *@
@@ -81,6 +85,17 @@ else
     <PageShell Measure="PageShell.Width.Wide">
         @if (_offer.Count == 0)
         {
+            @* The lead, and it has to be here rather than in the subtitle: the subtitle is
+               hidden below 600px by design, and this is exactly the page whose purpose is easy to
+               mistake for something the game already does. The offer screen shows the five cards
+               and how many of each you hold; the thing it cannot show is the bar. *@
+            <p class="lead-note">
+                The game already shows the @GameRules.WonderPickCardsShown cards and how many of
+                each you hold. What it cannot show is <strong>the bar</strong>: how good an offer
+                has to be before it is worth one of your @GameRules.StaminaCap stamina. That
+                depends on the offers you have been getting, not on this one &mdash; so log every
+                offer, taken or skipped, and the bar comes from your own distribution.
+            </p>
             <p class="text-body-secondary">
                 Tap the @GameRules.WonderPickCardsShown cards you have been offered. You see all
                 of them and receive <strong>one at random</strong>, so the only decision is
@@ -150,12 +165,16 @@ else
                     </div>
                 </div>
 
-                <DataTable Label="Cards worth a Wonder Pick">
+                @* The two count columns are inputs to the last one, not the point of the table.
+                   Named as what they do to the figure beside them, and dropped first on a phone,
+                   so the column that is this page's own answer is the one that survives. *@
+                <h2 class="h6 mt-3">What each card contributes</h2>
+                <DataTable Label="What each card in the offer contributes to its value">
                     <thead>
                         <tr>
                             <th scope="col">card</th>
-                            <th scope="col" class="num">you own</th>
-                            <th scope="col" class="num">still want</th>
+                            <th scope="col" class="num" data-pri="3">you hold</th>
+                            <th scope="col" class="num" data-pri="3">still want</th>
                             <th scope="col" class="num">worth to you</th>
                         </tr>
                     </thead>
@@ -174,8 +193,8 @@ else
                                         <span class="glyphs @rung.GlyphClass ms-1" title="@rung.Symbol">@rung.Glyphs</span>
                                     }
                                 </td>
-                                <td class="num">@(c.Owned > 0 ? c.Owned.ToString() : "—")</td>
-                                <td class="num">@(c.Wanted > 0 ? c.Wanted.ToString() : "—")</td>
+                                <td class="num" data-pri="3">@(c.Owned > 0 ? c.Owned.ToString() : "—")</td>
+                                <td class="num" data-pri="3">@(c.Wanted > 0 ? c.Wanted.ToString() : "—")</td>
                                 <td class="num">
                                     @if (c.Value > 0)
                                     {

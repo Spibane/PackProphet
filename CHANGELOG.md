@@ -76,6 +76,28 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **Pin a pack to the front of the log picker.** A star on each booster; pinned packs lead the
+  grid whatever the series dropdown says, which is the trip the pin exists to save. Persisted
+  per collection, and drawn as pinned wherever it appears, so a pack from another series never
+  reads as part of the one below it.
+- **The card grid no longer flickers while scrolling.** `<Virtualize>` was given a row height
+  computed from an assumed 1,000px-wide grid; a row is as tall as a tile is wide, so on a 375px
+  phone at 6 columns the figure was about 2.5x the truth. It rendered a fraction of the rows the
+  screen had room for, saw the gap, and rendered again — on every scroll event. The height is now
+  measured from the laid-out row and re-measured whenever the grid changes width.
+- **Log a pack keeps its header on screen.** "Add N to collection" sat above a grid of several
+  hundred cards, so tapping the last card of a pack meant scrolling back past every card you had
+  just tapped to reach it. The bar that did stay counted the cards in the pack — a fixed number
+  nobody is tracking — and now reports **picked 3 of 5** instead, which is the figure that moves
+  and the one that says when a pack is fully logged.
+- **Dates on the history chart printed on top of each other.** The axis marked both ends, every
+  month start and every Monday, with no rule against two marks landing in the same place — and a
+  label is about three days wide. 24 August is a Monday one day before the 25th, so the last two
+  dates were drawn over each other; 1 August beside the Monday after it did the same. A mark is
+  now skipped when it cannot clear the labels already placed, ends first, then months, then weeks.
+- The grid's image loader could not honour a request to re-check its images: `refresh()` read a
+  variable that was never assigned, so every call threw and was swallowed.
+
 - **Licence and source are offered inside the app.** Settings now carries a "Licence and
   source" section linking the licence text, the repository, every upstream data source and the
   trademark disclaimer. AGPL section 13 applies to network interaction, so the offer has to

@@ -19,7 +19,7 @@ const MAX_INFLIGHT = 6;
 // it ever starts — so a bigger window costs queue depth, not requests.
 const PRELOAD_MARGIN = '1200px 0px';
 
-let io = null, mo = null;
+let io = null, mo = null, host = null;
 let queue = [], inflight = 0;
 let loaded = 0, failed = 0;
 
@@ -134,6 +134,7 @@ function scan(node, add) {
 }
 
 export function init(root) {
+    host = root;
     io = new IntersectionObserver(entries => {
         for (const e of entries) e.isIntersecting ? enqueue(e.target) : drop(e.target);
         pump();
@@ -184,5 +185,5 @@ export function refresh() {
 
 export function dispose() {
     io?.disconnect(); mo?.disconnect();
-    io = mo = null; queue = []; prefetchQueue = []; inflight = 0;
+    io = mo = host = null; queue = []; prefetchQueue = []; inflight = 0;
 }

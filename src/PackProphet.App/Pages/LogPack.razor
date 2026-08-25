@@ -66,41 +66,64 @@ else if (_pack is null)
            than the tiles they labelled — eleven sets meant roughly thirty rem of headings and
            margins — so the set code lives on the tile instead. *@
         <div class="pack-picker" style="grid-template-columns:repeat(@Session.PackColumns,1fr)">
-            @foreach (var pack in PacksInSeries())
+            @foreach (var pack in PacksShown())
             {
                 var name = pack.Split(':')[1];
                 var set = pack.Split(':')[0];
-                <button class="pack-choice" @onclick="() => Choose(pack)" disabled="@Busy.IsBusy"
-                        title="@name — @set @Session.Sets.DisplayName(set)">
-                    @* Stacked, not layered. Set logo above, booster below. Layering them in
-                       one box looked wrong because the art is sized to `contain`, so the logo
-                       bled out around its edges.
+                var pinned = Session.IsPackPinned(pack);
 
-                       The booster is a `cover` background over a drawn placeholder: when the
-                       art exists it fills the box completely and the placeholder is invisible;
-                       when it does not (Paradox Drive has none) the placeholder shows. No
-                       error handling and no state to get stuck in, unlike an <img> with
-                       onerror, which hid a tile permanently after one aborted request. *@
-                    <span class="logo" style="background-image:url('@PocketCard.SetLogoUrl(set)')"
-                          aria-hidden="true"></span>
-                    <span class="art">
-                        <span class="art-img"
-                              style="background-image:url('@Session.PackArtUrl(pack)')"></span>
-                    </span>
-                    <span class="nm">@name</span>
-                    <span class="st">@set</span>
-                    @if (GameRules.IsLimitedTimePack(name))
-                    {
-                        <span class="ltd">ltd</span>
-                    }
-                </button>
+                @* A cell rather than a bare button, because the pin has to be a control of its
+                   own: nesting a button inside a button is invalid, and the browser resolves it
+                   by dropping one of them. *@
+                <div class="pack-cell @(pinned ? "pinned" : "")">
+                    <button class="pack-choice" @onclick="() => Choose(pack)" disabled="@Busy.IsBusy"
+                            title="@name — @set @Session.Sets.DisplayName(set)">
+                        @* Stacked, not layered. Set logo above, booster below. Layering them in
+                           one box looked wrong because the art is sized to `contain`, so the logo
+                           bled out around its edges.
+
+                           The booster is a `cover` background over a drawn placeholder: when the
+                           art exists it fills the box completely and the placeholder is invisible;
+                           when it does not (Paradox Drive has none) the placeholder shows. No
+                           error handling and no state to get stuck in, unlike an <img> with
+                           onerror, which hid a tile permanently after one aborted request. *@
+                        <span class="logo" style="background-image:url('@PocketCard.SetLogoUrl(set)')"
+                              aria-hidden="true"></span>
+                        <span class="art">
+                            <span class="art-img"
+                                  style="background-image:url('@Session.PackArtUrl(pack)')"></span>
+                        </span>
+                        <span class="nm">@name</span>
+                        <span class="st">@set</span>
+                        @if (GameRules.IsLimitedTimePack(name))
+                        {
+                            <span class="ltd">ltd</span>
+                        }
+                    </button>
+
+                    @* Always on the tile rather than revealed on hover: this page is used on a
+                       phone beside the game, where there is no hover, and a control you can only
+                       find with a mouse is no control at all. *@
+                    <button class="pin-pack @(pinned ? "on" : "")" aria-pressed="@pinned"
+                            @onclick="() => Session.SetPackPinned(pack, !pinned)"
+                            aria-label="@(pinned ? $"Unpin {name}" : $"Pin {name}")"
+                            title="@(pinned
+                                     ? $"{name} is pinned to the front. Unpin it and it goes back to sitting with its series."
+                                     : $"Pin {name} to the front, whichever series is showing.")">
+                        @(pinned ? "\u2605" : "\u2606")
+                    </button>
+                </div>
             }
         </div>
     </PageShell>
 }
 else
 {
-    <div class="page-head">
+    @* Pinned to the top for the whole task. The one control that finishes the job — "add N to
+       collection" — was at the top of a grid of several hundred cards, so tapping the last card of
+       a pack meant scrolling back up past everything you had just tapped to press it. The count
+       beside it is the running total, which is the other thing worth having on screen throughout. *@
+    <div class="page-head sticky-head">
         <button class="btn btn-sm btn-outline-secondary" @onclick="Reset">&larr; change pack</button>
         <h1 class="title">@_pack.Split(':')[1]</h1>
         @* The instruction has to match the view. In the tile grid a tap on a card picks it; in
@@ -186,6 +209,7 @@ else
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
               RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
               SortKeyOf="Session.Sets.SortKey"
+              Summary="@PickedSummary"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady" />
 }
 
@@ -264,6 +288,28 @@ else
             .ToArray();
     }
 
+    /// <summary>
+    /// What the picker shows: pinned packs first, then the chosen series.
+    ///
+    /// Pins ignore the series filter deliberately — a pack you open every day is the one you want
+    /// under your thumb whatever the dropdown says, and it is the trip through that dropdown the
+    /// pin exists to remove. A pinned pack is still labelled with its set, and drawn with a filled
+    /// star, so a pack from elsewhere never reads as part of the series below it.
+    ///
+    /// A pin for a pack that no longer exists is skipped rather than cleaned up: card data can
+    /// load short, and silently discarding a pin because a snapshot was thin would lose it.
+    /// </summary>
+    private IReadOnlyList<string> PacksShown()
+    {
+        var pinned = Session.PinnedPacks
+            .Where(p => _packs.Contains(p, StringComparer.Ordinal))
+            .ToList();
+
+        return pinned.Count == 0
+            ? PacksInSeries()
+            : [.. pinned, .. PacksInSeries().Where(p => !pinned.Contains(p, StringComparer.Ordinal))];
+    }
+
     private void OnSeries(ChangeEventArgs e) => _series = e.Value?.ToString() ?? _series;
 
     private void OnCols(ChangeEventArgs e)
@@ -308,6 +354,41 @@ else
     private int PickedCount(PocketCard card) => _picked.Count(c => c.Key == card.Key);
 
     /// <summary>
+    /// What the grid's own bar reports here. It is the one strip that stays on screen, and its
+    /// default -- how many cards are in scope -- answers a question nobody has on this page: the
+    /// scope is one pack, and its size is fixed. How many you have picked out of how many the pack
+    /// holds is the figure you are actually tracking, and it is the one that says when you are
+    /// done.
+    /// </summary>
+    private RenderFragment PickedSummary => @<span class="@(PackFull ? "fw-semibold text-success-emphasis" : "")">
+        @PickedLabel
+    </span>;
+
+    /// <summary>Pack sizes this set's published rates allow. Empty where the set has no rates.</summary>
+    private IReadOnlyCollection<int> PackSizes =>
+        _pack is null || Session.Odds is null
+            ? []
+            : Session.Odds.Rates.CardCounts(_pack.Split(':')[0]);
+
+    /// <summary>Whether the picked count is a full pack, so the bar can say so without a warning.</summary>
+    private bool PackFull => _picked.Count > 0 && PackSizes.Contains(_picked.Count);
+
+    /// <summary>
+    /// "picked 3 of 5", or just "picked 3" where the set has no published rates to say what a pack
+    /// holds. A set with two pack sizes says both rather than picking one, since either is right.
+    /// </summary>
+    private string PickedLabel
+    {
+        get
+        {
+            var sizes = PackSizes;
+            return sizes.Count == 0
+                ? $"picked {_picked.Count}"
+                : $"picked {_picked.Count} of {string.Join(" or ", sizes.OrderBy(n => n))}";
+        }
+    }
+
+    /// <summary>
     /// Says so when the number of cards picked is not a number this pack can hold. Null while the
     /// count is plausible, or while the set has no published rates to check against.
     /// </summary>
@@ -315,12 +396,12 @@ else
     {
         get
         {
-            if (_pack is null || _picked.Count == 0 || Session.Odds is null) return null;
+            if (_pack is null || _picked.Count == 0) return null;
+
+            var counts = PackSizes;
+            if (counts.Count == 0 || PackFull) return null;
 
             var set = _pack.Split(':')[0];
-            var counts = Session.Odds.Rates.CardCounts(set);
-            if (counts.Count == 0 || counts.Contains(_picked.Count)) return null;
-
             var sizes = counts.Count == 1
                 ? $"{counts.First()} cards"
                 : string.Join(" or ", counts.OrderBy(n => n)) + " cards";

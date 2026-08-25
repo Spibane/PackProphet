@@ -228,19 +228,16 @@ else
                nothing as the screen narrowed. Out here it can overflow its tick freely.
 
                The first and last dates are always drawn, so the range the chart covers is legible
-               even when every intermediate label has been dropped. *@
+               even when every intermediate label has been dropped. Which of the rest are drawn is
+               AxisLabels' decision — a mark too close to one already placed is left off rather
+               than printed over it. *@
             <div class="bars-axis">
+                @{ var axis = AxisLabels(); }
                 @for (var i = 0; i < _perDay.Count; i++)
                 {
-                    var day = _perDay[i].Date;
-                    var edge = i == 0 || i == _perDay.Count - 1;
-                    var major = day.Day == 1;
-                    var minor = day.DayOfWeek == DayOfWeek.Monday;
-
-                    @if (edge || major || minor)
+                    @if (axis.TryGetValue(i, out var kind))
                     {
-                        <span class="@(edge ? "edge" : major ? "major" : "minor")"
-                              style="left:@Percent(i)%">@day.ToString("d MMM")</span>
+                        <span class="@kind" style="left:@Percent(i)%">@_perDay[i].Date.ToString("d MMM")</span>
                     }
                 }
             </div>
@@ -1027,6 +1024,48 @@ else
     {
         var days = Math.Max(1, (DateTimeOffset.Now - _first).TotalDays);
         return $"{_log.Count / days:0.#} packs a day";
+    }
+
+    /// <summary>
+    /// Which days get a date under them, by column index, each with the class that sets its
+    /// priority when the axis has to thin out.
+    ///
+    /// The candidates are the two ends, the first of a month and every Monday — but a candidate is
+    /// only taken when it clears the labels already chosen. Two of them a day or so apart print on
+    /// top of each other: a Monday beside the last day, or a month that starts mid-week beside the
+    /// Monday after it. Marking a day is no use if the mark cannot be read.
+    ///
+    /// Ends are placed first, since they are what makes the range legible at all, then month
+    /// starts, then Mondays. Order within the axis is still by day, because the CSS pulls the
+    /// FIRST and LAST labels inside the chart rather than letting them hang off its edges.
+    ///
+    /// Clearance is a share of the chart rather than a pixel figure: a label is about a tenth of
+    /// this axis at the size it draws, and how wide the axis actually is belongs to the browser.
+    /// At the widths where even a tenth is too tight, app.css drops the weekly and monthly marks
+    /// outright and only the two ends survive.
+    /// </summary>
+    private Dictionary<int, string> AxisLabels()
+    {
+        var marks = new Dictionary<int, string>();
+        var gap = Math.Max(1, _perDay.Count / 10);
+
+        void Take(int i, string kind)
+        {
+            if (marks.Keys.All(at => Math.Abs(at - i) >= gap)) marks[i] = kind;
+        }
+
+        if (_perDay.Count == 0) return marks;
+
+        Take(0, "edge");
+        Take(_perDay.Count - 1, "edge");
+
+        for (var i = 0; i < _perDay.Count; i++)
+            if (_perDay[i].Date.Day == 1) Take(i, "major");
+
+        for (var i = 0; i < _perDay.Count; i++)
+            if (_perDay[i].Date.DayOfWeek == DayOfWeek.Monday) Take(i, "minor");
+
+        return marks;
     }
 
     /// <summary>

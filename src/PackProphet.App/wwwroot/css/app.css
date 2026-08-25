@@ -1070,6 +1070,21 @@ tr.row-best {
     .table-responsive th[data-pri="3"],
     .table-responsive td[data-pri="3"] { display: none; }
 
+    /* A column heading is two or three words in a column sized for its data, not for its name:
+       "packs per new card" in 67px wrapped to four lines, and since the tallest cell sets the row,
+       one long heading made the whole header 105px -- an eighth of the screen naming columns rather
+       than showing them.
+
+       Smaller and tighter rather than shorter. Renaming the columns would cost meaning, and the
+       heading is read once to orient and then skipped, so it can afford less weight than the
+       figures under it. balance evens the lines out instead of leaving one orphaned word. */
+    .table-responsive thead th {
+        font-size: .72rem;
+        line-height: 1.2;
+        text-wrap: balance;
+        vertical-align: bottom;
+    }
+
     /* Once the columns are narrow, a cell holding a sentence wraps into a tower and sets the height
        of the whole row — measured at 114px on Trades at 320px. Centred vertically, a one-glyph
        rarity then floats in the middle of that, which is what reads as dead space: the emptiness is

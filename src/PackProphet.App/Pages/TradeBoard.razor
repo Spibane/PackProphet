@@ -73,26 +73,6 @@ else
     </div>
 
     <PageShell Measure="PageShell.Width.Wide" Class="sections">
-        <p class="small text-body-secondary">
-            The game's wishlist is not a tracking list, it is an advertisement: the only thing it
-            does is make other players offer you those cards. A listing costs nothing but a slot and
-            slots never expire, so the best board is simply the @GameRules.TradeBoardSlots
-            <strong>tradeable cards you still want that cost the most to get any other way</strong>
-            &mdash; an unaccepted request loses you nothing. A few slots are held back for cards
-            someone plausibly has spare, so the board actually converts something.
-        </p>
-
-        @if (ShowFoilFilter)
-        {
-            <p class="small text-body-secondary">
-                <strong>Parallel foils</strong> appear here as the 1-3 diamond cards they are
-                printed as &mdash; that is the rarity the data gives them, and it is what decides
-                both trade eligibility and the dust price. They also come from one limited-time
-                pack, which makes them expensive to get any other way, so they crowd the top of the
-                list. Whether the game lets you put a foil printing on your wishlist specifically is
-                not something the card data records, so if it will not, exclude them above.
-            </p>
-        }
 
         @if (_plan is null)
         {
@@ -229,6 +209,32 @@ else
                     }
                 </tbody>
             </DataTable>
+
+        @* Why the board is built this way, under the board rather than over it. Both paragraphs
+           are worth reading once -- the game's wishlist advertises rather than tracks, and foils
+           are listed at their printed rarity -- and neither is worth 378px above the answer on
+           every later visit. The verdict and the "I have made these changes" button stay above:
+           those are the answer and the action, not the explanation. *@
+        <p class="small text-body-secondary">
+            The game's wishlist is not a tracking list, it is an advertisement: the only thing it
+            does is make other players offer you those cards. A listing costs nothing but a slot and
+            slots never expire, so the best board is simply the @GameRules.TradeBoardSlots
+            <strong>tradeable cards you still want that cost the most to get any other way</strong>
+            &mdash; an unaccepted request loses you nothing. A few slots are held back for cards
+            someone plausibly has spare, so the board actually converts something.
+        </p>
+
+        @if (ShowFoilFilter)
+        {
+            <p class="small text-body-secondary">
+                <strong>Parallel foils</strong> appear here as the 1-3 diamond cards they are
+                printed as &mdash; that is the rarity the data gives them, and it is what decides
+                both trade eligibility and the dust price. They also come from one limited-time
+                pack, which makes them expensive to get any other way, so they crowd the top of the
+                list. Whether the game lets you put a foil printing on your wishlist specifically is
+                not something the card data records, so if it will not, exclude them above.
+            </p>
+        }
 
             @* The limits of the one heuristic on this page. It is a guess about other players made
                from data about card drops, which is worth knowing before deciding whether to keep

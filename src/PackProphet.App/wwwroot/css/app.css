@@ -70,6 +70,17 @@
    here missed them: the width was declared in five places and corrected in one. */
 :root { --rarity-col: 4.1rem; }
 
+/* The type column carries a coloured pip and, above 700px, the element's name beside it. Below
+   that the name is hidden and only the 17px pip remains — but the track stayed at 5.4rem, or
+   4.2rem on a phone, leaving 50px of every row empty. Four declarations again, so the width goes
+   in a token rather than in each of them.
+
+   The floor is set by the column HEADER, not the pip: the header is a sort button reading "type"
+   plus its caret, which needs 49px. That is what keeps the column at 3.2rem rather than the 1.5rem
+   the pip alone would want, and it is the reason this reclaims 16px a row instead of 50. */
+:root { --type-col: 5.4rem; }
+@media (width <= 700px) { :root { --type-col: 3.2rem; } }
+
 :root {
     --measure-form: 38rem;
     --measure-text: 44rem;
@@ -677,7 +688,7 @@ main:focus { outline: none; }
         var(--art-w)         /* art          */
         minmax(6rem, 1fr)    /* name         */
         4.6rem               /* set + number */
-        5.4rem               /* type         */
+        var(--type-col)     /* type         */
         4rem                 /* stage        */
         var(--rarity-col)   /* rarity       */
         2.4rem               /* hp           */
@@ -1581,17 +1592,33 @@ tr.row-best {
    scan a collection by. Type and rarity survive to the smallest size. */
 
 @media (width <= 1100px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem var(--rarity-col) 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) 1.8rem 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) 1.8rem 2.4rem 4.2rem; }
     .card-line .c-a2 { display: none; }
 }
 @media (width <= 900px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem var(--rarity-col) 1.8rem 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) 1.8rem 2.4rem 4.2rem; }
     .card-line .c-a1, .card-line .c-a2, .card-line .c-ab, .card-line .c-hp { display: none; }
 }
 @media (width <= 560px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(5rem,1fr) 4.2rem var(--rarity-col) 1.8rem 2.2rem 4rem; }
-    .card-line .c-id, .card-line .c-st { display: none; }
-    .card-line .c-ty { font-size: .84rem; }
+    /* Seven columns in 375px. Even with the name at its 5rem minimum the row needed 419px, so the
+       list scrolled sideways on a phone -- the name could not take the 1fr it is asking for, and
+       every row was 44px too wide. The shortfall comes back out of spacing and minimums rather
+       than out of a column, since each of the seven earns its place: the pick count is empty in
+       the collection but not when this grid is embedded in a picker. */
+    .card-line {
+        grid-template-columns: var(--art-w) minmax(4rem,1fr) var(--rarity-col) 1.8rem 2rem 3.6rem;
+        gap: .3rem;
+        padding-inline: .35rem;
+    }
+    /* Type joins the columns already dropped at each step up the file. Below 700px it was only a
+       17px pip anyway, but the column still cost 51px because its header is a sort button reading
+       "type" -- so two thirds of the width was spent labelling a column rather than showing it.
+       The element is on the card art in the same row, and on the card's own page.
+
+       That is also what buys the name back: seven columns did not fit 375px even with the name at
+       its minimum, so the list scrolled sideways and the +/- buttons sat off-canvas. Six fit, and
+       the name gets the difference. */
+    .card-line .c-id, .card-line .c-st, .card-line .c-ty { display: none; }
 }
 
 /* ================================================================= hover detail

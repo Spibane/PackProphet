@@ -19,6 +19,10 @@ running app at 375x812 unless another width is named.
   collection's, which is what you called a save slot.
 - **Split a pack budget across packs** — how many of each to buy for a fixed number of packs,
   rather than sinking all of them into whichever pack currently ranks first.
+- **Pin a pack to the front of the log picker.** A star on each booster; pinned packs lead the
+  grid whatever the series dropdown says, which is the trip the pin exists to save. Persisted
+  per collection, and drawn as pinned wherever it appears, so a pack from another series never
+  reads as part of the one below it.
 
 ### Layout
 
@@ -73,13 +77,6 @@ running app at 375x812 unless another width is named.
   an unhandled exception; it also registered the dead grid as the target the command palette jumps
   focus to. The command palette and the undo accelerator had the same shape and left a document
   listener pointing at a component that had gone.
-
-### Also unreleased
-
-- **Pin a pack to the front of the log picker.** A star on each booster; pinned packs lead the
-  grid whatever the series dropdown says, which is the trip the pin exists to save. Persisted
-  per collection, and drawn as pinned wherever it appears, so a pack from another series never
-  reads as part of the one below it.
 - **The card grid no longer flickers while scrolling.** `<Virtualize>` was given a row height
   computed from an assumed 1,000px-wide grid; a row is as tall as a tile is wide, so on a 375px
   phone at 6 columns the figure was about 2.5x the truth. It rendered a fraction of the rows the
@@ -90,6 +87,9 @@ running app at 375x812 unless another width is named.
   just tapped to reach it. The bar that did stay counted the cards in the pack — a fixed number
   nobody is tracking — and now reports **picked 3 of 5** instead, which is the figure that moves
   and the one that says when a pack is fully logged.
+
+### Also unreleased
+
 - **Dates on the history chart printed on top of each other.** The axis marked both ends, every
   month start and every Monday, with no rule against two marks landing in the same place — and a
   label is about three days wide. 24 August is a Monday one day before the 25th, so the last two

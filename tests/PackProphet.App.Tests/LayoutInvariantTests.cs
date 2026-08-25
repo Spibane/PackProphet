@@ -58,11 +58,13 @@ public class LayoutInvariantTests
     }
 
     [Theory]
-    // The rows that show a card's rarity as glyphs. Four diamonds are the widest a rarity gets, and
-    // an undersized track does not overflow — the row's own ellipsis rule truncates it, so a
-    // 4-diamond card silently renders as a 2-diamond one.
+    // The rows that lay a rarity out on a fixed CSS-grid track. Four diamonds are the widest a
+    // rarity gets, and an undersized track does not overflow — the row's own ellipsis rule
+    // truncates it, so a 4-diamond card silently renders as a 2-diamond one.
+    //
+    // wish-row is deliberately absent: it is a real table now, and a table column sizes itself to
+    // its content, so there is no track to get wrong.
     [InlineData(".card-line", ".c-rr")]
-    [InlineData(".wish-row", ".rt")]
     [InlineData(".supplied-row", ".rt")]
     public void Every_variant_sizes_its_rarity_column_from_the_shared_token(string row, string cell)
     {

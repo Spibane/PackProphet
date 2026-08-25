@@ -209,7 +209,14 @@ main > * { flex-shrink: 0; }
 
 /* ================================================================= nav and bars */
 
+/* Named, because the desktop More menu hangs off the bottom of this bar and a popover is in the
+   top layer -- it is positioned against the viewport, so it cannot ask its opener how tall the bar
+   is. One token, used by both, rather than a number in the popover that drifts the first time this
+   bar's type scale changes. Matches the content height it already had. */
+:root { --nav-h: 2.95rem; }
+
 .app-nav {
+    min-block-size: var(--nav-h);
     display: flex; align-items: center; gap: .25rem; flex-wrap: wrap;
     padding: .4rem calc(.75rem + var(--safe-r)) .4rem calc(.75rem + var(--safe-l));
     background: var(--bs-tertiary-bg);
@@ -222,6 +229,13 @@ main > * { flex-shrink: 0; }
 }
 .app-nav .nav-item:hover { background: var(--bs-secondary-bg); }
 .app-nav .nav-item.active { background: var(--bs-primary); color: #fff; }
+/* The More button is a button, so it needs the parts of a link it does not inherit. Same class as
+   its neighbours because it sits in the same row and should read as one of them. */
+.app-nav .nav-more-btn {
+    border: 0; background: none; font: inherit; cursor: pointer;
+    display: inline-flex; align-items: center; gap: .25rem;
+}
+.app-nav .nav-more-btn .caret { font-size: .7em; opacity: .7; }
 
 /* Theme cycler. Pushed to the far end by ms-auto in the markup; the word collapses on narrow
    screens so the glyph alone survives beside the nav links. */
@@ -2278,6 +2292,28 @@ tr.row-best {
     box-shadow: 0 -4px 24px rgba(0, 0, 0, .25);
 }
 .nav-more::backdrop { background: rgba(0, 0, 0, .35); }
+
+/* A sheet from the bottom is right where it is opened from a bar at the bottom. On a desktop it
+   is opened from a button at the top, and a panel that flies in from the far edge of the screen
+   loses the connection to the control that summoned it. Same markup, hung under the top bar
+   instead.
+
+   No anchor positioning: it is still not safe to rely on. The offset comes from --nav-h, which the
+   bar itself is sized by, so the two cannot disagree. */
+@media (width >= 1057px) {
+    .nav-more {
+        inset: var(--nav-h) .75rem auto auto;
+        margin: 0;
+        width: min(28rem, 92vw);
+        padding: .5rem;
+        border: 1px solid var(--bs-border-color);
+        border-top: 1px solid var(--bs-border-color);
+        border-radius: .6rem;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, .3);
+    }
+    /* Light dismiss still works; it just should not dim a whole desktop screen for a dropdown. */
+    .nav-more::backdrop { background: transparent; }
+}
 .nav-more-head {
     margin: .25rem .5rem .5rem;
     font-size: .72rem; letter-spacing: .08em; text-transform: uppercase;
@@ -2299,7 +2335,10 @@ tr.row-best {
     .app-nav { display: none; }
 }
 @media (width >= 1057px) {
-    .tab-bar, .nav-more { display: none; }
+    /* The tab bar goes; its menu does not, because the top nav now opens the same component. Both
+       menus are in the DOM at once and only one is ever reachable -- the other's opener is the bar
+       that is hidden -- so hiding by width would have hidden the one still in use. */
+    .tab-bar { display: none; }
 }
 
 @media (width <= 1056px) {

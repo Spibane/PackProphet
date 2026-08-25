@@ -2,25 +2,25 @@
 @inject PaletteSwitch Palette
 @implements IDisposable
 
+@* The same four destinations the tab bar makes primary, in the same order, with everything else
+   behind the same disclosure. Twelve links inline needed 1242px of a 1265px row at 1280px, so the
+   theme button dropped to a second line there and the whole nav wrapped at every width below --
+   well above the 1057px where the tab bar takes over, which was supposed to be the point at which
+   this nav stopped having to cope.
+
+   Matching the tab bar rather than picking a roomier desktop split: which four destinations are
+   the daily ones does not change with the width of the screen, and a nav whose contents reshuffle
+   between a laptop and a phone is one you have to re-learn. *@
 <nav class="app-nav">
     <span class="brand">PackProphet</span>
-    <NavLink class="nav-item" href="log">Log a pack</NavLink>
     <NavLink class="nav-item" href="collection" Match="NavLinkMatch.All">Collection</NavLink>
     <NavLink class="nav-item" href="packs">Which pack</NavLink>
-    <NavLink class="nav-item" href="decks">Decks</NavLink>
+    <NavLink class="nav-item" href="log">Log a pack</NavLink>
     <NavLink class="nav-item" href="wonder">Wonder</NavLink>
-    <NavLink class="nav-item" href="trades">Trades</NavLink>
-    <NavLink class="nav-item" href="board">In-game list</NavLink>
-    @* Only with something to compare: a link that always says "you have one collection" is a dead
-       end in a nav that is already long. *@
-    @if (Session.MultipleProfiles)
-    {
-        <NavLink class="nav-item" href="compare">Compare</NavLink>
-    }
-    <NavLink class="nav-item" href="resources">Resources</NavLink>
-    <NavLink class="nav-item" href="wishlists">Wishlists</NavLink>
-    <NavLink class="nav-item" href="history">History</NavLink>
-    <NavLink class="nav-item" href="settings">Settings</NavLink>
+    <button class="nav-item nav-more-btn" popovertarget="desk-more">
+        More
+        <span class="caret" aria-hidden="true">&#9662;</span>
+    </button>
 
     @* The hotkey alone would be invisible, and on a phone there is no Ctrl+K, so the palette gets a
        button. The shortcut is printed on it rather than hidden in a tooltip. *@
@@ -82,6 +82,8 @@
         <span class="theme-label">@Label(Session.Theme)</span>
     </button>
 </nav>
+
+<MoreMenu Id="desk-more" />
 
 @code {
     protected override void OnInitialized() => Session.Changed += OnChanged;

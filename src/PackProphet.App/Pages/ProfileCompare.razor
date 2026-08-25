@@ -6,7 +6,7 @@
 
 @if (!Session.Ready)
 {
-    <p class="p-4">Loading card data&hellip;</p>
+    <Loading />
 }
 else if (!Session.MultipleProfiles)
 {
@@ -50,7 +50,8 @@ else
     @* Two mechanics, and the split between them is what the page is for. A Share is one-way and
        free but stops at 4 diamonds; a trade is a same-rarity swap that costs both accounts dust
        and a stamina. So "what does my alt have that my main needs" is not one list. *@
-    <p class="p-3 pb-0 small text-body-secondary" style="max-inline-size:var(--measure-wide)">
+    <PageShell Measure="PageShell.Width.Wide" Class="pb-0">
+    <p class="small text-body-secondary mb-0">
         Two ways to move a card between your own accounts, and which one applies is decided
         entirely by rarity. <strong>Shares</strong> carry 1 to 4 diamonds one way &mdash; nothing
         comes back, nothing is spent, and each account can receive
@@ -59,17 +60,20 @@ else
         both sides pay the rarity's shinedust and one Trade Stamina of their own. The balances used
         are whatever each collection last recorded on its own Resources page.
     </p>
+    </PageShell>
 
     @if (_swaps is null)
     {
-        <p class="p-3">Working&hellip;</p>
+        <PageShell Measure="PageShell.Width.Wide"><p class="mb-0">Working&hellip;</p></PageShell>
     }
     else if (_swaps.Nothing)
     {
-        <p class="p-3">
-            Nothing to move. Neither collection holds a spare the other still wants at a rarity
-            that can be shared or traded.
-        </p>
+        <PageShell Measure="PageShell.Width.Wide">
+            <p class="mb-0">
+                Nothing to move. Neither collection holds a spare the other still wants at a
+                rarity that can be shared or traded.
+            </p>
+        </PageShell>
     }
     else
     {

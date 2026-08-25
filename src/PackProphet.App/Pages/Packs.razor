@@ -7,7 +7,7 @@
 
 @if (!Session.Ready)
 {
-    <p class="p-4">Loading card data&hellip;</p>
+    <Loading />
 }
 else
 {
@@ -144,9 +144,11 @@ else
         }
     </div>
 
+    <PageShell>
+
     @if (_outstanding == 0)
     {
-        <Notice Severity="Notice.Level.Success" Class="m-3">
+        <Notice Severity="Notice.Level.Success">
             Nothing outstanding for this target. Raise the rarity or copies to aim higher.
         </Notice>
     }
@@ -157,7 +159,7 @@ else
            rather than below the ranking table &mdash; that table runs to dozens of rows across
            every priceable pack, and a button only reachable by scrolling past all of them may as
            well not exist. *@
-        <div class="d-flex flex-wrap gap-2 px-3 mb-3">
+        <div class="d-flex flex-wrap gap-2 mb-3">
             @if (!IsWishScope)
             {
                 <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleAdvisor">
@@ -177,7 +179,7 @@ else
 
         @if (_advisorOpen && !IsWishScope)
         {
-            <div class="px-3 pb-3">
+            <div class="mb-3">
                 <DataTable Label="Cost per rarity, at one copy and two" Fit="true">
                     <thead>
                         <tr><th scope="col">rarity</th><th scope="col" class="num">1 copy</th><th scope="col" class="num">2 copies</th></tr>
@@ -203,7 +205,7 @@ else
 
         @if (_batchOpen)
         {
-            <div class="px-3 pb-3">
+            <div class="mb-3">
                 @* The game sells ten of a set in one action, so the batch gets a real answer
                    rather than being left to intuition. *@
                 <p class="small text-body-secondary">
@@ -274,7 +276,7 @@ else
 
         @if (_allocateOpen)
         {
-            <div class="px-3 pb-3">
+            <div class="mb-3">
                 @* No single pack can complete a multi-set target, so a fixed budget is worth
                    splitting rather than sinking into whichever pack currently ranks first. *@
                 <p class="small text-body-secondary">
@@ -331,7 +333,7 @@ else
 
         @if (_pointsOpen)
         {
-            <div class="px-3 pb-3">
+            <div class="mb-3">
                 @* Pack points are a byproduct of opening rather than an alternative to it: you
                    earn five per pack whatever you do. So this panel asks which cards deserve a
                    limited, per-set budget rather than "buy or pull?". *@
@@ -623,7 +625,7 @@ else
 
            The buttons above the table stay above it: that table runs to dozens of rows, and a
            control only reachable by scrolling past all of them may as well not exist. *@
-        <div class="summary px-3 py-2">
+        <div class="summary">
             <div class="stat">
                 <span class="label">cards still needed</span>
                 <span class="value">@_outstanding</span>
@@ -665,7 +667,7 @@ else
 
         @if (_unreachable.Count > 0)
         {
-            <Notice Severity="Notice.Level.Warning" Class="mx-3">
+            <Notice Severity="Notice.Level.Warning">
                 <strong>@_unreachable.Sum(d => d.Remaining) card(s) cannot be obtained right now.</strong>
                 They are left out of the estimate above rather than silently counted &mdash; so
                 that figure covers @_priceable cards, not all @_outstanding. The packs that would
@@ -681,7 +683,7 @@ else
             @* These have no pack row to appear in, because no pack has ever sold them. The only
                routes are a trade or another event, so they are called out rather than left to be
                inferred from an empty ranking. *@
-            <Notice Severity="Notice.Level.Info" Class="mx-3">
+            <Notice Severity="Notice.Level.Info">
                 <strong>@_neverInPack.Count card(s) never came from a pack.</strong>
                 An event or a promo only &mdash; opening packs will never produce them.
                 <div class="supplied mt-2">
@@ -712,6 +714,8 @@ else
         }
 
     }
+
+    </PageShell>
 }
 
 @code {

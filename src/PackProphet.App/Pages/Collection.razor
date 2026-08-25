@@ -8,7 +8,7 @@
 
 @if (!Session.Ready)
 {
-    <p class="p-4">Loading card data&hellip;</p>
+    <Loading />
 }
 else
 {
@@ -164,6 +164,7 @@ else
         </div>
     }
 
+    <PageShell Flush="true">
     <CardGrid Cards="Filtered" CountOf="Session.CountOf" Columns="Session.GridColumns"
               OnAdjust="OnAdjust" OnSweep="OnSweep" OnSet="OnSet"
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
@@ -270,6 +271,7 @@ else
             }
         </ToolbarExtras>
     </CardGrid>
+    </PageShell>
 }
 
 @code {

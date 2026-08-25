@@ -6,7 +6,7 @@
 
 @if (!Session.Ready)
 {
-    <p class="p-4">Loading card data&hellip;</p>
+    <Loading />
 }
 else
 {
@@ -126,7 +126,7 @@ else
                     <p class="why mb-0">@Why(a)</p>
                 </div>
 
-                <div class="summary px-0 py-2">
+                <div class="summary">
                     <div class="stat">
                         <span class="label">expected value</span>
                         <span class="value">@Fmt(a.ExpectedValue) packs</span>

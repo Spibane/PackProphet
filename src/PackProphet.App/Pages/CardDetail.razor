@@ -8,7 +8,7 @@
 
 @if (!Session.Ready)
 {
-    <p class="p-4">Loading card data&hellip;</p>
+    <Loading />
 }
 else if (_card is null)
 {
@@ -44,7 +44,8 @@ else
         </span>
     </div>
 
-    <div class="card-detail p-3">
+    <PageShell>
+    <div class="card-detail">
         <div class="art">
             @* Background rather than <img>: a failed load leaves the placeholder instead of a
                broken-image gap, with no error handling needed. *@
@@ -333,6 +334,7 @@ else
             }
         </div>
     </div>
+    </PageShell>
 
     </div>@* .detail-keys *@
 }

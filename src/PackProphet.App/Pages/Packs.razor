@@ -64,11 +64,10 @@ else
             }
         </select>
 
-        <label class="form-check form-switch small mb-0"
-               title="Premium is a +50% pack rate, so it changes every timeline on this page">
-            <input class="form-check-input" type="checkbox" checked="@Premium" @onchange="OnPremium" />
-            premium
-        </label>
+        @* No premium switch here. It is a subscription -- set once, changed almost never -- and a
+           control that permanent does not earn a place in a bar you pass through every time you
+           ask which pack to open. It lives on Resources, beside the pack rate it modifies and the
+           hourglass balance it is read against, which is where the arithmetic it changes is. *@
 
         @* One chip per rarity, carrying its own copy count. Selection and quantity are the
            same fact — a rarity you want zero of is one you ignore — so a single control says
@@ -85,7 +84,13 @@ else
             <summary>
                 <span class="ttl">collecting</span>
                 <span class="cur">@PlanSummary</span>
-                <span class="scope">@(PlanScope is null ? "every set" : $"{ScopedSet} only")</span>
+                @* Only when it is not the default. "every set" is what a plan does unless told
+                   otherwise, so saying it spends a line on a phone reporting the absence of a
+                   decision; "A1 only" is a decision and is worth the room. *@
+                @if (PlanScope is not null)
+                {
+                    <span class="scope">@ScopedSet only</span>
+                }
                 @if (_pending)
                 {
                     <span class="chip-pending" title="Applying shortly — keep tapping to make more changes">
@@ -1468,14 +1473,6 @@ else
                 _advisor = [];   // stale for the new availability; repriced only if reopened
                 Recompute();
             });
-    }
-
-    private void OnPremium(ChangeEventArgs e)
-    {
-        // Affects only the packs-to-calendar-time conversion, so no re-ranking is needed and
-        // the change is instant — which is why this one gets no busy indicator.
-        var on = e.Value is bool b && b;
-        Session.Mutate(p => p with { Resources = p.Resources with { Premium = on } }, undoable: false);
     }
 
     public async ValueTask DisposeAsync()

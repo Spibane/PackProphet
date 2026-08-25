@@ -41,6 +41,22 @@
         </label>
     </div>
 
+    @* Beside the gap bar because it is the same kind of setting: how much a page explains itself.
+       Both are dismissible in place, and this is where a dismissal is undone. *@
+    <div class="form-check mb-4">
+        <input class="form-check-input" type="checkbox" id="wonderintro"
+               checked="@Session.ShowWonderIntro"
+               @onchange="e => Session.SetShowWonderIntro((bool)(e.Value ?? false))" />
+        <label class="form-check-label" for="wonderintro">
+            Explain what Wonder Pick decides
+            <span class="d-block small text-body-secondary">
+                A paragraph on the Wonder Pick page separating what it works out &mdash; the bar an
+                offer has to clear to be worth a stamina &mdash; from what the game's own offer
+                screen already shows you. Worth reading once.
+            </span>
+        </label>
+    </div>
+
     @* The plan drives every estimate in the app — the ranking, the completion figures, the point
        shop, the trade board — so it is editable here as well as on the Packs page. *@
     <h2>What counts as complete</h2>

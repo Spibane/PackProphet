@@ -94,6 +94,30 @@
         });
     </script>
 
+    <!-- A popover is in the top layer, so it is positioned against the viewport and cannot ask its
+         opener where it is: CSS alone can pin it to a screen edge and nothing else. Pinned right,
+         the desktop menu opened at the far corner while its button sits fifth from the left, which
+         reads as an unrelated panel rather than that button's menu.
+
+         Anchor positioning would do this in CSS, and is not yet safe to rely on across the
+         browsers this has to work in. So the opener's own left edge is measured on the way open
+         and handed to the stylesheet as a custom property; the sheet still decides whether to use
+         it, which is how the phone keeps its bottom sheet. Measured at beforetoggle so the value
+         is set before the first paint of the open state. -->
+    <script>
+        document.addEventListener('beforetoggle', e => {
+            const menu = e.target;
+            if (e.newState !== 'open' || !menu.matches || !menu.matches('[popover].nav-more')) return;
+
+            const opener = document.querySelector('[popovertarget="' + menu.id + '"]');
+            if (!opener) return;
+
+            const box = opener.getBoundingClientRect();
+            menu.style.setProperty('--open-x', box.left + 'px');
+            menu.style.setProperty('--open-y', box.bottom + 'px');
+        }, true);
+    </script>
+
     <!-- Resolved against the BASE href, not the current URL. A deep link like /packs is served
          index.html by the Pages 404 fallback, so a bare relative path would register
          /packs/service-worker.js — a 404, and a scope that covers nothing. -->

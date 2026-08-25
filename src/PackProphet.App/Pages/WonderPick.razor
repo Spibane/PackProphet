@@ -89,13 +89,24 @@ else
                hidden below 600px by design, and this is exactly the page whose purpose is easy to
                mistake for something the game already does. The offer screen shows the five cards
                and how many of each you hold; the thing it cannot show is the bar. *@
-            <p class="lead-note">
-                The game already shows the @GameRules.WonderPickCardsShown cards and how many of
-                each you hold. What it cannot show is <strong>the bar</strong>: how good an offer
-                has to be before it is worth one of your @GameRules.StaminaCap stamina. That
-                depends on the offers you have been getting, not on this one &mdash; so log every
-                offer, taken or skipped, and the bar comes from your own distribution.
-            </p>
+            @* Dismissible and persisted, like the collection's gap strip. It is a thing you need
+               told once; after that it is six lines above the control you came here to use, and it
+               would never go away on its own because it is a standing fact rather than a state
+               that resolves. Dismissing hides the paragraph, not the page. *@
+            @if (Session.ShowWonderIntro)
+            {
+                <p class="lead-note">
+                    The game already shows the @GameRules.WonderPickCardsShown cards and how many
+                    of each you hold. What it cannot show is <strong>the bar</strong>: how good an
+                    offer has to be before it is worth one of your @GameRules.StaminaCap stamina.
+                    That depends on the offers you have been getting, not on this one &mdash; so
+                    log every offer, taken or skipped, and the bar comes from your own
+                    distribution.
+                    <button class="x" @onclick="() => Session.SetShowWonderIntro(false)"
+                            title="Hide this note for good. Settings brings it back."
+                            aria-label="Hide the explanation">&times;</button>
+                </p>
+            }
             <p class="text-body-secondary">
                 Tap the @GameRules.WonderPickCardsShown cards you have been offered. You see all
                 of them and receive <strong>one at random</strong>, so the only decision is

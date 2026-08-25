@@ -1195,6 +1195,18 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
+    /// <summary>Whether Wonder Pick still shows the paragraph explaining what it decides.</summary>
+    public bool ShowWonderIntro => State.Prefs.ShowWonderIntro;
+
+    public void SetShowWonderIntro(bool show)
+    {
+        if (show == ShowWonderIntro) return;
+
+        State = State with { Prefs = State.Prefs with { ShowWonderIntro = show } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
     /// <summary>
     /// Evolution chains you own part of. Memoised over the card data; the REPORT is cached
     /// separately, since it depends on the collection.

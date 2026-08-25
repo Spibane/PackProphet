@@ -434,6 +434,12 @@ main:focus { outline: none; }
     width: 1px; align-self: stretch; margin: 0 .1rem;
     background: var(--bs-border-color);
 }
+/* A divider only divides when the things it sits between are on the same line. Once the bar wraps
+   -- which below 600px it always does -- it lands at the end of a row as a stray tick with nothing
+   on its far side. The wrap itself is the separation there. */
+@media (width < 600px) {
+    .page-tools > .bar-sep { display: none; }
+}
 
 /* The title is the one thing every header has, so it gets one definition rather than a <strong>
    styled slightly differently on each page. */
@@ -484,7 +490,13 @@ main:focus { outline: none; }
 .set-picker > summary:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
 .set-picker > summary .cur { font-weight: 600; }
 .set-picker > summary .pct { color: var(--bs-secondary-color); font-variant-numeric: tabular-nums; }
-.set-picker > summary .hint { margin-left: auto; font-size: .82rem; color: var(--bs-secondary-color); }
+/* Pushed to the far edge only where there is an edge to push to. At 375px `margin-left: auto`
+   consumed the last of the line and dropped the pill onto a row of its own, which is the row the
+   fold was meant to save. Below the phone breakpoint it just follows the text. */
+@media (width >= 600px) {
+    .set-picker > summary .hint,
+    .rarity-plan > summary .hint,
+    }
 .set-picker-body {
     display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
     padding: .1rem calc(.75rem + var(--safe-r)) .5rem calc(.75rem + var(--safe-l));
@@ -548,6 +560,47 @@ main:focus { outline: none; }
 .summary .value.fs-6 { font-size: 1.05rem !important; font-weight: 700; }
 .summary .sub { font-size: .86rem; color: var(--bs-secondary-color); }
 
+/* The affordance on all three fold-away panels. It read as bare grey text saying "change", which
+   on pages made largely of links is a link — so it looked like somewhere to navigate to rather
+   than something to open in place. A bordered pill with a caret that turns says what it is: a
+   control belonging to this row, in one of two states.
+
+   The caret is the state, not the word: "change" stays put while open, because a control whose
+   label flips to "close" makes you read it every time to find out where you are. */
+.hint {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .05rem .45rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 1rem;
+    background: var(--bs-body-bg);
+    color: var(--bs-secondary-color);
+    font-size: .78rem; line-height: 1.5;
+    white-space: nowrap;
+}
+.hint::after {
+    content: "";
+    inline-size: .42rem; block-size: .42rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-1px) rotate(45deg);
+    transition: transform .12s ease;
+}
+details[open] > summary .hint::after { transform: translateY(1px) rotate(-135deg); }
+summary:hover .hint { border-color: var(--bs-primary); color: var(--bs-body-color); }
+
+@media (prefers-reduced-motion: reduce) {
+    .hint::after { transition: none; }
+}
+
+/* Marker removed on all three: the caret in the pill is the disclosure signal, and two of them
+   pointing different ways on one row is worse than none. */
+.set-picker > summary,
+.rarity-plan > summary,
+.board-tuning > summary { list-style: none; }
+.set-picker > summary::-webkit-details-marker,
+.rarity-plan > summary::-webkit-details-marker,
+.board-tuning > summary::-webkit-details-marker { display: none; }
+
 /* ================================================================= rarity selection */
 
 .rarity-chips { display: flex; gap: .2rem; flex-wrap: wrap; }
@@ -564,7 +617,12 @@ main:focus { outline: none; }
 /* The completion plan, folded. Same shape as the collection's set picker, because it is the same
    problem: a row of chips that configures the page sitting permanently above the thing it
    configures. The summary carries the plan itself, so folding it costs no information. */
-.rarity-plan { flex: 1 1 100%; }
+/* Inline rather than a row of its own. It claimed 100% because the chips inside it needed the
+   width; the chips are behind the fold now, so only the summary competes for space, and with the
+   premium switch gone from this bar there is room for it beside the scope select. It still takes a
+   full row when there is not -- basis, not a fixed width. */
+.rarity-plan { flex: 1 1 auto; min-inline-size: 0; }
+.rarity-plan[open] { flex-basis: 100%; }
 .rarity-plan > summary {
     display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem;
     cursor: pointer; user-select: none;
@@ -575,10 +633,13 @@ main:focus { outline: none; }
     font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
     color: var(--bs-secondary-color);
 }
+/* The eyebrow goes on a phone. A row of rarity glyphs beside a "change" control does not need to
+   be told it is a list of rarities, and the word is 90px of a 343px line. */
+@media (width < 600px) {
+    .rarity-plan > summary .ttl { display: none; }
+}
 .rarity-plan > summary .cur { font-weight: 600; }
 .rarity-plan > summary .scope { color: var(--bs-secondary-color); }
-.rarity-plan > summary .hint { margin-left: auto; font-size: .82rem; color: var(--bs-secondary-color); }
-.rarity-plan > summary:hover .hint { color: var(--bs-body-color); }
 
 .rarity-plan .rarity-chips { padding-top: .4rem; }
 
@@ -1203,9 +1264,20 @@ tr.row-best {
    Tables still scroll inside their own wrapper, so nothing is lost by dropping a column here — it
    is a matter of what has to be scrolled to, not what can be reached. Priority 1 is never hidden.
 
-   Applied only where a table measurably overflows a phone. A table that already fits is left with
-   all its columns, since hiding one would cost information for nothing. */
-@media (width < 600px) {
+   Applied only where a table measurably overflows. A table that already fits is left with all its
+   columns, since hiding one would cost information for nothing.
+
+   A CONTAINER query, not a media query, and that is the whole of the fix here. The condition being
+   asked is "is this table cramped", and a table's width comes from its container, not the window:
+   the wishlist editor is two equal columns above 1000px, so at a 1280px window its table lives in
+   614px, and a viewport rule reading 1280 kept all eight columns in a box that needs 680 to lay a
+   row out on one line. Every row wrapped to two, at the widest screens.
+
+   680px is that measurement -- the width at which the wishlist's rows stop wrapping. It is the
+   widest of the tagged tables, so it is the threshold that has to hold. */
+.table-responsive { container-type: inline-size; }
+
+@container (width < 680px) {
     /* Element-qualified on purpose. A bare [data-pri="3"] has the same specificity as any
        component rule that sets display on one of its own cells -- .wish-row .ty { display:
        inline-flex } is one -- and loses to it on source order, so the column hid in the header and
@@ -1214,6 +1286,17 @@ tr.row-best {
     .table-responsive th[data-pri="3"],
     .table-responsive td[data-pri="3"] { display: none; }
 
+    /* The wishlist's flexible column is one of the ones just hidden, so the name takes it over
+       rather than leaving the slack to the remove column at the far edge. */
+    .wish-list .nm { width: 100%; }
+
+}
+
+/* The two rules below are about a table that is genuinely tight, not merely one that has had to
+   drop a column, so they keep a smaller threshold. 600px is the phone body: at 375px a table is
+   343 or 375 wide and takes both, while the Settings collections table sits at 672px on a laptop
+   and would look shrunken for no reason if it shared the 680 above. */
+@container (width < 600px) {
     /* A column heading is two or three words in a column sized for its data, not for its name:
        "packs per new card" in 67px wrapped to four lines, and since the tallest cell sets the row,
        one long heading made the whole header 105px -- an eighth of the screen naming columns rather
@@ -1560,6 +1643,14 @@ tr.row-best {
    own results at 22rem, so the column can never be taller than the viewport. */
 .edit-cols .picker-col { position: sticky; top: .5rem; }
 
+/* The wishlist's half is a table of eight columns; the deck builder's is a list of names. Equal
+   halves gave the table 614px at a 1280px window, and it needs 680 to lay a row out on one line,
+   so on the widest screens every row wrapped to two. Three-fifths clears that from 1280 up; below
+   that the container query on the table drops the detail columns instead.
+
+   After .edit-cols, not before: same specificity, so source order decides. */
+.wish-edit { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+
 @media (width <= 1000px) {
     .edit-cols { grid-template-columns: minmax(0, 1fr); }
     .edit-cols .picker-col { position: static; }
@@ -1868,6 +1959,12 @@ tr.row-best {
    own content, so none of those numbers has to be guessed or kept in step. What is left here is
    appearance; which columns survive a phone is data-pri, like every other table. */
 .wish-row > * { vertical-align: middle; }
+/* No column claims the slack while all eight are showing. A table with eight columns in 737px
+   distributes it better than any one of them can: forcing the cost column to 100% squeezed a
+   neighbour and put a row back onto two lines. (The cell comment in the page still describes the
+   nine-track grid this table replaced.) The only case needing a rule is the narrow one, where the
+   cost column is hidden and the slack would otherwise fall to the remove column at the far edge --
+   that rule is with the container query. */
 .wish-row:hover { background: var(--bs-secondary-bg); }
 .wish-row .nm { font-size: .98rem; font-weight: 600; }
 .wish-row .ty { display: inline-flex; align-items: center; }
@@ -2049,12 +2146,20 @@ tr.row-best {
    exists, not supporting detail — and because the subtitle that would normally carry that is
    hidden below 600px. */
 .lead-note {
+    position: relative;
     font-size: 1.02rem; line-height: 1.45;
     color: var(--bs-body-color);
     max-inline-size: var(--measure-text);
-    padding-inline-start: .6rem;
+    padding-inline: .6rem 2rem;
     border-inline-start: 3px solid var(--bs-primary);
 }
+/* Same dismiss as the gap strip, in the same place, so the two read as one kind of thing. */
+.lead-note > .x {
+    position: absolute; top: -.1rem; right: .25rem;
+    padding: 0 .25rem; border: 0; background: none; cursor: pointer;
+    color: var(--bs-secondary-color); font-size: 1.2rem; line-height: 1.3;
+}
+.lead-note > .x:hover { color: var(--bs-body-color); }
 
 /* ================================================================= wonder pick
 
@@ -2278,8 +2383,6 @@ tr.row-best {
 }
 .board-tuning > summary:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
 .board-tuning > summary .cur { color: var(--bs-body-color); }
-.board-tuning > summary .hint { margin-left: auto; font-size: .82rem; color: var(--bs-secondary-color); }
-.board-tuning > summary:hover .hint { color: var(--bs-body-color); }
 .board-tuning-body {
     display: flex; flex-wrap: wrap; align-items: center; gap: .4rem;
     padding-top: .4rem;
@@ -2395,11 +2498,19 @@ tr.row-best {
    loses the connection to the control that summoned it. Same markup, hung under the top bar
    instead.
 
-   No anchor positioning: it is still not safe to rely on. The offset comes from --nav-h, which the
-   bar itself is sized by, so the two cannot disagree. */
+   Hung under the button that opens it rather than pinned to the right edge, which read as a panel
+   belonging to the corner rather than to the More button five items in. --open-x and --open-y are
+   written by the beforetoggle listener in index.html, since a top-layer element cannot see its
+   opener from CSS; --nav-h is the fallback for the vertical, so a menu opened before the script
+   runs still lands below the bar rather than over it.
+
+   Clamped so a button near the right edge cannot push the panel off screen. */
 @media (width >= 1057px) {
     .nav-more {
-        inset: var(--nav-h) .75rem auto auto;
+        --open-y: var(--nav-h);
+        position: fixed;
+        inset: var(--open-y) auto auto
+               clamp(.75rem, var(--open-x, .75rem), 100vw - 28rem - .75rem);
         margin: 0;
         width: min(28rem, 92vw);
         padding: .5rem;

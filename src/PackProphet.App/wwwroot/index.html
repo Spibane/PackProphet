@@ -87,9 +87,9 @@
          it, rather than wiring an onclick to each of eight links. -->
     <script>
         document.addEventListener('click', e => {
-            const item = e.target.closest('#nav-more a, #nav-more button');
+            const item = e.target.closest('[popover].nav-more a, [popover].nav-more button');
             if (!item) return;
-            const menu = document.getElementById('nav-more');
+            const menu = item.closest('[popover].nav-more');
             if (menu && menu.matches(':popover-open')) menu.hidePopover();
         });
     </script>

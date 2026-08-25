@@ -1,0 +1,58 @@
+@inject AppSession Session
+@inject PaletteSwitch Palette
+@implements IDisposable
+
+@* The destinations that are not part of the daily loop, behind one disclosure.
+
+   Shared by both navs rather than written twice. The tab bar had this list and the top nav did
+   not, so the top nav carried all twelve links inline: at 1280px that needed 1242px of a 1265px
+   row and the theme button dropped to a second line, and every width below that wrapped worse.
+   Two copies of the list would also drift -- a new page added to one nav and not the other is a
+   page that exists on a phone and not on a laptop.
+
+   The id is a parameter because both navs are in the DOM at once, hidden from each other by
+   width. Two popovers cannot share one id: popovertarget resolves to the first, so the tab bar's
+   button would open the top nav's menu. *@
+
+<div id="@Id" popover class="nav-more">
+    @* The palette reaches everything this list does and a great deal more, so it goes first and is
+       styled as an action rather than a destination. On a phone it is also the only way in: there
+       is no Ctrl+K, and the top nav that carries the palette button is hidden at those widths. *@
+    <button class="nav-more-search" @onclick="() => Palette.Toggle()">
+        <span class="ico" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="15" height="15" focusable="false">
+                <circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.7" />
+                <path d="M10.4 10.4 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+        </span>
+        Jump to a card, set, deck or action
+    </button>
+
+    <p class="nav-more-head" id="@($"{Id}-head")">Everything else</p>
+    <nav aria-labelledby="@($"{Id}-head")">
+        <NavLink class="nav-more-item" href="decks">Decks</NavLink>
+        <NavLink class="nav-more-item" href="wishlists">Wishlists</NavLink>
+        <NavLink class="nav-more-item" href="trades">Trades</NavLink>
+        <NavLink class="nav-more-item" href="board">In-game list</NavLink>
+        @* Only with something to compare: a link that always says "you have one collection" is a
+           dead end. *@
+        @if (Session.MultipleProfiles)
+        {
+            <NavLink class="nav-more-item" href="compare">Compare</NavLink>
+        }
+        <NavLink class="nav-more-item" href="resources">Resources</NavLink>
+        <NavLink class="nav-more-item" href="history">History</NavLink>
+        <NavLink class="nav-more-item" href="settings">Settings</NavLink>
+    </nav>
+</div>
+
+@code {
+    /// <summary>DOM id the opening button points at with popovertarget. Unique per nav.</summary>
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+
+    protected override void OnInitialized() => Session.Changed += OnChanged;
+
+    public void Dispose() => Session.Changed -= OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+}

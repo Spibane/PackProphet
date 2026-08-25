@@ -65,36 +65,7 @@
     </button>
 </nav>
 
-<div id="nav-more" popover class="nav-more">
-    @* The palette's own button lives in the top nav, which is hidden at these widths — and there is
-       no Ctrl+K on a phone. Without this the palette would be unreachable on exactly the devices
-       the tab bar exists for. First, and styled as an action rather than a destination, because it
-       reaches everything the list below does and a great deal more. *@
-    <button class="nav-more-search" @onclick="() => Palette.Toggle()">
-        <span class="ico" aria-hidden="true">
-            <svg viewBox="0 0 16 16" width="15" height="15" focusable="false">
-                <circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.7" />
-                <path d="M10.4 10.4 14 14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
-            </svg>
-        </span>
-        Jump to a card, set, deck or action
-    </button>
-
-    <p class="nav-more-head" id="nav-more-head">Everything else</p>
-    <nav aria-labelledby="nav-more-head">
-        <NavLink class="nav-more-item" href="decks">Decks</NavLink>
-        <NavLink class="nav-more-item" href="wishlists">Wishlists</NavLink>
-        <NavLink class="nav-more-item" href="trades">Trades</NavLink>
-        <NavLink class="nav-more-item" href="board">In-game list</NavLink>
-        @if (Session.MultipleProfiles)
-        {
-            <NavLink class="nav-more-item" href="compare">Compare</NavLink>
-        }
-        <NavLink class="nav-more-item" href="resources">Resources</NavLink>
-        <NavLink class="nav-more-item" href="history">History</NavLink>
-        <NavLink class="nav-more-item" href="settings">Settings</NavLink>
-    </nav>
-</div>
+<MoreMenu Id="nav-more" />
 
 @code {
     protected override void OnInitialized() => Session.Changed += OnChanged;

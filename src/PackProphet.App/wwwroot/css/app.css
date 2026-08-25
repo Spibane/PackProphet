@@ -1052,7 +1052,13 @@ tr.row-best {
    Applied only where a table measurably overflows a phone. A table that already fits is left with
    all its columns, since hiding one would cost information for nothing. */
 @media (width < 600px) {
-    .table-responsive [data-pri="3"] { display: none; }
+    /* Element-qualified on purpose. A bare [data-pri="3"] has the same specificity as any
+       component rule that sets display on one of its own cells -- .wish-row .ty { display:
+       inline-flex } is one -- and loses to it on source order, so the column hid in the header and
+       stayed in the body, putting every row one cell out of step with its headings. Adding the
+       element name outranks those without reaching for !important. */
+    .table-responsive th[data-pri="3"],
+    .table-responsive td[data-pri="3"] { display: none; }
 
     /* Once the columns are narrow, a cell holding a sentence wraps into a tower and sets the height
        of the whole row — measured at 114px on Trades at 320px. Centred vertically, a one-glyph
@@ -1684,24 +1690,11 @@ tr.row-best {
    gave it a huge cell and pushed everything else to the far right with nothing in between —
    which is what made the row read as empty. Text that can use the space goes in the space. */
 .wish-list { border: 1px solid var(--bs-border-color); border-radius: .3rem; overflow: hidden; }
-.wish-row {
-    display: grid;
-    grid-template-columns:
-        1.7rem              /* art           */
-        minmax(6rem, 12rem) /* name          */
-        1.4rem              /* element pip   */
-        var(--rarity-col)   /* rarity        */
-        4.2rem              /* set + number  */
-        minmax(0, 1fr)      /* what it costs */
-        3rem                /* owned         */
-        5.4rem              /* want stepper  */
-        1.8rem;             /* remove        */
-    align-items: center; gap: .45rem;
-    padding: .2rem .5rem; border-bottom: 1px solid var(--bs-border-color);
-    font-size: .92rem;
-}
-.wish-row > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wish-row:last-child { border-bottom: 0; }
+/* Was a nine-track CSS grid, restated in full at two breakpoints -- which is how a rarity column
+   that could not fit four diamonds survived being fixed twice. A table sizes each column to its
+   own content, so none of those numbers has to be guessed or kept in step. What is left here is
+   appearance; which columns survive a phone is data-pri, like every other table. */
+.wish-row > * { vertical-align: middle; }
 .wish-row:hover { background: var(--bs-secondary-bg); }
 .wish-row .nm { font-size: .98rem; font-weight: 600; }
 .wish-row .ty { display: inline-flex; align-items: center; }
@@ -1710,6 +1703,7 @@ tr.row-best {
 .wish-row .rt { font-size: .88rem; }
 .wish-row .own { text-align: right; font-variant-numeric: tabular-nums; }
 .wish-row .own .done { color: var(--bs-success); font-weight: 600; }
+.wish-row .thumb { width: 1px; }
 .wish-row .pack-thumb { display: block; }
 /* A card you already have enough of is tinted rather than removed: it is still on the list,
    and seeing it fill in is how the list reads as progress. */
@@ -1737,23 +1731,6 @@ tr.row-best {
 .wish-row .want-n .n {
     min-width: 1.5rem; text-align: center;
     font-weight: 600; font-variant-numeric: tabular-nums;
-}
-
-@media (width <= 820px) {
-    /* The cost note is the first to go, not the last: it is the longest thing here and the
-       card's own page still carries it. */
-    .wish-row {
-        grid-template-columns:
-            1.7rem minmax(5rem, 1fr) 1.4rem var(--rarity-col) 4.2rem 3rem 5.4rem 1.8rem;
-    }
-    .wish-row .rt { display: none; }
-}
-
-@media (width <= 560px) {
-    .wish-row {
-        grid-template-columns: 1.7rem minmax(4rem, 1fr) 1.4rem var(--rarity-col) 2.6rem 5.4rem 1.8rem;
-    }
-    .wish-row .id { display: none; }
 }
 
 /* ---- command palette ------------------------------------------------------------------- */

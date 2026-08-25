@@ -152,93 +152,6 @@ else
     }
     else
     {
-        <div class="summary px-3 py-2">
-            <div class="stat">
-                <span class="label">cards still needed</span>
-                <span class="value">@_outstanding</span>
-            </div>
-            <div class="stat">
-                <span class="label">expected packs</span>
-                <span class="value">@Fmt(_bestCase)</span>
-                <span class="sub">
-                    @* Always say what the number covers. When a pack is unavailable its exclusive
-                       cards leave the estimate, so the figure can fall even though the situation
-                       got worse — shown bare, that reads as "cheaper". *@
-                    to finish @_priceable of @_outstanding, opening the best pack each time
-                </span>
-            </div>
-            @if (Session.AssumedRates.Count > 0)
-            {
-                <div class="stat">
-                    <span class="label">assumed rates</span>
-                    <span class="value">@Session.AssumedRates.Count set(s)</span>
-                    <span class="sub">
-                        @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
-                        {
-                            <span class="d-block">
-                                @set priced from @donor
-                                <button class="btn btn-sm btn-link p-0 align-baseline"
-                                        @onclick="() => StopAssuming(set)">stop</button>
-                            </span>
-                        }
-                    </span>
-                </div>
-            }
-
-            <div class="stat">
-                <span class="label">time at your rate</span>
-                <span class="value">@Days(_bestCase, Premium)</span>
-                <span class="sub">@RateNote()</span>
-            </div>
-        </div>
-
-        @if (_unreachable.Count > 0)
-        {
-            <Notice Severity="Notice.Level.Warning" Class="mx-3">
-                <strong>@_unreachable.Sum(d => d.Remaining) card(s) cannot be obtained right now.</strong>
-                They are left out of the estimate above rather than silently counted &mdash; so
-                that figure covers @_priceable cards, not all @_outstanding. The packs that would
-                sell them are still listed below, each marked with why it cannot be counted:
-                <strong>off sale</strong> means it is coming back, <strong>rates unknown</strong>
-                means the set is out and its odds have not been published yet, and
-                <strong>not out yet</strong> means nobody has these cards.
-            </Notice>
-        }
-
-        @if (_neverInPack.Count > 0)
-        {
-            @* These have no pack row to appear in, because no pack has ever sold them. The only
-               routes are a trade or another event, so they are called out rather than left to be
-               inferred from an empty ranking. *@
-            <Notice Severity="Notice.Level.Info" Class="mx-3">
-                <strong>@_neverInPack.Count card(s) never came from a pack.</strong>
-                An event or a promo only &mdash; opening packs will never produce them.
-                <div class="supplied mt-2">
-                    @foreach (var (card, remaining) in _neverInPack.Take(UnreachableShown))
-                    {
-                        <div class="supplied-row">
-                            <a class="pack-thumb deck-thumb" href="card/@card.Key"
-                               data-tip-img="@card.ArtUrl" data-tip="@card.Name"
-                               style="background-image:url('@card.ArtUrl')"
-                               aria-label="@card.Name"></a>
-                            <span class="nm">
-                                @card.Name
-                                @if (remaining > 1)
-                                {
-                                    <span class="text-body-secondary">&times;@remaining</span>
-                                }
-                            </span>
-                            <span class="rr">@(RungOf(card)?.Symbol ?? card.Rarity)</span>
-                            <span class="rt">trade only</span>
-                        </div>
-                    }
-                </div>
-                @if (_neverInPack.Count > UnreachableShown)
-                {
-                    <div class="small mt-1">&hellip; and @(_neverInPack.Count - UnreachableShown) more.</div>
-                }
-            </Notice>
-        }
 
         @* Every extra breakdown lives behind a button in one row here, at the top of the page,
            rather than below the ranking table &mdash; that table runs to dozens of rows across
@@ -698,6 +611,105 @@ else
                 }
             </tbody>
         </DataTable>
+
+        @* The figures behind the answer, and the caveats on them, sit under the ranking rather
+           than over it. This page exists to answer one question, and a summary of an answer is
+           not a substitute for the answer: on a phone the table used to start 855px down, just
+           past a full screen, so the first thing the page showed was an accounting of a result
+           you could not yet see.
+
+           Assumptions belong here for the same reason. You check what an estimate covers after
+           it surprises you, not before you have read it.
+
+           The buttons above the table stay above it: that table runs to dozens of rows, and a
+           control only reachable by scrolling past all of them may as well not exist. *@
+        <div class="summary px-3 py-2">
+            <div class="stat">
+                <span class="label">cards still needed</span>
+                <span class="value">@_outstanding</span>
+            </div>
+            <div class="stat">
+                <span class="label">expected packs</span>
+                <span class="value">@Fmt(_bestCase)</span>
+                <span class="sub">
+                    @* Always say what the number covers. When a pack is unavailable its exclusive
+                       cards leave the estimate, so the figure can fall even though the situation
+                       got worse — shown bare, that reads as "cheaper". *@
+                    to finish @_priceable of @_outstanding, opening the best pack each time
+                </span>
+            </div>
+            @if (Session.AssumedRates.Count > 0)
+            {
+                <div class="stat">
+                    <span class="label">assumed rates</span>
+                    <span class="value">@Session.AssumedRates.Count set(s)</span>
+                    <span class="sub">
+                        @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
+                        {
+                            <span class="d-block">
+                                @set priced from @donor
+                                <button class="btn btn-sm btn-link p-0 align-baseline"
+                                        @onclick="() => StopAssuming(set)">stop</button>
+                            </span>
+                        }
+                    </span>
+                </div>
+            }
+
+            <div class="stat">
+                <span class="label">time at your rate</span>
+                <span class="value">@Days(_bestCase, Premium)</span>
+                <span class="sub">@RateNote()</span>
+            </div>
+        </div>
+
+        @if (_unreachable.Count > 0)
+        {
+            <Notice Severity="Notice.Level.Warning" Class="mx-3">
+                <strong>@_unreachable.Sum(d => d.Remaining) card(s) cannot be obtained right now.</strong>
+                They are left out of the estimate above rather than silently counted &mdash; so
+                that figure covers @_priceable cards, not all @_outstanding. The packs that would
+                sell them are still listed below, each marked with why it cannot be counted:
+                <strong>off sale</strong> means it is coming back, <strong>rates unknown</strong>
+                means the set is out and its odds have not been published yet, and
+                <strong>not out yet</strong> means nobody has these cards.
+            </Notice>
+        }
+
+        @if (_neverInPack.Count > 0)
+        {
+            @* These have no pack row to appear in, because no pack has ever sold them. The only
+               routes are a trade or another event, so they are called out rather than left to be
+               inferred from an empty ranking. *@
+            <Notice Severity="Notice.Level.Info" Class="mx-3">
+                <strong>@_neverInPack.Count card(s) never came from a pack.</strong>
+                An event or a promo only &mdash; opening packs will never produce them.
+                <div class="supplied mt-2">
+                    @foreach (var (card, remaining) in _neverInPack.Take(UnreachableShown))
+                    {
+                        <div class="supplied-row">
+                            <a class="pack-thumb deck-thumb" href="card/@card.Key"
+                               data-tip-img="@card.ArtUrl" data-tip="@card.Name"
+                               style="background-image:url('@card.ArtUrl')"
+                               aria-label="@card.Name"></a>
+                            <span class="nm">
+                                @card.Name
+                                @if (remaining > 1)
+                                {
+                                    <span class="text-body-secondary">&times;@remaining</span>
+                                }
+                            </span>
+                            <span class="rr">@(RungOf(card)?.Symbol ?? card.Rarity)</span>
+                            <span class="rt">trade only</span>
+                        </div>
+                    }
+                </div>
+                @if (_neverInPack.Count > UnreachableShown)
+                {
+                    <div class="small mt-1">&hellip; and @(_neverInPack.Count - UnreachableShown) more.</div>
+                }
+            </Notice>
+        }
 
     }
 }

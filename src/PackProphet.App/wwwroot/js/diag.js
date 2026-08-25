@@ -5,6 +5,30 @@
 (function () {
     let box = null, n = 0;
 
+    // When the page was last put in the background, and last brought back. iOS backgrounds the
+    // page while the share sheet is open, so "was hidden a moment ago" is the difference between
+    // an error this app caused and one the OS raised over the top of it. Without this the two are
+    // indistinguishable, because the browser withholds the source for both.
+    const startedAt = Date.now();
+    let lastHiddenAt = 0, lastShownAt = 0;
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) lastHiddenAt = Date.now();
+        else lastShownAt = Date.now();
+    });
+
+    function timing() {
+        const now = Date.now();
+        const parts = ['at +' + ((now - startedAt) / 1000).toFixed(1) + 's after load'];
+        if (lastHiddenAt) {
+            parts.push('page was backgrounded ' + ((now - lastHiddenAt) / 1000).toFixed(1) + 's ago');
+            if (lastShownAt > lastHiddenAt)
+                parts.push('and came back ' + ((now - lastShownAt) / 1000).toFixed(1) + 's ago');
+        } else {
+            parts.push('page has never been backgrounded this session');
+        }
+        return parts.join(', ');
+    }
+
     function show(kind, msg, extra) {
         n++;
         if (!box) {
@@ -44,7 +68,9 @@
                  'as cross-origin, including some it raises itself -- an extension, or the OS share\n' +
                  'sheet. Nothing in this app is loaded from another origin, so it is very likely\n' +
                  'not ours. Page: ' + location.pathname + ' | standalone: ' +
-                 (window.matchMedia('(display-mode: standalone)').matches ? 'yes' : 'no'));
+                 (window.matchMedia('(display-mode: standalone)').matches ? 'yes' : 'no') +
+                 '\n' + timing() +
+                 '\nIf it was backgrounded a moment before this, the OS raised it, not the app.');
             return;
         }
 

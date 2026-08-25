@@ -231,23 +231,18 @@ else
            every later visit. The verdict and the "I have made these changes" button stay above:
            those are the answer and the action, not the explanation. *@
         <p class="small text-body-secondary">
-            The game's wishlist is not a tracking list, it is an advertisement: the only thing it
-            does is make other players offer you those cards. A listing costs nothing but a slot and
-            slots never expire, so the best board is simply the @GameRules.TradeBoardSlots
-            <strong>tradeable cards you still want that cost the most to get any other way</strong>
-            &mdash; an unaccepted request loses you nothing. A few slots are held back for cards
-            someone plausibly has spare, so the board actually converts something.
+            The game's wishlist is an advertisement: it makes other players offer you those cards.
+            Slots cost nothing and never expire, so the board is the @GameRules.TradeBoardSlots
+            <strong>tradeable cards you still want that cost the most to get any other way</strong>,
+            with a few slots held back for cards someone plausibly has spare.
         </p>
 
         @if (ShowFoilFilter)
         {
             <p class="small text-body-secondary">
-                <strong>Parallel foils</strong> appear here as the 1-3 diamond cards they are
-                printed as &mdash; that is the rarity the data gives them, and it is what decides
-                both trade eligibility and the dust price. They also come from one limited-time
-                pack, which makes them expensive to get any other way, so they crowd the top of the
-                list. Whether the game lets you put a foil printing on your wishlist specifically is
-                not something the card data records, so if it will not, exclude them above.
+                <strong>Parallel foils</strong> are listed as the 1-3 diamond cards they are
+                printed as, which is what decides trade eligibility and the dust price. If the game
+                will not let you wishlist a foil printing, exclude them above.
             </p>
         }
 
@@ -259,23 +254,19 @@ else
                 <p class="small text-body-secondary">
                     <strong>About the @_plan.Slots.Count(s => s.Band == BoardBand.Liquid)
                     &ldquo;widely held&rdquo; slots.</strong>
-                    A board of nothing but the dearest cards may convert nothing, so some slots go to
-                    cards more copies of which are likely to exist &mdash; estimated as the drop rate
-                    times how long the set has been on sale. That estimate is weak: it does not know
-                    whether other players still need the card, whether they hold a spare, or whether
-                    they would give it up. It is also in tension with the rest of the page, since a
-                    widely held card is by definition cheaper to get yourself. Set the reserve to
-                    <strong>0</strong> above for a board ranked purely by what a card costs you.
+                    Some slots go to cards more copies of which likely exist &mdash; drop rate
+                    times how long the set has been on sale. It is a weak guess: it cannot know who
+                    still needs the card or would part with one. Set the reserve to
+                    <strong>0</strong> above to rank purely by what a card costs you.
                 </p>
             }
 
             @if (_plan.Slots.Any(s => s.SparesAtRarity == 0))
             {
                 <p class="small text-body-secondary">
-                    A trade needs a card of the same rarity to give away, so slots marked
-                    <em>no spare to give</em> are requests you could not currently honour. They are
-                    kept anyway &mdash; the request is what produces the offer, and a spare may
-                    turn up before anyone bites.
+                    A trade needs a card of the same rarity to give back, so <em>no spare to
+                    give</em> means you could not honour the request today. Kept anyway &mdash; a
+                    spare may turn up first.
                 </p>
             }
 

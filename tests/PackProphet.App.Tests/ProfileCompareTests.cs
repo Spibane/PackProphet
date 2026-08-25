@@ -17,7 +17,9 @@ public class ProfileCompareTests : AppHost
 
         var cut = RenderComponent<ProfileCompare>();
 
-        Assert.Contains("only one collection", cut.Markup);
+        // Case-insensitively: the sentence has been reworded once already and started with this
+        // phrase the second time, which is a spelling difference rather than a change of meaning.
+        Assert.Contains("only one collection", cut.Markup, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -16,8 +16,8 @@ else if (!Session.MultipleProfiles)
     </div>
     <PageShell Measure="PageShell.Width.Wide">
         <p>
-            There is only one collection, so there is nothing to compare yet. Alt accounts are
-            ordinary in this game and you can trade with yourself, which is what this page is for.
+            Only one collection, so nothing to compare yet. You can trade with your own alt
+            account, which is what this page is for.
         </p>
         <a class="btn btn-sm btn-primary" href="settings">add a collection</a>
     </PageShell>
@@ -52,13 +52,10 @@ else
        and a stamina. So "what does my alt have that my main needs" is not one list. *@
     <PageShell Measure="PageShell.Width.Wide" Class="pb-0">
     <p class="small text-body-secondary mb-0">
-        Two ways to move a card between your own accounts, and which one applies is decided
-        entirely by rarity. <strong>Shares</strong> carry 1 to 4 diamonds one way &mdash; nothing
-        comes back, nothing is spent, and each account can receive
-        @GameRules.SharesReceivedPerDay a day. Everything above that is a <strong>trade</strong>,
-        which is a swap: each account hands over one card, both cards must be the same rarity, and
-        both sides pay the rarity's shinedust and one Trade Stamina of their own. The balances used
-        are whatever each collection last recorded on its own Resources page.
+        Rarity decides which applies. <strong>Shares</strong> carry 1 to 4 diamonds one way, free,
+        @GameRules.SharesReceivedPerDay received a day. Above that it is a <strong>trade</strong>:
+        both cards must be the same rarity, and both sides pay that rarity's shinedust and one
+        stamina. Balances come from each collection's own Resources page.
     </p>
     </PageShell>
 
@@ -109,9 +106,7 @@ else
 
                 <h2>Free to send</h2>
                 <p class="small text-body-secondary">
-                    Diamonds only, and one way: a Share asks for nothing back, so none of these
-                    needs a card at the same rarity or a single shinedust. The accounts have to be
-                    friends in-game.
+                    Diamonds only, one way, and free. The accounts have to be friends in-game.
                 </p>
 
                 <div class="share-cols">
@@ -233,9 +228,8 @@ else
                 <p class="small text-body-secondary">
                     @_swaps.Swaps.Count @Swap(_swaps.Swaps.Count) found, @_swaps.Mutual of them
                     wanted by both sides.
-                    <strong>@_swaps.ReadyNow</strong> can be done today &mdash; trade stamina
-                    regenerates one per 12 hours on each account, so a long list is a plan for the
-                    week rather than for this evening.
+                    <strong>@_swaps.ReadyNow</strong> can be done today. Trade stamina regenerates
+                    one per 12 hours on each account.
                 </p>
 
                 <DataTable Label="Possible swaps">
@@ -314,11 +308,10 @@ else
             {
                 <h2>Wanted, but nothing to pay with</h2>
                 <p class="small text-body-secondary">
-                    @_swaps.Theirs.Name holds these spare and @_swaps.Mine.Name still wants them.
-                    They are above 4 diamonds, so a Share cannot carry them, and a trade needs a
-                    card of the <em>same rarity</em> going back &mdash; of which there is none
-                    spare here. Any spare at that rung unlocks the swap; it does not have to be a
-                    card anyone wants.
+                    @_swaps.Theirs.Name holds these spare and @_swaps.Mine.Name wants them, but
+                    they are above 4 diamonds and there is no spare at that rarity to send back.
+                    Any spare at that rung unlocks the swap &mdash; it need not be one anyone
+                    wants.
                 </p>
                 <DataTable Label="Wanted, with nothing to pay with" Fit="true">
                     <thead>
@@ -349,8 +342,7 @@ else
                 <h2>Yours to send, once something comes back</h2>
                 <p class="small text-body-secondary">
                     @_swaps.Theirs.Name wants these and @_swaps.Mine.Name has them spare, but every
-                    swap at those rarities was already paired above. They are what makes the next
-                    swap possible when @_swaps.Theirs.Name pulls something you need.
+                    swap at those rarities is already paired above.
                 </p>
                 <ul class="small mb-0">
                     @foreach (var gift in _swaps.Unwanted.Take(30))

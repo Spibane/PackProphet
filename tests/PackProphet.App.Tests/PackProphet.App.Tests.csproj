@@ -51,6 +51,15 @@
              Link="service-worker.published.js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The stylesheet and the grid, read as text so the layout invariants that span the two of them
+       can be asserted. Neither is compiled here; they are evidence, not code under test. -->
+  <ItemGroup>
+    <Content Include="..\..\src\PackProphet.App\wwwroot\css\app.css"
+             Link="app.css" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\PackProphet.App\Components\CardGrid.razor"
+             Link="CardGrid.razor.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- The same vendored snapshot the app ships, served to the loader over a fake HttpClient so a
        page renders against real card data rather than a handful of fixtures. -->
   <ItemGroup>

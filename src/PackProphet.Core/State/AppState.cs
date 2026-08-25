@@ -197,6 +197,16 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     public bool ShowEvolutionGaps { get; init; } = true;
 
     /// <summary>
+    /// Whether Wonder Pick still explains what it is for. The paragraph exists because the page is
+    /// easy to mistake for something the game already does, and that is a thing you need told
+    /// once — after which it is a wall of text above the control you came to use.
+    ///
+    /// Dismissible and persisted, for the same reason as the gap strip: it is a standing note
+    /// rather than a passing state, so it never goes away on its own.
+    /// </summary>
+    public bool ShowWonderIntro { get; init; } = true;
+
+    /// <summary>
     /// Limited-time packs the user has confirmed are currently on sale, by pack key.
     ///
     /// Empty by default, i.e. assumed not available: Deluxe packs are absent more often than

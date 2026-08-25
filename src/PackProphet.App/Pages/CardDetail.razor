@@ -72,11 +72,10 @@ else
 
             <div class="own-row">
                 <span class="label">you own</span>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="() => Bump(-1)"
+                <button class="step" @onclick="() => Bump(-1)"
                         disabled="@(_owned == 0)" aria-label="Remove one">&minus;</button>
                 <span class="count">@_owned</span>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="() => Bump(1)"
-                        aria-label="Add one">+</button>
+                <button class="step" @onclick="() => Bump(1)" aria-label="Add one">+</button>
             </div>
 
             @* Wanting a card is a separate fact from owning it, and this is the screen that has

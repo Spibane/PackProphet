@@ -313,11 +313,9 @@
                     }
                 </span>
                 <span class="c-acts" role="gridcell">
-                    <button class="btn btn-sm btn-outline-secondary py-0 px-2"
-                            @onclick="() => Bump(card, -1)" @onclick:stopPropagation="true"
+                    <button class="step" @onclick="() => Bump(card, -1)" @onclick:stopPropagation="true"
                             disabled="@(count == 0 && PickedOf is null)" aria-label="Remove one">&minus;</button>
-                    <button class="btn btn-sm btn-outline-secondary py-0 px-2"
-                            @onclick="() => Bump(card, +1)" @onclick:stopPropagation="true"
+                    <button class="step" @onclick="() => Bump(card, +1)" @onclick:stopPropagation="true"
                             aria-label="Add one">+</button>
                 </span>
             </div>

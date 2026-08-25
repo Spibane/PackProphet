@@ -55,16 +55,20 @@
 
    Left-aligned rather than centred, which is what every one of these pages already did — centring
    would be a visible change to all of them and is a separate decision. */
-/* Wide enough for the widest rarity a card can have: four diamonds, which measure 57.8px at the
-   .92rem these rows use. The track was 3.2rem — 51.2px — so every 4-diamond card was ellipsised to
-   "◆◆…" by the row's own overflow rule, silently turning a rarity into a different rarity. The
-   supplied-row track was 3.5rem and cleared its own content by 0.7px, which is not a margin.
+/* Wide enough for the widest rarity a card can have — four diamonds — at the largest size any row
+   shows them: 62.9px, in card-line, whose glyphs are 1rem where the other rows use .92rem. 4.1rem
+   is 65.6px.
+
+   Undersized tracks were ellipsising those cards to "◆◆…", which is worse than a cosmetic clip: it
+   silently displays one rarity as a different, lower one. card-line was 3.6rem below 560px,
+   wish-row and pick-row 3.2rem, supplied-row 3.5rem — the last of which cleared its own content by
+   0.7px, which is not a margin.
 
    One value for all three row types that show a rarity — wish-row, pick-row and supplied-row —
    because they show the same thing and there is no reason for them to disagree about how much room
    it needs. Two of them also restate the track inside media queries, which is how the first fix
    here missed them: the width was declared in five places and corrected in one. */
-:root { --rarity-col: 3.8rem; }
+:root { --rarity-col: 4.1rem; }
 
 :root {
     --measure-form: 38rem;
@@ -675,7 +679,7 @@ main:focus { outline: none; }
         4.6rem               /* set + number */
         5.4rem               /* type         */
         4rem                 /* stage        */
-        4.6rem               /* rarity       */
+        var(--rarity-col)   /* rarity       */
         2.4rem               /* hp           */
         minmax(7rem, 1fr)    /* attack 1     */
         minmax(7rem, 1fr)    /* attack 2     */
@@ -1577,15 +1581,15 @@ tr.row-best {
    scan a collection by. Type and rarity survive to the smallest size. */
 
 @media (width <= 1100px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem 4.6rem 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) 1.8rem 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem var(--rarity-col) 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) 1.8rem 2.4rem 4.2rem; }
     .card-line .c-a2 { display: none; }
 }
 @media (width <= 900px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem 4.6rem 1.8rem 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem 5.4rem 4rem var(--rarity-col) 1.8rem 2.4rem 4.2rem; }
     .card-line .c-a1, .card-line .c-a2, .card-line .c-ab, .card-line .c-hp { display: none; }
 }
 @media (width <= 560px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(5rem,1fr) 4.2rem 3.6rem 1.8rem 2.2rem 4rem; }
+    .card-line { grid-template-columns: var(--art-w) minmax(5rem,1fr) 4.2rem var(--rarity-col) 1.8rem 2.2rem 4rem; }
     .card-line .c-id, .card-line .c-st { display: none; }
     .card-line .c-ty { font-size: .84rem; }
 }

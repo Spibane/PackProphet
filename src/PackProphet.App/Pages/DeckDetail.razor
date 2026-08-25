@@ -179,9 +179,9 @@ else
                 }
                 @foreach (var finding in _report.Findings)
                 {
-                    <div class="alert @AlertClass(finding.Severity) py-1 px-2 small mb-1">
+                    <Notice Severity="@NoticeLevel(finding.Severity)" Dense="true" Class="mb-1">
                         <strong>@SeverityLabel(finding.Severity)</strong> @finding.Message
-                    </div>
+                    </Notice>
                 }
             }
 
@@ -646,12 +646,12 @@ else
 
     private static string Fmt(double? packs) => Text.Fmt.Packs(packs);
 
-    private static string AlertClass(LintSeverity severity) => severity switch
+    private static Notice.Level NoticeLevel(LintSeverity severity) => severity switch
     {
-        LintSeverity.Error => "alert-danger",
-        LintSeverity.Warning => "alert-warning",
-        LintSeverity.Unverified => "alert-secondary",
-        _ => "alert-info"
+        LintSeverity.Error => Notice.Level.Problem,
+        LintSeverity.Warning => Notice.Level.Warning,
+        LintSeverity.Unverified => Notice.Level.Unverified,
+        _ => Notice.Level.Info
     };
 
     private static string SeverityLabel(LintSeverity severity) => severity switch

@@ -41,7 +41,7 @@ else
 
         @if (_message is not null)
         {
-            <div class="alert @(_failed ? "alert-warning" : "alert-success") py-2 small">@_message</div>
+            <Notice Severity="@(_failed ? Notice.Level.Warning : Notice.Level.Success)">@_message</Notice>
         }
 
         @if (_failed)

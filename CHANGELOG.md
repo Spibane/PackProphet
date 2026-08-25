@@ -42,6 +42,16 @@ running app at 375x812 unless another width is named.
   own state. Collection opens on the newest openable set rather than the first one printed.
 - Collection chrome 499 → 156px. Which pack's tools three rows → one at 1280px. Which pack 855 →
   341px, Trades 559 → 288px, the in-game list 911 → 501px. Breakpoints 11 → 9.
+- **Which pack's breakdown buttons wrap into an even grid on a phone.** Four labels of four
+  different lengths in a flex row wrapped three-and-an-orphan at 414px and two-and-two at 375px,
+  with neither row's edges lining up. Two equal columns below 600px, and the flex row kept above
+  it, where all four fit on one line.
+- **The ranked pack table lines up with the page again.** Bleeding it to the screen edge on a
+  phone put the "pack" heading hard against the bezel and the log button a few pixels off the
+  other edge, out of line with every control above. The row tint and the rules still run edge to
+  edge; only the text is inset. A floor on the numeric headings keeps the two insets out of those
+  columns, so the header comes out at 36px rather than the 50 it was, or the 64 the inset alone
+  would have cost.
 
 ### Accessibility
 

@@ -1287,12 +1287,56 @@ tr.row-best {
     background-size: contain; background-position: center; background-repeat: no-repeat;
 }
 
+/* The row of buttons that opens the extra breakdowns above the table. Above a phone all four fit
+   on one line and a flex row is exactly right, so the wrap only has to be dealt with below 600px.
+
+   There it becomes a grid. The four labels are all different lengths, so wrapping them dealt the
+   row out ragged -- three and an orphan at one phone width, two and two at another, each row a
+   different total length and nothing below lining up with anything above. Two equal columns make
+   the wrap the same shape at every phone width, and stretching the buttons to fill them is a
+   welcome side effect: a wide tap target on the device where tapping is how you use it.
+
+   Two fixed columns rather than auto-fit, which is the usual answer here and is wrong for four
+   items: the column count it lands on depends on the width, so somewhere in the range it picks
+   three and hands back the orphan row this rule exists to remove. Two columns take the widest
+   label ("buying 10 at once") down to about a 300px screen before it wraps, which is narrower
+   than anything being sold.
+
+   Only a grid at this size, not everywhere: at 1200px the same rule stretched each button to
+   280px and spread four of them across the whole page. */
+.panel-toggles { display: flex; flex-wrap: wrap; gap: .5rem; }
+@media (width < 600px) {
+    .panel-toggles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* A wide table reclaiming the page body's 1rem on a phone. Physical margins, not logical: the
    padding being cancelled is `calc(1rem + var(--safe-l))`, and taking back exactly 1rem from each
    physical side leaves the cutout inset behind, which is the half that matters. Only below the
    phone breakpoint — above it the width is not scarce and the inset reads as deliberate. */
 @media (width < 600px) {
     .table-responsive.bleed { margin-left: -1rem; margin-right: -1rem; }
+
+    /* What bleeds is the ROW, not the text in it. The margins above put the first heading hard
+       against the screen edge and the last cell's button a few pixels off the other one, so the
+       table read as a band shoved out of line with the controls above it — which sit on the page
+       body's 1rem like everything else.
+
+       Giving that 1rem back as padding on the outer cells lines the text up again while the tint
+       on the best row, and the rule under each row, still run edge to edge. Where the 32px comes
+       from is the rule below. */
+    .table-responsive.bleed > .table > :not(caption) > * > *:first-child { padding-left: 1rem; }
+    .table-responsive.bleed > .table > :not(caption) > * > *:last-child { padding-right: 1rem; }
+
+    /* The two insets have to come out of the flexible name column, and left to itself the auto
+       layout takes them proportionally from every column instead: "packs per new card" went 55 to
+       51px, which is where it breaks to a fourth line, and the header grew from 50 to 64 -- the
+       exact cost the bleed exists to avoid.
+
+       A floor on the numeric headings settles it. 3.8rem is measured, not chosen: it is where
+       "packs per" stops breaking after "packs", so the heading sits on two lines and the header
+       comes out at 36px, shorter than it was before any of this. The name column pays, which is
+       the right column to pay: a wrapped pack name is still a readable name. */
+    .table-responsive.bleed thead th.num { min-width: 3.8rem; }
 }
 
 /* ================================================================= column priority

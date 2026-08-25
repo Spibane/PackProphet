@@ -50,13 +50,42 @@ else
             <span>@Session.Profile.Resources.Shinedust.ToString("N0")</span>
         </span>
         <a class="btn btn-sm btn-outline-secondary" href="resources">edit</a>
+
+        @* What is currently shaping the list, on the bar rather than inside the disclosure that
+           sets it. The rows below are a ranking, and a ranking read without knowing it is filtered
+           to one rarity, or ordered by dust rather than difficulty, is a different answer to the
+           one it appears to be. Each chip puts its own control back to the default. *@
+        @if (_view != "all")
+        {
+            <button class="chip-filter" @onclick="ResetView" aria-label="Show everything, ranked">@ViewLabel &times;</button>
+        }
+        @if (_sort != "packs")
+        {
+            <button class="chip-filter" @onclick="ResetSort" aria-label="Rank by how hard a card is to pull">@SortLabel &times;</button>
+        }
+        @if (_rarity.Length > 0)
+        {
+            <button class="chip-filter" @onclick="ResetRarity" aria-label="Show any rarity">@RarityLabel &times;</button>
+        }
+        @if (ShowFoilFilter && _foils != "with")
+        {
+            <button class="chip-filter" @onclick="ResetFoils" aria-label="Include parallel foils">foils: @_foils &times;</button>
+        }
+        @if (_readyOnly)
+        {
+            <button class="chip-filter" @onclick="ResetReady" aria-label="Show all rows">doable only &times;</button>
+        }
     </div>
 
     @* A single global ranking is not enough here. Sorted by how hard a card is to pull, the top of
        the list is always the same handful of near-unpullable cards — the 139 parallel foils swamp
        it — which answers "what is rarest" rather than "what should I do about each pack, each
        rarity, each set". So the ranking is one view of several. *@
-    <div class="page-tools">
+    @* The controls that set all of the above. Folded by default: two full bars of selects sat
+       over this table on every visit, 242px of them, and the page's answer is the table. *@
+    <details class="toolbar-more">
+        <summary>view, ranking and filters</summary>
+        <div class="toolbar-more-body">
         <select class="form-select form-select-sm" style="max-width:12rem" aria-label="Group the rows by" @onchange="OnView">
             <option value="all" selected="@(_view == "all")">everything, ranked</option>
             <option value="rarity" selected="@(_view == "rarity")">best per rarity</option>
@@ -100,19 +129,13 @@ else
                 title="Hide trades you cannot make today">
             @(_readyOnly ? "doable only" : "all rows")
         </button>
-    </div>
+        </div>
+    </details>
 
     <PageShell Measure="PageShell.Width.Wide" Class="sections">
         @* Stamina is the scarce resource, so the page opens with how much of it there is. The
            question is not what you can afford but which of the affordable things is worth a slot
            that arrives twice a day. *@
-        <p class="small text-body-secondary">
-            Every trade costs exactly <strong>1 stamina</strong> whatever the rarity, and stamina
-            regenerates one per 12 hours &mdash; so about two trades a day, while shinedust simply
-            piles up. That makes trades the scarce thing, not currency. Value below is
-            <strong>expected packs saved</strong>, which is also value per stamina, since the cost
-            is flat.
-        </p>
 
         @if (_stamina.AtCap)
         {
@@ -318,6 +341,18 @@ else
                 </tbody>
             </DataTable>
 
+        @* How the economy works, under the ranking rather than over it. It explains why the
+           numbers are what they are, which is worth reading once and is not worth 126px above the
+           answer on every later visit. The verdict above the table stays there: that is the
+           answer, not an explanation of it. *@
+        <p class="small text-body-secondary">
+            Every trade costs exactly <strong>1 stamina</strong> whatever the rarity, and stamina
+            regenerates one per 12 hours &mdash; so about two trades a day, while shinedust simply
+            piles up. That makes trades the scarce thing, not currency. Value below is
+            <strong>expected packs saved</strong>, which is also value per stamina, since the cost
+            is flat.
+        </p>
+
             <p class="small text-body-secondary">
                 <strong>share?</strong> says whether a friend could simply send the card &mdash; 1
                 to 4 diamonds, nothing back, no dust and no stamina, one a day. Most rows say
@@ -491,6 +526,38 @@ else
     private void SetReadyOnly(bool on) { _readyOnly = on; Reshape(); }
 
     private void SetFoils(string mode) { _foils = mode; Reshape(); }
+
+    // One per chip on the tool bar. Each puts a single control back to its default, so a chip is
+    // both the report that something is applied and the way to remove it.
+    private void ResetView() { _view = "all"; Reshape(); }
+    private void ResetSort() { _sort = "packs"; Reshape(); }
+    private void ResetRarity() { _rarity = ""; Reshape(); }
+    private void ResetFoils() { _foils = "with"; Reshape(); }
+    private void ResetReady() { _readyOnly = false; Reshape(); }
+
+    /// <summary>Chip wording, taken from the option each control shows so the two cannot disagree.</summary>
+    private string ViewLabel => _view switch
+    {
+        "rarity" => "best per rarity",
+        "pack"   => "best per pack",
+        "set"    => "best per set",
+        _        => _view,
+    };
+
+    private string SortLabel => _sort switch
+    {
+        "points" => "furthest off by points",
+        "dust"   => "dearest in dust",
+        "cheap"  => "cheapest in dust",
+        _        => _sort,
+    };
+
+    /// <summary>The rarity's symbol rather than its ladder index, which means nothing on a chip.</summary>
+    private string RarityLabel =>
+        int.TryParse(_rarity, out var i)
+        && Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == i) is { } rung
+            ? rung.Symbol
+            : _rarity;
 
     private string NextFoilMode() => _foils switch
     {

@@ -129,28 +129,32 @@
    semantics, and a min/max pair cannot leave a 0.02px hole between them. */
 
 /* ================================================================= layout
-   One scroll container, never two. The grid takes exactly the space left over rather than
-   guessing with calc(100vh - Nrem), which can never match the real chrome height. */
+   The document scrolls. Everything above the content is ordinary page content and scrolls away
+   with it, rather than being pinned by a flex chain that hands the leftover height to one box.
 
-html, body { height: 100%; margin: 0; }
+   The chain that used to do that -- body overflow:hidden, main as a flex column, the grid as its
+   own overflow-y:auto scroller -- guaranteed the chrome never left the screen, which meant 338px
+   of toolbars on Collection cost 338px forever rather than until you scrolled past them. It also
+   split the app in two: pages with a grid scrolled inside a box, pages without scrolled normally,
+   and the two behaved differently at the bottom edge.
+
+   Letting the document scroll also gets something back that no app-side layout can: a mobile
+   browser hides its own URL bar when the page scrolls, and will not when the scrolling happens in
+   a nested box. */
+
+html { margin: 0; }
 body {
+    margin: 0;
+    min-height: 100%;
     background: var(--bs-body-bg);
     color: var(--bs-body-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
 }
 /* Blazor renders the layout INSIDE index.html's #app div, so this element sits between body
    and main. Unstyled it was an ordinary block of content height, which broke the flex chain:
    main's `flex: 1 1 auto` did nothing, main's height stayed content-sized, its `overflow-y`
    never had anything to scroll, and body's `overflow: hidden` simply clipped whatever did not
    fit. A tall page therefore lost its bottom with no scrollbar offered. */
-#app {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
+#app { display: block; }
 
 /* viewport-fit=cover lets the app paint into a notched phone's full screen, which is what the
    bottom bar will need in order to sit against the real bottom edge rather than above the home
@@ -168,14 +172,11 @@ body {
 }
 
 main {
-    flex: 1 1 auto;
-    min-height: 0;          /* lets a flex child actually shrink and scroll */
-    /* Only where nothing else sits on the inset. Below desk the tab bar is the bottom-most
-       element and owns it instead, or the two would both pay for the same strip. */
+    display: block;
+    /* Room for the tab bar, which is fixed to the bottom edge below desk and would otherwise
+       cover the last screenful. The inset is inside this figure rather than added to it, because
+       the bar already carries it. */
     padding-bottom: env(safe-area-inset-bottom);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;       /* pages with no scroller of their own scroll here */
 }
 
 /* Flex items shrink by default, and a shrunk item does not make its container scroll — it
@@ -502,12 +503,11 @@ main:focus { outline: none; }
 
 /* ================================================================= card grid (tiles) */
 
-.grid-wrap {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-}
+/* No longer a scroller. overscroll-behavior went with it: it existed to stop a scroll gesture
+   inside the grid chaining out to the page behind it, and there is no longer an inside. The
+   touch-action rule that suppresses panning during a card sweep still applies to the grid itself
+   and is unaffected. */
+.grid-wrap { min-height: 0; }
 
 .card-row { display: grid; gap: 4px; padding: 2px 4px; }
 
@@ -2132,22 +2132,30 @@ tr.row-best {
    The tab bar is a flex sibling AFTER main rather than a fixed overlay, so it takes its 56px out of
    the flex chain and main's scroller ends exactly above it. A fixed bar would sit over the last row
    of cards, which is the bug this whole pass exists to remove. */
+/* Fixed rather than a flex sibling, now that the page scrolls: as a sibling it would scroll away
+   with everything else. Fixed brings back the hazard it was originally shaped to avoid -- a bar
+   sitting on top of the last screenful -- so main reserves exactly its height below, and the two
+   figures come from one token so they cannot drift apart. */
+:root { --tab-bar-h: 3.5rem; }
+
 .tab-bar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 1030;
     display: flex;
-    flex: none;
+    /* The bar owns the bottom inset so its buttons sit above a home indicator while its background
+       still reaches the physical bottom edge. */
+    padding-bottom: env(safe-area-inset-bottom);
     border-top: 1px solid var(--bs-border-color);
     background: var(--bs-tertiary-bg);
-    /* The bar owns the bottom inset so its buttons sit above a home indicator while its background
-       still reaches the physical bottom edge. main gives its own bottom padding back, since the
-       bar now covers that ground. */
-    padding-bottom: env(safe-area-inset-bottom);
 }
 .tab-bar .tab {
     flex: 1 1 0;
     min-width: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: .1rem;
-    height: 3.5rem;
+    height: var(--tab-bar-h);
     padding: .25rem .15rem;
     border: 0; background: none;
     color: var(--bs-secondary-color);
@@ -2212,7 +2220,8 @@ tr.row-best {
 }
 
 @media (width <= 1056px) {
-    main { padding-bottom: 0; }
+    /* The bar's own height, its border, and the inset it sits above. */
+    main { padding-bottom: calc(var(--tab-bar-h) + 1px + env(safe-area-inset-bottom)); }
 }
 
 /* The palette reached from the More sheet: an action, not one of the destinations under it, so it

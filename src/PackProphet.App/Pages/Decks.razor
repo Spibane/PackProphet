@@ -37,9 +37,11 @@ else
         </div>
     }
 
-    @* Full width. The list is a table of decks against each other, and capping it left the columns
-       bunched at the left of a wide screen with the rest of the row empty. *@
-    <PageShell Measure="PageShell.Width.Wide">
+    @* Full width, and the parameter has to agree with the comment: this said "capping it left the
+       columns bunched at the left of a wide screen with the rest of the row empty" while passing
+       a 64rem cap, which is exactly the thing it warns about. My own slip when every page moved
+       onto the shell -- Wide was the right measure for the page next to it and got copied. *@
+    <PageShell>
         @if (_decks.Count == 0)
         {
             <EmptyState>

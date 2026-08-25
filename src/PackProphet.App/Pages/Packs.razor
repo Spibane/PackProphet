@@ -22,7 +22,7 @@ else
            afterwards. *@
         @* Grouped by series so this stays usable as sets accumulate. *@
         <select class="form-select form-select-sm" style="max-width:16rem" aria-label="What to rank packs against" @onchange="OnScope">
-            <option value="everything">everything I collect</option>
+            <option value="everything">everything</option>
             @* Wishlists sit in the same control as sets because they are the same thing to the
                engine: a target. A separate "wishlist mode" would imply the ranking works
                differently for them. *@
@@ -52,7 +52,7 @@ else
                        A sets" — and it sits above its own sets rather than in a separate list,
                        so the dropdown reads as one hierarchy. *@
                     <option value="series:@series" selected="@(_scope == $"series:{series}")">
-                        every set in series @series
+                        series @series
                     </option>
                     @foreach (var set in Session.Sets.SetsIn(series).Where(s => _sets.Contains(s)))
                     {
@@ -75,21 +75,34 @@ else
            none / 1 / 2. *@
         @* The rarity chips edit the completion plan, which a wishlist target does not consult, so
            under a wishlist scope they are hidden rather than shown doing nothing. *@
-        @* Eleven chips on one row wrapped to three lines at 375px, above a ranking they only
-           configure. Folded away, with the summary saying what the plan actually is -- which is
-           the part you read, where the chips are the part you occasionally change. *@
-        @if (!IsWishScope)
-        {
+        @* One panel for everything that sets what the ranking is OF, rather than a row of chips
+           and a row of availability toggles above the ranking they configure. Eleven chips alone
+           wrapped to three lines at 375px. The summary carries the settings themselves, so folding
+           them costs no information -- it is the reading that stays out and the changing that
+           folds away. *@
         <details class="rarity-plan">
             <summary>
-                <span class="ttl">collecting</span>
-                <span class="cur">@PlanSummary</span>
-                @* Only when it is not the default. "every set" is what a plan does unless told
-                   otherwise, so saying it spends a line on a phone reporting the absence of a
-                   decision; "A1 only" is a decision and is worth the room. *@
-                @if (PlanScope is not null)
+                @if (IsWishScope)
                 {
-                    <span class="scope">@ScopedSet only</span>
+                    <span class="cur">a wishlist decides what counts</span>
+                }
+                else
+                {
+                    <span class="ttl">collecting</span>
+                    <span class="cur">@PlanSummary</span>
+                    @* Only when it is not the default. "every set" is what a plan does unless told
+                       otherwise, so saying it spends a line on a phone reporting the absence of a
+                       decision; "A1 only" is a decision and is worth the room. *@
+                    @if (PlanScope is not null)
+                    {
+                        <span class="scope">@ScopedSet only</span>
+                    }
+                }
+                @* Likewise: the app assumes limited-time packs are off sale, so only the other
+                   answer is worth a word here. *@
+                @if (OnSaleNow is { Length: > 0 } onSale)
+                {
+                    <span class="scope">@onSale on sale</span>
                 }
                 @if (_pending)
                 {
@@ -100,68 +113,70 @@ else
                 <span class="hint">change</span>
             </summary>
 
-            <span class="rarity-chips">
-                <RarityChips Plan="Draft" OnCycle="CycleTier"
-                             ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
-            </span>
+            @* The rarity chips edit the completion plan, which a wishlist target does not consult,
+               so under a wishlist scope they are hidden rather than shown doing nothing. *@
+            @if (!IsWishScope)
+            {
+                <span class="rarity-chips">
+                    <RarityChips Plan="Draft" OnCycle="CycleTier"
+                                 ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
+                </span>
 
-            @* Which plan the chips are editing, and how to reach the other one. This used to be a
-               label reading "default" with no route to a per-set plan unless a single set was
-               already scoped — so the word promised a distinction the page never offered. It now
-               says what to do at every scope. *@
-            <p class="plan-scope">
-                @if (PlanScope is not null)
-                {
-                    <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
-                    <button class="chip-link" @onclick="ClearOverride"
-                            title="Follow the default plan again">use the default here</button>
-                }
-                else if (ScopedSet is not null)
-                {
-                    <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
-                    <button class="chip-link" @onclick="StartOverride"
-                            title="Give @ScopedSet its own plan, starting from the default">
-                        give @ScopedSet its own
-                    </button>
-                }
-                else
-                {
-                    <span>
-                        This is the <strong>default</strong>, used by every set without a plan of
-                        its own. To give one set a different plan, choose that set in the dropdown
-                        above — the option to split it off appears here once a single set is in
-                        scope.
-                    </span>
-                }
-            </p>
+                @* Which plan the chips are editing, and how to reach the other one. This used to be
+                   a label reading "default" with no route to a per-set plan unless a single set was
+                   already scoped — so the word promised a distinction the page never offered. It
+                   now says what to do at every scope. *@
+                <p class="plan-scope">
+                    @if (PlanScope is not null)
+                    {
+                        <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
+                        <button class="chip-link" @onclick="ClearOverride"
+                                title="Follow the default plan again">use the default here</button>
+                    }
+                    else if (ScopedSet is not null)
+                    {
+                        <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
+                        <button class="chip-link" @onclick="StartOverride"
+                                title="Give @ScopedSet its own plan, starting from the default">
+                            give @ScopedSet its own
+                        </button>
+                    }
+                    else
+                    {
+                        <span>
+                            This is the <strong>default</strong>, used by every set without a plan
+                            of its own. To give one set a different plan, choose that set in the
+                            dropdown above — the option to split it off appears here once a single
+                            set is in scope.
+                        </span>
+                    }
+                </p>
+            }
+
+            @* Availability is a live fact no dataset records. The app assumes off sale, and a
+               Deluxe pack is otherwise the standout pick for a 4-diamond target, so the assumption
+               changes every figure on the page — which is why it is a labelled control saying
+               which way it is set rather than a bare switch. In here with the plan because it is
+               the same kind of thing: what the ranking is allowed to consider. *@
+            @if (Session.LimitedPacks.Count > 0)
+            {
+                <span class="avail">
+                    <span class="ttl">limited-time</span>
+                    @foreach (var pack in Session.LimitedPacks)
+                    {
+                        var on = Session.IsLimitedPackAvailable(pack);
+                        <button class="avail-chip @(on ? "on" : "off")"
+                                @onclick="() => ToggleLimited(pack, !on)"
+                                title="@(pack.Split(':')[1]) packs come and go. @(on
+                                    ? "Counted in the ranking. Tap if they are not on sale."
+                                    : "Left out of the ranking, and their exclusive cards count as unobtainable. Tap when they are on sale.")">
+                            <span class="nm">@pack.Split(':')[1]</span>
+                            <span class="st">@(on ? "on sale" : "off sale")</span>
+                        </button>
+                    }
+                </span>
+            }
         </details>
-        }
-
-        @* Limited-time packs get a labelled control that says which way it is set rather than a
-           bare switch. Availability is a live fact no dataset records, the app assumes off sale,
-           and a Deluxe pack is otherwise the standout pick for a 4-diamond target, so the
-           assumption changes every figure on the page. *@
-        @if (Session.LimitedPacks.Count > 0)
-        {
-            @* Inside the condition, so no divider dangles at the end of the bar when there are no
-               limited-time packs to separate. *@
-            <span class="bar-sep" aria-hidden="true"></span>
-            <span class="avail">
-                <span class="ttl">limited-time</span>
-                @foreach (var pack in Session.LimitedPacks)
-                {
-                    var on = Session.IsLimitedPackAvailable(pack);
-                    <button class="avail-chip @(on ? "on" : "off")"
-                            @onclick="() => ToggleLimited(pack, !on)"
-                            title="@(pack.Split(':')[1]) packs come and go. @(on
-                                ? "Counted in the ranking. Tap if they are not on sale."
-                                : "Left out of the ranking, and their exclusive cards count as unobtainable. Tap when they are on sale.")">
-                        <span class="nm">@pack.Split(':')[1]</span>
-                        <span class="st">@(on ? "on sale" : "off sale")</span>
-                    </button>
-                }
-            </span>
-        }
     </div>
 
     <PageShell>
@@ -179,22 +194,21 @@ else
            rather than below the ranking table &mdash; that table runs to dozens of rows across
            every priceable pack, and a button only reachable by scrolling past all of them may as
            well not exist. *@
+        @* Named by what they open rather than by "show"/"hide". The word doubled the label of every
+           one of them, and a button that says "hide" when the panel is shut and "show" when it is
+           open has to be read to work out which state you are in. The pressed state says that. *@
         <div class="d-flex flex-wrap gap-2 mb-3">
             @if (!IsWishScope)
             {
-                <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleAdvisor">
-                    @(_advisorOpen ? "hide" : "show") what each rarity would cost
-                </button>
+                <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@_advisorOpen"
+                        @onclick="ToggleAdvisor">cost per rarity</button>
             }
-            <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleBatch">
-                @(_batchOpen ? "hide" : "show") buying @GameRules.PacksPerBatch at once
-            </button>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleAllocate">
-                @(_allocateOpen ? "hide" : "show") splitting a budget
-            </button>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="TogglePoints">
-                @(_pointsOpen ? "hide" : "show") pack points
-            </button>
+            <button class="btn btn-sm @Toggled(_batchOpen)" aria-pressed="@_batchOpen"
+                    @onclick="ToggleBatch">buying @GameRules.PacksPerBatch at once</button>
+            <button class="btn btn-sm @Toggled(_allocateOpen)" aria-pressed="@_allocateOpen"
+                    @onclick="ToggleAllocate">splitting a budget</button>
+            <button class="btn btn-sm @Toggled(_pointsOpen)" aria-pressed="@_pointsOpen"
+                    @onclick="TogglePoints">pack points</button>
         </div>
 
         @if (_advisorOpen && !IsWishScope)
@@ -217,8 +231,7 @@ else
                 </DataTable>
                 <p class="small text-body-secondary mb-0">
                     Expected packs to finish <em>that rarity alone</em>, opening the best available
-                    pack each time &mdash; so it reads as the cost of adding a rarity to your
-                    selection. People set impossible targets because nobody ever priced them.
+                    pack each time.
                 </p>
             </div>
         }
@@ -836,6 +849,18 @@ else
     /// </summary>
     private RarityPlan? _draft;
     private RarityPlan Draft => _draft ?? Plan;
+
+    /// <summary>
+    /// The limited-time packs currently marked on sale, for the folded summary. Empty when they
+    /// are all at the app's assumption, which is the case that needs no words.
+    /// </summary>
+    private string OnSaleNow =>
+        string.Join(", ", Session.LimitedPacks
+            .Where(Session.IsLimitedPackAvailable)
+            .Select(p => p.Split(':')[1]));
+
+    /// <summary>Filled while its panel is open, outlined while it is not.</summary>
+    private static string Toggled(bool open) => open ? "btn-secondary" : "btn-outline-secondary";
 
     /// <summary>
     /// The plan as one line, for the collapsed picker: the rungs being collected, with a count

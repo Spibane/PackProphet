@@ -16,7 +16,7 @@
        aria-modal is deliberately absent: showModal() already conveys modality, and setting it by
        hand on a native dialog is redundant. *@
     <dialog class="palette" @ref="_dialog" aria-label="Command palette" @onclose="OnDialogClose">
-        <input class="palette-input" @ref="_input" placeholder="Jump to a card, set, deck, or action&hellip;"
+        <input class="palette-input" @ref="_input" placeholder="Jump to a card, set, deck, or action…"
                @bind="_query" @bind:event="oninput" @bind:after="Search"
                @onkeydown="OnKeyDown" @onkeydown:stopPropagation="true" aria-label="Search" />
 

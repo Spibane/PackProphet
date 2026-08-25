@@ -166,6 +166,41 @@ public class LayoutInvariantTests
     }
 
     [Fact]
+    public void No_table_cell_is_given_a_display_that_takes_it_out_of_its_row()
+    {
+        // A <td> set to flex or inline-flex stops being a table cell, so it drops out of the row's
+        // height calculation -- and because a cell draws its own bottom border, the row line then
+        // sits high in that column and level in every other. On the wishlist two cells came out at
+        // 25.8px and 34.6px in a 46.6px row, which read as a table with ragged rules.
+        //
+        // The fix is always the same: leave the cell a cell and put the flex on a wrapper inside
+        // it. This catches the tempting version, which looks like it should work.
+        var css = WithoutComments(Css);
+
+        var offenders = new List<string>();
+        foreach (Match rule in Regex.Matches(css, @"([^{}]+)\{([^{}]*)\}"))
+        {
+            var selector = Regex.Replace(rule.Groups[1].Value, @"\s+", " ").Trim();
+            var body = rule.Groups[2].Value;
+
+            if (!Regex.IsMatch(body, @"display:\s*(inline-)?flex|display:\s*(inline-)?grid")) continue;
+
+            // Only the cell itself matters. A selector ending in a descendant of the cell is the
+            // correct shape and must keep passing.
+            foreach (var part in selector.Split(','))
+            {
+                var last = part.Trim().Split(' ').LastOrDefault()?.Trim() ?? "";
+                if (Regex.IsMatch(last, @"^(td|th)([.:\[#].*)?$"))
+                    offenders.Add($"{part.Trim()} sets a flex or grid display");
+            }
+        }
+
+        Assert.True(offenders.Count == 0,
+            "These put a table cell outside its own row, so its bottom border stops lining up " +
+            "with the rest: " + string.Join("; ", offenders));
+    }
+
+    [Fact]
     public void Every_stepper_size_clears_the_minimum_target()
     {
         // WCAG 2.5.8 asks for 24x24 CSS px, and the -/+ buttons were 23 tall for as long as they

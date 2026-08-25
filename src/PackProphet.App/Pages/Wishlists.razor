@@ -374,12 +374,17 @@ else
                         @* Stepper rather than a cycler: there is no small ceiling to wrap around.
                            Extra copies are ordinary — trade fodder and flair material. *@
                         <td class="want-n num">
-                            <button class="step" @onclick="() => Bump(card, -1)"
-                                    aria-label="Want one fewer @card.Name">&minus;</button>
-                            <span class="n">@wanted</span>
-                            <button class="step" @onclick="() => Bump(card, 1)"
-                                    disabled="@(wanted >= WishlistEdit.MaxCopies)"
-                                    aria-label="Want one more @card.Name">+</button>
+                            @* The stepper is wrapped rather than laid out on the cell: a td given
+                               a flex display leaves the table row, and its bottom border then
+                               draws at its own height instead of the row's. *@
+                            <span class="stepper">
+                                <button class="step" @onclick="() => Bump(card, -1)"
+                                        aria-label="Want one fewer @card.Name">&minus;</button>
+                                <span class="n">@wanted</span>
+                                <button class="step" @onclick="() => Bump(card, 1)"
+                                        disabled="@(wanted >= WishlistEdit.MaxCopies)"
+                                        aria-label="Want one more @card.Name">+</button>
+                            </span>
                         </td>
 
                         <td class="acts"><button class="step remove" @onclick="() => Remove(card)"

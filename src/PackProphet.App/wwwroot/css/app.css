@@ -561,6 +561,37 @@ main:focus { outline: none; }
 .rarity-chip.on { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; font-weight: 600; }
 .rarity-chip:disabled { opacity: .5; }
 
+/* The completion plan, folded. Same shape as the collection's set picker, because it is the same
+   problem: a row of chips that configures the page sitting permanently above the thing it
+   configures. The summary carries the plan itself, so folding it costs no information. */
+.rarity-plan { flex: 1 1 100%; }
+.rarity-plan > summary {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem;
+    cursor: pointer; user-select: none;
+    font-size: .88rem;
+}
+.rarity-plan > summary:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
+.rarity-plan > summary .ttl {
+    font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.rarity-plan > summary .cur { font-weight: 600; }
+.rarity-plan > summary .scope { color: var(--bs-secondary-color); }
+.rarity-plan > summary .hint { margin-left: auto; font-size: .82rem; color: var(--bs-secondary-color); }
+.rarity-plan > summary:hover .hint { color: var(--bs-body-color); }
+
+.rarity-plan .rarity-chips { padding-top: .4rem; }
+
+/* The sentence that makes a per-set plan findable. Sized down and quieted: it is instruction
+   rather than state, and it is read once. */
+.plan-scope {
+    margin: .45rem 0 .15rem;
+    font-size: .82rem; line-height: 1.35;
+    color: var(--bs-secondary-color);
+    max-inline-size: var(--measure-text);
+}
+.plan-scope strong { color: var(--bs-body-color); }
+
 .chip-pending {
     font-size: .86rem; align-self: center;
     color: var(--bs-warning-text-emphasis);
@@ -1134,6 +1165,10 @@ tr.row-best {
     .supplied-row .rt { grid-column: 2 / -1; white-space: normal; }
 }
 
+/* nowrap on the cells, not the headings: a figure broken across two lines ("100.0" then "%") is
+   unreadable and costs a row of height per line, while a heading of three words is meant to wrap
+   and is what keeps the column narrow. */
+.pack-table td.num { white-space: nowrap; }
 .pack-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 /* The per-row action. Narrow and right-aligned so the numeric columns keep their width, and
    never wrapping: a two-line row would break the alignment of every figure beside it. */
@@ -1145,6 +1180,14 @@ tr.row-best {
     vertical-align: middle; margin-right: .4rem; border-radius: .15rem;
     background-color: var(--bs-secondary-bg);
     background-size: contain; background-position: center; background-repeat: no-repeat;
+}
+
+/* A wide table reclaiming the page body's 1rem on a phone. Physical margins, not logical: the
+   padding being cancelled is `calc(1rem + var(--safe-l))`, and taking back exactly 1rem from each
+   physical side leaves the cutout inset behind, which is the half that matters. Only below the
+   phone breakpoint — above it the width is not scarce and the inset reads as deliberate. */
+@media (width < 600px) {
+    .table-responsive.bleed { margin-left: -1rem; margin-right: -1rem; }
 }
 
 /* ================================================================= column priority

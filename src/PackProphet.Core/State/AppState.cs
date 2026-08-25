@@ -268,6 +268,18 @@ public sealed record Profile(
     /// </summary>
     public LifetimeTotals? Lifetime { get; init; }
 
+    /// <summary>
+    /// The player's name in the game, so a shared wishlist can be acted on. A want-list is
+    /// useless to the person reading it unless they can find you to send the card, and nothing
+    /// else in the app carries that: the profile name is whatever you called this collection.
+    ///
+    /// Per profile rather than per app. A second profile is a second account, with its own
+    /// friend list and its own name.
+    ///
+    /// Optional, like Lifetime, so existing saves deserialize unchanged.
+    /// </summary>
+    public string? InGameName { get; init; }
+
     public static Profile NewDefault(string id = "default", string name = "My collection") =>
         new(id, name, new(), TargetSettings.Default, [], [], [], [], Resources.Empty);
 }

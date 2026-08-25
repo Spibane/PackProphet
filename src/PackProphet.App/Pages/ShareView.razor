@@ -25,7 +25,20 @@ else
 {
     <div class="page-head">
         <h1 class="title">@_shared.ListName</h1>
-        <span class="subtitle">wanted by @_shared.OwnerName &mdash; shared read-only</span>
+        @* The in-game name is the one that lets you act on this. The collection name is what the
+           owner called a save slot -- it identifies nothing to you. Shown when the link carries
+           one; links made before the field existed, and owners who never set it, still decode. *@
+        <span class="subtitle">
+            @if (_shared.InGameName is { Length: > 0 } inGame)
+            {
+                <span>find them in-game as <strong>@inGame</strong></span>
+            }
+            else
+            {
+                <span>wanted by @_shared.OwnerName</span>
+            }
+            &mdash; shared read-only
+        </span>
     </div>
 
     @* Said plainly rather than assumed: the whole list arrived inside the link itself, so nothing

@@ -154,6 +154,9 @@
         <thead>
             <tr>
                 <th scope="col">collection</th>
+                @* The name people find you by in the game. A shared wishlist is unusable without
+                   it -- whoever reads the list knows what you want and has no way to send it. *@
+                <th scope="col" data-pri="2">in-game name</th>
                 <th scope="col" class="text-end">cards</th>
                 <th scope="col"><span class="visually-hidden">actions</span></th>
             </tr>
@@ -182,6 +185,12 @@
                                 <span class="badge text-bg-primary ms-2">active</span>
                             }
                         }
+                    </td>
+                    <td data-pri="2">
+                        <input class="form-control form-control-sm" style="max-width:12rem"
+                               value="@profile.InGameName" placeholder="not set"
+                               aria-label="In-game name for @profile.Name"
+                               @onchange="e => SaveInGameName(profile.Id, e.Value?.ToString())" />
                     </td>
                     <td class="text-end">@Cards(profile)</td>
                     <td class="text-end">
@@ -415,6 +424,12 @@
         _deleting = null;
         Session.SwitchProfile(id);
         Say($"switched to {Session.Profile.Name}.");
+    }
+
+    private void SaveInGameName(string id, string? name)
+    {
+        Session.SetInGameName(id, name);
+        Say(string.IsNullOrWhiteSpace(name) ? "in-game name cleared." : $"in-game name saved as {name!.Trim()}.");
     }
 
     private void StartRename(Profile profile)

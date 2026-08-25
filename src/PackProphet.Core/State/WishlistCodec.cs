@@ -10,7 +10,17 @@ using System.Text.Json;
 /// shelf looks like, and a bare want-list is both smaller and more private than a full
 /// collection would be.
 /// </summary>
-public sealed record SharedWishlist(string OwnerName, string ListName, Dictionary<string, int> Wanted);
+/// <param name="OwnerName">What the owner calls this collection. Their label, not their identity.</param>
+/// <param name="InGameName">
+/// What to search for in the game, when the owner has set one. Without it a shared list tells you
+/// exactly what someone wants and gives you no way to send it — the collection name is whatever
+/// they called a save slot. Optional with a default so links made before this field decode.
+/// </param>
+public sealed record SharedWishlist(
+    string OwnerName,
+    string ListName,
+    Dictionary<string, int> Wanted,
+    string? InGameName = null);
 
 /// <summary>
 /// Packs a wishlist into a URL-safe string and back, entirely client-side.
@@ -24,9 +34,9 @@ public static class WishlistCodec
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public static string Encode(string ownerName, Wishlist list)
+    public static string Encode(string ownerName, Wishlist list, string? inGameName = null)
     {
-        var shared = new SharedWishlist(ownerName, list.Name, list.Wanted);
+        var shared = new SharedWishlist(ownerName, list.Name, list.Wanted, inGameName);
         var json = JsonSerializer.SerializeToUtf8Bytes(shared, JsonOptions);
 
         using var output = new MemoryStream();

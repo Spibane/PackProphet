@@ -1351,6 +1351,24 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     /// <summary>
+    /// The player's name in the game for this collection. Empty clears it, because "I typed it
+    /// and I want it gone" is a real intent and there is no other control that could express it —
+    /// unlike the profile name, which must always be something.
+    /// </summary>
+    public void SetInGameName(string id, string? name)
+    {
+        var cleaned = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+
+        State = State with
+        {
+            Profiles = State.Profiles
+                .Select(p => p.Id == id ? p with { InGameName = cleaned } : p).ToList()
+        };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    /// <summary>
     /// Delete a collection. Refuses the last one: an app with no profile has nowhere to put a
     /// tap, and the state model has no way to express it.
     /// </summary>

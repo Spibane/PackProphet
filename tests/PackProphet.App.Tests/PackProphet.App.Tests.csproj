@@ -60,6 +60,13 @@
              Link="CardGrid.razor.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Every page, as text. One invariant spans all of them: nothing below the bars may pad itself
+       to the screen edge with a flat utility, because those do not clear a display cutout. -->
+  <ItemGroup>
+    <Content Include="..\..\src\PackProphet.App\Pages\*.razor"
+             Link="pages\%(Filename).razor.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- The same vendored snapshot the app ships, served to the loader over a fake HttpClient so a
        page renders against real card data rather than a handful of fixtures. -->
   <ItemGroup>

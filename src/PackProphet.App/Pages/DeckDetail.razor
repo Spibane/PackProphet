@@ -8,7 +8,7 @@
 
 @if (!Session.Ready)
 {
-    <p class="p-4">Loading card data&hellip;</p>
+    <Loading />
 }
 else if (_draft is null)
 {
@@ -86,7 +86,8 @@ else
         </Notice>
     }
 
-    <div class="edit-cols p-3">
+    <PageShell>
+    <div class="edit-cols">
         <div>
             <h2 class="h6">Energy <span class="small fw-normal text-body-secondary">at most @GameRules.MaxEnergyTypes</span></h2>
             <div class="energy-chips mb-3">
@@ -280,6 +281,7 @@ else
             }
         </div>
     </div>
+    </PageShell>
 }
 
 @code {

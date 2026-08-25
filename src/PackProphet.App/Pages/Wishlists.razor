@@ -9,7 +9,7 @@
 
 @if (!Session.Ready)
 {
-    <p class="p-4">Loading card data&hellip;</p>
+    <Loading />
 }
 else if (Id is null)
 {
@@ -233,17 +233,18 @@ else
 
     @if (_shareLink is not null)
     {
-        <div class="px-3 pb-2">
+        <PageShell>
             <input class="form-control form-control-sm" readonly value="@_shareLink"
                    onfocus="this.select()" aria-label="Shareable read-only link for this wishlist" />
             <p class="small text-body-secondary mt-1 mb-0">
                 Tap the field to select it, then copy. Shows only what is wanted, not what you
                 already own &mdash; nothing is uploaded, the whole list travels inside the link.
             </p>
-        </div>
+        </PageShell>
     }
 
-    <div class="summary px-3 py-2">
+    <PageShell>
+    <div class="summary">
         <div class="stat">
             <span class="label">cards wanted</span>
             <span class="value">@Session.WantedTotal(_list)</span>
@@ -276,7 +277,7 @@ else
     @* Two columns on desktop, list left and search right — the same shape as the deck builder.
        With the search below the list, adding a card grew the list and pushed the search down, so
        adding a second copy meant hunting for the row that had just moved. *@
-    <div class="edit-cols wish-edit p-3">
+    <div class="edit-cols wish-edit">
         <div class="list-col">
         @if (_cards.Count == 0)
         {
@@ -392,6 +393,7 @@ else
                         PickedOf="WantedOf" OnPick="Add" OnPickAll="AddAll" />
         </div>
     </div>
+    </PageShell>
 }
 
 @code {

@@ -307,7 +307,9 @@ main:focus { outline: none; }
     position: relative;
     /* A top margin as well as a bottom one: with none it sat flush against the set tabs, reading
        as part of that bar rather than as its own row. */
-    margin: .5rem .75rem;
+    /* Insets on the physical sides, like the bars above it: a cutout is on a physical edge, so a
+       logical margin would clear it in one writing direction and not the other. */
+    margin: .5rem calc(.75rem + var(--safe-r)) .5rem calc(.75rem + var(--safe-l));
     padding: .35rem 2rem .35rem .6rem;
     border: 1px solid var(--bs-border-color);
     background: color-mix(in srgb, var(--bs-body-color) 4%, transparent);
@@ -476,11 +478,15 @@ main:focus { outline: none; }
     outline-offset: -2px;
 }
 
+/* Vertical padding only. Horizontal padding was `px-3` at all three call sites, which is a flat
+   1rem and does not clear a display cutout -- the same bug the toolbars had in landscape, in a
+   band that also spans the screen. Rather than repeating the inset here, the block sits inside
+   the page body and takes its padding, which is where every other block on those pages gets it. */
 .summary {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
     gap: .5rem;
-    padding: 0;
+    padding-block: .5rem;
 }
 
 /* Each figure in its own box. Whitespace alone was not enough separation once there were eight

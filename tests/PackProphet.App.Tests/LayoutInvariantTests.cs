@@ -131,6 +131,40 @@ public class LayoutInvariantTests
         Assert.Equal(roomy + 1, declaredRoomy);
     }
 
+    /// <summary>
+    /// Utilities that pad or inset a block by a flat amount. Fine anywhere nested; wrong on
+    /// anything sitting directly against the screen edge, because none of them clear a cutout.
+    /// </summary>
+    private static readonly Regex FlatEdgePadding =
+        new(@"class=""[^""]*\b(p-[345]|px-[345]|m-[345]|mx-[345])\b", RegexOptions.Compiled);
+
+    public static TheoryData<string> PageFiles()
+    {
+        var data = new TheoryData<string>();
+        foreach (var f in Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "pages"), "*.razor.txt"))
+            data.Add(f);
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(PageFiles))]
+    public void No_page_pads_itself_to_the_screen_edge_by_hand(string file)
+    {
+        // Padding below the bars belongs to PageShell, which carries env(safe-area-inset-*) so a
+        // block clears a display cutout. Six pages instead reached for px-3 or p-3, which is a
+        // flat 1rem: in landscape on a notched phone their content sat under the cutout while the
+        // bars above it -- fixed earlier, in the same place -- did not.
+        //
+        // The check is on the page rather than in the browser because it is invisible on a
+        // desktop, where every inset resolves to zero. That is how it was missed the first time.
+        var markup = File.ReadAllText(file);
+        var name = Path.GetFileName(file);
+
+        Assert.False(FlatEdgePadding.IsMatch(markup),
+            $"{name} pads a block with a flat utility. Wrap it in <PageShell> instead, or if it " +
+            "is genuinely nested inside one already, use a spacing class that is not an edge inset.");
+    }
+
     [Fact]
     public void Every_stepper_size_clears_the_minimum_target()
     {

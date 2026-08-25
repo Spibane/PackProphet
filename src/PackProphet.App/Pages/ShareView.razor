@@ -7,7 +7,7 @@
 
 @if (!Session.Ready)
 {
-    <p class="p-4">Loading card data&hellip;</p>
+    <Loading />
 }
 else if (_shared is null)
 {
@@ -31,21 +31,26 @@ else
     @* Said plainly rather than assumed: the whole list arrived inside the link itself, so nothing
        about opening this page sent anything anywhere. What the owner already has is deliberately
        not part of it — this is a want-list, not their collection. *@
-    <Notice Severity="Notice.Level.Info" Class="mx-3">
+    <PageShell Class="pb-0">
+    <Notice Severity="Notice.Level.Info">
         Nothing here can be edited. This was decoded entirely in your browser &mdash; opening the
         link uploaded nothing and contacted no server. Only the wanted cards travelled in the
         link, not @_shared.OwnerName's collection.
     </Notice>
+    </PageShell>
 
     @if (_rows.Count == 0)
     {
-        <p class="p-3 text-body-secondary">
-            Nothing in this list is a card the current card data knows about.
-        </p>
+        <PageShell>
+            <p class="text-body-secondary">
+                Nothing in this list is a card the current card data knows about.
+            </p>
+        </PageShell>
     }
     else
     {
-        <div class="summary px-3 py-2">
+        <PageShell>
+        <div class="summary">
             <div class="stat">
                 <span class="label">cards wanted</span>
                 <span class="value">@_rows.Count</span>
@@ -57,7 +62,7 @@ else
             </div>
         </div>
 
-        <DataTable Label="Cards on this wishlist" Class="mx-3">
+        <DataTable Label="Cards on this wishlist">
             <thead>
                 <tr>
                     <th scope="col">card</th>
@@ -90,9 +95,10 @@ else
                 }
             </tbody>
         </DataTable>
-        <p class="small text-body-secondary mx-3">
+        <p class="small text-body-secondary">
             Rows you own at least one of are highlighted &mdash; those are what you have to offer.
         </p>
+        </PageShell>
     }
 }
 

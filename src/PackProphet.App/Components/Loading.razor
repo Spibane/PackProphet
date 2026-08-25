@@ -1,0 +1,14 @@
+@* The gate every page shows while the card data is still being read.
+
+   Fifteen pages had this as `<p class="p-4">`, character for character. Two things were wrong
+   with it repeated rather than shared. The padding is flat, so on a notched phone in landscape
+   the message sat under the cutout while every other block on the page cleared it; and it was
+   announced to nobody, so a screen reader arriving at a page mid-load found what looked like an
+   empty page and no indication that anything was coming.
+
+   Polite rather than assertive: it is the ordinary state of arriving, not something to interrupt
+   for. *@
+
+<PageShell>
+    <p class="mb-0" role="status">Loading card data&hellip;</p>
+</PageShell>

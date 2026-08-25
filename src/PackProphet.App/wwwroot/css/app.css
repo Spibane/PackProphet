@@ -230,11 +230,21 @@ main > * { flex-shrink: 0; }
 /* The two share directions, side by side. They do not compete - each account has its own daily
    allowance - so showing them as one list would imply a queue that does not exist. Stacks on a
    phone, incoming first, because that is the half you act on. */
+/* Two columns where two fit, one where they do not — stated as a minimum column width rather
+   than as a viewport breakpoint, so it also holds when this sits in a narrow panel rather than a
+   narrow window. min(100%, …) keeps the single column from overflowing a container narrower than
+   the minimum itself.
+
+   auto-fit rather than a fixed two tracks: a fixed count cannot stack, so at 400px it lays two
+   368px columns side by side and overflows the container. auto-fit collapses the spare track to
+   zero when only two things are in here, which is always, so the rendered result matches the
+   1fr 1fr it replaces at every width where both fit. */
 .share-cols {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.6rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 23rem), 1fr));
+    gap: 1rem 1.6rem;
     margin-bottom: .8rem;
 }
-@media (width <= 800px) { .share-cols { grid-template-columns: 1fr; } }
 
 /* Bootstrap's .visually-hidden-focusable does the showing and hiding; this only dresses it, and
    only while it is on screen. Rolling the hiding by hand was a mistake once already: an absolutely
@@ -410,7 +420,7 @@ main:focus { outline: none; }
 .page-head .actions {
     display: flex; align-items: center; gap: .4rem; flex: none; margin-left: auto;
 }
-@media (width <= 560px) {
+@media (width < 600px) {
     /* The subtitle is explanatory, and a phone header has room for the title and the buttons
        or for prose, not both. */
     .page-head .subtitle { display: none; }
@@ -1225,7 +1235,7 @@ tr.row-best {
 /* Density drops as the chart narrows: weekly marks go first, then month starts, and the two end
    dates always survive so the range is still readable. */
 @media (width <= 900px) { .bars-axis .minor { display: none; } }
-@media (width <= 560px) { .bars-axis .major { display: none; } }
+@media (width < 600px) { .bars-axis .major { display: none; } }
 
 /* The empty part of the track has to be visible, or a set with little progress looks like no
    bar at all rather than a nearly empty one. */
@@ -1529,7 +1539,7 @@ tr.row-best {
     .pick-row { grid-template-columns: 1.7rem minmax(5rem, 1.2fr) var(--rarity-col) minmax(0, 1.4fr) 2.8rem 2.2rem 4.6rem; }
     .pick-row .hp { display: none; }
 }
-@media (width <= 560px) {
+@media (width < 600px) {
     .pick-row { grid-template-columns: 1.7rem minmax(0, 1fr) minmax(0, 1.1fr) 2.2rem; }
     .pick-row .rr, .pick-row .ind { display: none; }
 }
@@ -1615,7 +1625,7 @@ tr.row-best {
     .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) var(--pick-col) 2.4rem 4.2rem; }
     .card-line .c-a1, .card-line .c-a2, .card-line .c-ab, .card-line .c-hp { display: none; }
 }
-@media (width <= 560px) {
+@media (width < 600px) {
     /* Seven columns in 375px. Even with the name at its 5rem minimum the row needed 419px, so the
        list scrolled sideways on a phone -- the name could not take the 1fr it is asking for, and
        every row was 44px too wide. The shortfall comes back out of spacing and minimums rather
@@ -1672,7 +1682,7 @@ tr.row-best {
 #tip img + .tip-text { border-top: 1px solid var(--bs-border-color); margin-top: .35rem; }
 
 @media (height <= 700px) { #tip img { height: 15rem; } }
-@media (width <= 560px)  { #tip img { height: 13rem; } }
+@media (width < 600px)  { #tip img { height: 13rem; } }
 
 /* The list thumbnail is a hover target, so it needs to sit in the grid like the image did. */
 .card-line .c-thumb { display: block; width: var(--art-w); height: var(--art-h); }
@@ -1820,7 +1830,7 @@ tr.row-best {
     border: 1px solid var(--bs-border-color); border-radius: .2rem;
     padding: 0 .25rem; margin-right: .15rem; font-size: .78rem;
 }
-@media (width <= 560px) {
+@media (width < 600px) {
     /* The keyboard legend is meaningless on a touch device. */
     .palette-foot { display: none; }
     .palette { top: 1.5rem; }

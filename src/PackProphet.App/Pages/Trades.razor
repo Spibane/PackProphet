@@ -228,7 +228,7 @@ else
                             <th scope="col">@(_view == "rarity" ? "rarity" : _view)</th>
                         }
                         <th scope="col" data-pri="1">card</th>
-                        <th scope="col" data-pri="2">rarity</th>
+                        <th scope="col" data-pri="3">rarity</th>
                         @* A column rather than a badge on the name. Most rows are shareable, so as
                            a badge it repeated down the whole table; as a column it is scannable,
                            and the rows that say no stand out. *@
@@ -258,7 +258,7 @@ else
                                     </span>
                                 }
                             </td>
-                            <td data-pri="2">
+                            <td data-pri="3">
                                 <span class="glyphs @Session.Index.GlyphClass(row.Candidate.Want)" title="@Session.Index.Symbol(row.Candidate.Want)">
                                     @Session.Index.Glyphs(row.Candidate.Want)
                                 </span>

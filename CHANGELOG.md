@@ -4,7 +4,7 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
-## 0.3.0 — 2026-08-25
+## Unreleased
 
 Phase 3, and a layout pass over all seventeen routes. Every figure below was measured in the
 running app at 375x812 unless another width is named.
@@ -64,7 +64,7 @@ running app at 375x812 unless another width is named.
   to do; dropped what a badge already says, what justifies the design, and the clause that
   restates the previous one.
 
-### Also in this release
+### Also unreleased
 
 - **Licence and source are offered inside the app.** Settings now carries a "Licence and
   source" section linking the licence text, the repository, every upstream data source and the

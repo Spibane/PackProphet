@@ -174,10 +174,39 @@ else
         @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
            header, the set tabs, a filter row and a control row, this page put five bars above the
            first card; sharing one bar halves that without hiding anything. *@
-        <Filters>
-            <input class="form-control form-control-sm" style="max-width:14rem"
+        <Search>
+            <input class="form-control form-control-sm grid-search"
                    placeholder="search name" aria-label="Search card names" value="@_search" @oninput="OnSearch" />
+        </Search>
 
+        @* What is currently narrowing the list, said on the bar itself. The controls that set
+           these are folded into the disclosure; this is the state they leave behind, and without
+           it the card count would quietly mean something other than what it says. Each chip
+           clears its own filter. *@
+        <FilterChips>
+            @if (_search is { Length: > 0 })
+            {
+                <button class="chip-filter" @onclick="ClearSearch"
+                        aria-label="Clear the name search">name: @_search &times;</button>
+            }
+            @if (_own != "all")
+            {
+                <button class="chip-filter" @onclick="ClearOwnFilter"
+                        aria-label="Clear the ownership filter">@OwnFilterLabel &times;</button>
+            }
+            @if (_rarity is { Length: > 0 })
+            {
+                <button class="chip-filter" @onclick="ClearRarityFilter"
+                        aria-label="Clear the rarity filter">@RarityFilterLabel &times;</button>
+            }
+            @if (_pack is { Length: > 0 })
+            {
+                <button class="chip-filter" @onclick="ClearPackFilter"
+                        aria-label="Clear the pack filter">@_pack &times;</button>
+            }
+        </FilterChips>
+
+        <Filters>
             <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Filter by what you own" @onchange="OnOwnFilter">
                 <option value="all">all cards</option>
                 <option value="missing">missing only</option>
@@ -351,9 +380,37 @@ else
     }
 
     private void OnSearch(ChangeEventArgs e) => _search = Text(e);
-    private void OnOwnFilter(ChangeEventArgs e) => _own = Text(e) is { Length: > 0 } v ? v : "all";
-    private void OnRarityFilter(ChangeEventArgs e) => _rarity = Text(e);
-    private void OnPackFilter(ChangeEventArgs e) => _pack = Text(e);
+    private void OnOwnFilter(ChangeEventArgs e) => SetOwnFilter(Text(e) is { Length: > 0 } v ? v : "all");
+    private void OnRarityFilter(ChangeEventArgs e) => SetRarityFilter(Text(e));
+    private void OnPackFilter(ChangeEventArgs e) => SetPackFilter(Text(e));
+
+    // One per chip on the toolbar. Parameterless because a Razor event handler cannot carry a
+    // quoted string literal without escaping that the compiler then reads as an indexer.
+    private void ClearSearch() => _search = "";
+    private void ClearOwnFilter() => _own = "all";
+    private void ClearRarityFilter() => _rarity = "";
+    private void ClearPackFilter() => _pack = "";
+    private void SetOwnFilter(string v) => _own = v;
+    private void SetRarityFilter(string v) => _rarity = v;
+    private void SetPackFilter(string v) => _pack = v;
+
+    /// <summary>The wording the ownership dropdown uses, so a chip and its control agree.</summary>
+    private string OwnFilterLabel => _own switch
+    {
+        "missing" => "missing only",
+        "owned"   => "owned only",
+        "dupes"   => "duplicates",
+        "needed"  => "short of target",
+        "gaps"    => "fills an evolution gap",
+        _         => _own,
+    };
+
+    /// <summary>The rarity's own symbol rather than its ladder index, which means nothing on a chip.</summary>
+    private string RarityFilterLabel =>
+        int.TryParse(_rarity, out var i)
+        && Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == i) is { } rung
+            ? rung.Symbol
+            : _rarity;
     private void OnColumns(ChangeEventArgs e)
     {
         if (int.TryParse(Text(e), out var n)) Session.SetGridColumns(n);

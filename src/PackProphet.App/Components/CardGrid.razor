@@ -10,15 +10,19 @@
      - imgloader.js caps in-flight image requests, because native loading="lazy" let a fast
        scroll queue thousands of requests and the CDN dropped the connection. *@
 
+@* One row that stays, and a disclosure holding everything else.
+
+   The rule this follows: hide controls freely, never hide active state that changes what the
+   numbers mean. "286 cards" with an invisible filter applied is a lie, and so is a tap that
+   removes a copy when the toolbar looks like it adds one. So search, the add/remove mode, a chip
+   per active filter and the count are always on screen, and the controls that SET those things
+   fold away with the layout options.
+
+   details rather than a sheet or a modal: you want to watch the count move as you change a
+   filter, and a modal is precisely what stops you. It also needs no JavaScript, no focus trap and
+   no escape handling, and Find-in-page opens it on its own. *@
 <div class="grid-toolbar">
-    @* The page's own filters share this bar rather than getting one above it. Separate bars meant
-       five rows on Collection — a nav, a header, a set-tab row, a filter row and a control row —
-       before a single card. One bar, filters first and layout after, is half the height. *@
-    @if (Filters is not null)
-    {
-        @Filters
-        <span class="bar-sep" aria-hidden="true"></span>
-    }
+    @Search
 
     @* An explicit add/remove mode, since there was otherwise no way to decrement on a touch
        device: shift-click is both undiscoverable and unavailable on a phone. *@
@@ -38,6 +42,34 @@
                 remove
             </button>
         </div>
+    }
+
+    @FilterChips
+
+    <span class="ms-auto small text-body-secondary grid-count">
+        @if (ListView && FactOf is not null && !FactsReady)
+        {
+            <span class="text-body-tertiary">loading card detail&hellip; &middot; </span>
+        }
+        @if (Removing)
+        {
+            <span class="text-danger-emphasis fw-semibold">tapping removes a copy &middot; </span>
+        }
+        @Cards.Count cards
+        @if (_imgFailed > 0)
+        {
+            <span class="text-danger-emphasis"> · @_imgFailed art failed</span>
+        }
+    </span>
+</div>
+
+<details class="toolbar-more">
+    <summary>filters and layout</summary>
+    <div class="toolbar-more-body">
+    @if (Filters is not null)
+    {
+        @Filters
+        <span class="bar-sep" aria-hidden="true"></span>
     }
 
     <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
@@ -86,22 +118,8 @@
         </button>
     }
     @ToolbarExtras
-    <span class="ms-auto small text-body-secondary">
-        @if (ListView && FactOf is not null && !FactsReady)
-        {
-            <span class="text-body-tertiary">loading card detail&hellip; &middot; </span>
-        }
-        @if (Removing)
-        {
-            <span class="text-danger-emphasis fw-semibold">tapping removes a copy &middot; </span>
-        }
-        @Cards.Count cards
-        @if (_imgFailed > 0)
-        {
-            <span class="text-danger-emphasis"> · @_imgFailed art failed</span>
-        }
-    </span>
-</div>
+    </div>
+</details>
 
 @* "listing" is read by gridsweep.js, not by CSS: a mouse drag over list rows must obey the
    sweep toggle, while a drag over the tile grid need not. See the comment on onDown there. *@
@@ -430,6 +448,19 @@
     /// comment in the markup.
     /// </summary>
     [Parameter] public RenderFragment? Filters { get; set; }
+
+    /// <summary>
+    /// The search box. Kept out of <see cref="Filters"/> and out of the disclosure: it is the
+    /// fastest way to narrow a set and belongs in reach, not behind a summary.
+    /// </summary>
+    [Parameter] public RenderFragment? Search { get; set; }
+
+    /// <summary>
+    /// One chip per filter currently applied. This is the half of filtering that may never hide —
+    /// a count means something different with a filter on, so the page says which are on even
+    /// while the controls that set them are folded away.
+    /// </summary>
+    [Parameter] public RenderFragment? FilterChips { get; set; }
 
     private List<List<(PocketCard Card, int Index)>> _rows = [];
 

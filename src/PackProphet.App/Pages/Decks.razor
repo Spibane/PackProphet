@@ -42,10 +42,10 @@ else
     <PageShell Measure="PageShell.Width.Wide">
         @if (_decks.Count == 0)
         {
-            <p class="text-body-secondary">
+            <EmptyState>
                 No decks yet. <a href="decks/import">Import one</a> from the game's share code,
                 or <a href="decks/new">build one from scratch</a>.
-            </p>
+            </EmptyState>
         }
         else if (Session.DeckGrid)
         {

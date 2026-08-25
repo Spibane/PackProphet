@@ -2254,7 +2254,20 @@ tr.row-best {
 .nav-more-search:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
 
 /* An empty list is not an error, so it is quiet: no border, no tint, no icon. It only has to say
-   what is missing and offer the thing that fills it. */
+   what is missing and offer the thing that fills it.
+
+   Three things in this file look like this one and are not, and were miscounted as spellings of it
+   once already:
+
+     .empty      a label inside a thumbnail where a card face would be -- "empty deck", "nothing on
+                 this list". Two words on a tile, not a page state.
+     .verdict .call   the headline of a verdict. "No trade is possible yet" is a negative ANSWER,
+                 not an absence of one, and it belongs with the reasoning underneath it.
+     .hits-empty  part of the hits showcase, which is a designed panel with its own frame. A
+                 centred generic state would read as a hole in it.
+
+   What belongs here is the case where a page has nothing to show yet and something specific would
+   fill it. */
 .empty-state {
     padding: 1.5rem .75rem;
     text-align: center;

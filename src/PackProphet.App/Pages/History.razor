@@ -18,11 +18,11 @@ else
     <PageShell Measure="PageShell.Width.Wide" Class="sections">
         @if (_log.Count == 0)
         {
-            <p class="text-body-secondary">
+            <EmptyState>
                 Nothing logged yet. Every pack you record on
                 <a href="log">Log a pack</a> lands here, and this page also checks the odds
                 engine against what you actually pulled.
-            </p>
+            </EmptyState>
             @* A returning player has a real history the app has not seen, so the empty page says
                so rather than implying they have opened nothing. *@
             @if (Session.Lifetime is { } baseline)

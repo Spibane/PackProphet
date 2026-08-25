@@ -111,7 +111,8 @@
 }
 
 .page-body {
-    padding-inline: 1rem;
+    padding-left: calc(1rem + var(--safe-l));
+    padding-right: calc(1rem + var(--safe-r));
     padding-block: 1rem;
     min-inline-size: 0;
 }
@@ -170,19 +171,26 @@ body {
 #app { display: block; }
 
 /* viewport-fit=cover lets the app paint into a notched phone's full screen, which is what the
-   bottom bar will need in order to sit against the real bottom edge rather than above the home
-   indicator. On its own, though, cover would put content under the indicator and the status bar,
-   so the insets are honoured here rather than later: the horizontal ones on body, because a
-   landscape notch eats into every band at once, and the bottom one inside main, so a long page can
-   still scroll its last line clear of the indicator.
+   bottom bar needs in order to sit against the real bottom edge rather than above the home
+   indicator.
 
-   Every one of these resolves to 0 on hardware without cutouts, so this changes nothing anywhere
-   else. */
-body {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-    padding-top: env(safe-area-inset-top);
+   The horizontal insets were on body, and that was wrong. Padding body moves every band inward,
+   so in landscape on a notched phone each toolbar's BACKGROUND stopped about a centimetre from the
+   edge and left a stripe of page behind it. A band should reach the physical edge and inset its
+   own CONTENTS instead -- the cutout is a place text must not go, not a place the design ends.
+
+   So the insets live on the bands, added to the padding they already had, and body only carries
+   the top one, which sits above every band anyway.
+
+   Physical left/right rather than logical inline-start/end: a cutout is on a physical side of the
+   device and does not swap when the writing direction does. This is the one place in the file
+   where the physical property is the correct one. */
+:root {
+    --safe-l: env(safe-area-inset-left);
+    --safe-r: env(safe-area-inset-right);
 }
+
+body { padding-top: env(safe-area-inset-top); }
 
 main {
     display: block;
@@ -203,7 +211,7 @@ main > * { flex-shrink: 0; }
 
 .app-nav {
     display: flex; align-items: center; gap: .25rem; flex-wrap: wrap;
-    padding: .4rem .75rem;
+    padding: .4rem calc(.75rem + var(--safe-r)) .4rem calc(.75rem + var(--safe-l));
     background: var(--bs-tertiary-bg);
     border-bottom: 1px solid var(--bs-border-color);
 }
@@ -390,7 +398,7 @@ main:focus { outline: none; }
 .page-head, .page-tools, .grid-toolbar {
     display: flex; align-items: center; gap: .5rem;
     flex: none;
-    padding: .35rem .75rem;
+    padding: .35rem calc(.75rem + var(--safe-r)) .35rem calc(.75rem + var(--safe-l));
     border-bottom: 1px solid var(--bs-border-color);
 }
 .page-head {
@@ -440,6 +448,9 @@ main:focus { outline: none; }
     .page-head .subtitle { display: none; }
 }
 
+/* No inset of its own: this sits inside .page-tools, which already carries one, and adding a
+   second would push the tabs a cutout's width further in again. Only a band that reaches the
+   physical edge needs to inset its contents. */
 .set-tabs { display: flex; gap: .25rem; overflow-x: auto; }
 .set-tab {
     border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
@@ -522,7 +533,7 @@ main:focus { outline: none; }
    and is unaffected. */
 .grid-wrap { min-height: 0; }
 
-.card-row { display: grid; gap: 4px; padding: 2px 4px; }
+.card-row { display: grid; gap: 4px; padding: 2px calc(4px + var(--safe-r)) 2px calc(4px + var(--safe-l)); }
 
 .card-tile {
     position: relative;
@@ -1662,7 +1673,8 @@ tr.row-best {
     .card-line {
         grid-template-columns: var(--art-w) minmax(4rem,1fr) var(--type-col) var(--rarity-col) var(--pick-col) 2rem 3.6rem;
         gap: .3rem;
-        padding-inline: .35rem;
+        padding-left: calc(.35rem + var(--safe-l));
+        padding-right: calc(.35rem + var(--safe-r));
     }
     /* Type joins the columns already dropped at each step up the file. Below 700px it was only a
        17px pip anyway, but the column still cost 51px because its header is a sort button reading
@@ -2179,6 +2191,8 @@ tr.row-best {
     position: fixed;
     inset-inline: 0;
     bottom: 0;
+    padding-left: var(--safe-l);
+    padding-right: var(--safe-r);
     z-index: 1030;
     display: flex;
     /* The bar owns the bottom inset so its buttons sit above a home indicator while its background
@@ -2332,7 +2346,7 @@ tr.row-best {
     background: var(--bs-tertiary-bg);
 }
 .toolbar-more > summary {
-    padding: .3rem .75rem;
+    padding: .3rem calc(.75rem + var(--safe-r)) .3rem calc(.75rem + var(--safe-l));
     font-size: .86rem;
     color: var(--bs-secondary-color);
     cursor: pointer;
@@ -2345,7 +2359,7 @@ tr.row-best {
 }
 .toolbar-more-body {
     display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
-    padding: .35rem .75rem .6rem;
+    padding: .35rem calc(.75rem + var(--safe-r)) .6rem calc(.75rem + var(--safe-l));
 }
 
 /* An applied filter, and the control that removes it — the same object, because a chip that only

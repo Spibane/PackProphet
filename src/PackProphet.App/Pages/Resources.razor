@@ -31,11 +31,6 @@ else
                     <span class="rate">@_pack.PerDay.ToString("0.#") a day</span>
                 </div>
 
-                <p class="small text-body-secondary mb-2">
-                    Packs are not stored &mdash; there is only a rate, and hourglasses that bring
-                    the next one forward.
-                </p>
-
                 <div class="pool-figures">
                     <div class="fig">
                         <span class="v">@_pack.FromHourglasses</span>
@@ -84,13 +79,13 @@ else
             <PoolPanel Title="Wonder Stamina"
                        Outlook="Session.WonderOutlook"
                        HourglassesPerUnit="GameRules.WonderHourglassesPerStamina"
-                       Note="Cost is 1 to 4, set by the highest rarity in the offer — so one 2-star can take almost your whole reserve."
+                       Note=""
                        OnSave="@((v) => Session.SetPool(trade: false, v.Balance, v.Hourglasses))" />
 
             <PoolPanel Title="Trade Stamina"
                        Outlook="Session.TradeOutlook"
                        HourglassesPerUnit="GameRules.TradeHourglassesPerStamina"
-                       Note="Every trade costs exactly 1 whatever the rarity, so this caps trading at about two a day. It, not shinedust, is what limits trading."
+                       Note=""
                        OnSave="@((v) => Session.SetPool(trade: true, v.Balance, v.Hourglasses))" />
         </div>
 

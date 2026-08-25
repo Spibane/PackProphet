@@ -54,7 +54,12 @@
         </div>
     </div>
 
-    <p class="small text-body-secondary">@Note</p>
+    @* Only when there is one. Rendered unconditionally it left an empty paragraph -- a blank
+       line and its margin -- under the two pools whose notes have been dropped. *@
+    @if (!string.IsNullOrWhiteSpace(Note))
+    {
+        <p class="small text-body-secondary">@Note</p>
+    }
 
     @* What was entered, and when, so a projected balance is never mistaken for a measured one. *@
     @if (Outlook.Balance != Outlook.Entered)

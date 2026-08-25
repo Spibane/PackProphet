@@ -195,7 +195,7 @@ else
         @* Named by what they open rather than by "show"/"hide". The word doubled the label of every
            one of them, and a button that says "hide" when the panel is shut and "show" when it is
            open has to be read to work out which state you are in. The pressed state says that. *@
-        <div class="d-flex flex-wrap gap-2 mb-3">
+        <div class="panel-toggles mb-3">
             @if (!IsWishScope)
             {
                 <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@_advisorOpen"

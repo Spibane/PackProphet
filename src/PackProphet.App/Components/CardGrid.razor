@@ -25,20 +25,28 @@
     @Search
 
     @* An explicit add/remove mode, since there was otherwise no way to decrement on a touch
-       device: shift-click is both undiscoverable and unavailable on a phone. *@
-    @if (AllowRemove)
+       device: shift-click is both undiscoverable and unavailable on a phone.
+
+       Only where it governs something. It is read by exactly two paths -- a tap on a tile, and a
+       release of a sweep -- so in list mode with the sweep unarmed it governs nothing at all: a
+       tap on a row does nothing (every row carries its own -/+ buttons instead), and the keyboard
+       has its own +/- keys that pass their direction explicitly and never consult this. It sat
+       there anyway, labelled "Tapping a card adds a copy", next to rows where tapping does not.
+
+       The label follows suit, because in list mode the thing it governs is the drag, not the tap. *@
+    @if (AllowRemove && (!ListView || Sweeping))
     {
         @* Either half flips it, so a tap on the side already chosen still does something. With two
            states, "the other one" is unambiguous. *@
-        <div class="btn-group btn-group-sm" role="group" aria-label="Tap action">
+        <div class="btn-group btn-group-sm" role="group" aria-label="@Gesture action">
             <button class="btn @(Removing ? "btn-outline-secondary" : "btn-success")"
                     @onclick="() => Removing = !Removing" aria-pressed="@(!Removing)"
-                    title="@(Removing ? "Switch back to adding a copy per tap" : "Tapping a card adds a copy")">
+                    title="@(Removing ? $"Switch back to adding a copy per {Gesture}" : $"{GestureVerb} adds a copy")">
                 add
             </button>
             <button class="btn @(Removing ? "btn-danger" : "btn-outline-secondary")"
                     @onclick="() => Removing = !Removing" aria-pressed="@Removing"
-                    title="@(Removing ? "Tapping a card removes a copy" : "Switch to removing a copy per tap")">
+                    title="@(Removing ? $"{GestureVerb} removes a copy" : $"Switch to removing a copy per {Gesture}")">
                 remove
             </button>
         </div>
@@ -51,9 +59,9 @@
         {
             <span class="text-body-tertiary">loading card detail&hellip; &middot; </span>
         }
-        @if (Removing)
+        @if (Removing && (!ListView || Sweeping))
         {
-            <span class="text-danger-emphasis fw-semibold">tapping removes a copy &middot; </span>
+            <span class="text-danger-emphasis fw-semibold">@Gesture removes a copy &middot; </span>
         }
         @Cards.Count cards
         @if (_imgFailed > 0)
@@ -480,6 +488,16 @@
 
     /// <summary>When set, a tap or sweep removes a copy instead of adding one.</summary>
     private bool Removing { get; set; }
+
+    /// <summary>
+    /// What the add/remove mode governs here. In the tile grid it is the tap; in list mode a tap
+    /// does nothing and only the sweep reads the mode, so calling it a tap would name a gesture
+    /// that has no effect on the thing in front of you.
+    /// </summary>
+    private string Gesture => ListView ? "drag" : "tap";
+
+    /// <summary>The same distinction as a sentence opener: "Dragging across cards", "Tapping a card".</summary>
+    private string GestureVerb => ListView ? "Dragging across cards" : "Tapping a card";
 
     /// <summary>
     /// Shift-click and right-click are one-off inversions of the current mode, so a single

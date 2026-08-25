@@ -55,6 +55,17 @@
 
    Left-aligned rather than centred, which is what every one of these pages already did — centring
    would be a visible change to all of them and is a separate decision. */
+/* Wide enough for the widest rarity a card can have: four diamonds, which measure 57.8px at the
+   .92rem these rows use. The track was 3.2rem — 51.2px — so every 4-diamond card was ellipsised to
+   "◆◆…" by the row's own overflow rule, silently turning a rarity into a different rarity. The
+   supplied-row track was 3.5rem and cleared its own content by 0.7px, which is not a margin.
+
+   One value for all three row types that show a rarity — wish-row, pick-row and supplied-row —
+   because they show the same thing and there is no reason for them to disagree about how much room
+   it needs. Two of them also restate the track inside media queries, which is how the first fix
+   here missed them: the width was declared in five places and corrected in one. */
+:root { --rarity-col: 3.8rem; }
+
 :root {
     --measure-form: 38rem;
     --measure-text: 44rem;
@@ -975,7 +986,7 @@ tr.row-best {
 .supplied { display: grid; gap: .15rem; }
 .supplied-row {
     display: grid;
-    grid-template-columns: 1.7rem minmax(7rem, 14rem) 3.5rem minmax(0, 1fr);
+    grid-template-columns: 1.7rem minmax(7rem, 14rem) var(--rarity-col) minmax(0, 1fr);
     align-items: center; gap: .5rem;
     font-size: .88rem;
 }
@@ -983,7 +994,7 @@ tr.row-best {
 .supplied-row .rt { color: var(--bs-secondary-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (width <= 700px) {
     /* The route note wraps under the name rather than being clipped to nothing. */
-    .supplied-row { grid-template-columns: 1.7rem minmax(0, 1fr) 3.5rem; }
+    .supplied-row { grid-template-columns: 1.7rem minmax(0, 1fr) var(--rarity-col); }
     .supplied-row .rt { grid-column: 2 / -1; white-space: normal; }
 }
 
@@ -1017,6 +1028,16 @@ tr.row-best {
    all its columns, since hiding one would cost information for nothing. */
 @media (width < 600px) {
     .table-responsive [data-pri="3"] { display: none; }
+
+    /* Once the columns are narrow, a cell holding a sentence wraps into a tower and sets the height
+       of the whole row — measured at 114px on Trades at 320px. Centred vertically, a one-glyph
+       rarity then floats in the middle of that, which is what reads as dead space: the emptiness is
+       above and below the short cells, not beside them.
+
+       Top-aligned, every cell in a row starts on the same line as the card name, so a tall row
+       looks like one entry with a long note rather than a mostly-empty band. Bootstrap's
+       .align-middle is right at desk widths, where rows are one line, and wrong here. */
+    .table-responsive .table.align-middle > :not(caption) > * > * { vertical-align: top; }
 }
 
 /* ================================================================= page sections
@@ -1393,7 +1414,7 @@ tr.row-best {
     grid-template-columns:
         1.7rem              /* art        */
         minmax(6rem, 1.2fr) /* name       */
-        3.2rem              /* rarity     */
+        var(--rarity-col)   /* rarity     */
         3rem                /* hp + unit  */
         minmax(0, 1.5fr)    /* ability + attacks */
         2.8rem              /* set        */
@@ -1474,7 +1495,7 @@ tr.row-best {
        reason to pick a card. */
     /* HP goes before the set code: which set a printing is from still distinguishes rows,
        whereas HP is reference detail. */
-    .pick-row { grid-template-columns: 1.7rem minmax(5rem, 1.2fr) 3.2rem minmax(0, 1.4fr) 2.8rem 2.2rem 4.6rem; }
+    .pick-row { grid-template-columns: 1.7rem minmax(5rem, 1.2fr) var(--rarity-col) minmax(0, 1.4fr) 2.8rem 2.2rem 4.6rem; }
     .pick-row .hp { display: none; }
 }
 @media (width <= 560px) {
@@ -1628,7 +1649,7 @@ tr.row-best {
         1.7rem              /* art           */
         minmax(6rem, 12rem) /* name          */
         1.4rem              /* element pip   */
-        3.2rem              /* rarity        */
+        var(--rarity-col)   /* rarity        */
         4.2rem              /* set + number  */
         minmax(0, 1fr)      /* what it costs */
         3rem                /* owned         */
@@ -1682,14 +1703,14 @@ tr.row-best {
        card's own page still carries it. */
     .wish-row {
         grid-template-columns:
-            1.7rem minmax(5rem, 1fr) 1.4rem 3.2rem 4.2rem 3rem 5.4rem 1.8rem;
+            1.7rem minmax(5rem, 1fr) 1.4rem var(--rarity-col) 4.2rem 3rem 5.4rem 1.8rem;
     }
     .wish-row .rt { display: none; }
 }
 
 @media (width <= 560px) {
     .wish-row {
-        grid-template-columns: 1.7rem minmax(4rem, 1fr) 1.4rem 3.2rem 2.6rem 5.4rem 1.8rem;
+        grid-template-columns: 1.7rem minmax(4rem, 1fr) 1.4rem var(--rarity-col) 2.6rem 5.4rem 1.8rem;
     }
     .wish-row .id { display: none; }
 }

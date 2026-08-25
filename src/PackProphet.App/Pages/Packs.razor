@@ -145,9 +145,7 @@ else
                     {
                         <span>
                             This is the <strong>default</strong>, used by every set without a plan
-                            of its own. To give one set a different plan, choose that set in the
-                            dropdown above — the option to split it off appears here once a single
-                            set is in scope.
+                            of its own. Pick a single set above to give it one.
                         </span>
                     }
                 </p>
@@ -242,11 +240,9 @@ else
                 @* The game sells ten of a set in one action, so the batch gets a real answer
                    rather than being left to intuition. *@
                 <p class="small text-body-secondary">
-                    Ten packs of a set costs exactly ten packs and guarantees nothing extra, so it
-                    <strong>cannot beat opening ten singles of the same pack</strong> &mdash; those
-                    are the same ten draws. What it does decide is <em>which</em> set gets the ten,
-                    and that is a real difference. The figures below are for the whole batch, not
-                    per pack.
+                    Ten packs of a set is the same ten draws as ten singles of it, so a batch
+                    cannot do better &mdash; what it decides is <em>which</em> set gets them.
+                    Figures below cover the whole batch.
                 </p>
 
                 @if (_batches.Count == 0)
@@ -298,10 +294,8 @@ else
                         </tbody>
                     </DataTable>
                     <p class="small text-body-secondary mb-0">
-                        One thing this cannot price: a batch takes away the chance to change your
-                        mind after each pull. That costs nothing early on, when the same pack stays
-                        the best pick for far longer than ten packs &mdash; but on a nearly
-                        finished set the best pack changes the moment its last card lands.
+                        Not priced here: a batch gives up the chance to switch packs after each
+                        pull, which only matters on a nearly finished set.
                     </p>
                 }
             </div>
@@ -371,11 +365,10 @@ else
                    earn five per pack whatever you do. So this panel asks which cards deserve a
                    limited, per-set budget rather than "buy or pull?". *@
                 <p class="small text-body-secondary">
-                    Points are earned at @GameRules.PackPointsPerPack per pack and are spendable
-                    <strong>only within the set whose packs earned them</strong> &mdash; there is
-                    no cross-funding. They stop accruing at @GameRules.PackPointsCap.
-                    Logging packs adds them automatically; set a starting balance here if you
-                    were already playing.
+                    @GameRules.PackPointsPerPack per pack, spendable
+                    <strong>only in the set that earned them</strong>, capped at
+                    @GameRules.PackPointsCap. Logging packs adds them; set a starting balance here
+                    if you were already playing.
                 </p>
 
                 @if (_capWarnings.Count > 0)
@@ -454,11 +447,9 @@ else
                 else
                 {
                     <p class="small text-body-secondary">
-                        Ranked by <em>packs saved per pack's worth of points</em> &mdash; not by
-                        price. Almost every card looks cheaper by points, which is true and
-                        misleading: a Crown returns about 2.5 packs saved per pack of points
-                        while an Immersive returns 0.3, so ranking by price alone recommends
-                        precisely the worst purchases. Anything at or below 1.0 is left out.
+                        Ranked by <em>packs saved per pack's worth of points</em>, not by price:
+                        a Crown returns about 2.5, an Immersive 0.3. Anything at or below 1.0 is
+                        left out.
                     </p>
                     <DataTable Label="Where points are worth spending" Fit="true">
                         <thead>
@@ -701,13 +692,8 @@ else
         @if (_unreachable.Count > 0)
         {
             <Notice Severity="Notice.Level.Warning">
-                <strong>@_unreachable.Sum(d => d.Remaining) card(s) cannot be obtained right now.</strong>
-                They are left out of the estimate above rather than silently counted &mdash; so
-                that figure covers @_priceable cards, not all @_outstanding. The packs that would
-                sell them are still listed below, each marked with why it cannot be counted:
-                <strong>off sale</strong> means it is coming back, <strong>rates unknown</strong>
-                means the set is out and its odds have not been published yet, and
-                <strong>not out yet</strong> means nobody has these cards.
+                <strong>@_unreachable.Sum(d => d.Remaining) card(s) cannot be obtained right
+                now,</strong> so the estimate above covers @_priceable of @_outstanding.
             </Notice>
         }
 
@@ -718,7 +704,7 @@ else
                inferred from an empty ranking. *@
             <Notice Severity="Notice.Level.Info">
                 <strong>@_neverInPack.Count card(s) never came from a pack.</strong>
-                An event or a promo only &mdash; opening packs will never produce them.
+                An event or a promo only.
                 <div class="supplied mt-2">
                     @foreach (var (card, remaining) in _neverInPack.Take(UnreachableShown))
                     {

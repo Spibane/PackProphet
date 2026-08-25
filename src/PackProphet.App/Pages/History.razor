@@ -30,9 +30,8 @@ else
                 <p class="text-body-secondary">
                     The game counted <strong>@baseline.PacksOpened</strong> packs and
                     <strong>@baseline.WonderPicks</strong> Wonder Picks before
-                    @baseline.At.ToLocalTime().ToString("d MMM yyyy"). Those are totals only, so
-                    nothing on this page can be broken down from them &mdash; that needs packs
-                    logged here.
+                    @baseline.At.ToLocalTime().ToString("d MMM yyyy"). Totals only, so nothing
+                    here can be broken down from them.
                 </p>
             }
             else
@@ -323,10 +322,9 @@ else
             @if (!_lifetime)
             {
                 <p class="small text-body-secondary">
-                    What you actually pulled against what the engine predicted for exactly the packs
-                    you opened. Small samples swing wildly &mdash; a handful of packs says nothing
-                    about a 0.3% rarity &mdash; so treat this as a sanity check on the model, not on
-                    your luck.
+                    What you pulled against what the engine predicted for the packs you opened.
+                    Small samples swing wildly, so read it as a check on the model, not on your
+                    luck.
                 </p>
             }
             else
@@ -335,10 +333,8 @@ else
                    of them is visible in the table. *@
                 <p class="small text-body-secondary">
                     All @Session.LifetimePacks packs the game counted, split across sets by what
-                    your collection holds: copies of a set's own cards, divided by how many of
-                    them one of its packs yields. Only the ratios are used, so the inflation from
-                    trades and Wonder Picks largely cancels &mdash; but two things are worth
-                    knowing:
+                    your collection holds. Only the ratios are used, so inflation from trades and
+                    Wonder Picks largely cancels. Two caveats:
                 </p>
                 <ul class="small text-body-secondary">
                     <li>
@@ -350,10 +346,8 @@ else
                     </li>
                     <li>
                         Deluxe packs are estimated only from the cards <em>only they</em> can give
-                        &mdash; the parallel foils and their own new cards &mdash; because
-                        everything else in one is a reprint credited to the set it came from. And
-                        a Deluxe pack does not guarantee a foil, so they are counted at the rate
-                        the slot actually pays rather than one per pack.
+                        &mdash; the foils and their own new cards. Everything else in one is a
+                        reprint credited to its own set.
                     </li>
                 </ul>
                 @if (_mix.Count > 0)
@@ -442,10 +436,8 @@ else
                 also take the cards back out of my collection when deleting
             </label>
             <p class="small text-body-secondary">
-                Deleting always returns the @GameRules.PackPointsPerPack pack points that opening
-                earned, floored at zero &mdash; you may already have spent them.
-                Only the date is editable: the app cannot know the clock time the game recorded,
-                and matching it to the minute is not worth the fuss.
+                Deleting returns the @GameRules.PackPointsPerPack pack points that opening earned,
+                floored at zero. Only the date is editable.
             </p>
 
             <DataTable Label="Recent packs">

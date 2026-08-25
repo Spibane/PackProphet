@@ -61,9 +61,8 @@
        shop, the trade board — so it is editable here as well as on the Packs page. *@
     <h2>What counts as complete</h2>
     <p class="small text-body-secondary">
-        One chip per rarity, carrying how many copies you want. Tapping cycles none, one, two
-        &mdash; a rarity you want none of is one you are not collecting. This is the
-        <strong>default</strong>, which every set without its own plan follows.
+        One chip per rarity, carrying how many copies you want; tap to cycle none, one, two. This
+        is the <strong>default</strong>, followed by every set without its own plan.
     </p>
     @if (Session.Ready)
     {
@@ -95,8 +94,8 @@
         else
         {
             <p class="small text-body-secondary mb-4">
-                Every set follows this default. A single set can be given its own plan from the
-                <a href="packs">Which pack</a> page while that set is selected.
+                Every set follows this default. Give one its own from
+                <a href="packs">Which pack</a>, with that set selected.
             </p>
         }
     }
@@ -105,16 +104,12 @@
        without it every count on the History page reads as a fraction of the truth. *@
     <h2>What the game already counted</h2>
     <p class="small text-body-secondary">
-        The game keeps its own lifetime totals &mdash; open your profile in PTCGP and read them
-        off. Entering them here stops History from reporting your first week as your whole
-        history. Everything you log from now on is <strong>added</strong> to these, so nothing is
-        counted twice.
+        Open your profile in PTCGP and read off its lifetime totals. Everything you log from now
+        on is <strong>added</strong> to these, so nothing is counted twice.
     </p>
     <p class="small text-body-secondary">
-        These are counts and nothing more: the game says how many packs, never which ones. So
-        they cannot feed per-set figures, the pack-points ledger, or the checks of predicted
-        odds against your real pulls &mdash; all of those stay based only on packs logged here,
-        and say so where they appear.
+        The game gives counts only, never which packs. So per-set figures, the points ledger and
+        the odds checks use packs logged here and nothing else.
     </p>
     <div class="d-flex gap-3 flex-wrap align-items-end mb-2">
         <label class="small">
@@ -155,8 +150,7 @@
        how collections get erased by accident. *@
     <h2>Collections</h2>
     <p class="small text-body-secondary">
-        Each one holds its own cards, plan, decks, logs and resources. One is active at a time and
-        every other page shows that one.
+        Each holds its own cards, plan, decks, logs and resources. One is active at a time.
         @if (Session.MultipleProfiles)
         {
             <span>
@@ -265,10 +259,8 @@
         exists. That also means clearing site data erases it, so export a backup.
     </p>
     <p class="small text-body-secondary">
-        Anything you do here can be undone with <kbd>Ctrl</kbd>+<kbd>Z</kbd> (or
-        <kbd>&#8984;</kbd>+<kbd>Z</kbd>), which works on every page, from the arrow buttons on
-        the Collection page, or from the command palette. The last @AppSession.UndoDepth changes
-        are kept &mdash; but only for this session, so a reload is the point of no return.
+        <kbd>Ctrl</kbd>+<kbd>Z</kbd> (or <kbd>&#8984;</kbd>+<kbd>Z</kbd>) undoes anything, on any
+        page. The last @AppSession.UndoDepth changes are kept, for this session only.
     </p>
     <div class="d-flex gap-2 flex-wrap mb-4">
         <button class="btn btn-sm btn-primary" @onclick="Export">export backup</button>
@@ -376,7 +368,6 @@
         <p class="small text-body-secondary">
             The licence follows the card data: the only community dataset carrying attack text,
             ability text and evolution stage for every set is itself AGPL. Card data comes from
-            comes from
             <a href="https://github.com/chase-mew/pokemon-tcg-pocket-cards" target="_blank" rel="noopener">chase-mew/pokemon-tcg-pocket-cards</a>
             and
             <a href="https://github.com/flibustier/pokemon-tcg-pocket-database" target="_blank" rel="noopener">flibustier/pokemon-tcg-pocket-database</a>,

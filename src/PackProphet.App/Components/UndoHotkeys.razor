@@ -8,6 +8,7 @@
 
 @code {
     private DotNetObjectReference<UndoHotkeys>? _self;
+    private bool _disposed;
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
@@ -17,8 +18,19 @@
         try { await JS.InvokeVoidAsync("ppUndo.register", _self); }
         catch { /* an accelerator; the buttons still work without it */ }
 
+        // Disposal can land during that await, and the unregister in DisposeAsync has then already
+        // been and gone. Registering the second listener now would leave the document holding a
+        // reference into a component that no longer exists.
+        if (_disposed) return;
+
         try { await JS.InvokeVoidAsync("ppPersist.register", _self); }
         catch { /* the debounce still saves 400ms after the last edit */ }
+
+        if (_disposed)
+        {
+            try { await JS.InvokeVoidAsync("ppPersist.unregister"); }
+            catch { /* the page may already be gone */ }
+        }
     }
 
     [JSInvokable]
@@ -45,6 +57,8 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
+
         try { await JS.InvokeVoidAsync("ppUndo.unregister"); }
         catch { /* the page may already be gone */ }
 

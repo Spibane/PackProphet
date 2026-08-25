@@ -481,6 +481,14 @@
     private DotNetObjectReference<CardGrid>? _self;
     private IJSObjectReference? _keys;
     private bool _attached;
+
+    /// <summary>
+    /// Set by <see cref="DisposeAsync"/>, read after every await in <see cref="OnAfterRenderAsync"/>.
+    /// Navigating away while a dynamic import is still in flight leaves a continuation that would
+    /// otherwise go on using <c>_self</c> after it has been disposed, and serialising a disposed
+    /// object reference throws out of the render loop.
+    /// </summary>
+    private bool _disposed;
     private int _imgFailed;
     private System.Threading.Timer? _statsTimer;
 
@@ -676,6 +684,8 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_disposed) return;
+
         if (_attached)
         {
             if (_contentChanged)
@@ -685,18 +695,22 @@
                 // scrolling first means it queues the top of the new list rather than wherever
                 // the old one had been left.
                 await ScrollToTopAsync();
+                if (_disposed) return;
             }
 
             if (_listChanged)
             {
                 _listChanged = false;
                 await RefreshImagesAsync();
+                if (_disposed) return;
                 await PrefetchAsync();
+                if (_disposed) return;
             }
 
             // Cheap, and the column count changes from two places (the picker and the list-view
             // toggle) neither of which is a good place to remember this.
             await SyncKeyColumnsAsync();
+            if (_disposed) return;
 
             // A mode armed in list view must not survive into a grid that hides its button:
             // the state would be unreachable, and .sweeping still changes the cursor and
@@ -711,13 +725,28 @@
         }
         _attached = true;
 
+        // Each line below is an await, and the component can be disposed during any of them —
+        // navigating off /collection inside the few hundred milliseconds the three dynamic
+        // imports take is enough. So check after every one. Continuing past disposal would pass
+        // an already-disposed _self to the next call, which throws ObjectDisposedException as
+        // Blazor serialises it and comes out of the render loop as an unhandled exception; and
+        // the registrations further down would outlive the component that owns them.
         _self = DotNetObjectReference.Create(this);
+
         _sweep = await JS.InvokeAsync<IJSObjectReference>("import", "./js/gridsweep.js");
+        if (_disposed) { await ReleaseModulesAsync(); return; }
+
         await _sweep.InvokeVoidAsync("attach", _gridEl, _self);
+        if (_disposed) { await ReleaseModulesAsync(); return; }
+
         _touchCapable = await _sweep.InvokeAsync<bool>("hasCoarsePointer");
+        if (_disposed) { await ReleaseModulesAsync(); return; }
 
         _keys = await JS.InvokeAsync<IJSObjectReference>("import", "./js/gridkeys.js");
+        if (_disposed) { await ReleaseModulesAsync(); return; }
+
         await _keys.InvokeVoidAsync("attach", _gridEl, _self, ListView ? 1 : Columns);
+        if (_disposed) { await ReleaseModulesAsync(); return; }
 
         // So the command palette can hand focus here from anywhere on the page.
         Focus.Register(this, () => FocusGridAsync());
@@ -728,12 +757,17 @@
         {
             var back = IndexOfCard(key);
             if (back >= 0) await FocusGridAsync(back);
+            if (_disposed) { await ReleaseModulesAsync(); return; }
         }
 
         _images = await JS.InvokeAsync<IJSObjectReference>("import", "./js/imgloader.js");
+        if (_disposed) { await ReleaseModulesAsync(); return; }
+
         await _images.InvokeVoidAsync("init", _gridEl);
+        if (_disposed) { await ReleaseModulesAsync(); return; }
 
         await PrefetchAsync();
+        if (_disposed) { await ReleaseModulesAsync(); return; }
 
         // Poll for image stats: a callback per image would defeat the point of the loader.
         _statsTimer = new System.Threading.Timer(async _ =>
@@ -745,6 +779,17 @@
             }
             catch { /* page torn down */ }
         }, null, 1000, 1500);
+
+        // The timer is the one thing here that keeps running on its own, so if disposal landed
+        // between the last check and this line it has to be stopped by hand: DisposeAsync has
+        // already been past the field and found it null.
+        if (_disposed)
+        {
+            await _statsTimer.DisposeAsync();
+            _statsTimer = null;
+            await ReleaseModulesAsync();
+            Focus.Release(this);
+        }
     }
 
     /// <summary>
@@ -914,9 +959,24 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
+
         if (_statsTimer is not null) await _statsTimer.DisposeAsync();
+        _statsTimer = null;
         Focus.Release(this);
 
+        await ReleaseModulesAsync();
+        _self?.Dispose();
+    }
+
+    /// <summary>
+    /// Hand the JS modules back and clear the fields. Called from <see cref="DisposeAsync"/> and
+    /// from the setup in <see cref="OnAfterRenderAsync"/> when disposal beat one of its imports —
+    /// whichever runs second finds the fields already null, so a module imported after DisposeAsync
+    /// walked past it is still released rather than left registered on the JS side.
+    /// </summary>
+    private async Task ReleaseModulesAsync()
+    {
         if (_keys is not null)
         {
             try { await _keys.InvokeVoidAsync("dispose", _gridEl); }
@@ -931,6 +991,6 @@
             catch (JSDisconnectedException) { }
             catch (JSException) { }
         }
-        _self?.Dispose();
+        _sweep = _images = _keys = null;
     }
 }

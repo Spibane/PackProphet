@@ -486,7 +486,7 @@ main:focus { outline: none; }
     cursor: pointer; user-select: none;
     font-size: .9rem;
 }
-.set-picker > summary:hover .hint { color: var(--bs-body-color); }
+.set-picker > summary:hover .fold-hint { color: var(--bs-body-color); }
 .set-picker > summary:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
 .set-picker > summary .cur { font-weight: 600; }
 .set-picker > summary .pct { color: var(--bs-secondary-color); font-variant-numeric: tabular-nums; }
@@ -494,9 +494,10 @@ main:focus { outline: none; }
    consumed the last of the line and dropped the pill onto a row of its own, which is the row the
    fold was meant to save. Below the phone breakpoint it just follows the text. */
 @media (width >= 600px) {
-    .set-picker > summary .hint,
-    .rarity-plan > summary .hint,
-    }
+    .set-picker > summary .fold-hint,
+    .rarity-plan > summary .fold-hint,
+    .board-tuning > summary .fold-hint { margin-left: auto; }
+}
 .set-picker-body {
     display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
     padding: .1rem calc(.75rem + var(--safe-r)) .5rem calc(.75rem + var(--safe-l));
@@ -566,8 +567,12 @@ main:focus { outline: none; }
    control belonging to this row, in one of two states.
 
    The caret is the state, not the word: "change" stays put while open, because a control whose
-   label flips to "close" makes you read it every time to find out where you are. */
-.hint {
+   label flips to "close" makes you read it every time to find out where you are.
+
+   NOT called .hint. That class already named the "ctrl K" label inside the palette button, so a
+   bare rule here drew this pill and its caret inside that button's own square border — a box in
+   a box, on the one control in the top bar. */
+.fold-hint {
     display: inline-flex; align-items: center; gap: .3rem;
     padding: .05rem .45rem;
     border: 1px solid var(--bs-border-color);
@@ -577,7 +582,7 @@ main:focus { outline: none; }
     font-size: .78rem; line-height: 1.5;
     white-space: nowrap;
 }
-.hint::after {
+.fold-hint::after {
     content: "";
     inline-size: .42rem; block-size: .42rem;
     border-right: 1.5px solid currentColor;
@@ -585,11 +590,11 @@ main:focus { outline: none; }
     transform: translateY(-1px) rotate(45deg);
     transition: transform .12s ease;
 }
-details[open] > summary .hint::after { transform: translateY(1px) rotate(-135deg); }
-summary:hover .hint { border-color: var(--bs-primary); color: var(--bs-body-color); }
+details[open] > summary .fold-hint::after { transform: translateY(1px) rotate(-135deg); }
+summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body-color); }
 
 @media (prefers-reduced-motion: reduce) {
-    .hint::after { transition: none; }
+    .fold-hint::after { transition: none; }
 }
 
 /* Marker removed on all three: the caret in the pill is the disclosure signal, and two of them

@@ -37,7 +37,21 @@ else
     @* The set tabs are the page's main control, but they are tall — two lines per tab, since each
        carries its own progress — so they sit below the header rather than making it a different
        height from every other page's. *@
-    <div class="page-tools">
+    @* Closed by default, showing only which set you are in. Every set ever printed was on screen
+       at all times -- a full row at 375px, and already wrapping past the right edge on a laptop --
+       to answer a question asked once a session. The summary keeps the answer, the row keeps the
+       choosing, and the choosing is what folds away. *@
+    @* Uncontrolled, like the grid's own toolbar disclosure: the browser owns the open state, so
+       there is nothing to keep in sync and it survives a re-render on its own. It also stays open
+       across a pick, which is what you want while comparing percentages across sets. *@
+    <details class="set-picker">
+        <summary>
+            <span class="cur">@CurrentSetLabel</span>
+            <span class="pct">@CurrentProgress.ToString("P0")</span>
+            <span class="hint">change set</span>
+        </summary>
+
+        <div class="set-picker-body">
         @* A series at a time. One row of every set ever printed already wraps to three lines;
            grouping keeps it to one row per series indefinitely. *@
         <select class="form-select form-select-sm" style="max-width:9rem" aria-label="Series" @onchange="OnSeries">
@@ -77,7 +91,8 @@ else
                 }
             }
         </div>
-    </div>
+        </div>
+    </details>
 
     @* Collection-wide rather than scoped to the visible set: evolution does not care which set a
        card came from, and scoping it would hide the gap whose fix lives one tab over. Collapsed by
@@ -299,6 +314,21 @@ else
         _set = AllSets;
     }
 
+    /// <summary>What the collapsed picker says you are looking at.</summary>
+    private string CurrentSetLabel => _set switch
+    {
+        AllSets => "every set",
+        SeriesAll => $"all of series {_series}",
+        _ => $"{_set} — {Session.Sets.DisplayName(_set)}",
+    };
+
+    private double CurrentProgress => _set switch
+    {
+        AllSets => ProgressOf(_allCards),
+        SeriesAll => ProgressOf(SeriesCards),
+        _ => Progress(_set),
+    };
+
     private string RarityName(PocketCard card) =>
         Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Codes.Contains(card.Rarity))?.Symbol
             ?? card.Rarity;
@@ -320,9 +350,15 @@ else
             _sets = Session.Index.BySet.Keys.OrderBy(SetOrder).ToArray();
             // An unknown set in the URL is ignored rather than shown as an empty tab: a stale
             // bookmark should land on something.
+            // The newest set, not the first one printed. _sets is in release order, and opening on
+            // A1 meant every visit started on the set you finished longest ago -- the packs you are
+            // actually opening are for the set that just came out.
+            //
+            // Promo sets are skipped even though they sort last: they are not openable, so the
+            // newest of them is never the set you are working through.
             _set = SetParam is { Length: > 0 } wanted && _sets.Contains(wanted)
                 ? wanted
-                : _sets.FirstOrDefault() ?? "A1";
+                : _sets.LastOrDefault(set => !CardIndex.IsPromoSet(set)) ?? _sets.LastOrDefault() ?? "A1";
             _series = Session.Sets.SeriesOf(_set);
             _allCards = Session.Index.All
                 .DistinctBy(c => c.OwnershipKey)

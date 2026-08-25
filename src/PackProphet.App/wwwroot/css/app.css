@@ -467,6 +467,29 @@ main:focus { outline: none; }
 /* No inset of its own: this sits inside .page-tools, which already carries one, and adding a
    second would push the tabs a cutout's width further in again. Only a band that reaches the
    physical edge needs to inset its contents. */
+/* The set row, now behind a disclosure. Collapsed it is one line naming the set you are in; open
+   it is the row it always was. What changed is that the row is no longer the price of arriving on
+   the page. */
+.set-picker {
+    border-bottom: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+}
+.set-picker > summary {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem;
+    padding: .35rem calc(.75rem + var(--safe-r)) .35rem calc(.75rem + var(--safe-l));
+    cursor: pointer; user-select: none;
+    font-size: .9rem;
+}
+.set-picker > summary:hover .hint { color: var(--bs-body-color); }
+.set-picker > summary:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
+.set-picker > summary .cur { font-weight: 600; }
+.set-picker > summary .pct { color: var(--bs-secondary-color); font-variant-numeric: tabular-nums; }
+.set-picker > summary .hint { margin-left: auto; font-size: .82rem; color: var(--bs-secondary-color); }
+.set-picker-body {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+    padding: .1rem calc(.75rem + var(--safe-r)) .5rem calc(.75rem + var(--safe-l));
+}
+
 .set-tabs { display: flex; gap: .25rem; overflow-x: auto; }
 .set-tab {
     border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);

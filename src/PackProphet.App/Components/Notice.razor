@@ -1,4 +1,4 @@
-@* One inline message, in four severities.
+@* One inline message, in five severities.
 
    There were eighteen of these across the app and eighteen distinct class strings — not one
    repeat. With no convention to copy, every new message invented its own padding, and a change to
@@ -11,7 +11,12 @@
 <div class="alert @Bootstrap @Density @Class" role="@Role">@ChildContent</div>
 
 @code {
-    public enum Level { Info, Success, Warning, Problem }
+    /// <summary>
+    /// Unverified is not a quieter Warning: the other four say what the answer is, and it says
+    /// there is no answer to give because the rule could not be checked. Folding it into Info
+    /// would report an unchecked rule as a passing one.
+    /// </summary>
+    public enum Level { Info, Success, Warning, Problem, Unverified }
 
     [Parameter, EditorRequired] public Level Severity { get; set; }
 
@@ -31,12 +36,14 @@
         Level.Success => "alert-success",
         Level.Warning => "alert-warning",
         Level.Problem => "alert-danger",
+        Level.Unverified => "alert-secondary",
         _ => "alert-info",
     };
 
     private string Density => Dense ? "py-1 px-2 small" : "py-2 small";
 
     // Assertive interrupts whatever a screen reader is saying. That is right for something the
-    // user must deal with and wrong for "added 12 cards", which can wait for a gap.
+    // user must deal with and wrong for "added 12 cards", which can wait for a gap. Unverified
+    // stays polite for the same reason: nothing has gone wrong, something merely went unchecked.
     private string Role => Severity is Level.Warning or Level.Problem ? "alert" : "status";
 }

@@ -4,6 +4,18 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
+## Unreleased
+
+### Fixed
+
+- **Leaving a page while its JavaScript modules were still loading crashed the render loop.** The
+  card grid imports three modules on first render, and leaving /collection inside that window
+  disposed the component while the imports were in flight. The continuation went on to hand the
+  disposed object reference to the next call, which threw as it was serialised and was logged as
+  an unhandled exception; it also registered the dead grid as the target the command palette jumps
+  focus to. The command palette and the undo accelerator had the same shape and left a document
+  listener pointing at a component that had gone.
+
 ## 0.3.0 — 2026-08-25
 
 Phase 3, and a layout pass over all seventeen routes. Every figure below was measured in the

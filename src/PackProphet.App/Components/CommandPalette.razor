@@ -76,6 +76,7 @@
 
     private DotNetObjectReference<CommandPalette>? _self;
     private bool _focusPending;
+    private bool _disposed;
 
     private const int MaxPerGroup = 6;
 
@@ -85,11 +86,23 @@
 
     protected override async Task OnAfterRenderAsync(bool first)
     {
+        if (_disposed) return;
+
         if (first)
         {
             _self = DotNetObjectReference.Create(this);
             try { await JS.InvokeVoidAsync("ppPalette.register", _self); }
             catch { /* the palette is an accelerator; the app works without it */ }
+
+            // Disposed while that was in flight: DisposeAsync has already unregistered and thrown
+            // _self away, so take the registration back off rather than leave the hotkey pointing
+            // at a component that is gone.
+            if (_disposed)
+            {
+                try { await JS.InvokeVoidAsync("ppPalette.unregister"); }
+                catch { /* the page may already be gone */ }
+                return;
+            }
         }
 
         if (_focusPending && _open)
@@ -315,6 +328,7 @@
 
     public async ValueTask DisposeAsync()
     {
+        _disposed = true;
         Switch.Requested -= OnRequested;
         try { await JS.InvokeVoidAsync("ppPalette.unregister"); }
         catch { /* the page may already be gone */ }

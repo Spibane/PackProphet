@@ -2255,6 +2255,25 @@ tr.row-best {
 .pts-capped { --bs-table-bg: color-mix(in srgb, var(--bs-warning) 12%, var(--bs-body-bg)); }
 
 
+/* The board's three tuning knobs, folded. Each had a visible label of its own, which wrapped the
+   bar to three rows at 375px; the labels are inside the options now, so each control says its own
+   name and the panel needs none. */
+.board-tuning { flex: 1 1 100%; }
+.board-tuning > summary {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem;
+    cursor: pointer; user-select: none;
+    font-size: .88rem;
+}
+.board-tuning > summary:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
+.board-tuning > summary .cur { color: var(--bs-body-color); }
+.board-tuning > summary .hint { margin-left: auto; font-size: .82rem; color: var(--bs-secondary-color); }
+.board-tuning > summary:hover .hint { color: var(--bs-body-color); }
+.board-tuning-body {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .4rem;
+    padding-top: .4rem;
+}
+.board-tuning-body .form-select { inline-size: auto; max-inline-size: 100%; }
+
 /* ================================================================= trades
 
    A blocked row is dimmed rather than hidden: naming the gate is the answer, and a target that

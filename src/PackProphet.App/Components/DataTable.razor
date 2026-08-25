@@ -9,7 +9,7 @@
    keyboard otherwise, since Chrome does not make scrollers focusable the way Firefox does. It also
    needs a name, or a screen reader announces an unlabelled region. *@
 
-<div class="table-responsive" tabindex="0" role="region" aria-label="@Label">
+<div class="table-responsive @(Bleed ? "bleed" : null)" tabindex="0" role="region" aria-label="@Label">
     <table class="table table-sm align-middle @(Fit ? "w-auto" : null) @Class">
         @ChildContent
     </table>
@@ -21,6 +21,14 @@
 
     /// <summary>Shrink to the width of the content instead of filling the page.</summary>
     [Parameter] public bool Fit { get; set; }
+
+    /// <summary>
+    /// Take back the page body's padding on a phone. For the few tables wide enough that 32px
+    /// decides whether a heading fits on one line: the ranked pack table's header went from 50px
+    /// to 64px when the body started padding it. The display cutout inset is kept — this cancels
+    /// the 1rem of comfort, not the part that stops content sitting under a notch.
+    /// </summary>
+    [Parameter] public bool Bleed { get; set; }
 
     [Parameter] public string? Class { get; set; }
 

@@ -76,45 +76,60 @@ else
            none / 1 / 2. *@
         @* The rarity chips edit the completion plan, which a wishlist target does not consult, so
            under a wishlist scope they are hidden rather than shown doing nothing. *@
+        @* Eleven chips on one row wrapped to three lines at 375px, above a ranking they only
+           configure. Folded away, with the summary saying what the plan actually is -- which is
+           the part you read, where the chips are the part you occasionally change. *@
         @if (!IsWishScope)
         {
-        <span class="rarity-chips">
-            @* Which plan the chips are editing, stated rather than implied. The same row of chips
-               means two different things depending on the scope, and editing the global default
-               while a set is selected would be a surprise. *@
-            <span class="chip-scope">
-                @if (ScopedSet is null)
+        <details class="rarity-plan">
+            <summary>
+                <span class="ttl">collecting</span>
+                <span class="cur">@PlanSummary</span>
+                <span class="scope">@(PlanScope is null ? "every set" : $"{ScopedSet} only")</span>
+                @if (_pending)
                 {
-                    <span title="Applies to every set without its own plan">default</span>
-                }
-                else if (PlanScope is not null)
-                {
-                    <span title="@ScopedSet has its own plan, so the default does not apply to it">
-                        @ScopedSet only
+                    <span class="chip-pending" title="Applying shortly — keep tapping to make more changes">
+                        updating&hellip;
                     </span>
+                }
+                <span class="hint">change</span>
+            </summary>
+
+            <span class="rarity-chips">
+                <RarityChips Plan="Draft" OnCycle="CycleTier"
+                             ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
+            </span>
+
+            @* Which plan the chips are editing, and how to reach the other one. This used to be a
+               label reading "default" with no route to a per-set plan unless a single set was
+               already scoped — so the word promised a distinction the page never offered. It now
+               says what to do at every scope. *@
+            <p class="plan-scope">
+                @if (PlanScope is not null)
+                {
+                    <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
                     <button class="chip-link" @onclick="ClearOverride"
-                            title="Follow the default plan again">use default</button>
+                            title="Follow the default plan again">use the default here</button>
+                }
+                else if (ScopedSet is not null)
+                {
+                    <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
+                    <button class="chip-link" @onclick="StartOverride"
+                            title="Give @ScopedSet its own plan, starting from the default">
+                        give @ScopedSet its own
+                    </button>
                 }
                 else
                 {
-                    <span title="@ScopedSet follows the default plan">default</span>
-                    <button class="chip-link" @onclick="StartOverride"
-                            title="Give @ScopedSet its own plan, starting from the default">
-                        just @ScopedSet
-                    </button>
+                    <span>
+                        This is the <strong>default</strong>, used by every set without a plan of
+                        its own. To give one set a different plan, choose that set in the dropdown
+                        above — the option to split it off appears here once a single set is in
+                        scope.
+                    </span>
                 }
-            </span>
-
-            <RarityChips Plan="Draft" OnCycle="CycleTier"
-                         ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
-
-            @if (_pending)
-            {
-                <span class="chip-pending" title="Applying shortly — keep tapping to make more changes">
-                    updating&hellip;
-                </span>
-            }
-        </span>
+            </p>
+        </details>
         }
 
         @* Limited-time packs get a labelled control that says which way it is set rather than a
@@ -463,7 +478,7 @@ else
             <hr />
         }
 
-        <DataTable Label="Packs ranked for your target" Class="pack-table">
+        <DataTable Label="Packs ranked for your target" Class="pack-table" Bleed="true">
             <thead>
                 <tr>
                     <th scope="col" data-pri="1">pack</th>
@@ -816,6 +831,29 @@ else
     /// </summary>
     private RarityPlan? _draft;
     private RarityPlan Draft => _draft ?? Plan;
+
+    /// <summary>
+    /// The plan as one line, for the collapsed picker: the rungs being collected, with a count
+    /// only where it is more than one. Says "nothing" rather than rendering an empty string,
+    /// because a blank summary reads as a control that failed to load.
+    /// </summary>
+    private string PlanSummary
+    {
+        get
+        {
+            var parts = Session.Index.Ladder.Rungs
+                .Select(rung => (rung.Symbol, Copies: Draft.Copies(rung.Index)))
+                .Where(r => r.Copies > 0)
+                .Select(r => r.Copies > 1 ? $"{r.Symbol}\u00d7{r.Copies}" : r.Symbol)
+                .ToList();
+
+            if (ScopeHasFoils && Session.FoilCopies > 0)
+            {
+                parts.Add(Session.FoilCopies > 1 ? $"foils\u00d7{Session.FoilCopies}" : "foils");
+            }
+            return parts.Count == 0 ? "nothing" : string.Join(" ", parts);
+        }
+    }
 
     private bool _pending;
     private CancellationTokenSource? _debounce;

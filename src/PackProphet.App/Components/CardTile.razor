@@ -22,40 +22,44 @@
    The tile is a cell of the grid its container declares, named by a sentence CardGrid builds so
    the keyboard cursor and the tile describe the card the same way. It carries no tabindex: the
    container holds the only tab stop and moves aria-activedescendant. *@
-<div class="card-tile @(Count > 0 ? "owned" : "") @(Picked > 0 ? "picked" : "") @(Gold ? "flair gold-flair" : "")"
+<div class="card-tile @(Count > 0 ? "owned" : "") @(Picked > 0 ? "picked" : "") @(Gold ? "gold" : "")"
      data-idx="@Index" data-tip="@Tip"
      id="@DomId" role="gridcell" aria-label="@Label"
      @onclick="OnClick"
      @oncontextmenu="RightClick" @oncontextmenu:preventDefault="true"
      @onpointerdown="PointerDown" @onpointerup="PointerUp"
      @onpointercancel="CancelHold" @onpointerleave="CancelHold" @onpointermove="PointerMove">
-    @* No rarity badge. The tile is the card art, which carries the rarity mark itself. The list
-       layout does show rarity, because there the art is a 32px thumbnail. *@
-    <img data-src="@Card.ArtUrl" alt="@Card.Name" decoding="async" draggable="false" />
+    @* The art, and nothing on top of it.
+       ==================================================================================
+       The count, the info button and the heart were all badges over the artwork. One was fine,
+       two were busy, three covered three corners of the thing you are looking at in order to
+       recognise it -- and the art is the whole reason this layout exists rather than the list.
 
-    @* Detail needs its own target: a tap on the tile means "I own one more", so it cannot also
-       mean "tell me about this". A corner button for a pointer, a long press for a finger. *@
-    @if (ShowInfo)
-    {
-        @* Its context menu is stopped rather than prevented, so "open in new tab" still works on
-           the one thing here that is genuinely a link. *@
-        @* Out of the tab order: a focus stop per tile would put thousands of them between the grid
-           and whatever follows it. The keyboard route to detail is `i` on the cursor, which
-           gridkeys.js sends to KeyOpen. *@
-        <a class="info" href="card/@Card.Key" title="Card detail" aria-label="Detail for @Card.Name"
-           tabindex="-1"
-           @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true"
-           @oncontextmenu:stopPropagation="true">info</a>
-    }
+       So they moved below, into a caption strip, and the art element became its own box: it owns
+       the aspect ratio, the rounding, the overflow clip and the gold flair, all of which used to
+       belong to the tile and would otherwise squash the art by the height of the caption. *@
+    <span class="art @(Gold ? "flair gold-flair" : "")">
+        @* No rarity badge. The art carries the rarity mark itself. The list layout does show
+           rarity, because there the art is a 32px thumbnail. *@
+        <img data-src="@Card.ArtUrl" alt="@Card.Name" decoding="async" draggable="false" />
+
+        @* Shown only while the art is on its way, hidden by CSS the moment it arrives or fails.
+           A real element rather than a pseudo-element: gold flair already owns both of the art
+           box's, and a sibling selector off the image's own data-state is what makes "loading"
+           and "failed" distinguishable without JavaScript touching this at all. *@
+        <span class="art-wait" aria-hidden="true"></span>
+    </span>
+
+    <span class="cap">
 
     @* Wanting a card and owning it are different facts, and this is the screen where you notice
-       the first one. Marking it here rather than on the card's own page is the whole point: you are
-       already looking at the set, and the alternative was open the card, mark it, come back.
+       the first one: you are already looking at the set, and the alternative was open the card,
+       mark it, come back.
 
-       Its own target, like the info corner: a tap on the tile means "I own one more", so wanting
-       cannot also be a tap on the tile. Hidden while a sweep is armed for the same reason info is
-       -- a button would swallow the start of a drag. *@
-    @if (OnWant.HasDelegate && ShowInfo)
+       Its own target, and in the caption rather than over the art -- a tap on the tile means "I
+       own one more", so wanting cannot also be a tap on the tile, but it no longer has to cover a
+       corner of the picture to say so. *@
+    @if (OnWant.HasDelegate)
     {
         <button class="want @(Wanted > 0 ? "on" : "")" type="button"
                 @onclick="Want" @onclick:stopPropagation="true"
@@ -75,15 +79,35 @@
         </button>
     }
 
-    @if (Count > 0)
+    @* Detail needs its own target: a tap on the tile means "I own one more", so it cannot also mean
+       "tell me about this". Centre of the caption, and a long press on the art for a finger.
+
+       Still gone while a sweep is armed: a link in the middle of the tile would swallow the start
+       of a drag. *@
+    @if (ShowInfo)
     {
-        <span class="cnt">@Count</span>
+        @* Its context menu is stopped rather than prevented, so "open in new tab" still works on
+           the one thing here that is genuinely a link. *@
+        @* Out of the tab order: a focus stop per tile would put thousands of them between the grid
+           and whatever follows it. The keyboard route to detail is `i` on the cursor, which
+           gridkeys.js sends to KeyOpen. *@
+        <a class="info" href="card/@Card.Key" title="Card detail" aria-label="Detail for @Card.Name"
+           tabindex="-1"
+           @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true"
+           @oncontextmenu:stopPropagation="true">info</a>
     }
+
+    @* The count keeps the end of the row whether or not there is one to show, so a caption is the
+       same shape on every tile: a virtualised grid needs every row to be the same height, and an
+       empty strip that collapsed would make the scrollbar lie. *@
+    <span class="cnt @(Count > 0 ? "" : "none")">@(Count > 0 ? Count.ToString() : "")</span>
+
     @* Distinct from the owned count: this is "I just pulled this" rather than "I own this". *@
     @if (Picked > 0)
     {
         <span class="pick">@(Picked > 1 ? $"+{Picked}" : "+")</span>
     }
+    </span>
 </div>
 
 @code {

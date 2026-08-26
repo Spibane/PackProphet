@@ -100,6 +100,36 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **The tile is the art again.** The count, the info button and the heart were all badges over the
+  artwork, covering three corners of the only thing the grid layout exists to show. On a pointer they
+  now sit in a caption strip under the picture — heart, info, count, left to right. On a touch screen
+  there is no caption at all: the heart and the info button do not exist there, so a strip would cost
+  every tile a row of space to show a count that one card in ten has, and the count goes back to
+  being a badge exactly where it was. The tile is the height of its art again on a phone, so a
+  screenful holds as many cards as before.
+
+- **A spinner while art loads, instead of a broken-image icon.** The loader holds an image's `src`
+  back until one of its six slots is free, and an `<img>` with an alt and no src is drawn by the
+  browser as its broken-image marker — so a fast scroll showed a fault on every tile it had not
+  reached yet. "Not loaded" and "will never load" looked identical, and the constant one looked like
+  the fault. The image is now hidden while it is pending or in flight with a spinner in its place;
+  the failed state is untouched, since the broken marker and the card's name beside it are the most
+  useful thing a tile with no art can show — and it is now the only thing that looks like a fault.
+
+- **"How to get it" was 192px wide on a tablet.** Two columns at those widths put it on a second
+  row — in column one, the art column. It spans the full width instead.
+
+- **A heart on the card page.** With the tile hearts gone on touch, the card's own page was the only
+  route to wanting a card, and it offered one only if a wishlist already existed. It has the same
+  one-tap heart the grid does, on the same list, whether or not that list exists yet. The curated
+  lists still follow it, and the hearts' own list is no longer listed twice.
+
+- **The info button and the heart no longer disappear before the touch layout arrives.** Both were
+  hidden below a 200px tile, which with six columns happens at about 1200px of viewport — while the
+  long press that replaces them does not arrive until 1057px. Between the two there was a mouse, no
+  corner button and no way to open a card except the keyboard. In the caption there is nothing to
+  collide with, so neither rule is needed at all.
+
 - **The hearts get a list of their own.** A heart used to fill whichever wishlist happened to be
   first, which quietly rewrites the one list on that page you built deliberately. There is now a
   **Want it** list, made by the first heart and marked as the hearts' list wherever wishlists are

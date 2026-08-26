@@ -100,11 +100,17 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
-- **The sticky set strip shows the set's logo beside its name**, and the set tabs now use the same
-  logo rather than a booster wrapper. One set, one identity: the log screen already used the
-  expansion wordmark for exactly this job, so a booster in the picker and a wordmark on the log
-  screen were two pictures for the same thing. The code and the percentage stay on each tab — the
-  logo names the set, but only the code names the tab you are on.
+- **The sticky set strip shows the set's logo beside its name.** Big enough to read: a 256×113
+  wordmark scaled to the cap height of the label beside it is a smudge, so the logo is 36px tall and
+  the strip is about 42px. That is a real cost on a sticky element and the right trade — the strip
+  appears only when the list spans more than one set, and being recognised at a glance is the only
+  thing it does.
+
+  **The set tabs keep their booster wrapper.** The logo was tried there and reverted: a tab holds
+  its picture beside a code and a percentage, and the sliver that leaves is the wrong shape for a
+  wordmark — a booster is recognisable at that width because its shape and colour do the work
+  rather than its lettering. Same set, two pictures, because the two places have opposite shapes to
+  fill.
 
 - **The corner info button is back for narrow desktops**, over the art and revealed on hover, since
   the caption is gone at those widths and the long press that replaces it is a touch gesture. Only

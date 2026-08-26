@@ -103,6 +103,7 @@
    following item into the previous track. */
 .card-line { --pick-col: 0px; }
 .grid-wrap.picking .card-line { --pick-col: 1.8rem; }
+.grid-wrap.wanting .card-line { --want-col: 1.8rem; }
 
 :root {
     --measure-form: 38rem;
@@ -490,6 +491,51 @@ main:focus { outline: none; }
    Pages carry only the bars they need, and the order never changes. The split is also what
    keeps the header's height fixed: a single bar holding a title and six controls cannot be one
    row at every width, and the moment it wraps it is a different height. */
+/* One control height per bar.
+   ==========================================================================================
+   Every bar in this app mixes buttons, selects, text fields and chips, and each of those
+   arrives with a height of its own: Bootstrap's -sm controls land on 31px, a set tab carrying
+   two lines on 40, and the filter chips were built to a 44px touch target. Three heights in one
+   row reads as a row that was assembled rather than designed, and it is most obvious where the
+   controls sit side by side -- the filters disclosure had 31px selects between 44px chips.
+
+   So the height is a token, every control in a bar is pinned to it, and the value is set once per
+   bar rather than per control. 2.25rem clears the 24px WCAG 2.5.8 target on a mouse; a coarse
+   pointer raises the token to 44px, which grows every control in the bar together rather than
+   singling out the chips. Bars get taller on a phone, which is the correct trade: they are the
+   things being tapped.
+
+   Buttons need the flex centring as well as the height. Bootstrap's .btn is inline-block with
+   padding, so a min-height alone would leave the label sitting at the top of a taller box. */
+:root { --ctl-h: 2.25rem; }
+@media (pointer: coarse) { :root { --ctl-h: 2.75rem; } }
+
+.page-tools .btn, .grid-toolbar .btn, .toolbar-more-body .btn,
+.set-picker-body .btn, .rarity-plan .btn,
+.page-tools .form-select, .grid-toolbar .form-select,
+.toolbar-more-body .form-select, .set-picker-body .form-select, .rarity-plan .form-select,
+.page-tools .form-control, .grid-toolbar .form-control,
+.toolbar-more-body .form-control, .set-picker-body .form-control,
+.chip-tog, .pack-pick, .set-tab, .rarity-chip {
+    min-height: var(--ctl-h);
+}
+.page-tools .btn, .grid-toolbar .btn, .toolbar-more-body .btn,
+.set-picker-body .btn, .rarity-plan .btn, .rarity-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* NOT the page header. Its 3rem is a contract rather than a preference -- the toolbar below it is
+   pinned under it, and the app's other pages line their titles up against it -- and it holds one or
+   two controls rather than a row of them, so there is nothing in it to be uniform WITH. Growing it
+   on a phone also cost the one thing it exists to show: at 44px the log screen's header squeezed
+   the pack's name down to "R.". */
+
+/* The set picker is the one bar whose own control is taller than a button: a tab carries a code
+   and a percentage on two lines, and now a wrapper beside them. The bar takes ITS height rather
+   than shrinking the tabs to match a select. */
+.set-picker-body { --ctl-h: 2.5rem; }
+@media (pointer: coarse) { .set-picker-body { --ctl-h: 2.75rem; } }
+
 .page-head, .page-tools, .grid-toolbar {
     display: flex; align-items: center; gap: .5rem;
     flex: none;
@@ -516,7 +562,12 @@ main:focus { outline: none; }
    the header's own fixed height, which is a contract rather than an accident: .page-head is
    always exactly one row, hence a header that can be relied on to be 3rem plus its border. */
 .page-head.sticky-head { position: sticky; top: 0; z-index: 25; }
-.page-head.sticky-head ~ .grid-toolbar { top: calc(3rem + 1px); }
+/* One pixel INSIDE the header rather than one clear of it. The header is min-height: 3rem plus a
+   border, and border-box rounding lands its real height a fraction under 49px at some zoom levels
+   -- so `3rem + 1px` left a sub-pixel gap between the two pinned bars with the card grid scrolling
+   through it. Overlapping is safe in a way that clearing is not: the header has the higher
+   z-index, so it paints over the pixel it shares. */
+.page-head.sticky-head ~ .grid-toolbar { top: var(--head-h, calc(3rem - 1px)); }
 
 /* Divides the two halves of a shared control bar: what is shown, then how. Without it the
    filters and the layout buttons read as one undifferentiated row of eight controls. */
@@ -615,7 +666,6 @@ main:focus { outline: none; }
 .pack-picks { display: flex; flex-wrap: wrap; gap: .25rem; }
 .pack-pick {
     display: inline-flex; align-items: center; gap: .35rem;
-    min-height: 2.75rem;
     padding: .15rem .5rem .15rem .3rem;
     border: 1px solid var(--bs-border-color); border-radius: .35rem;
     background: var(--bs-body-bg); color: var(--bs-body-color);
@@ -630,7 +680,9 @@ main:focus { outline: none; }
     font-weight: 600;
 }
 .pack-pick:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
-.pack-pick .pack-thumb { width: 1.5rem; height: 2.05rem; margin: 0; flex: none; }
+/* Sized so the chip lands on --ctl-h rather than pushing past it: the wrapper is the tallest thing
+   in the chip, so its height plus the chip's padding and border IS the chip's height. */
+.pack-pick .pack-thumb { width: 1.3rem; height: 1.8rem; margin: 0; flex: none; }
 
 /* A grid, not a flex row: with eight statistics the flex version wrapped into ragged rows whose
    columns did not line up. auto-fill keeps them aligned at any width without breakpoints. */
@@ -836,7 +888,13 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
    Empty means "nothing to say" -- one set in scope -- and an empty strip takes no room at all, so
    there is no hidden attribute for the script and Blazor's diff to disagree about. */
 .grid-spy {
-    position: sticky; top: 0; z-index: 4;
+    /* Under the bars, not at the top of the viewport. The toolbar above is sticky at 0 with a
+       higher z-index, so a strip at top: 0 was hidden by it the moment the page scrolled -- which
+       is exactly the state the strip exists for. Its height is not knowable from CSS, since it
+       wraps into a second row on a phone and grows when a filter chip appears, so js/gridspy.js
+       measures it and publishes --bars-h. The fallback of 0 is what an unmeasured grid gets, which
+       is the old behaviour rather than a broken one. */
+    position: sticky; top: var(--bars-h, 0px); z-index: 4;
     padding: .2rem calc(.75rem + var(--safe-r)) .2rem calc(.75rem + var(--safe-l));
     border-bottom: 1px solid var(--bs-border-color);
     /* Opaque: cards scroll under it. */
@@ -1037,16 +1095,45 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-tile .want svg { width: 62%; height: 62%; }
 .card-tile .want:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 
-/* The same toggle in a list row, where it is one button among three and sized like them. */
-.card-line .c-acts .want {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 1.7rem; height: 1.7rem;
-    border: 1px solid var(--bs-border-color); border-radius: .3rem;
-    background: var(--bs-body-bg); color: var(--bs-secondary-color);
+/* Gone from the tile grid on a touch screen, the same call the info button already made and for a
+   sharper reason: a permanent button in the corner of every tile is a permanent hazard in the one
+   layout whose entire job is being tapped. A miss costs a copy of the wrong card.
+
+   The feature does not go with it. The list view keeps its column -- rows are not tap targets for
+   counting, and every row carries its own -/+ -- and a long press on a tile still opens the card,
+   where the wishlists have always lived. So on a phone wanting a card is a deliberate act on a
+   screen that has room for it, and the grid stays a grid. */
+@media (hover: none) {
+    .card-tile .want { display: none; }
 }
-.card-line .c-acts .want:hover { border-color: var(--bs-danger); color: var(--bs-danger); }
-.card-line .c-acts .want.on { color: var(--bs-danger); border-color: var(--bs-danger); }
-.card-line .c-acts .want:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+
+/* Below the size where a tile can hold a corner button without covering the art it is there to
+   help you recognise. The same threshold the info button uses. */
+@container (width <= 200px) {
+    .card-tile .want { display: none; }
+}
+
+/* The same toggle in a list row, in a column of its own at the front.
+
+   It used to sit beside the -/+ buttons, which made three small square buttons in a row, one of
+   which does something completely different from the other two -- and it was next to the count,
+   which is the number it is most likely to be mistaken for. At the front of the row it reads as a
+   mark against the row, the way a starred message does, and it is nowhere near the count.
+
+   No border, unlike the steppers: a bordered box is what made it read as one of them. The outline
+   heart is affordance enough, and the filled one is unmistakable. */
+.card-line .c-want { display: flex; align-items: center; justify-content: center; }
+.card-line .c-want .want {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.6rem; height: 1.6rem;
+    padding: 0;
+    border: 0; border-radius: .3rem;
+    background: none; color: var(--bs-secondary-color);
+    opacity: .75;
+}
+.card-line .c-want .want:hover { color: var(--bs-danger); opacity: 1; }
+.card-line .c-want .want.on { color: var(--bs-danger); opacity: 1; }
+.card-line .c-want .want:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
 
 /* Which wishlist the hearts write to. A label, not a filter: it changes what a tap DOES rather
    than which cards are listed, so it sits at the end of the row after the separator. */
@@ -1097,6 +1184,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
     display: grid;
     grid-template-columns:
         var(--art-w)         /* art          */
+        var(--want-col)      /* want         */
         minmax(6rem, 1fr)    /* name         */
         4.6rem               /* set + number */
         var(--type-col)     /* type         */
@@ -1113,6 +1201,10 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
        templates just to change one track is how they drift out of sync. */
     --art-w: 32px;
     --art-h: 45px;
+    /* Collapses to nothing where the page passes no want handler -- a picker, or the log screen,
+       whose taps mean something else entirely. Same trick as --pick-col: one track that is
+       sometimes zero, rather than five templates that each know whether the column exists. */
+    --want-col: 0px;
     align-items: center;
     gap: .45rem;
     height: 50px;
@@ -1164,7 +1256,11 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 
 .card-line.head .c-nm { font-size: inherit; font-weight: inherit; }
 .card-line.head {
-    position: sticky; top: 0; z-index: 5;
+    /* Same problem as the set strip, and the same fix: these headers were sticking to the top of
+       the viewport underneath a toolbar that is also sticky and paints over them, so the column
+       names vanished on the first scroll of a list -- the one view where the columns need naming.
+       Offset by the measured height of the bars, plus the strip when it is showing. */
+    position: sticky; top: calc(var(--bars-h, 0px) + var(--spy-h, 0px)); z-index: 5;
     height: 38px;
     background: var(--bs-tertiary-bg);
     font-size: .84rem; text-transform: uppercase; letter-spacing: .03em;
@@ -2138,11 +2234,11 @@ tr.row-best {
    scan a collection by. Type and rarity survive to the smallest size. */
 
 @media (width <= 1100px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) var(--pick-col) 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) var(--want-col) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) var(--pick-col) 2.4rem 4.2rem; }
     .card-line .c-a2 { display: none; }
 }
 @media (width <= 900px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) var(--pick-col) 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) var(--want-col) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) var(--pick-col) 2.4rem 4.2rem; }
     .card-line .c-a1, .card-line .c-a2, .card-line .c-ab, .card-line .c-hp { display: none; }
 }
 @media (width < 600px) {
@@ -2152,7 +2248,7 @@ tr.row-best {
        than out of a column, since each of the seven earns its place: the pick count is empty in
        the collection but not when this grid is embedded in a picker. */
     .card-line {
-        grid-template-columns: var(--art-w) minmax(4rem,1fr) var(--type-col) var(--rarity-col) var(--pick-col) 2rem 3.6rem;
+        grid-template-columns: var(--art-w) var(--want-col) minmax(4rem,1fr) var(--type-col) var(--rarity-col) var(--pick-col) 2rem 3.6rem;
         gap: .3rem;
         padding-left: calc(.35rem + var(--safe-l));
         padding-right: calc(.35rem + var(--safe-r));
@@ -2998,12 +3094,32 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 
    Nothing selected is "everything", so an untouched row is all-quiet: no chip carries the on
    state, and the bar above shows no chip. */
+/* Each row of chips is a named group, and the name is what was missing: on a wide screen the two
+   rows sat side by side and read as one row of twenty-four unexplained buttons, and on a narrow one
+   they were two rows of unexplained buttons. The pips say which type; nothing said that the row
+   WAS type. A .bar-sep between the two groups does the rest -- the same divider this bar already
+   uses to separate what is shown from how it is shown.
+
+   The label is also the group's accessible name via aria-labelledby, so the visible word and the
+   announced one cannot drift. */
+.chip-group {
+    display: flex; align-items: center; gap: .4rem;
+    /* Its own line at the width where two groups plus a separator no longer fit, rather than
+       wrapping the chips of one group around the label of the next. */
+    flex: 0 1 auto; min-inline-size: 0;
+}
+.chip-group > .ttl {
+    flex: none;
+    font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--bs-secondary-color); white-space: nowrap;
+}
 .chip-toolbar { display: flex; flex-wrap: wrap; gap: .25rem; }
 .chip-tog {
     display: inline-flex; align-items: center; justify-content: center;
-    /* A 44px touch target on a phone, where these are tapped, and the same box on a desktop so
-       the two rows do not change height between layouts. */
-    min-width: 2.75rem; min-height: 2.75rem;
+    /* Width still its own: a chip holding four diamonds is wider than one holding a pip, and
+       forcing them square would either crop the glyphs or pad the pips to nothing. Height comes
+       from --ctl-h with everything else in the bar. */
+    min-width: var(--ctl-h);
     padding: .1rem .35rem;
     border: 1px solid var(--bs-border-color); border-radius: .35rem;
     background: var(--bs-body-bg); color: var(--bs-body-color);

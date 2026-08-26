@@ -157,17 +157,14 @@
    stylesheet drops an empty strip, so there is no attribute for Blazor's diff and the script to
    fight over. aria-hidden because it duplicates what every row already carries and changes on
    every scroll, which a screen reader would read out as a stream of set names nobody asked for. *@
-@if (GroupOf is not null && _multiGroup)
-{
-    <div class="grid-spy" @ref="_spyEl" aria-hidden="true"></div>
-}
+<div class="grid-spy" @ref="_spyEl" aria-hidden="true"></div>
 
 @* "listing" is read by gridsweep.js, not by CSS: a mouse drag over list rows must obey the
    sweep toggle, while a drag over the tile grid need not. See the comment on onDown there. *@
 @* tabindex, role and aria-activedescendant are set from js/gridkeys.js, which owns the cursor —
    see the note there on why a roving tabindex does not suit a virtualised grid. The container is
    the single tab stop for however many thousand cards are in scope. *@
-<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(PickedOf is null ? "" : "picking")"
+<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(PickedOf is null ? "" : "picking") @(OnWant.HasDelegate ? "wanting" : "")"
      id="@_gridId" role="grid"
      aria-label="@(ListView ? "Card list" : "Card grid") — arrow keys to move, digits to set a count"
      @ref="_gridEl">
@@ -199,6 +196,15 @@
            conditionally-omitted cell would shift every column after it out of alignment. *@
         <div class="card-line head @(Roomy ? "roomy" : "")" role="row">
             <span class="c-thumb" role="columnheader"></span>
+            @* Its own column, at the front. It was next to the -/+ buttons, where it read as a
+               third stepper -- three small square buttons in a row, one of which does something
+               completely different from the other two -- and it sat beside the count, which is the
+               number it was most likely to be mistaken for. At the front it reads as a mark against
+               the row, the way a starred message does.
+
+               The header cell stays empty. "want" over a column of hearts would be the only header
+               in the row explaining an icon that already says it, and this column does not sort. *@
+            <span class="c-want" role="columnheader"></span>
             <button class="c-nm" role="columnheader" @onclick="() => SortBy(ListSort.Name)">name @Caret(ListSort.Name)</button>
             <button class="c-id" role="columnheader" @onclick="() => SortBy(ListSort.Number)">set @Caret(ListSort.Number)</button>
             @* The column is a row of pips, so its heading is one too — a three-wedge key rather
@@ -243,7 +249,7 @@
             @* A row of cells, so the list reads as the data table it looks like. The label is what
                gridkeys.js announces as the cursor moves, so it has to be the whole sentence. *@
             <div @key="card.Key" class="card-line @(Roomy ? "roomy" : "") @(count > 0 ? "owned" : "")"
-                 data-idx="@idx" data-group="@GroupOf?.Invoke(card)"
+                 data-idx="@idx" data-group="@GroupLabelOf(card)"
                  id="@($"{_gridId}-tile-{idx}")" role="row"
                  aria-label="@Describe(card, count)">
                 @* The image is pointer-events:none so sweep hit-testing lands on the row, so
@@ -251,6 +257,27 @@
                 <span class="c-thumb @(Gold(card, count) ? "gold-flair" : "")"
                       data-tip-img="@card.ArtUrl" data-tip="@card.Name" role="gridcell">
                     <img class="thumb" data-src="@card.ArtUrl" alt="" decoding="async" draggable="false" />
+                </span>
+
+                @* Always rendered, empty or not: the row is a CSS grid, so a skipped cell shifts
+                   every column after it -- which is exactly what it did the first time this went
+                   in with the header cell and without this one. *@
+                <span class="c-want" role="gridcell">
+                    @if (OnWant.HasDelegate)
+                    {
+                        var wanted = WantedOf?.Invoke(card) ?? 0;
+                        <button class="want @(wanted > 0 ? "on" : "")" @onclick="() => OnWant.InvokeAsync(card)"
+                                @onclick:stopPropagation="true"
+                                aria-pressed="@Aria.Flag(wanted > 0)"
+                                aria-label="@(wanted > 0 ? $"On your want list: {card.Name}" : $"Add {card.Name} to your want list")"
+                                title="@(wanted > 0 ? "On your want list" : "Add to your want list")">
+                            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
+                                <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
+                                      fill="@(wanted > 0 ? "currentColor" : "none")"
+                                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                    }
                 </span>
                 @* The name is the link. A tile tap means "I own one more", so detail needs its
                    own target rather than stealing that gesture. *@
@@ -355,23 +382,6 @@
                     }
                 </span>
                 <span class="c-acts" role="gridcell">
-                    @* The same toggle the tile carries. Both views, because either can be the one
-                       you are in when you notice you want something. *@
-                    @if (OnWant.HasDelegate)
-                    {
-                        var wanted = WantedOf?.Invoke(card) ?? 0;
-                        <button class="want @(wanted > 0 ? "on" : "")" @onclick="() => OnWant.InvokeAsync(card)"
-                                @onclick:stopPropagation="true"
-                                aria-pressed="@Aria.Flag(wanted > 0)"
-                                aria-label="@(wanted > 0 ? $"On your wishlist: {card.Name}" : $"Add {card.Name} to your wishlist")"
-                                title="@(wanted > 0 ? "On your wishlist" : "Add to your wishlist")">
-                            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
-                                <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
-                                      fill="@(wanted > 0 ? "currentColor" : "none")"
-                                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
-                            </svg>
-                        </button>
-                    }
                     <button class="step" @onclick="() => Bump(card, -1)" @onclick:stopPropagation="true"
                             disabled="@(count == 0 && PickedOf is null)" aria-label="Remove one">&minus;</button>
                     <button class="step" @onclick="() => Bump(card, +1)" @onclick:stopPropagation="true"
@@ -387,7 +397,7 @@
             @* The row's group is its FIRST card's. A row can straddle two sets, and the reader
                is asking "where am I", which the card at the left edge answers. *@
             <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row"
-                 data-group="@(row.Count > 0 ? GroupOf?.Invoke(row[0].Card) : null)">
+                 data-group="@(row.Count > 0 ? GroupLabelOf(row[0].Card) : null)">
                 @foreach (var (card, idx) in row)
                 {
                     <CardTile @key="card.Key" Card="card" Index="idx"
@@ -573,6 +583,18 @@
 
     /// <summary>Whether the cards in scope span more than one group, and the strip is worth a row.</summary>
     private bool _multiGroup;
+
+    /// <summary>
+    /// The group to mark a row with, or null to mark nothing.
+    ///
+    /// Marking is the gate on the whole strip: with one set in scope the header two bars up already
+    /// names it, and an unmarked grid leaves the script with nothing to read, so the strip stays
+    /// empty and the stylesheet drops it. Cheaper than a conditional element, and it means the
+    /// script attaches once for the life of the grid rather than appearing and disappearing with
+    /// the filters.
+    /// </summary>
+    private string? GroupLabelOf(PocketCard card) =>
+        GroupOf is not null && _multiGroup ? GroupOf(card) : null;
 
     private IJSObjectReference? _sweep, _images, _metrics, _spy;
     private string _lastListSignature = "";
@@ -1003,13 +1025,16 @@
     }
 
     /// <summary>
-    /// Point the scroll spy at the strip, or bring it up to date if it is already watching. Both
-    /// calls are safe when the strip is not rendered: <c>_spyEl</c> is then the default reference,
-    /// and the module ignores a null element.
+    /// Point the scroll spy at the strip, or bring it up to date if it is already watching.
+    ///
+    /// Unconditional, even where there is no grouping to report: the same pass measures where the
+    /// sticky bars above the grid end and publishes it as --bars-h, which is what stops the list
+    /// view's column headers from parking underneath the toolbar. A grid with nothing to group
+    /// still has that problem.
     /// </summary>
     private async Task AttachSpyAsync()
     {
-        if (_spy is null || GroupOf is null || !_multiGroup) return;
+        if (_spy is null) return;
 
         try
         {

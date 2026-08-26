@@ -49,6 +49,36 @@ function currentGroup(grid, edge) {
     return last ? last.dataset.group || '' : '';
 }
 
+/// Where the sticky bars above the grid end, in viewport pixels.
+///
+/// Two things below them want to stick just under, not at zero: this strip and the list view's
+/// column headers. Both were sitting at top: 0 with a lower z-index than the toolbar, which is to
+/// say both were invisible the moment you scrolled — the toolbar parked on top of them. CSS cannot
+/// express "under my previous sibling", because that sibling's height depends on how many rows its
+/// contents wrapped into.
+///
+/// The toolbar's own sticky offset is included: on the log-a-pack screen it sits under a pinned
+/// header rather than at the top of the viewport.
+function barsBottom(label) {
+    const bar = label.parentElement?.querySelector('.grid-toolbar');
+    if (!bar) return 0;
+
+    const own = parseFloat(getComputedStyle(bar).top) || 0;
+    return own + bar.getBoundingClientRect().height;
+}
+
+/// The pinned page header's height, for the toolbar below it to sit under.
+///
+/// This was a constant -- `3rem + 1px`, the header's min-height plus its border -- and it was wrong
+/// in both directions. Border-box rounding put the real height a fraction under that at some zoom
+/// levels, leaving a sub-pixel strip of scrolling card grid between the two pinned bars; and once
+/// the controls in the header grew on a coarse pointer the header became 56px, so the same constant
+/// pinned the toolbar nine pixels UNDER the header instead. Measured, it is right at every size.
+function headHeight(label) {
+    const head = label.parentElement?.querySelector('.page-head.sticky-head');
+    return head ? head.getBoundingClientRect().height : 0;
+}
+
 export function watch(grid, label) {
     if (!grid || !label || watched.has(grid)) return;
 
@@ -57,15 +87,36 @@ export function watch(grid, label) {
     const update = () => {
         pending = 0;
 
-        // Sticky, so its own box is where the strip currently sits. Measured each time rather than
-        // cached: the toolbars above it wrap at different widths, and the disclosure opening moves
-        // it several rem.
-        const edge = label.getBoundingClientRect().bottom;
+        // Published for the stylesheet rather than applied here, so one measurement serves both
+        // the strip and the list's column headers and neither needs to know about the other.
+        const host = label.parentElement;
+
+        // The header first: the toolbar's own sticky offset is set from it, and barsBottom reads
+        // that offset back. Setting them the other way round would measure the toolbar against the
+        // previous frame's header.
+        const head = headHeight(label);
+        if (head > 0) host?.style.setProperty('--head-h', `${head}px`);
+
+        const bars = barsBottom(label);
+        host?.style.setProperty('--bars-h', `${bars}px`);
+
+        // The strip's own height, so the list view's column headers can sit under it rather than
+        // behind it. Zero while it has nothing to say: the stylesheet drops an empty strip, and a
+        // header offset by a strip that is not there would float a row's height below the bars.
+        host?.style.setProperty('--spy-h', `${label.getBoundingClientRect().height}px`);
+
+        // The line under which a row is covered: the bottom of the bars, plus the strip itself once
+        // it has something in it.
+        //
+        // Derived rather than read off the strip's own box, because the strip is display: none
+        // until it has text -- so measuring it would give zero on the very pass that decides what
+        // to put in it. offsetHeight is 0 in exactly that state, which is the right answer for it.
+        const edge = bars + label.offsetHeight;
         const group = currentGroup(grid, edge);
 
-        // Only one group in scope — a single set selected — and there is nothing to report. Empty
-        // rather than hidden: the stylesheet drops an empty strip, so there is no attribute for
-        // Blazor's diff and this file to disagree about.
+        // No groups in scope — one set selected, so the page never marked the rows — and there is
+        // nothing to report. Empty rather than hidden: the stylesheet drops an empty strip, so
+        // there is no attribute for Blazor's diff and this file to disagree about.
         if (label.textContent !== group) label.textContent = group;
     };
 
@@ -92,7 +143,16 @@ export function watch(grid, label) {
     const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(onScroll);
     if (mo) mo.observe(grid, { childList: true, subtree: true });
 
-    watched.set(grid, { scroller, onScroll, mo });
+    // The bars above change height without a scroll and without touching the grid: a filter chip
+    // appears, the window narrows and the row wraps, the disclosure opens. Watching the toolbar
+    // keeps --bars-h honest through all three.
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(onScroll);
+    for (const sel of ['.grid-toolbar', '.page-head.sticky-head']) {
+        const el = label.parentElement?.querySelector(sel);
+        if (ro && el) ro.observe(el);
+    }
+
+    watched.set(grid, { scroller, onScroll, mo, ro });
     update();
 }
 
@@ -112,5 +172,6 @@ export function dispose(grid) {
     entry.scroller.removeEventListener('scroll', entry.onScroll);
     if (entry.scroller !== window) window.removeEventListener('scroll', entry.onScroll);
     if (entry.mo) entry.mo.disconnect();
+    if (entry.ro) entry.ro.disconnect();
     watched.delete(grid);
 }

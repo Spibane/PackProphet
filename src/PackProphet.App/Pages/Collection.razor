@@ -276,7 +276,9 @@ else
 
                Symbols rather than an icon font: these are the glyphs the list view already draws,
                from the same rungs, so a chip and a card agree on what a rarity looks like. *@
-            <div class="chip-toolbar" role="group" aria-label="Filter by rarity">
+            <div class="chip-group">
+                <span class="ttl" id="rarity-chips-label">rarity</span>
+                <div class="chip-toolbar" role="group" aria-labelledby="rarity-chips-label">
                 @foreach (var rung in Session.Index.Ladder.Rungs)
                 {
                     <button class="chip-tog @(_rarities.Contains(rung.Index) ? "on" : "")"
@@ -287,12 +289,17 @@ else
                         <span class="visually-hidden">@rung.Symbol</span>
                     </button>
                 }
+                </div>
             </div>
+
+            <span class="bar-sep" aria-hidden="true"></span>
 
             @* Type needs the printed card detail, which downloads after the card list does, so the
                control says so rather than quietly returning nothing. Ten energies and four trainer
                kinds: too many for a dropdown to be worth reading, and each has a pip already. *@
-            <div class="chip-toolbar" role="group" aria-label="Filter by type">
+            <div class="chip-group">
+                <span class="ttl" id="type-chips-label">type</span>
+                <div class="chip-toolbar" role="group" aria-labelledby="type-chips-label">
                 @foreach (var type in FilterTypes)
                 {
                     <button class="chip-tog @(_types.Contains(type) ? "on" : "")"
@@ -304,6 +311,7 @@ else
                         <span class="visually-hidden">@type</span>
                     </button>
                 }
+                </div>
             </div>
 
             @* No pack filter for promo sets: their "Vol. N" groupings record how a promo was given
@@ -321,7 +329,10 @@ else
                Tapping the chosen pack again clears it. *@
             @if (!ViewingAll && !CardIndex.IsPromoSet(_set))
             {
-                <div class="pack-picks" role="group" aria-label="Filter by pack">
+                <span class="bar-sep" aria-hidden="true"></span>
+                <div class="chip-group">
+                    <span class="ttl" id="pack-picks-label">pack</span>
+                    <div class="pack-picks" role="group" aria-labelledby="pack-picks-label">
                     @foreach (var p in PacksInSet)
                     {
                         <button class="pack-pick @(_pack == p ? "on" : "")"
@@ -332,30 +343,10 @@ else
                             <span class="nm">@p</span>
                         </button>
                     }
+                    </div>
                 </div>
             }
 
-            @* Which list the hearts write to. Only with more than one: with a single wishlist the
-               question does not arise, and with none the first heart makes one.
-
-               It is a filter-bar control rather than a per-card menu because a heart has to stay
-               one tap. Choosing a list per card would put a menu between noticing you want
-               something and recording it, which is the friction that stops the feature being used
-               -- the same reason the card page will start a list without asking for a name. *@
-            @if (Session.Wishlists.Count > 1)
-            {
-                <span class="bar-sep" aria-hidden="true"></span>
-                <label class="want-target">
-                    <span class="ttl">hearts add to</span>
-                    <select class="form-select form-select-sm" @onchange="OnWantList"
-                            aria-label="Which wishlist the hearts add to">
-                        @foreach (var list in Session.Wishlists)
-                        {
-                            <option value="@list.Id" selected="@(list.Id == WantListId)">@list.Name</option>
-                        }
-                    </select>
-                </label>
-            }
         </Filters>
         <ToolbarExtras>
             @* Columns only mean something in the grid layout. *@
@@ -546,42 +537,13 @@ else
     private void TogglePack(string pack) => _pack = _pack == pack ? "" : pack;
 
     /// <summary>
-    /// The wishlist the hearts write to. Chosen, or the first one — not remembered in the profile:
-    /// it is a pointer for this visit rather than a setting, and a stored id would go stale the
-    /// moment that list was deleted.
+    /// The hearts read and write one list of their own — see <see cref="AppSession.WantList"/>.
+    /// The page holds no state for it: which list a heart fills is a property of the collection,
+    /// not of this visit to this page.
     /// </summary>
-    private string? _wantList;
+    private int WantedOf(PocketCard card) => Session.WantedOnHeartList(card.OwnershipKey);
 
-    private string? WantListId =>
-        _wantList is { Length: > 0 } id && Session.Wishlists.Any(w => w.Id == id)
-            ? id
-            : Session.Wishlists.FirstOrDefault()?.Id;
-
-    private void OnWantList(ChangeEventArgs e) => _wantList = Text(e);
-
-    /// <summary>
-    /// Copies of a card wanted on that list. The list rather than "any list": the heart is a
-    /// two-state control, and filling it for a card wanted somewhere else would make the next tap
-    /// -- which can only act on one list -- look like it had done nothing.
-    /// </summary>
-    private int WantedOf(PocketCard card) =>
-        WantListId is { } id && Session.Wishlists.FirstOrDefault(w => w.Id == id) is { } list
-            ? list.Wanted.GetValueOrDefault(card.OwnershipKey)
-            : 0;
-
-    /// <summary>
-    /// On or off, one copy. Wanting four of something is a wishlist-page question, and answering it
-    /// here would mean a heart that cycles through counts with no way to see what it landed on.
-    ///
-    /// With no wishlist at all the first heart makes one, unnamed, exactly as the card page does:
-    /// stopping to name something is the friction this is meant to remove.
-    /// </summary>
-    private void ToggleWant(PocketCard card)
-    {
-        var id = WantListId ?? Session.CreateWishlist();
-        _wantList = id;
-        Session.SetWanted(id, card.OwnershipKey, WantedOf(card) > 0 ? 0 : 1);
-    }
+    private void ToggleWant(PocketCard card) => Session.ToggleWanted(card.OwnershipKey);
 
 
     // One per chip on the toolbar. Parameterless because a Razor event handler cannot carry a

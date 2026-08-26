@@ -100,6 +100,33 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **The corner info button is back for narrow desktops**, over the art and revealed on hover, since
+  the caption is gone at those widths and the long press that replaces it is a touch gesture. Only
+  in that band — a real phone still gets the long press and nothing added back.
+
+- **The count badge is smaller wherever it sits on the art.** It was 27% of the tile wide with a
+  2.25rem height floor, which on a six-column phone tile of 58px came out 30 by 36 — half the card's
+  width and nearly two thirds of its height, for one or two digits. Now 28px square with a
+  proportionally smaller digit.
+
+- **Accessibility pass over the new grid.** Two real faults, both fixed:
+
+  - **The heart was mouse-only.** Everything in a tile is out of the tab order — a focus stop per
+    card would put thousands of them between the grid and the rest of the page — so the grid's
+    contract is that the cursor plus a letter does whatever a tile's furniture does. There was a key
+    for the count, for the detail page and for a bulk range, and none for wanting a card. **`w`**
+    now toggles it, and the key legend says so.
+  - **The filled heart failed the non-text contrast floor in dark.** It is the only thing on a tile
+    saying "this is on your want list", so WCAG 1.4.11 asks 3:1 of it; raw `--bs-danger` measured
+    **2.94:1** against the caption — the same failure the outline buttons had, and the same pair of
+    mixed reds fixes it, now shared as a token by all three places that draw a heart. The empty
+    heart was already fine at 4.45 light / 5.15 dark, which is asserted too because its alpha is the
+    product of a translucent colour and an element opacity.
+
+  Also: the want column's header in list view had no accessible name — blank on screen is right, a
+  header announced as nothing is not. And white on the count badge sits at exactly 4.50:1, which
+  passes and could not pass by less, so it is now pinned by a test rather than by luck.
+
 - **The tile is the art again.** The count, the info button and the heart were all badges over the
   artwork, covering three corners of the only thing the grid layout exists to show. At desk widths
   they now sit in a caption strip under the picture — heart, **card name**, count, left to right. The

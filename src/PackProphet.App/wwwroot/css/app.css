@@ -3027,6 +3027,17 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
    the bar's own convention is filters left, layout right. */
 .grid-toolbar .layout-switch { flex: none; }
 
+/* The wanted list as pasteable text. Monospaced, because the lines are set code, number, name
+   and rarity in fixed order and a proportional font makes four aligned columns look ragged.
+   Resizable vertically only: a list of forty cards wants to be dragged taller, and a textarea
+   that can be dragged wider breaks the row it sits in. */
+.trade-text {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .8rem; line-height: 1.45;
+    resize: vertical;
+    white-space: pre;
+}
+
 /* Where in a pack the chance is, under an expanded ranking row. A row of position-and-figure
    pairs rather than a table: it is three or four values read left to right in pack order, and a
    table would give four headers to four numbers.

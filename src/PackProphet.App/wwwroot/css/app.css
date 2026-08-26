@@ -673,7 +673,11 @@ main:focus { outline: none; }
    is a tall sliver beside two lines of text; a 256x113 wordmark squeezed into that is illegible,
    while a booster is recognisable at this width because its shape and colour do the work rather
    than its lettering. */
-.set-tab:has(.pack-thumb) { flex-direction: row; align-items: center; gap: 0; }
+/* One layout whether or not there is a thumbnail. It used to flip to a row only when a wrapper was
+   there, which left the two tabs that have none -- the "all of series" aggregate and the promo set
+   -- as narrow columns among a row of wider tabs: a different shape rather than the same shape
+   minus a picture. The label keeps its own stack either way. */
+.set-tab { flex-direction: row; align-items: center; gap: 0; }
 .set-tab .lbl { display: flex; flex-direction: column; line-height: 1.15; }
 .set-tab .pack-thumb { width: 1.1rem; height: 1.55rem; margin-right: .35rem; flex: none; }
 
@@ -3254,6 +3258,39 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 .toolbar-more-body {
     display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
     padding: .35rem calc(.75rem + var(--safe-r)) .6rem calc(.75rem + var(--safe-l));
+}
+
+/* Back to the top of the list.
+   ==========================================================================================
+   Fixed rather than sticky: it belongs to the viewport, not to a place in the list, and a sticky
+   element inside a virtualised scroller has nothing stable to stick to.
+
+   Bottom-right, and above the tab bar where there is one -- the bar is fixed to the bottom edge
+   below the desk breakpoint, so anything else down there has to clear its height AND the inset it
+   sits above, which is the same sum <main> already reserves. Left of centre is where a thumb rests
+   on a phone; the right corner is the one place a floating button does not sit under it.
+
+   Hidden until js/gridspy.js says there is something to scroll back from. */
+.to-top {
+    display: none;
+    position: fixed;
+    right: calc(1rem + var(--safe-r));
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    z-index: 1020;
+    width: 2.75rem; height: 2.75rem;
+    align-items: center; justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg); color: var(--bs-body-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+.to-top.on { display: flex; }
+.to-top:hover { border-color: var(--bs-primary); color: var(--bs-primary); }
+.to-top:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
+/* Above the tab bar, which is fixed to the bottom edge at these widths. */
+@media (width <= 1056px) {
+    .to-top { bottom: calc(1rem + var(--tab-bar-h) + 1px + env(safe-area-inset-bottom)); }
 }
 
 /* A row of toggle chips: rarity marks and type pips, several selectable at once. Replaces two

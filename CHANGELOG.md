@@ -100,6 +100,20 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **A back-to-top button on the card grid.** A set is a couple of hundred cards and "every set" is
+  three and a half thousand, and every control — the search box, the set picker, the filters — is at
+  the top of the page and nowhere else. It appears once a viewport has been scrolled past, sits
+  bottom-right clear of the tab bar, and jumps rather than animating: a virtualised list of thousands
+  smooth-scrolled renders every row in between and queues every image in between for nothing.
+
+- **The promo set tab drew a blank grey box where a wrapper should be**, and the two tabs without a
+  picture — the promo set and the "all of series" aggregate — were laid out as narrow columns among a
+  row of wider tabs. The blank came from asking for pack art through the helper that never returns
+  nothing: where the catalogue has no mapping it guesses a URL from the pack's name, which is right
+  for a real booster and wrong for a promo set, whose "packs" are the Vol. 1, Vol. 2 groupings
+  recording how a promo was given away. The tab now asks the catalogue directly, so no mapping means
+  no picture, and every tab keeps the same layout with or without one.
+
 - **The sticky set strip shows the set's logo beside its name.** Big enough to read: a 256×113
   wordmark scaled to the cap height of the label beside it is a smudge, so the logo is 36px tall and
   the strip is about 42px. That is a real cost on a sticky element and the right trade — the strip

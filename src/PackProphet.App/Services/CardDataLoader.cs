@@ -38,10 +38,39 @@ public sealed class CardDataLoader
     private static string FactsUrl(string root) =>
         root == Local ? $"{root}/cards.v5.json" : FactsCdn;
 
+    /// <summary>
+    /// How long a CDN request gets before it is treated as a failure. The fallback below only
+    /// runs when an attempt *returns*, so a request that hangs — connection held open, no
+    /// response, which is what a network that drops packets to the CDN rather than refusing
+    /// them looks like — would otherwise leave the app on "Loading card data…" for good.
+    /// Short, because the snapshot behind it loads in about a second.
+    /// </summary>
+    private static readonly TimeSpan CdnDeadline = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Longer than <see cref="CdnDeadline"/> because the upstream card detail is 4.4 MB and this
+    /// runs after the UI is already usable, so waiting costs some columns rather than the boot.
+    /// It is still a deadline: the point is that a hang ends.
+    /// </summary>
+    private static readonly TimeSpan FactsDeadline = TimeSpan.FromSeconds(30);
+
     private readonly HttpClient _http;
     private CardData? _cached;
 
     public CardDataLoader(HttpClient http) => _http = http;
+
+    /// <summary>
+    /// Fetch JSON, putting a deadline on anything that leaves the origin. Local reads are left
+    /// alone: they are files the app shipped with, and a slow parse on a phone is not a hang.
+    /// </summary>
+    private async Task<T?> GetAsync<T>(string root, string url, TimeSpan deadline, CancellationToken ct)
+    {
+        if (root == Local) return await _http.GetFromJsonAsync<T>(url, ct);
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(deadline);
+        return await _http.GetFromJsonAsync<T>(url, cts.Token);
+    }
 
     public async Task<CardData> LoadAsync(CancellationToken ct = default)
     {
@@ -57,10 +86,10 @@ public sealed class CardDataLoader
     {
         try
         {
-            var cards = await _http.GetFromJsonAsync<List<PocketCard>>($"{root}/cards.min.json", ct);
-            var rarities = await _http.GetFromJsonAsync<Dictionary<string, Rarity>>($"{root}/rarities.json", ct);
-            var rates = await _http.GetFromJsonAsync<Dictionary<string, Dictionary<string, PackVariant>>>(
-                $"{root}/pullRates.json", ct);
+            var cards = await GetAsync<List<PocketCard>>(root, $"{root}/cards.min.json", CdnDeadline, ct);
+            var rarities = await GetAsync<Dictionary<string, Rarity>>(root, $"{root}/rarities.json", CdnDeadline, ct);
+            var rates = await GetAsync<Dictionary<string, Dictionary<string, PackVariant>>>(
+                root, $"{root}/pullRates.json", CdnDeadline, ct);
 
             if (cards is null or { Count: 0 } || rarities is null or { Count: 0 } || rates is null)
                 return null;
@@ -98,7 +127,7 @@ public sealed class CardDataLoader
             ? $"{root}/expansions.json"
             : "https://cdn.jsdelivr.net/gh/chase-mew/pokemon-tcg-pocket-cards@main/data/v5/expansions.json";
 
-        try { return await _http.GetFromJsonAsync<List<ExpansionInfo>>(url, ct); }
+        try { return await GetAsync<List<ExpansionInfo>>(root, url, CdnDeadline, ct); }
         catch { return null; }   // falls back to the lower-resolution art
     }
 
@@ -107,7 +136,7 @@ public sealed class CardDataLoader
     {
         // Optional: without it the catalogue derives series from set codes instead, which is
         // a slightly worse grouping rather than a broken app.
-        try { return await _http.GetFromJsonAsync<Dictionary<string, List<SetInfo>>>($"{root}/sets.json", ct); }
+        try { return await GetAsync<Dictionary<string, List<SetInfo>>>(root, $"{root}/sets.json", CdnDeadline, ct); }
         catch { return null; }
     }
 
@@ -128,10 +157,13 @@ public sealed class CardDataLoader
         {
             try
             {
-                var facts = await _http.GetFromJsonAsync<List<CardFact>>(FactsUrl(root), ct);
+                var facts = await GetAsync<List<CardFact>>(root, FactsUrl(root), FactsDeadline, ct);
                 if (facts is { Count: > 0 }) return new CardFacts(facts);
             }
-            catch (Exception e) when (e is not OperationCanceledException)
+            // The deadline above cancels through a linked token, so a timeout arrives here as an
+            // OperationCanceledException too. Only the caller's own token means "stop"; anything
+            // else is this source failing, and the other one is still worth trying.
+            catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 // try the other source
             }

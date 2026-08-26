@@ -4,325 +4,237 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
-## 0.3.0 — 2026-08-25
+## Unreleased
 
-Phase 3, and a layout pass over all seventeen routes. Every figure below was measured in the
-running app at 375x812 unless another width is named.
+A pass over the collection grid and the screens around it, started by comparing the app against
+two other trackers — [PTCGP Tracker](https://ptcgp-tracker.com) and
+[TCG Pocket Collection Tracker](https://tcgpocketcollectiontracker.com) — and then reworked over
+several rounds of review. Every figure below was measured in the running app at 375x812 unless
+another width is named.
 
-### New
+### The grid's own bar
 
-- **Shareable read-only wishlists.** A list travels whole inside the link and is decoded in the
-  recipient's browser; nothing is uploaded and no account exists. The payload sits after the `#`
-  so it never reaches a server as a query string, which also fixed a 414 on a real list.
-- **An in-game name per collection**, carried into the share link. A want-list told the reader
-  exactly what to send and gave them no way to find you: the only name in the payload was the
-  collection's, which is what you called a save slot.
-- **Split a pack budget across packs** — how many of each to buy for a fixed number of packs,
-  rather than sinking all of them into whichever pack currently ranks first.
-- **Pin a pack to the front of the log picker.** A star on each booster; pinned packs lead the
-  grid whatever the series dropdown says, which is the trip the pin exists to save. Persisted
-  per collection, and drawn as pinned wherever it appears, so a pack from another series never
-  reads as part of the one below it.
+- **List mode's switch moved onto the always-on bar.** It is the view that carries the set and
+  number, type, rarity, a count you can type into and the printed text — half of what a tile grid
+  cannot do — and behind a summary reading "filters and layout" it was findable only by someone who
+  already suspected it existed. The density toggle stays inside: it means nothing until you are in
+  list mode, and that row has to survive a phone.
 
-### Layout
+- **"Missing only" is a button on that bar too.** It is what you reach for after opening a pack, and
+  it was option two of a select inside a closed disclosure. The select still offers all six filters;
+  this is a shortcut to the one used every session.
 
-- **Every page was clipping 160px below the fold.** An unstyled wrapper plus a vendored
-  `height: 100vh` from a package nothing used. Removing the package alone made it worse.
-- **A bottom tab bar below 1057px**, and above it a top nav cut to the same four destinations in
-  the same order, from one shared menu component. Twelve links inline needed 1242px of a 1265px
-  row, so the bar wrapped at every width — well above the point the tab bar takes over.
-- **One page shell with three named measures**, replacing fifteen ad hoc `max-width` values
-  across twenty-six declarations. Body blocks now clear a display cutout; they were padding with
-  a flat `1rem`, so in landscape on a notched phone they sat under it while the bars above did
-  not.
-- **Column priority is a container query, not a media query.** A table's width comes from its
-  container: the wishlist editor is two columns above 1000px, so at a 1280px window its table had
-  614px and needed 680, and every row wrapped — worse the wider the screen.
-- **The set row, the rarity plan and the board's tuning knobs fold away**, each summarised by its
-  own state. Collection opens on the newest openable set rather than the first one printed.
-- Collection chrome 499 → 156px. Which pack's tools three rows → one at 1280px. Which pack 855 →
-  341px, Trades 559 → 288px, the in-game list 911 → 501px. Breakpoints 11 → 9.
-- **Which pack's breakdown buttons wrap into an even grid on a phone.** Four labels of four
-  different lengths in a flex row wrapped three-and-an-orphan at 414px and two-and-two at 375px,
-  with neither row's edges lining up. Two equal columns below 600px, and the flex row kept above
-  it, where all four fit on one line.
-- **The ranked pack table lines up with the page again.** Bleeding it to the screen edge on a
-  phone put the "pack" heading hard against the bezel and the log button a few pixels off the
-  other edge, out of line with every control above. The row tint and the rules still run edge to
-  edge; only the text is inset. A floor on the numeric headings keeps the two insets out of those
-  columns, so the header comes out at 36px rather than the 50 it was, or the 64 the inset alone
-  would have cost.
+- **Rarity and type are chips, several at a time.** Rarity was a dropdown that could hold exactly
+  one rung and named each one in words the game draws as symbols; it is now a row of toggle chips
+  carrying the same glyphs the list view draws, because "the stars and the crown, never mind the
+  diamonds" is the question people actually ask. A **type filter** did not exist at all and now
+  does, as the fourteen pips. Nothing selected means everything, so an untouched row hides nothing.
+  Type comes from the printed detail, which downloads after the card list, so those chips are
+  disabled until it lands.
+
+- **Each chip row is a labelled group** — `RARITY`, `TYPE`, `PACK` — separated by the divider the bar
+  already uses. Side by side on a wide screen they read as one row of twenty-four unexplained
+  buttons; stacked on a narrow one, two rows of them. The visible label is also the group's
+  accessible name, so the two cannot drift.
+
+- **One control height per bar.** Every bar mixed 31px Bootstrap controls, 40px set tabs and 44px
+  filter chips, which reads as a row that was assembled rather than designed. The height is a token
+  now: 36px on a mouse, 44px on a coarse pointer, so every control in a bar grows together rather
+  than singling out the chips. The page header is deliberately exempt — its 3rem is a contract the
+  sticky toolbar below it depends on, and at 44px the log screen's header squeezed the pack's name
+  down to "R.".
+
+- **Choose a pack by its wrapper.** The pack filter was a select listing "Charizard", "Mewtwo",
+  "Pikachu"; it is now the three boosters, which is how the game asks the same question. One at a
+  time — a card lists every pack it comes from, so "either of these two" is nearly the whole set,
+  while "what is still missing from the pack I am about to open" is the question the filter exists
+  for. Tapping the chosen pack again clears it. The set tabs get a wrapper beside the code for the
+  same reason: B2a and B2b are the same three characters in a different order, and their wrappers
+  are not.
+
+- **A back-to-top button.** A set is a couple of hundred cards and "every set" is three and a half
+  thousand, and every control that acts on the list is at the top of the page and nowhere else. It
+  appears once a viewport has been scrolled past, sits clear of the tab bar, and jumps rather than
+  animating: a virtualised list of thousands smooth-scrolled renders every row in between and queues
+  every image in between for nothing.
+
+- **The pack log had no way to type.** A pack holds up to 233 cards and you are looking for the five
+  you pulled, so finding them meant scanning the grid five times. It gets the search box the
+  collection grid already had, with the picked strip left unfiltered so narrowing never hides what
+  you have already logged.
+
+### Which set you are looking at
+
+- **A sticky strip names the set you are scrolling through**, with its logo beside the name. The
+  collection can hold every card ever printed, in set order, and a screen into it nothing said which
+  set was under your thumb — the set picker names the *filter*, which in that view is "every set". A
+  header per set is impossible inside a virtualised list without breaking the uniform row height its
+  scrollbar depends on, so one strip sits under the toolbar and a small script keeps it in step with
+  the topmost visible row. Only where the list spans more than one set.
+
+  The logo is 36px tall and the strip about 42px, because a 256x113 wordmark scaled to the cap height
+  of the label beside it is a smudge. The set tabs keep their booster wrapper instead: a tab holds
+  its picture beside a code and a percentage, and the sliver that leaves is the wrong shape for
+  lettering. Same set, two pictures, because the two places have opposite shapes to fill.
+
+### The card tile
+
+- **The tile is the art again.** The count, the info button and the heart were all badges over the
+  artwork, covering three corners of the only thing the grid layout exists to show. At desk widths
+  they sit in a caption strip under the picture — heart, **card name**, count. The name replaces the
+  word "info": below the art those six characters label a thing that already has a label, and the
+  printed name on a 200px tile is small, stylised and sometimes behind an ex badge. It is styled as a
+  name rather than a button, which is how the list view already does it.
+
+  The frame moved from the art onto the whole tile, so the two read as one object. Without it a
+  tile's count sat four pixels from the next card's heart with nothing between them, and the eye
+  grouped across the gutter instead of down the tile.
+
+- **At mobile widths the grid is unchanged**: no caption, the count back to a badge exactly where it
+  was, and the tile the height of its art, so a screenful holds as many cards as before. That switch
+  is on the same 1056px breakpoint as the tab bar rather than on `hover`, because a desktop window
+  dragged narrow keeps its mouse — it was keeping the caption while everything else on the page had
+  already become the phone layout. The corner info button comes back in that band, over the art and
+  revealed on hover, since a long press is a touch gesture.
+
+- **The count badge is smaller wherever it sits on the art.** It was 27% of the tile wide with a
+  2.25rem height floor, which on a six-column phone tile of 58px came out 30 by 36 — half the card's
+  width and nearly two thirds of its height, for one or two digits. Now 28px square.
+
+- **A spinner while art loads, instead of a broken-image icon.** The loader holds an image's `src`
+  back until one of its six slots is free, and an `<img>` with an alt and no src is drawn by the
+  browser as its broken-image marker — so a fast scroll showed a fault on every tile it had not
+  reached yet. "Not loaded" and "will never load" looked identical, and the constant one looked like
+  the fault. Pending and in-flight images are hidden with a spinner in their place; the failed state
+  is untouched, since the broken marker and the card's name beside it are the most useful thing a
+  tile with no art can show — and it is now the only thing that looks like a fault.
+
+### Wanting a card
+
+- **A heart on the tile and on each list row.** Wanting a card was reachable only from that card's
+  own page, so recording it meant leaving the set you were looking at, marking it, and coming back.
+  One tap, on or off, one copy — wanting four of something is a wishlist-page question, and a heart
+  that cycled through counts would give no way to see what it landed on.
+
+- **The hearts have a list of their own**, "Want it", made by the first heart. Filling whichever
+  wishlist happened to be first would quietly rewrite the one list you built deliberately. It is
+  marked as the hearts' list wherever wishlists are shown, and deleting it is safe: the next heart
+  makes another.
+
+- **In list view the heart has its own column, at the front.** Beside the −/+ buttons it was a third
+  small square button in a row of them, doing something completely different, next to the number it
+  was most likely to be confused with.
+
+- **Not on the tile grid on a touch screen.** A permanent button in the corner of every tile is a
+  permanent hazard in the one layout whose whole job is being tapped, and a miss costs a copy of the
+  wrong card. The list view keeps its column, and the card's own page has the same one-tap heart —
+  present whether or not the list exists yet, which is what makes it a complete route on a phone.
+
+### Numbers that were already computed and never shown
+
+- **Where in a pack the chance is.** "Chance of a hit" answers whether a pack helps and hides which
+  card in it does the helping: the first three cards come from the common pool, so a collection that
+  has finished the commons has all of its chance in the last two, and the same percentage means
+  different things in two sets. An expanded ranking row now breaks the chance down by card position,
+  merging adjacent positions whose odds are equal — which is what produces the "1st-3rd card"
+  reading. Merged from the numbers rather than hardcoded: a set that broke the three-commons pattern
+  would come out unmerged rather than wrongly merged.
+
+- **The deck page's pack table** showed a bare "chance of a hit" with no way to read it as packs. It
+  gets the "packs per new card" column the Which-pack table has, from a figure the ranker already
+  returned.
+
+- **A wishlist as pasteable text.** The share link is the better artefact and the wrong shape for
+  where these trades happen: a Discord thread takes a few lines, nobody opens a stranger's link, and
+  a reader with the game open on the same phone cannot follow one and come back. Only what is still
+  short, set and number first, rarity on every line — the game's trade rules turn on it.
 
 ### Accessibility
 
-- **The card grid is operable from the keyboard.** It was pointer-only: a tile was a div with a
-  click handler. Arrows move, digits set a count outright, Enter adds, `-` removes, `i` opens
-  card detail. One tab stop with `aria-activedescendant`, a visible **keyboard** button naming
-  the keys, a skip link, and a command-palette action.
-- **The -/+ buttons meet WCAG 2.5.8.** Two of their four spellings measured 26.67 x 23.00 px,
-  under the 24 x 24 floor, in a 50px row with the buttons centred in it. One class now, sized by
-  one variable, guarded by a test on the variable.
-- **The command palette is a real `<dialog>`.** The focus trap, Escape, the inert background, the
-  backdrop and focus restoration are the platform's; a hand-rolled trap and an inert wrapper
-  around the whole layout went with it.
-- Tables carry real headers, scroll inside their own wrapper rather than sliding the page, and
-  are reachable by keyboard. Eighteen ad hoc alerts became one `Notice` component that also picks
-  whether a message interrupts a screen reader or waits its turn.
-- Two table cells had been given a flex display, which takes a cell out of its row: they measured
-  25.8px and 34.6px in a 46.6px row, so the rule sat high in those two columns and level in the
-  other seven.
+- **`aria-pressed` was silently absent on every unpressed toggle, everywhere.** Blazor omits an
+  attribute whose value is `false` — right for HTML's own booleans, since `disabled="false"` would
+  disable a control, and wrong for every ARIA state, where the two values are the *words* "true" and
+  "false" and the absence of the attribute says the element has no such state at all. So a toggle
+  that was off announced itself as an ordinary button: the one state that needed saying was the only
+  one that said nothing, and the markup looked correct — the attribute was written, it just never
+  arrived.
 
-### Copy
+  Found by a test that clicked `button[aria-pressed]` and hit "add", because the unpressed button did
+  not match the selector. Fixed at all 26 sites across eleven files through one `Aria.Flag` helper.
+  The worst of them was the rarity plan on the Which-pack page, where six of the ten chips that
+  configure every estimate in the app were announced as plain buttons.
 
-- **Paragraphs over 40 words: 45 → 15.** Kept what tells you about the game, your data, or what
-  to do; dropped what a badge already says, what justifies the design, and the clause that
-  restates the previous one.
-  
+  Guarded by a test that reads the `.razor` sources rather than the DOM, because from the DOM side a
+  dropped attribute is invisible: what you see is an element with no `aria-pressed`, which is exactly
+  what a plain button looks like. Checked against a deliberately reintroduced violation.
+
+- **The filled heart failed the non-text contrast floor in dark.** It is the only thing on a tile
+  saying "this is on your want list", so WCAG 1.4.11 asks 3:1 of it; raw `--bs-danger` measured
+  **2.94:1** against the caption — the same failure the outline buttons had, and the same pair of
+  mixed reds fixes it, now shared as a token by all three places that draw a heart. The empty heart
+  was already fine at 4.45 light / 5.15 dark, which is asserted too because its alpha is the product
+  of a translucent colour and an element opacity.
+
+- **The heart was reachable only with a mouse.** Everything in a tile is out of the tab order — a
+  focus stop per card would put thousands of them between the grid and the rest of the page — so the
+  grid's contract is that the cursor plus a letter does whatever a tile's furniture does. There was a
+  key for the count, for the detail page and for a bulk range, and none for wanting a card. **`w`**
+  now toggles it, and the key legend says so.
+
+- **The want column's header in list view had no accessible name.** Blank on screen is right; a
+  column header announced as nothing is not.
+
+- **White on the count badge sits at exactly 4.50:1**, which passes and could not pass by less, so it
+  is now pinned by a test rather than by luck.
+
 ### Fixed
 
-- **Leaving a page while its JavaScript modules were still loading crashed the render loop.** The
-  card grid imports three modules on first render, and leaving /collection inside that window
-  disposed the component while the imports were in flight. The continuation went on to hand the
-  disposed object reference to the next call, which threw as it was serialised and was logged as
-  an unhandled exception; it also registered the dead grid as the target the command palette jumps
-  focus to. The command palette and the undo accelerator had the same shape and left a document
-  listener pointing at a component that had gone.
-- **The card grid no longer flickers while scrolling.** `<Virtualize>` was given a row height
-  computed from an assumed 1,000px-wide grid; a row is as tall as a tile is wide, so on a 375px
-  phone at 6 columns the figure was about 2.5x the truth. It rendered a fraction of the rows the
-  screen had room for, saw the gap, and rendered again — on every scroll event. The height is now
-  measured from the laid-out row and re-measured whenever the grid changes width.
-- **Log a pack keeps its header on screen.** "Add N to collection" sat above a grid of several
-  hundred cards, so tapping the last card of a pack meant scrolling back past every card you had
-  just tapped to reach it. The bar that did stay counted the cards in the pack — a fixed number
-  nobody is tracking — and now reports **picked 3 of 5** instead, which is the figure that moves
-  and the one that says when a pack is fully logged.
+- **The sticky bars were hiding what sticks under them.** The set strip and the list view's column
+  headers were both pinned at `top: 0` beneath a toolbar that is also pinned there and paints over
+  them — so both vanished on the first scroll, which is the state they exist for. CSS cannot express
+  "under my previous sibling" when that sibling's height depends on how many rows it wrapped into, so
+  the script that fills the strip measures the bars and publishes the offset for the stylesheet.
 
-### Also unreleased
+- **A gap under the pinned header on the log screen**, with the card grid scrolling through it. The
+  toolbar below it was pinned at a constant `3rem + 1px`, which border-box rounding left a sub-pixel
+  short of the header. Measured now — and it was wrong in the other direction too: once the controls
+  grew on a phone the header became 56px and the same constant would have pinned the toolbar nine
+  pixels *underneath* it.
 
-- **A back-to-top button on the card grid.** A set is a couple of hundred cards and "every set" is
-  three and a half thousand, and every control — the search box, the set picker, the filters — is at
-  the top of the page and nowhere else. It appears once a viewport has been scrolled past, sits
-  bottom-right clear of the tab bar, and jumps rather than animating: a virtualised list of thousands
-  smooth-scrolled renders every row in between and queues every image in between for nothing.
+- **"How to get it" rendered 192px wide on a tablet.** Two columns at those widths put it on a second
+  row — in column one, the art column. It spans the full width instead.
 
 - **The promo set tab drew a blank grey box where a wrapper should be**, and the two tabs without a
   picture — the promo set and the "all of series" aggregate — were laid out as narrow columns among a
   row of wider tabs. The blank came from asking for pack art through the helper that never returns
   nothing: where the catalogue has no mapping it guesses a URL from the pack's name, which is right
   for a real booster and wrong for a promo set, whose "packs" are the Vol. 1, Vol. 2 groupings
-  recording how a promo was given away. The tab now asks the catalogue directly, so no mapping means
-  no picture, and every tab keeps the same layout with or without one.
-
-- **The sticky set strip shows the set's logo beside its name.** Big enough to read: a 256×113
-  wordmark scaled to the cap height of the label beside it is a smudge, so the logo is 36px tall and
-  the strip is about 42px. That is a real cost on a sticky element and the right trade — the strip
-  appears only when the list spans more than one set, and being recognised at a glance is the only
-  thing it does.
-
-  **The set tabs keep their booster wrapper.** The logo was tried there and reverted: a tab holds
-  its picture beside a code and a percentage, and the sliver that leaves is the wrong shape for a
-  wordmark — a booster is recognisable at that width because its shape and colour do the work
-  rather than its lettering. Same set, two pictures, because the two places have opposite shapes to
-  fill.
-
-- **The corner info button is back for narrow desktops**, over the art and revealed on hover, since
-  the caption is gone at those widths and the long press that replaces it is a touch gesture. Only
-  in that band — a real phone still gets the long press and nothing added back.
-
-- **The count badge is smaller wherever it sits on the art.** It was 27% of the tile wide with a
-  2.25rem height floor, which on a six-column phone tile of 58px came out 30 by 36 — half the card's
-  width and nearly two thirds of its height, for one or two digits. Now 28px square with a
-  proportionally smaller digit.
-
-- **Accessibility pass over the new grid.** Two real faults, both fixed:
-
-  - **The heart was mouse-only.** Everything in a tile is out of the tab order — a focus stop per
-    card would put thousands of them between the grid and the rest of the page — so the grid's
-    contract is that the cursor plus a letter does whatever a tile's furniture does. There was a key
-    for the count, for the detail page and for a bulk range, and none for wanting a card. **`w`**
-    now toggles it, and the key legend says so.
-  - **The filled heart failed the non-text contrast floor in dark.** It is the only thing on a tile
-    saying "this is on your want list", so WCAG 1.4.11 asks 3:1 of it; raw `--bs-danger` measured
-    **2.94:1** against the caption — the same failure the outline buttons had, and the same pair of
-    mixed reds fixes it, now shared as a token by all three places that draw a heart. The empty
-    heart was already fine at 4.45 light / 5.15 dark, which is asserted too because its alpha is the
-    product of a translucent colour and an element opacity.
-
-  Also: the want column's header in list view had no accessible name — blank on screen is right, a
-  header announced as nothing is not. And white on the count badge sits at exactly 4.50:1, which
-  passes and could not pass by less, so it is now pinned by a test rather than by luck.
-
-- **The tile is the art again.** The count, the info button and the heart were all badges over the
-  artwork, covering three corners of the only thing the grid layout exists to show. At desk widths
-  they now sit in a caption strip under the picture — heart, **card name**, count, left to right. The
-  name replaces the word "info": below the art those six characters labelled a thing that already
-  has a label, and the printed name on a 200px tile is small, stylised and sometimes behind an ex
-  badge. It is styled as a name rather than a button, which is how the list view already does it.
-
-  The frame moved from the art onto the whole tile, so the art and its caption read as one object.
-  Without that, a tile's count sat four pixels from the next card's heart with nothing between them,
-  and the eye grouped across the gutter instead of down the tile.
-
-  **At mobile widths nothing changed**: no caption, the count back to a badge exactly where it was,
-  and the tile the height of its art, so a screenful holds as many cards as before. That switch is
-  on the same 1056px breakpoint as the tab bar rather than on `hover`, because a desktop window
-  dragged narrow keeps its mouse — it was keeping the caption while everything else on the page had
-  already become the phone layout.
-
-- **A spinner while art loads, instead of a broken-image icon.** The loader holds an image's `src`
-  back until one of its six slots is free, and an `<img>` with an alt and no src is drawn by the
-  browser as its broken-image marker — so a fast scroll showed a fault on every tile it had not
-  reached yet. "Not loaded" and "will never load" looked identical, and the constant one looked like
-  the fault. The image is now hidden while it is pending or in flight with a spinner in its place;
-  the failed state is untouched, since the broken marker and the card's name beside it are the most
-  useful thing a tile with no art can show — and it is now the only thing that looks like a fault.
-
-- **"How to get it" was 192px wide on a tablet.** Two columns at those widths put it on a second
-  row — in column one, the art column. It spans the full width instead.
-
-- **A heart on the card page.** With the tile hearts gone on touch, the card's own page was the only
-  route to wanting a card, and it offered one only if a wishlist already existed. It has the same
-  one-tap heart the grid does, on the same list, whether or not that list exists yet. The curated
-  lists still follow it, and the hearts' own list is no longer listed twice.
+  recording how a promo was given away. The tab asks the catalogue directly now, and every tab keeps
+  the same layout with or without a picture.
 
 - **The info button and the heart no longer disappear before the touch layout arrives.** Both were
   hidden below a 200px tile, which with six columns happens at about 1200px of viewport — while the
   long press that replaces them does not arrive until 1057px. Between the two there was a mouse, no
   corner button and no way to open a card except the keyboard. In the caption there is nothing to
-  collide with, so neither rule is needed at all.
+  collide with, so neither rule is needed.
 
-  One consequence, stated rather than hidden: with a mouse in a window under 1056px there is now no
-  info button, since the caption is gone at those widths and a long press is a touch gesture. Card
-  detail is still one `i` on the keyboard cursor, one click on a name in list view, or one search in
-  the command palette.
-
-- **The hearts get a list of their own.** A heart used to fill whichever wishlist happened to be
-  first, which quietly rewrites the one list on that page you built deliberately. There is now a
-  **Want it** list, made by the first heart and marked as the hearts' list wherever wishlists are
-  shown. Deleting it is safe: the next heart makes another.
-
-- **The heart is off the tile grid on a touch screen.** A permanent button in the corner of every
-  tile is a permanent hazard in the one layout whose whole job is being tapped, and a miss there
-  costs a copy of the wrong card. The list view keeps its column, and a long press on a tile still
-  opens the card, where the wishlists have always been — so on a phone wanting a card is a
-  deliberate act on a screen with room for it.
-
-- **The heart has its own column in list view.** It was next to the −/+ buttons and beside the
-  count: three small square buttons in a row, one of which does something completely different
-  from the other two, sitting next to the number it was most likely to be confused with. It is now
-  at the front of the row, unbordered, where it reads as a mark against the row.
-
-- **The rarity and type chips say what they are.** Side by side on a wide screen they read as one
-  row of twenty-four unexplained buttons; stacked on a narrow one, two rows of unexplained buttons.
-  Each row is now a labelled group — RARITY, TYPE, PACK — separated by the same divider the bar
-  already uses, and the visible label is also the group's accessible name.
-
-- **One control height per bar.** Every bar mixed 31px Bootstrap controls, 40px set tabs and 44px
-  filter chips, which reads as a row that was assembled rather than designed. The height is now a
-  token: 36px on a mouse, 44px on a coarse pointer, so every control in a bar grows together rather
-  than singling out the chips. The page header is deliberately exempt — its 3rem is a contract the
-  sticky toolbar below it depends on, and at 44px the log screen's header squeezed the pack name
-  down to "R.".
-
-- **The sticky bars no longer hide what sticks under them.** The set strip and the list view's
-  column headers were both pinned at `top: 0` beneath a toolbar that is also pinned there and paints
-  over them — so both vanished on the first scroll, which is the state they exist for. CSS cannot
-  express "under my previous sibling" when that sibling's height depends on how many rows it wrapped
-  into, so the script that fills the strip now measures the bars and publishes the offset for the
-  stylesheet to use.
-
-- **The gap under the pinned header on the log screen.** The toolbar below it was pinned at a
-  constant `3rem + 1px`, which border-box rounding left a sub-pixel strip short of the header —
-  with the card grid scrolling through it. Measured now, and it was wrong in the other direction
-  too: once the controls grew on a phone the header became 56px and the same constant would have
-  pinned the toolbar nine pixels *underneath* it.
-
-- **The grid's own bar, rebuilt around what gets used.** Four things came out from behind the
-  "filters and layout" summary. **List mode** now has its switch on the always-on bar: it is the
-  view carrying the set and number, type, rarity, a count you can type into and the printed text,
-  and it was findable only by someone who already suspected it existed. **"Missing only"** gets a
-  two-state button beside the search box, having been option two of a select inside a closed
-  disclosure — it is what you reach for after opening a pack. **Rarity** was a dropdown that held
-  exactly one rung and named each one in words the game draws as symbols; it is now a row of
-  toggle chips carrying the same glyphs the list view draws, several at a time, because "the stars
-  and the crown, never mind the diamonds" is the question people actually ask. A **type filter**
-  did not exist at all and now does, as the fourteen pips. Nothing selected means everything.
-  Measured at 375px: rarity wraps to two rows, type to two, both at a 44px touch target.
-
-- **Choose a pack by its wrapper.** The pack filter was a select listing "Charizard", "Mewtwo",
-  "Pikachu"; it is now the three boosters, which is how the game asks the same question. One at a
-  time — a card lists every pack it comes from, so "either of these two" is nearly the whole set,
-  while "what is still missing from the pack I am about to open" is the question the filter exists
-  for. The set tabs get a wrapper beside the code for the same reason: B2a and B2b are the same
-  three characters in a different order, and their wrappers are not.
-
-- **Which set you are scrolling through.** The collection can hold every card ever printed, in set
-  order, and a screen into it nothing said which set was under your thumb — the set picker names
-  the *filter*, which in that view is "every set". A sticky header per set is impossible inside a
-  virtualised list without breaking the uniform row height its scrollbar depends on, so one strip
-  sits under the toolbar and a small script keeps it in step with the topmost visible row. Only
-  where the list spans more than one set.
-
-- **Want a card from the grid.** Wanting a card was reachable only from that card's own page, so
-  recording it meant leaving the set you were looking at. A heart on each tile and each list row
-  now does it in one tap, on or off. With no wishlist at all the first heart makes one without
-  asking for a name; with more than one, the bar says which list the hearts write to.
-
-- **The pack log had no way to type.** A pack holds up to 233 cards and you are looking for the
-  five you pulled, so finding them meant scanning the grid five times. It gets the search box the
-  collection grid already had, with the picked strip left unfiltered so narrowing never hides what
-  you have already logged.
-
-- **Where in a pack the chance is.** "Chance of a hit" answers whether a pack helps and hides
-  which card in it does the helping — the first three cards come from the common pool, so a
-  collection that has finished the commons has all of its chance in the last two, and the same
-  percentage means different things in two sets. An expanded ranking row now breaks the chance
-  down by card position, merging adjacent positions whose odds are equal, which is what produces
-  the "1st-3rd card" reading. Merged from the numbers rather than hardcoded: a set that broke the
-  three-commons pattern would come out unmerged rather than wrongly merged.
-
-- **A wishlist as pasteable text.** The share link is the better artefact and the wrong shape for
-  where these trades happen: a Discord thread takes a few lines, nobody opens a stranger's link,
-  and a reader with the game open on the same phone cannot follow one and come back. Only what is
-  still short, set and number first, rarity on every line — the game's trade rules turn on it.
-
-- **The deck page's pack table** showed a bare "chance of a hit" with no way to read it as packs.
-  It gets the "packs per new card" column the Which-pack table has, from a figure the ranker
-  already returned.
-
-- **`aria-pressed` was silently absent on every unpressed toggle, everywhere.** Blazor omits an
-  attribute whose value is `false` — right for HTML's own booleans, since `disabled="false"` would
-  disable a control, and wrong for every ARIA state, where the two values are the *words* "true"
-  and "false" and the absence of the attribute says the element has no such state at all. So a
-  toggle that was off announced itself as an ordinary button: the one state that needed saying was
-  the only one that said nothing, and the markup looked correct — the attribute was written, it
-  just never arrived.
-
-  Found by a test that clicked `button[aria-pressed]` and hit "add", because the unpressed button
-  did not match the selector. Fixed at all 26 sites across eleven files, through one `Aria.Flag`
-  helper. The worst of them was the rarity plan on the Which-pack page, where six of the ten chips
-  that configure every estimate in the app were announced as plain buttons.
-
-  Guarded by a test that reads the `.razor` sources rather than the DOM, because from the DOM side
-  a dropped attribute is invisible: what you see is an element with no `aria-pressed`, which is
-  exactly what a plain button looks like. It was checked against a deliberately reintroduced
-  violation.
-
-- **Wishlists took Wonder Pick's place in both nav bars.** The four primary destinations are the
-  ones you visit while you are handling cards; a wishlist is consulted every time you open a pack
-  or weigh a trade, and Wonder Pick is a once-a-day errand with its own screen. Wonder Pick moves
-  into More, which is where the rest of the occasional destinations already live. Both navs read
-  from the same list, so the swap happened once.
+- **Wishlists took Wonder Pick's place in both nav bars.** The four primary destinations are the ones
+  you visit while you are handling cards; a wishlist is consulted every time you open a pack or weigh
+  a trade, and Wonder Pick is a once-a-day errand with its own screen. It moves into More, which is
+  where the rest of the occasional destinations already live. Both navs read from the same list, so
+  the swap happened once.
 
 - **Backing out of the More sheet no longer taps the page underneath.** On a phone the sheet is
-  anchored to the bottom edge, over the tab bar that opened it, so the More button cannot be
-  tapped a second time to close it — and the only "outside" left is the collection grid. A
-  popover's `::backdrop` is painted but not hit-testable, so that dismissing tap went straight
-  through to whichever card was under it. The sheet now has a **Close** button at the bottom, and
-  a transparent sibling of the popover catches the tap: it is outside the popover, so light
-  dismiss still fires, and it is a real element, so nothing behind it is clicked. Desktop gets
-  the same click-catcher and not the button, since the More button there is never covered.
+  anchored to the bottom edge, over the tab bar that opened it, so the More button cannot be tapped a
+  second time to close it — and the only "outside" left is the collection grid. A popover's
+  `::backdrop` is painted but not hit-testable, so that dismissing tap went straight through to
+  whichever card was under it. The sheet now has a **Close** button at the bottom, and a transparent
+  sibling of the popover catches the tap: it is outside the popover, so light dismiss still fires, and
+  it is a real element, so nothing behind it is clicked.
+
+### Earlier, also unreleased
+
+Work that had landed before this pass and has not been released either.
 
 - **Contrast, measured rather than eyeballed.** Every text colour on every page was read with
   getComputedStyle in both themes and checked against the surface it actually sits on. Two things
@@ -450,6 +362,100 @@ running app at 375x812 unless another width is named.
 - **CI runs the tests before deploying.** It previously did not.
 - The deck QR was **verified against the live game in both directions**. Until then every codec
   test ran this project's encoder against its own decoder.
+
+## 0.3.0 — 2026-08-25
+
+Phase 3, and a layout pass over all seventeen routes. Every figure below was measured in the
+running app at 375x812 unless another width is named.
+
+### New
+
+- **Shareable read-only wishlists.** A list travels whole inside the link and is decoded in the
+  recipient's browser; nothing is uploaded and no account exists. The payload sits after the `#`
+  so it never reaches a server as a query string, which also fixed a 414 on a real list.
+- **An in-game name per collection**, carried into the share link. A want-list told the reader
+  exactly what to send and gave them no way to find you: the only name in the payload was the
+  collection's, which is what you called a save slot.
+- **Split a pack budget across packs** — how many of each to buy for a fixed number of packs,
+  rather than sinking all of them into whichever pack currently ranks first.
+- **Pin a pack to the front of the log picker.** A star on each booster; pinned packs lead the
+  grid whatever the series dropdown says, which is the trip the pin exists to save. Persisted
+  per collection, and drawn as pinned wherever it appears, so a pack from another series never
+  reads as part of the one below it.
+
+### Layout
+
+- **Every page was clipping 160px below the fold.** An unstyled wrapper plus a vendored
+  `height: 100vh` from a package nothing used. Removing the package alone made it worse.
+- **A bottom tab bar below 1057px**, and above it a top nav cut to the same four destinations in
+  the same order, from one shared menu component. Twelve links inline needed 1242px of a 1265px
+  row, so the bar wrapped at every width — well above the point the tab bar takes over.
+- **One page shell with three named measures**, replacing fifteen ad hoc `max-width` values
+  across twenty-six declarations. Body blocks now clear a display cutout; they were padding with
+  a flat `1rem`, so in landscape on a notched phone they sat under it while the bars above did
+  not.
+- **Column priority is a container query, not a media query.** A table's width comes from its
+  container: the wishlist editor is two columns above 1000px, so at a 1280px window its table had
+  614px and needed 680, and every row wrapped — worse the wider the screen.
+- **The set row, the rarity plan and the board's tuning knobs fold away**, each summarised by its
+  own state. Collection opens on the newest openable set rather than the first one printed.
+- Collection chrome 499 → 156px. Which pack's tools three rows → one at 1280px. Which pack 855 →
+  341px, Trades 559 → 288px, the in-game list 911 → 501px. Breakpoints 11 → 9.
+- **Which pack's breakdown buttons wrap into an even grid on a phone.** Four labels of four
+  different lengths in a flex row wrapped three-and-an-orphan at 414px and two-and-two at 375px,
+  with neither row's edges lining up. Two equal columns below 600px, and the flex row kept above
+  it, where all four fit on one line.
+- **The ranked pack table lines up with the page again.** Bleeding it to the screen edge on a
+  phone put the "pack" heading hard against the bezel and the log button a few pixels off the
+  other edge, out of line with every control above. The row tint and the rules still run edge to
+  edge; only the text is inset. A floor on the numeric headings keeps the two insets out of those
+  columns, so the header comes out at 36px rather than the 50 it was, or the 64 the inset alone
+  would have cost.
+
+### Accessibility
+
+- **The card grid is operable from the keyboard.** It was pointer-only: a tile was a div with a
+  click handler. Arrows move, digits set a count outright, Enter adds, `-` removes, `i` opens
+  card detail. One tab stop with `aria-activedescendant`, a visible **keyboard** button naming
+  the keys, a skip link, and a command-palette action.
+- **The -/+ buttons meet WCAG 2.5.8.** Two of their four spellings measured 26.67 x 23.00 px,
+  under the 24 x 24 floor, in a 50px row with the buttons centred in it. One class now, sized by
+  one variable, guarded by a test on the variable.
+- **The command palette is a real `<dialog>`.** The focus trap, Escape, the inert background, the
+  backdrop and focus restoration are the platform's; a hand-rolled trap and an inert wrapper
+  around the whole layout went with it.
+- Tables carry real headers, scroll inside their own wrapper rather than sliding the page, and
+  are reachable by keyboard. Eighteen ad hoc alerts became one `Notice` component that also picks
+  whether a message interrupts a screen reader or waits its turn.
+- Two table cells had been given a flex display, which takes a cell out of its row: they measured
+  25.8px and 34.6px in a 46.6px row, so the rule sat high in those two columns and level in the
+  other seven.
+
+### Copy
+
+- **Paragraphs over 40 words: 45 → 15.** Kept what tells you about the game, your data, or what
+  to do; dropped what a badge already says, what justifies the design, and the clause that
+  restates the previous one.
+  
+### Fixed
+
+- **Leaving a page while its JavaScript modules were still loading crashed the render loop.** The
+  card grid imports three modules on first render, and leaving /collection inside that window
+  disposed the component while the imports were in flight. The continuation went on to hand the
+  disposed object reference to the next call, which threw as it was serialised and was logged as
+  an unhandled exception; it also registered the dead grid as the target the command palette jumps
+  focus to. The command palette and the undo accelerator had the same shape and left a document
+  listener pointing at a component that had gone.
+- **The card grid no longer flickers while scrolling.** `<Virtualize>` was given a row height
+  computed from an assumed 1,000px-wide grid; a row is as tall as a tile is wide, so on a 375px
+  phone at 6 columns the figure was about 2.5x the truth. It rendered a fraction of the rows the
+  screen had room for, saw the gap, and rendered again — on every scroll event. The height is now
+  measured from the laid-out row and re-measured whenever the grid changes width.
+- **Log a pack keeps its header on screen.** "Add N to collection" sat above a grid of several
+  hundred cards, so tapping the last card of a pack meant scrolling back past every card you had
+  just tapped to reach it. The bar that did stay counted the cards in the pack — a fixed number
+  nobody is tracking — and now reports **picked 3 of 5** instead, which is the figure that moves
+  and the one that says when a pack is fully logged.
 
 ## 0.2.0 — 2026-08-23
 

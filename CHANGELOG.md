@@ -100,6 +100,64 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **The grid's own bar, rebuilt around what gets used.** Four things came out from behind the
+  "filters and layout" summary. **List mode** now has its switch on the always-on bar: it is the
+  view carrying the set and number, type, rarity, a count you can type into and the printed text,
+  and it was findable only by someone who already suspected it existed. **"Missing only"** gets a
+  two-state button beside the search box, having been option two of a select inside a closed
+  disclosure — it is what you reach for after opening a pack. **Rarity** was a dropdown that held
+  exactly one rung and named each one in words the game draws as symbols; it is now a row of
+  toggle chips carrying the same glyphs the list view draws, several at a time, because "the stars
+  and the crown, never mind the diamonds" is the question people actually ask. A **type filter**
+  did not exist at all and now does, as the fourteen pips. Nothing selected means everything.
+  Measured at 375px: rarity wraps to two rows, type to two, both at a 44px touch target.
+
+- **Choose a pack by its wrapper.** The pack filter was a select listing "Charizard", "Mewtwo",
+  "Pikachu"; it is now the three boosters, which is how the game asks the same question. One at a
+  time — a card lists every pack it comes from, so "either of these two" is nearly the whole set,
+  while "what is still missing from the pack I am about to open" is the question the filter exists
+  for. The set tabs get a wrapper beside the code for the same reason: B2a and B2b are the same
+  three characters in a different order, and their wrappers are not.
+
+- **Which set you are scrolling through.** The collection can hold every card ever printed, in set
+  order, and a screen into it nothing said which set was under your thumb — the set picker names
+  the *filter*, which in that view is "every set". A sticky header per set is impossible inside a
+  virtualised list without breaking the uniform row height its scrollbar depends on, so one strip
+  sits under the toolbar and a small script keeps it in step with the topmost visible row. Only
+  where the list spans more than one set.
+
+- **Want a card from the grid.** Wanting a card was reachable only from that card's own page, so
+  recording it meant leaving the set you were looking at. A heart on each tile and each list row
+  now does it in one tap, on or off. With no wishlist at all the first heart makes one without
+  asking for a name; with more than one, the bar says which list the hearts write to.
+
+- **The pack log had no way to type.** A pack holds up to 233 cards and you are looking for the
+  five you pulled, so finding them meant scanning the grid five times. It gets the search box the
+  collection grid already had, with the picked strip left unfiltered so narrowing never hides what
+  you have already logged.
+
+- **Where in a pack the chance is.** "Chance of a hit" answers whether a pack helps and hides
+  which card in it does the helping — the first three cards come from the common pool, so a
+  collection that has finished the commons has all of its chance in the last two, and the same
+  percentage means different things in two sets. An expanded ranking row now breaks the chance
+  down by card position, merging adjacent positions whose odds are equal, which is what produces
+  the "1st-3rd card" reading. Merged from the numbers rather than hardcoded: a set that broke the
+  three-commons pattern would come out unmerged rather than wrongly merged.
+
+- **A wishlist as pasteable text.** The share link is the better artefact and the wrong shape for
+  where these trades happen: a Discord thread takes a few lines, nobody opens a stranger's link,
+  and a reader with the game open on the same phone cannot follow one and come back. Only what is
+  still short, set and number first, rarity on every line — the game's trade rules turn on it.
+
+- **The deck page's pack table** showed a bare "chance of a hit" with no way to read it as packs.
+  It gets the "packs per new card" column the Which-pack table has, from a figure the ranker
+  already returned.
+
+- **`aria-pressed` was silently absent on every unpressed toggle.** Blazor drops an attribute whose
+  value is `false`, so a filter that was off announced itself as an ordinary button — the one state
+  that needed saying. Found by a test that clicked `button[aria-pressed]` and hit "add". Fixed on
+  the new toggles; the older button groups in the card grid still do it.
+
 - **Wishlists took Wonder Pick's place in both nav bars.** The four primary destinations are the
   ones you visit while you are handling cards; a wishlist is consulted every time you open a pack
   or weigh a trade, and Wonder Pick is a once-a-day errand with its own screen. Wonder Pick moves

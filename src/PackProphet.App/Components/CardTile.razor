@@ -48,6 +48,33 @@
            @oncontextmenu:stopPropagation="true">info</a>
     }
 
+    @* Wanting a card and owning it are different facts, and this is the screen where you notice
+       the first one. Marking it here rather than on the card's own page is the whole point: you are
+       already looking at the set, and the alternative was open the card, mark it, come back.
+
+       Its own target, like the info corner: a tap on the tile means "I own one more", so wanting
+       cannot also be a tap on the tile. Hidden while a sweep is armed for the same reason info is
+       -- a button would swallow the start of a drag. *@
+    @if (OnWant.HasDelegate && ShowInfo)
+    {
+        <button class="want @(Wanted > 0 ? "on" : "")" type="button"
+                @onclick="Want" @onclick:stopPropagation="true"
+                @onpointerdown:stopPropagation="true"
+                @oncontextmenu:stopPropagation="true"
+                tabindex="-1"
+                aria-pressed="@(Wanted > 0 ? "true" : "false")"
+                aria-label="@(Wanted > 0 ? $"On your wishlist: {Card.Name}" : $"Add {Card.Name} to your wishlist")"
+                title="@(Wanted > 0 ? "On your wishlist" : "Add to your wishlist")">
+            @* Drawn, not typed: the heart characters that carry a filled and an outlined form are
+               not in every system font, and the pair that are do not match each other's weight. *@
+            <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">
+                <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
+                      fill="@(Wanted > 0 ? "currentColor" : "none")"
+                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            </svg>
+        </button>
+    }
+
     @if (Count > 0)
     {
         <span class="cnt">@Count</span>
@@ -93,18 +120,31 @@
     /// <summary>Raised on a long press. The page navigates; the tile only detects.</summary>
     [Parameter] public EventCallback<PocketCard> OnHold { get; set; }
 
+    /// <summary>Copies wanted on the wishlist the page is pointing at. Zero draws an empty heart.</summary>
+    [Parameter] public int Wanted { get; set; }
+
+    /// <summary>
+    /// Toggle the card on that wishlist. Absent where the page has no wishlist to write to, which
+    /// is what hides the heart — the log-a-pack grid, for one, where a tap means something else
+    /// entirely.
+    /// </summary>
+    [Parameter] public EventCallback<PocketCard> OnWant { get; set; }
+
+    private Task Want() => OnWant.InvokeAsync(Card);
+
     private PocketCard? _lastCard;
     private int _lastCount = -1;
     private int _lastIndex = -1;
     private int _lastPicked = -1;
     private bool _lastShowInfo = true;
     private bool _lastGold;
+    private int _lastWanted = -1;
 
     protected override bool ShouldRender()
     {
         if (ReferenceEquals(_lastCard, Card) && _lastCount == Count
             && _lastIndex == Index && _lastPicked == Picked && _lastShowInfo == ShowInfo
-            && _lastGold == Gold)
+            && _lastGold == Gold && _lastWanted == Wanted)
             return false;
 
         _lastCard = Card;
@@ -113,6 +153,7 @@
         _lastPicked = Picked;
         _lastShowInfo = ShowInfo;
         _lastGold = Gold;
+        _lastWanted = Wanted;
         return true;
     }
 

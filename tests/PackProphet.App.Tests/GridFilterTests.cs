@@ -165,6 +165,63 @@ public class GridFilterTests : AppHost
     }
 
     [Fact]
+    public async Task A_heart_on_the_tile_starts_a_wishlist_and_toggles_a_card_on_it()
+    {
+        // The whole point of the heart: wanting a card was reachable only from the card's own page,
+        // so recording it meant leaving the set you were looking at.
+        var page = await PageAsync();
+
+        Assert.Empty(Session.Wishlists);
+
+        // Narrowed to a couple of cards first: the grid is virtualised, and with no browser to
+        // report a viewport height it renders a window of nothing until the list is small.
+        page.Find(".grid-search").Input("wurmple");
+
+        var hearts = page.FindAll(".card-tile .want");
+        Assert.NotEmpty(hearts);
+        Assert.All(hearts, h => Assert.Equal("false", h.GetAttribute("aria-pressed")));
+
+        await ClickAsync(page, ".card-tile .want");
+
+        // A list appears without asking for a name, exactly as the card page does it.
+        var list = Assert.Single(Session.Wishlists);
+        Assert.Single(list.Wanted);
+
+        page.WaitForAssertion(() =>
+            Assert.Contains(page.FindAll(".card-tile .want"),
+                            h => h.GetAttribute("aria-pressed") == "true"));
+
+        // And off again: one tap is the whole control, in both directions.
+        await ClickAsync(page, ".card-tile .want");
+        page.WaitForAssertion(() => Assert.Empty(Session.Wishlists[0].Wanted));
+    }
+
+    [Fact]
+    public async Task The_heart_names_which_list_it_writes_to_only_when_there_is_a_choice()
+    {
+        var page = await PageAsync();
+
+        Session.CreateWishlist("first");
+        page.Render();
+        Assert.Empty(page.FindAll(".want-target"));
+
+        Session.CreateWishlist("second");
+        page.Render();
+        Assert.Single(page.FindAll(".want-target"));
+
+        // The hearts follow the chosen list, not the first one.
+        var second = Session.Wishlists.First(w => w.Name == "second");
+        page.Find(".want-target select").Change(second.Id);
+
+        page.Find(".grid-search").Input("wurmple");
+        await ClickAsync(page, ".card-tile .want");
+        page.WaitForAssertion(() =>
+            Assert.NotEmpty(Session.Wishlists.First(w => w.Id == second.Id).Wanted));
+
+        Assert.Empty(Session.Wishlists.First(w => w.Name == "first").Wanted);
+    }
+
+    [Fact]
     public async Task The_set_strip_appears_only_where_the_list_spans_sets()
     {
         var page = await PageAsync();

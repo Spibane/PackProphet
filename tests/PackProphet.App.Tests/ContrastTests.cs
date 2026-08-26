@@ -131,6 +131,62 @@ public class ContrastTests
         }
     }
 
+    /// <summary>
+    /// The heart on a card tile, in both states, against the caption it sits on.
+    ///
+    /// A graphic that carries meaning, not text: it is the only thing on the tile saying "this is on
+    /// your want list", so WCAG 1.4.11 asks 3:1 rather than 4.5:1. Two things make it easy to get
+    /// wrong and are why this is asserted rather than eyeballed — the caption's surface is the
+    /// tertiary background rather than the body, and the idle heart carries an element opacity on
+    /// top of an already translucent colour, so the alpha that matters is the product of the two.
+    ///
+    /// Raw --bs-danger measured 2.94:1 on the dark caption, which is what --pp-want-ink exists for.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void The_want_heart_clears_the_non_text_floor(bool dark)
+    {
+        const double NonText = 3.0;
+
+        var surface = Parse(dark ? DarkSurfaces.Panel : LightSurfaces.Panel);
+        var theme = dark ? "[data-bs-theme=\"dark\"]" : "[data-bs-theme=\"light\"]";
+
+        // On: the state that means something, so the one that has to be seen.
+        var on = Parse(Declared(Css(), theme, "--pp-want-ink"));
+        var onRatio = Contrast(on, surface);
+        Assert.True(onRatio >= NonText,
+            $"the filled heart is {onRatio:0.00}:1 on the caption in {(dark ? "dark" : "light")}, "
+            + $"under the {NonText}:1 floor for a meaningful graphic");
+
+        // Idle: --bs-secondary-color, which is the body colour at .75, times the .85 the element
+        // itself carries. Bootstrap's own values, named here as the surfaces above are.
+        var body = dark ? new Rgba(222, 226, 230) : new Rgba(33, 37, 41);
+        var idle = body with { A = 0.75 * 0.85 };
+        var idleRatio = Contrast(Composite(idle, surface), surface);
+
+        Assert.True(idleRatio >= NonText,
+            $"the empty heart is {idleRatio:0.00}:1 on the caption in {(dark ? "dark" : "light")}");
+    }
+
+    /// <summary>
+    /// White on the count badge. It sits at exactly 4.50:1 — the AA floor for text this size, which
+    /// it passes and could not pass by less. Pinned because the badge got SMALLER when it moved off
+    /// the art, so it is squarely small text now, and because a nudge to --bs-primary in either
+    /// direction would take it under without anything else in the app noticing.
+    /// </summary>
+    [Fact]
+    public void The_count_badge_clears_the_text_floor()
+    {
+        // Bootstrap's primary and success, unmodified by this stylesheet — named here like the
+        // surfaces, so a change to either is a change to this test.
+        foreach (var fill in new[] { "#0d6efd", "#198754" })
+        {
+            var ratio = Contrast(Parse("#ffffff"), Parse(fill));
+            Assert.True(ratio >= Aa, $"white on {fill} is {ratio:0.00}:1, under the {Aa}:1 floor");
+        }
+    }
+
     /// <summary>A guard on the guard: the maths has to fail something known to be too faint.</summary>
     [Fact]
     public void The_check_would_actually_notice()

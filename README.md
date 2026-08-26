@@ -22,6 +22,9 @@ series, or a hand-picked wishlist.
 Every pack ranked against whatever you are collecting, using published pull rates.
 
 - **Chance a pack gives you something you need**, and expected packs until it does.
+- **Where in the pack that chance is** — per card position, since the first three cards come from
+  the common pool: a collection that has finished the commons has all of its chance in the last two,
+  and the same headline percentage means different things in two sets.
 - **Expected packs to finish**, converted into calendar time at your own pack rate — for
   example "≈2.6 years, or 1.7 with premium".
 - **Target advisor** — every rarity priced side by side, at one copy and at two.
@@ -31,8 +34,22 @@ Every pack ranked against whatever you are collecting, using published pull rate
 - Scope it to everything, one set, a whole series, a deck, one wishlist, or all wishlists.
 
 ### Collection
-Every card in a virtualised grid or a compact list, with counts, filters, search over names,
-per-set progress against your target, bulk drag-select and undo/redo.
+Every card in a virtualised grid or a compact list, with counts, per-set progress against your
+target, bulk drag-select and undo/redo.
+
+- **Filters that hold more than one thing at a time** — rarity as the game's own symbols, type as
+  the fourteen energy and trainer pips, ownership, and the pack a card comes from, picked by its
+  wrapper rather than by name. Whatever is applied is shown as a chip on the bar, because a count
+  read without knowing it is filtered is a different answer to the one it appears to be.
+- **A heart on every card** puts it on your **Want it** list in one tap — its own list, so a
+  passing heart never rewrites a wishlist you built deliberately.
+- **Which set you are scrolling through**, on a sticky strip with the set's logo, once the list
+  spans more than one.
+- **A tile shows the art and nothing over it.** The count, the card's name and the heart sit in a
+  caption under the picture; on a phone the grid keeps the count as a badge and stays as dense as it
+  was.
+- **Keyboard throughout**: arrow keys move a cursor, digits set a count outright, `enter` and `-`
+  adjust, `shift`+move selects a range, `w` wants a card, `i` opens its page.
 
 Ownership is keyed by **artwork**, not by set entry, matching how the game treats it — a card
 reprinted in a later set is one card you own.
@@ -52,10 +69,14 @@ Share one as a link — nothing is uploaded, the list travels entirely inside th
 only what is wanted, never your own collection, and if the person opening it has their own
 PackProphet collection loaded, it highlights which of it they already own a copy of.
 
+Or **copy it as a few lines of text**, for the chat threads these trades actually happen in: what
+is still short, set and number first, with the rarity on every line — the game's trade rules turn
+on it.
+
 ### Log a pack
-Pick the pack, tap the cards that came out of it, done. Accrues pack points, warns at the cap,
-and updates every recommendation immediately. Pin the packs you open daily and they lead the
-picker whatever series you are looking at.
+Pick the pack, search it by name or tap the cards that came out of it, done. Accrues pack
+points, warns at the cap, and updates every recommendation immediately. Pin the packs you open
+daily and they lead the picker whatever series you are looking at.
 
 ### History
 Packs over time, what you pulled against what the model predicted, and a showcase of your best

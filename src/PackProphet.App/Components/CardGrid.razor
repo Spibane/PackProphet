@@ -24,6 +24,10 @@
 <div class="grid-toolbar">
     @Search
 
+    @* The one or two filter states worth a tap rather than a trip into the disclosure. Passed in
+       by the page, because which view you reach for most often differs from page to page. *@
+    @Toggles
+
     @* An explicit add/remove mode, since there was otherwise no way to decrement on a touch
        device: shift-click is both undiscoverable and unavailable on a phone.
 
@@ -40,12 +44,12 @@
            states, "the other one" is unambiguous. *@
         <div class="btn-group btn-group-sm" role="group" aria-label="@Gesture action">
             <button class="btn @(Removing ? "btn-outline-secondary" : "btn-success")"
-                    @onclick="() => Removing = !Removing" aria-pressed="@(!Removing)"
+                    @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(!Removing)"
                     title="@(Removing ? $"Switch back to adding a copy per {Gesture}" : $"{GestureVerb} adds a copy")">
                 add
             </button>
             <button class="btn @(Removing ? "btn-danger" : "btn-outline-secondary")"
-                    @onclick="() => Removing = !Removing" aria-pressed="@Removing"
+                    @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
                     title="@(Removing ? $"{GestureVerb} removes a copy" : $"Switch to removing a copy per {Gesture}")">
                 remove
             </button>
@@ -77,6 +81,25 @@
             <span class="text-danger-emphasis"> · @_imgFailed art failed</span>
         }
     </span>
+
+    <span class="bar-sep" aria-hidden="true"></span>
+
+    @* Promoted out of the disclosure it used to share with the layout options. List mode is not a
+       preference among equals: it is the only view that carries a count per row, a typed count, the
+       set and number, type, rarity and the printed text, and it is the answer to half of what a
+       tile grid cannot do. Behind a summary reading "filters and layout" it was findable only by
+       someone who already suspected it existed. The density toggle stays inside, because it only
+       means anything once you are in list mode and this row has to survive a phone. *@
+    <div class="btn-group btn-group-sm layout-switch" role="group" aria-label="Layout">
+        <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
+                @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
+                title="Card images in a grid">grid</button>
+        <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
+                @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
+                title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
+            list
+        </button>
+    </div>
 </div>
 
 <details class="toolbar-more">
@@ -88,27 +111,16 @@
         <span class="bar-sep" aria-hidden="true"></span>
     }
 
-    <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
-        <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
-                @onclick="() => SetList(!ListView)" aria-pressed="@(!ListView)"
-                title="Card images in a grid">grid</button>
-        <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetList(!ListView)" aria-pressed="@ListView"
-                title="Compact rows with names and exact counts — easier to scan, and usable with images off">
-            list
-        </button>
-    </div>
-
     @* Density, list only. Compact fits far more cards on screen; roomy trades that for the
        attack and ability text inline, which compact can only show on hover. *@
     @if (ListView)
     {
         <div class="btn-group btn-group-sm" role="group" aria-label="Row height">
             <button class="btn @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
-                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@(!Roomy)"
+                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
                     title="Short rows — most cards per screen">compact</button>
             <button class="btn @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
-                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Roomy"
+                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
                     title="Taller rows with attack and ability text shown in full">roomy</button>
         </div>
     }
@@ -121,7 +133,7 @@
        knowing about it. It is also the switch a pointer user wants when they stop tapping and
        start typing counts. *@
     <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
-            title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail. Shift+move selects a range to add or remove in bulk.">
+            title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
         keyboard
     </button>
 
@@ -137,12 +149,46 @@
     </div>
 </details>
 
+@* Which set is under your thumb, while you scroll. Only where the list spans more than one: with
+   a single set selected the header two bars up already says it, and a strip repeating it would be
+   one more row between the toolbar and the first card.
+
+   Filled by js/gridspy.js rather than by a render, and empty until it has something to say -- the
+   stylesheet drops an empty strip, so there is no attribute for Blazor's diff and the script to
+   fight over. aria-hidden because it duplicates what every row already carries and changes on
+   every scroll, which a screen reader would read out as a stream of set names nobody asked for. *@
+<div class="grid-spy" @ref="_spyEl" aria-hidden="true">
+    @* Two spans rather than one, so the script that fills this can set a background-image and a
+       text node without ever writing markup: the wrapper's URL goes on one, the set's name on the
+       other. Both are always present and empty until there is something to say. *@
+    <span class="art" data-spy-art></span>
+    <span class="txt" data-spy-text></span>
+</div>
+
+@* Back to the top.
+   ==================================================================================
+   A set is a couple of hundred cards and "every set" is three and a half thousand, so getting back
+   to the controls -- the search box, the set picker, the filters -- was a flick and a wait. Every
+   one of those controls is at the top of the page and nowhere else.
+
+   Rendered always and shown by js/gridspy.js once there is enough scrolled past to be worth
+   undoing: a button that appears at the top of an unscrolled page is a button that says nothing.
+   It scrolls rather than animates, because a virtualised list of thousands smooth-scrolled is
+   every row in between rendered and every image in between queued for nothing. *@
+<button class="to-top" data-to-top type="button" @onclick="ScrollToTopAsync"
+        title="Back to the top of the list" aria-label="Back to the top of the list">
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+        <path d="M8 13V4M3.5 8.5 8 3.5l4.5 5" fill="none" stroke="currentColor"
+              stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+</button>
+
 @* "listing" is read by gridsweep.js, not by CSS: a mouse drag over list rows must obey the
    sweep toggle, while a drag over the tile grid need not. See the comment on onDown there. *@
 @* tabindex, role and aria-activedescendant are set from js/gridkeys.js, which owns the cursor —
    see the note there on why a roving tabindex does not suit a virtualised grid. The container is
    the single tab stop for however many thousand cards are in scope. *@
-<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(PickedOf is null ? "" : "picking")"
+<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(PickedOf is null ? "" : "picking") @(OnWant.HasDelegate ? "wanting" : "")"
      id="@_gridId" role="grid"
      aria-label="@(ListView ? "Card list" : "Card grid") — arrow keys to move, digits to set a count"
      @ref="_gridEl">
@@ -159,6 +205,10 @@
         <span><kbd>&minus;</kbd> remove one</span>
         <span><kbd>shift</kbd>+move select a range, then <kbd>enter</kbd>/<kbd>&minus;</kbd> applies to all</span>
         <span><kbd>i</kbd> card detail, <kbd>esc</kbd> back</span>
+        @if (OnWant.HasDelegate)
+        {
+            <span><kbd>w</kbd> want it</span>
+        }
     </div>
 
     @if (Cards.Count == 0)
@@ -174,6 +224,17 @@
            conditionally-omitted cell would shift every column after it out of alignment. *@
         <div class="card-line head @(Roomy ? "roomy" : "")" role="row">
             <span class="c-thumb" role="columnheader"></span>
+            @* Its own column, at the front. It was next to the -/+ buttons, where it read as a
+               third stepper -- three small square buttons in a row, one of which does something
+               completely different from the other two -- and it sat beside the count, which is the
+               number it was most likely to be mistaken for. At the front it reads as a mark against
+               the row, the way a starred message does.
+
+               The header is named for a screen reader and blank on screen: a visible "want" over a
+               column of hearts would be the only header in the row explaining an icon that already
+               says it, but a column header with no accessible name at all is announced as nothing.
+               The column does not sort, so it is not a button. *@
+            <span class="c-want" role="columnheader"><span class="visually-hidden">want</span></span>
             <button class="c-nm" role="columnheader" @onclick="() => SortBy(ListSort.Name)">name @Caret(ListSort.Name)</button>
             <button class="c-id" role="columnheader" @onclick="() => SortBy(ListSort.Number)">set @Caret(ListSort.Number)</button>
             @* The column is a row of pips, so its heading is one too — a three-wedge key rather
@@ -218,13 +279,37 @@
             @* A row of cells, so the list reads as the data table it looks like. The label is what
                gridkeys.js announces as the cursor moves, so it has to be the whole sentence. *@
             <div @key="card.Key" class="card-line @(Roomy ? "roomy" : "") @(count > 0 ? "owned" : "")"
-                 data-idx="@idx" id="@($"{_gridId}-tile-{idx}")" role="row"
+                 data-idx="@idx" data-group="@GroupLabelOf(card)"
+                 data-group-art="@GroupArtFor(card)"
+                 id="@($"{_gridId}-tile-{idx}")" role="row"
                  aria-label="@Describe(card, count)">
                 @* The image is pointer-events:none so sweep hit-testing lands on the row, so
                    the hover target has to be this wrapper rather than the image itself. *@
                 <span class="c-thumb @(Gold(card, count) ? "gold-flair" : "")"
                       data-tip-img="@card.ArtUrl" data-tip="@card.Name" role="gridcell">
                     <img class="thumb" data-src="@card.ArtUrl" alt="" decoding="async" draggable="false" />
+                    <span class="art-wait" aria-hidden="true"></span>
+                </span>
+
+                @* Always rendered, empty or not: the row is a CSS grid, so a skipped cell shifts
+                   every column after it -- which is exactly what it did the first time this went
+                   in with the header cell and without this one. *@
+                <span class="c-want" role="gridcell">
+                    @if (OnWant.HasDelegate)
+                    {
+                        var wanted = WantedOf?.Invoke(card) ?? 0;
+                        <button class="want @(wanted > 0 ? "on" : "")" @onclick="() => OnWant.InvokeAsync(card)"
+                                @onclick:stopPropagation="true"
+                                aria-pressed="@Aria.Flag(wanted > 0)"
+                                aria-label="@(wanted > 0 ? $"On your want list: {card.Name}" : $"Add {card.Name} to your want list")"
+                                title="@(wanted > 0 ? "On your want list" : "Add to your want list")">
+                            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
+                                <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
+                                      fill="@(wanted > 0 ? "currentColor" : "none")"
+                                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                    }
                 </span>
                 @* The name is the link. A tile tap means "I own one more", so detail needs its
                    own target rather than stealing that gesture. *@
@@ -341,7 +426,11 @@
     {
         @* ItemSize is measured, not guessed — see the note on RowHeight and js/gridmetrics.js. *@
         <Virtualize Items="_rows" ItemSize="@RowHeight" Context="row" OverscanCount="3">
-            <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row">
+            @* The row's group is its FIRST card's. A row can straddle two sets, and the reader
+               is asking "where am I", which the card at the left edge answers. *@
+            <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row"
+                 data-group="@(row.Count > 0 ? GroupLabelOf(row[0].Card) : null)"
+                 data-group-art="@(row.Count > 0 ? GroupArtFor(row[0].Card) : null)">
                 @foreach (var (card, idx) in row)
                 {
                     <CardTile @key="card.Key" Card="card" Index="idx"
@@ -350,6 +439,8 @@
                               Count="CountOf(card)"
                               Gold="@Gold(card, CountOf(card))"
                               Picked="@(PickedOf?.Invoke(card) ?? 0)"
+                              Wanted="@(WantedOf?.Invoke(card) ?? 0)"
+                              OnWant="OnWant"
                               ShowInfo="@(!Sweeping)"
                               OnHold="OpenDetail"
                               OnActivate="Activate" />
@@ -391,6 +482,31 @@
     [Parameter] public bool Roomy { get; set; }
 
     [Parameter] public EventCallback<bool> RoomyChanged { get; set; }
+
+    /// <summary>
+    /// What to call the group a card belongs to — in practice its set, named as the page names it.
+    /// Optional: a grid holding one pack has nothing to group, and passing nothing turns the strip
+    /// off entirely rather than showing one that never changes.
+    /// </summary>
+    [Parameter] public Func<PocketCard, string>? GroupOf { get; set; }
+
+    /// <summary>
+    /// Copies of a card wanted on the wishlist the page is currently pointing at. Optional: where
+    /// it is absent no heart is drawn, which is right on a grid whose taps mean something other
+    /// than owning — logging a pack.
+    /// </summary>
+    [Parameter] public Func<PocketCard, int>? WantedOf { get; set; }
+
+    /// <summary>Toggle a card on that wishlist. The page owns which list "that" is.</summary>
+    [Parameter] public EventCallback<PocketCard> OnWant { get; set; }
+
+    /// <summary>
+    /// Art to stand for the group a card belongs to — in practice a wrapper from its set, which is
+    /// what the set picker uses for the same reason: nobody recognises "B2b", everybody recognises
+    /// the pack. Optional, and null per card is fine: a promo set has no wrapper, and the strip
+    /// then shows the name on its own rather than a gap where a picture should be.
+    /// </summary>
+    [Parameter] public Func<PocketCard, string?>? GroupArtOf { get; set; }
 
     /// <summary>Rarity rung, for drawing the game's own symbols instead of a code.</summary>
     [Parameter] public Func<PocketCard, RarityRung?>? RungOf { get; set; }
@@ -465,6 +581,14 @@
     [Parameter] public RenderFragment? Filters { get; set; }
 
     /// <summary>
+    /// Filter toggles for the always-on bar — the one or two states a page is switched between
+    /// often enough that a trip into the disclosure is the wrong price. Not a replacement for the
+    /// control in <see cref="Filters"/> that sets the same state: a page offering six ownership
+    /// filters keeps the select, and promotes only the one that gets used every session.
+    /// </summary>
+    [Parameter] public RenderFragment? Toggles { get; set; }
+
+    /// <summary>
     /// The search box. Kept out of <see cref="Filters"/> and out of the disclosure: it is the
     /// fastest way to narrow a set and belongs in reach, not behind a summary.
     /// </summary>
@@ -496,7 +620,28 @@
     // Virtualize needs an ICollection, which IReadOnlyList is not.
     private List<PocketCard> _flat = [];
     private ElementReference _gridEl;
-    private IJSObjectReference? _sweep, _images, _metrics;
+    private ElementReference _spyEl;
+
+    /// <summary>Whether the cards in scope span more than one group, and the strip is worth a row.</summary>
+    private bool _multiGroup;
+
+    /// <summary>
+    /// The group to mark a row with, or null to mark nothing.
+    ///
+    /// Marking is the gate on the whole strip: with one set in scope the header two bars up already
+    /// names it, and an unmarked grid leaves the script with nothing to read, so the strip stays
+    /// empty and the stylesheet drops it. Cheaper than a conditional element, and it means the
+    /// script attaches once for the life of the grid rather than appearing and disappearing with
+    /// the filters.
+    /// </summary>
+    private string? GroupLabelOf(PocketCard card) =>
+        GroupOf is not null && _multiGroup ? GroupOf(card) : null;
+
+    /// <summary>Gated on the same thing: an unmarked row carries neither the name nor the art.</summary>
+    private string? GroupArtFor(PocketCard card) =>
+        GroupArtOf is not null && GroupOf is not null && _multiGroup ? GroupArtOf(card) : null;
+
+    private IJSObjectReference? _sweep, _images, _metrics, _spy;
     private string _lastListSignature = "";
     private DotNetObjectReference<CardGrid>? _self;
     private IJSObjectReference? _keys;
@@ -732,6 +877,22 @@
     private void Rechunk()
     {
         _flat = Sorted();
+
+        // Whether the strip is worth a row at all. Stops at the second distinct value rather than
+        // collecting them: the answer is a yes/no, and in the common case -- one set selected --
+        // the first mismatch never comes, which is the pass this has to be cheap for.
+        _multiGroup = false;
+        if (GroupOf is not null && _flat.Count > 1)
+        {
+            var first = GroupOf(_flat[0]);
+            for (var i = 1; i < _flat.Count; i++)
+            {
+                if (GroupOf(_flat[i]) == first) continue;
+                _multiGroup = true;
+                break;
+            }
+        }
+
         _indexOf = new Dictionary<string, int>(_flat.Count);
         for (var i = 0; i < _flat.Count; i++) _indexOf[_flat[i].Key] = i;
 
@@ -787,6 +948,12 @@
             }
 
             await MeasureRowsAsync();
+            if (_disposed) return;
+
+            // A new window of rows is a new answer, and no scroll event follows a re-render. Also
+            // the point at which the strip first appears or disappears, since _multiGroup is
+            // decided in Rechunk.
+            await AttachSpyAsync();
             return;
         }
         _attached = true;
@@ -833,6 +1000,12 @@
         if (_disposed) { await ReleaseModulesAsync(); return; }
 
         await MeasureRowsAsync();
+        if (_disposed) { await ReleaseModulesAsync(); return; }
+
+        _spy = await JS.InvokeAsync<IJSObjectReference>("import", "./js/gridspy.js");
+        if (_disposed) { await ReleaseModulesAsync(); return; }
+
+        await AttachSpyAsync();
         if (_disposed) { await ReleaseModulesAsync(); return; }
 
         _images = await JS.InvokeAsync<IJSObjectReference>("import", "./js/imgloader.js");
@@ -892,6 +1065,27 @@
     {
         if (_keys is null) return;
         try { await _keys.InvokeVoidAsync("focusGrid", _gridEl, index, Cards.Count); }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    /// <summary>
+    /// Point the scroll spy at the strip, or bring it up to date if it is already watching.
+    ///
+    /// Unconditional, even where there is no grouping to report: the same pass measures where the
+    /// sticky bars above the grid end and publishes it as --bars-h, which is what stops the list
+    /// view's column headers from parking underneath the toolbar. A grid with nothing to group
+    /// still has that problem.
+    /// </summary>
+    private async Task AttachSpyAsync()
+    {
+        if (_spy is null) return;
+
+        try
+        {
+            await _spy.InvokeVoidAsync("watch", _gridEl, _spyEl);
+            await _spy.InvokeVoidAsync("refresh", _gridEl, _spyEl);
+        }
         catch (JSDisconnectedException) { }
         catch (JSException) { }
     }
@@ -1043,6 +1237,19 @@
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Toggle the cursor card on the want list, from the keyboard.
+    ///
+    /// The heart is <c>tabindex="-1"</c> like the rest of a tile's furniture, so this is the only
+    /// route to it without a pointer. Silent where the page passes no handler -- the log screen has
+    /// no list to write to, and a key that does nothing is better than one that throws.
+    /// </summary>
+    [JSInvokable]
+    public Task KeyWant(int index) =>
+        index >= 0 && index < Cards.Count && OnWant.HasDelegate
+            ? OnWant.InvokeAsync(Cards[index])
+            : Task.CompletedTask;
+
     /// <summary>Called once by gridsweep.js when a drag is released.</summary>
     [JSInvokable]
     public async Task ApplySweep(int lo, int hi)
@@ -1118,6 +1325,14 @@
             catch (JSException) { }
         }
 
+        // Also element-scoped: what it removes is a scroll listener watching this grid.
+        if (_spy is not null)
+        {
+            try { await _spy.InvokeVoidAsync("dispose", _gridEl); await _spy.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+            catch (JSException) { }
+        }
+
         foreach (var m in new[] { _sweep, _images, _keys })
         {
             if (m is null) continue;
@@ -1125,6 +1340,6 @@
             catch (JSDisconnectedException) { }
             catch (JSException) { }
         }
-        _sweep = _images = _keys = _metrics = null;
+        _sweep = _images = _keys = _metrics = _spy = null;
     }
 }

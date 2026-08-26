@@ -125,7 +125,7 @@ else
         }
 
         <button class="btn btn-sm @(_readyOnly ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetReadyOnly(!_readyOnly)" aria-pressed="@_readyOnly"
+                @onclick="() => SetReadyOnly(!_readyOnly)" aria-pressed="@Aria.Flag(_readyOnly)"
                 title="Hide trades you cannot make today">
             @(_readyOnly ? "doable only" : "all rows")
         </button>

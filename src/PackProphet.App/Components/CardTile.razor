@@ -22,19 +22,74 @@
    The tile is a cell of the grid its container declares, named by a sentence CardGrid builds so
    the keyboard cursor and the tile describe the card the same way. It carries no tabindex: the
    container holds the only tab stop and moves aria-activedescendant. *@
-<div class="card-tile @(Count > 0 ? "owned" : "") @(Picked > 0 ? "picked" : "") @(Gold ? "flair gold-flair" : "")"
+<div class="card-tile @(Count > 0 ? "owned" : "") @(Picked > 0 ? "picked" : "") @(Gold ? "gold" : "")"
      data-idx="@Index" data-tip="@Tip"
      id="@DomId" role="gridcell" aria-label="@Label"
      @onclick="OnClick"
      @oncontextmenu="RightClick" @oncontextmenu:preventDefault="true"
      @onpointerdown="PointerDown" @onpointerup="PointerUp"
      @onpointercancel="CancelHold" @onpointerleave="CancelHold" @onpointermove="PointerMove">
-    @* No rarity badge. The tile is the card art, which carries the rarity mark itself. The list
-       layout does show rarity, because there the art is a 32px thumbnail. *@
-    <img data-src="@Card.ArtUrl" alt="@Card.Name" decoding="async" draggable="false" />
+    @* The art, and nothing on top of it.
+       ==================================================================================
+       The count, the info button and the heart were all badges over the artwork. One was fine,
+       two were busy, three covered three corners of the thing you are looking at in order to
+       recognise it -- and the art is the whole reason this layout exists rather than the list.
 
-    @* Detail needs its own target: a tap on the tile means "I own one more", so it cannot also
-       mean "tell me about this". A corner button for a pointer, a long press for a finger. *@
+       So they moved below, into a caption strip, and the art element became its own box: it owns
+       the aspect ratio, the rounding, the overflow clip and the gold flair, all of which used to
+       belong to the tile and would otherwise squash the art by the height of the caption. *@
+    <span class="art @(Gold ? "flair gold-flair" : "")">
+        @* No rarity badge. The art carries the rarity mark itself. The list layout does show
+           rarity, because there the art is a 32px thumbnail. *@
+        <img data-src="@Card.ArtUrl" alt="@Card.Name" decoding="async" draggable="false" />
+
+        @* Shown only while the art is on its way, hidden by CSS the moment it arrives or fails.
+           A real element rather than a pseudo-element: gold flair already owns both of the art
+           box's, and a sibling selector off the image's own data-state is what makes "loading"
+           and "failed" distinguishable without JavaScript touching this at all. *@
+        <span class="art-wait" aria-hidden="true"></span>
+    </span>
+
+    <span class="cap">
+
+    @* Wanting a card and owning it are different facts, and this is the screen where you notice
+       the first one: you are already looking at the set, and the alternative was open the card,
+       mark it, come back.
+
+       Its own target, and in the caption rather than over the art -- a tap on the tile means "I
+       own one more", so wanting cannot also be a tap on the tile, but it no longer has to cover a
+       corner of the picture to say so. *@
+    @if (OnWant.HasDelegate)
+    {
+        <button class="want @(Wanted > 0 ? "on" : "")" type="button"
+                @onclick="Want" @onclick:stopPropagation="true"
+                @onpointerdown:stopPropagation="true"
+                @oncontextmenu:stopPropagation="true"
+                tabindex="-1"
+                aria-pressed="@Aria.Flag(Wanted > 0)"
+                aria-label="@(Wanted > 0 ? $"On your wishlist: {Card.Name}" : $"Add {Card.Name} to your wishlist")"
+                title="@(Wanted > 0 ? "On your wishlist" : "Add to your wishlist")">
+            @* Drawn, not typed: the heart characters that carry a filled and an outlined form are
+               not in every system font, and the pair that are do not match each other's weight. *@
+            <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">
+                <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
+                      fill="@(Wanted > 0 ? "currentColor" : "none")"
+                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            </svg>
+        </button>
+    }
+
+    @* The card's name, and the way into its detail page.
+       ==================================================================================
+       It said "info" while it was a button over the art, where a name would not have fitted and
+       there was nothing to name -- the art was right there. Below the art the same six characters
+       are a label for a thing that already has one, and the printed name on a 200px tile is small,
+       stylised and sometimes behind an ex badge. So the button became the name, which is both the
+       useful text and the same convention the list view uses: the name is the link.
+
+       Detail still needs its own target -- a tap on the tile means "I own one more", so it cannot
+       also mean "tell me about this" -- and it is still gone while a sweep is armed, because a link
+       across the middle of the tile would swallow the start of a drag. *@
     @if (ShowInfo)
     {
         @* Its context menu is stopped rather than prevented, so "open in new tab" still works on
@@ -42,21 +97,24 @@
         @* Out of the tab order: a focus stop per tile would put thousands of them between the grid
            and whatever follows it. The keyboard route to detail is `i` on the cursor, which
            gridkeys.js sends to KeyOpen. *@
-        <a class="info" href="card/@Card.Key" title="Card detail" aria-label="Detail for @Card.Name"
+        <a class="info" href="card/@Card.Key" title="@Card.Name — card detail"
+           aria-label="Detail for @Card.Name"
            tabindex="-1"
            @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true"
-           @oncontextmenu:stopPropagation="true">info</a>
+           @oncontextmenu:stopPropagation="true">@Card.Name</a>
     }
 
-    @if (Count > 0)
-    {
-        <span class="cnt">@Count</span>
-    }
+    @* The count keeps the end of the row whether or not there is one to show, so a caption is the
+       same shape on every tile: a virtualised grid needs every row to be the same height, and an
+       empty strip that collapsed would make the scrollbar lie. *@
+    <span class="cnt @(Count > 0 ? "" : "none")">@(Count > 0 ? Count.ToString() : "")</span>
+
     @* Distinct from the owned count: this is "I just pulled this" rather than "I own this". *@
     @if (Picked > 0)
     {
         <span class="pick">@(Picked > 1 ? $"+{Picked}" : "+")</span>
     }
+    </span>
 </div>
 
 @code {
@@ -93,18 +151,31 @@
     /// <summary>Raised on a long press. The page navigates; the tile only detects.</summary>
     [Parameter] public EventCallback<PocketCard> OnHold { get; set; }
 
+    /// <summary>Copies wanted on the wishlist the page is pointing at. Zero draws an empty heart.</summary>
+    [Parameter] public int Wanted { get; set; }
+
+    /// <summary>
+    /// Toggle the card on that wishlist. Absent where the page has no wishlist to write to, which
+    /// is what hides the heart — the log-a-pack grid, for one, where a tap means something else
+    /// entirely.
+    /// </summary>
+    [Parameter] public EventCallback<PocketCard> OnWant { get; set; }
+
+    private Task Want() => OnWant.InvokeAsync(Card);
+
     private PocketCard? _lastCard;
     private int _lastCount = -1;
     private int _lastIndex = -1;
     private int _lastPicked = -1;
     private bool _lastShowInfo = true;
     private bool _lastGold;
+    private int _lastWanted = -1;
 
     protected override bool ShouldRender()
     {
         if (ReferenceEquals(_lastCard, Card) && _lastCount == Count
             && _lastIndex == Index && _lastPicked == Picked && _lastShowInfo == ShowInfo
-            && _lastGold == Gold)
+            && _lastGold == Gold && _lastWanted == Wanted)
             return false;
 
         _lastCard = Card;
@@ -113,6 +184,7 @@
         _lastPicked = Picked;
         _lastShowInfo = ShowInfo;
         _lastGold = Gold;
+        _lastWanted = Wanted;
         return true;
     }
 

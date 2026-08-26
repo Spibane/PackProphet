@@ -75,4 +75,12 @@
              CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+
+  <!-- The same real PTCGP Tracker export the engine suite reads, so the page can be driven with a
+       genuine workbook rather than one this project produced. -->
+  <ItemGroup>
+    <Content Include="..\PackProphet.Tests\fixtures\*"
+             Link="fixtures\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

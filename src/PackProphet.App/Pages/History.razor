@@ -213,7 +213,11 @@ else
                 @GameRules.PacksPerDay(Session.Profile.Resources.Premium) a day
                 @(Session.Profile.Resources.Premium ? "with premium" : "without premium").
             </p>
-            <div class="bars" role="img" aria-label="Packs opened per day">
+            @* The label carries the shape of the chart, not just its title. "Packs opened per
+               day" names the picture and says nothing about it; a reader who cannot see the bars
+               needs the range, the total and where the peak is before deciding whether to open
+               the numbers below. *@
+            <div class="bars" role="img" aria-label="@BarsSummary">
                 @foreach (var day in _perDay)
                 {
                     <div class="bar-col" data-tip="@day.Date.ToString("ddd d MMM"): @day.Count pack(s)">
@@ -241,6 +245,33 @@ else
                     }
                 }
             </div>
+
+            @* The bars are a picture, so their data has to exist somewhere as text. Collapsed
+               rather than visually hidden: thirty rows read out before the rest of the page is a
+               worse answer than a control that says what it opens, and sighted users who want the
+               exact figure off a bar have the same problem. *@
+            <details class="mb-4">
+                <summary class="small text-body-secondary">Show these as numbers</summary>
+                <div class="pt-2">
+                    <DataTable Label="Packs opened per day" Fit="true">
+                        <thead>
+                            <tr>
+                                <th scope="col">day</th>
+                                <th scope="col" class="num">packs</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var day in _perDay)
+                            {
+                                <tr>
+                                    <th scope="row">@day.Date.ToString("ddd d MMM")</th>
+                                    <td class="num">@day.Count</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </DataTable>
+                </div>
+            </details>
 
             <h2>Packs per set</h2>
             <DataTable Label="Packs opened per set" Fit="true">
@@ -521,6 +552,27 @@ else
 
     private IReadOnlyList<(DateTime Date, int Count)> _perDay = [];
     private int _perDayMax = 1;
+
+    /// <summary>
+    /// What the bar chart says, in a sentence. The busiest day is named because it is the one
+    /// thing a glance at the bars gives you and a title does not.
+    /// </summary>
+    private string BarsSummary
+    {
+        get
+        {
+            if (_perDay.Count == 0) return "Packs opened per day: nothing logged yet.";
+
+            var total = _perDay.Sum(d => d.Count);
+            if (total == 0)
+                return $"Packs opened per day, last {DaysShown} days: none logged.";
+
+            var peak = _perDay.MaxBy(d => d.Count);
+
+            return $"Packs opened per day, {_perDay[0].Date:d MMM} to {_perDay[^1].Date:d MMM}: "
+                 + $"{total} in total, most on {peak.Date:d MMM} with {peak.Count}.";
+        }
+    }
 
     private IReadOnlyList<(string Set, int Count)> _perSet = [];
     private int _perSetMax = 1;

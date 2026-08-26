@@ -219,6 +219,13 @@ else
             <button class="btn btn-sm btn-outline-secondary" @onclick="MakeShareLink">
                 share this list
             </button>
+            @* The link is the better artefact and the wrong shape for where these trades actually
+               happen. A Discord thread or a subreddit comment takes a few lines of text: nobody
+               opens a stranger's link, and a reader on a phone with the game open cannot follow
+               one and come back. Same list, in the form the conversation is already in. *@
+            <button class="btn btn-sm btn-outline-secondary" @onclick="MakeTradeText">
+                copy as text
+            </button>
             @* Two taps, like the deck editor's delete: the list took work to build and there
                is no undo prompt after the fact. *@
             <button class="btn btn-sm @(_confirming == _list.Id ? "btn-danger" : "btn-outline-danger")"
@@ -254,6 +261,31 @@ else
                     The link says to find you in-game as
                     <strong>@Session.Profile.InGameName</strong>.
                 </p>
+            }
+        </PageShell>
+    }
+
+    @if (_tradeText is not null)
+    {
+        <PageShell>
+            @* A textarea rather than the clipboard API: it needs no permission prompt, works in
+               every browser this app supports, and shows what is about to be pasted instead of
+               claiming to have copied something. Rows are capped so a long list scrolls rather
+               than pushing the page it belongs to off the screen. *@
+            <textarea class="form-control form-control-sm trade-text" readonly rows="8"
+                      onfocus="this.select()"
+                      aria-label="Your wanted cards as plain text">@_tradeText</textarea>
+            <p class="small text-body-secondary mt-1 mb-0">
+                Tap the box to select it all, then copy. Only what is still missing, with the
+                rarity beside each card &mdash; which is what decides whether a trade is allowed.
+            </p>
+            @if (string.IsNullOrWhiteSpace(Session.Profile.InGameName))
+            {
+                <Notice Severity="Notice.Level.Warning" Dense="true" Class="mt-2 mb-0">
+                    No in-game name on this collection, so the message says what you want without
+                    saying who to send it to.
+                    <a href="settings">Add one in Settings</a> and copy it again.
+                </Notice>
             }
         </PageShell>
     }
@@ -441,6 +473,7 @@ else
     private double _packs;
     private string? _shareLink;
     private string? _shareLinkFor;
+    private string? _tradeText;
 
     private void MakeShareLink()
     {
@@ -451,6 +484,47 @@ else
         // payload travels inside a link: a fragment is never sent to a server, so it cannot 414
         // no matter how the list grows.
         _shareLink = $"{Nav.BaseUri}share#{code}";
+    }
+
+    /// <summary>
+    /// The list as a few lines anyone can paste into a chat.
+    ///
+    /// Only what is still short: a wishlist keeps its rows once you own them, and asking for a card
+    /// you already have wastes the reader's time and your own credibility. The rarity is on every
+    /// line because the game's trade rules turn on it -- a reader can see at a glance which of
+    /// these they are even allowed to send.
+    ///
+    /// The set and number lead each line rather than the name: two cards share a name often enough
+    /// that a name alone is ambiguous, and the in-game list is ordered by number.
+    /// </summary>
+    private void MakeTradeText()
+    {
+        if (_list is null) return;
+
+        var lines = new List<string> { $"Looking for — {_list.Name}" };
+
+        if (Session.Profile.InGameName is { Length: > 0 } ign)
+            lines.Add($"Find me in-game as {ign}");
+
+        lines.Add("");
+
+        var short_ = _cards.Where(c => c.Owned < c.Wanted).ToArray();
+        foreach (var (card, wanted, owned) in short_)
+        {
+            var need = wanted - owned;
+            var rarity = RungOf(card)?.Symbol ?? card.Rarity;
+            lines.Add($"{card.Set}-{card.Number} {card.Name} ({rarity})"
+                      + (need > 1 ? $" x{need}" : ""));
+        }
+
+        if (short_.Length == 0) lines.Add("(nothing outstanding — this list is complete)");
+
+        // Named rather than anonymous, so anyone who wants the same list can find the tool. One
+        // line, at the end, where it does not get in the way of the part being read.
+        lines.Add("");
+        lines.Add("— made with PackProphet");
+
+        _tradeText = string.Join('\n', lines);
     }
 
     protected override async Task OnInitializedAsync()
@@ -479,7 +553,7 @@ else
 
         // A stale link for a list you have navigated away from is worse than none: it would go
         // on showing the previous list's name and contents if left in place.
-        if (_shareLinkFor != _list.Id) { _shareLink = null; _shareLinkFor = _list.Id; }
+        if (_shareLinkFor != _list.Id) { _shareLink = null; _tradeText = null; _shareLinkFor = _list.Id; }
 
         _cards = Session.WishlistCards(_list);
         _missing = Session.MissingInWishlist(_list);

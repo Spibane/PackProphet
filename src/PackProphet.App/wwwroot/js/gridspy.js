@@ -41,12 +41,11 @@ function currentGroup(grid, edge) {
     const rows = grid.querySelectorAll('[data-group]');
     for (const row of rows) {
         const box = row.getBoundingClientRect();
-        if (box.bottom > edge) return row.dataset.group || '';
+        if (box.bottom > edge) return row;
     }
     // Everything rendered is above the edge: mid-scroll between two windows, or the very end of
     // the list. The last row is the honest answer, and it stops the label flickering to empty.
-    const last = rows[rows.length - 1];
-    return last ? last.dataset.group || '' : '';
+    return rows[rows.length - 1] || null;
 }
 
 /// Where the sticky bars above the grid end, in viewport pixels.
@@ -108,16 +107,33 @@ export function watch(grid, label) {
         // The line under which a row is covered: the bottom of the bars, plus the strip itself once
         // it has something in it.
         //
-        // Derived rather than read off the strip's own box, because the strip is display: none
-        // until it has text -- so measuring it would give zero on the very pass that decides what
-        // to put in it. offsetHeight is 0 in exactly that state, which is the right answer for it.
+        // Derived rather than read off the strip's own box, because the strip is hidden until it has
+        // something to say -- so measuring it would give zero on the very pass that decides what to
+        // put in it. offsetHeight is 0 in exactly that state, which is the right answer for it.
         const edge = bars + label.offsetHeight;
-        const group = currentGroup(grid, edge);
+        const row = currentGroup(grid, edge);
 
-        // No groups in scope — one set selected, so the page never marked the rows — and there is
-        // nothing to report. Empty rather than hidden: the stylesheet drops an empty strip, so
-        // there is no attribute for Blazor's diff and this file to disagree about.
-        if (label.textContent !== group) label.textContent = group;
+        const name = row?.dataset.group || '';
+        const art = row?.dataset.groupArt || '';
+
+        // The set's name, and a wrapper from it. Two nodes written separately -- textContent on one,
+        // a background-image on the other -- so nothing here ever assembles markup out of data.
+        const text = label.querySelector('[data-spy-text]');
+        const picture = label.querySelector('[data-spy-art]');
+
+        if (text && text.textContent !== name) text.textContent = name;
+        if (picture) {
+            const want = art ? `url("${art}")` : '';
+            if (picture.style.backgroundImage !== want) picture.style.backgroundImage = want;
+            // A promo set has no wrapper published, so the picture collapses and the name stands
+            // alone rather than leaving a hole where one should be.
+            picture.classList.toggle('has-art', !!art);
+        }
+
+        // Hidden by a class the script owns rather than by :empty, now that the strip has children
+        // of its own. Safe against Blazor: the class attribute it renders here is a constant, so the
+        // diff never has a new value to write and never puts this back.
+        label.classList.toggle('on', !!name);
     };
 
     // Coalesced to a frame. A scroll fires this dozens of times a second and the work is a handful
@@ -160,9 +176,9 @@ export function watch(grid, label) {
 /// rows is a new answer and no scroll event follows a re-render.
 export function refresh(grid, label) {
     if (!grid || !label) return;
-    const edge = label.getBoundingClientRect().bottom;
-    const group = currentGroup(grid, edge);
-    if (label.textContent !== group) label.textContent = group;
+
+    const entry = watched.get(grid);
+    if (entry) entry.onScroll();
 }
 
 export function dispose(grid) {

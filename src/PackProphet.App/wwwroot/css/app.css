@@ -665,12 +665,20 @@ main:focus { outline: none; }
 .set-tab.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
 .set-tab .pct { font-size: .82rem; opacity: .75; }
 
-/* With a wrapper on it the tab is a thumbnail beside its label rather than two stacked lines, so
-   the flex direction flips and the label keeps the stack it had. The thumbnail is the one used in
-   every table that names a pack, at the height of the two text lines beside it. */
-.set-tab:has(.pack-thumb) { flex-direction: row; align-items: center; gap: 0; }
+/* With a logo on it the tab is a picture beside its label rather than two stacked lines, so the
+   flex direction flips and the label keeps the stack it had.
+
+   Set logos are published at one size, 256x113 -- wide and short -- so the box takes that ratio
+   rather than the portrait one a booster wants. `contain`, because a wordmark cropped is a
+   wordmark you cannot read. */
+.set-tab:has(.set-logo) { flex-direction: row; align-items: center; gap: 0; }
 .set-tab .lbl { display: flex; flex-direction: column; line-height: 1.15; }
-.set-tab .pack-thumb { width: 1.1rem; height: 1.55rem; margin-right: .35rem; flex: none; }
+.set-tab .set-logo {
+    flex: none;
+    width: 2.6rem; height: 1.15rem;
+    margin-right: .4rem;
+    background-size: contain; background-position: center; background-repeat: no-repeat;
+}
 
 /* The boosters as the pack filter. Recognition rather than a dropdown of names: this is how the
    game asks the same question. Wraps, because a set can have three packs and a phone is 375px. */
@@ -906,6 +914,11 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
        measures it and publishes --bars-h. The fallback of 0 is what an unmeasured grid gets, which
        is the old behaviour rather than a broken one. */
     position: sticky; top: var(--bars-h, 0px); z-index: 4;
+    /* Hidden until the script has a set to name. A class rather than :empty, because the strip has
+       children of its own now; see the note in js/gridspy.js on why that is safe against the
+       render diff. */
+    display: none;
+    align-items: center; gap: .4rem;
     padding: .2rem calc(.75rem + var(--safe-r)) .2rem calc(.75rem + var(--safe-l));
     border-bottom: 1px solid var(--bs-border-color);
     /* Opaque: cards scroll under it. */
@@ -913,7 +926,24 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
     font-size: .8rem; font-weight: 600; letter-spacing: .02em;
     color: var(--bs-secondary-color);
 }
-.grid-spy:empty { display: none; }
+.grid-spy.on { display: flex; }
+
+/* The set's logo, the same picture the tabs and the log screen carry, for the same reason: nobody
+   recognises "B2b" and everybody recognises the wordmark. 256x113 published, so the box is that
+   ratio at the height of the strip, and `contain` because a cropped wordmark is unreadable.
+
+   Zero-width until there is one, so a set whose logo has not been published upstream leaves the
+   name standing alone rather than a blank slot in front of it. */
+.grid-spy .art {
+    flex: none;
+    /* Taller than the text beside it, and the strip takes its height from this. A wordmark at the
+       cap height of a .8rem label is a smudge; six more pixels is a cheap price for a mark that can
+       actually be recognised, on the one element whose whole job is being recognised. */
+    width: 0; height: 1.5rem;
+    background-size: contain; background-position: center; background-repeat: no-repeat;
+}
+.grid-spy .art.has-art { width: 3.4rem; }
+.grid-spy .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .card-row { display: grid; gap: 4px; padding: 2px calc(4px + var(--safe-r)) 2px calc(4px + var(--safe-l)); }
 

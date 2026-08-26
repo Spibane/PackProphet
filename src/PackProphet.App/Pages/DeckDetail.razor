@@ -254,7 +254,20 @@ else
                 {
                     <DataTable Label="Best packs for this deck" Class="pack-table">
                         <thead>
-                            <tr><th scope="col">pack</th><th scope="col" class="num">chance of a hit</th><th scope="col" class="num">cards it can give</th></tr>
+                            @* The percentage and the same figure as packs, in the wording the
+                               Which-pack table uses. A bare "6.9%" is not a number anyone acts on;
+                               "1 in 15 packs" is the same fact and says whether it is worth
+                               tonight. Both, because the percentage is what compares two rows and
+                               the packs figure is what decides. *@
+                            <tr>
+                                <th scope="col">pack</th>
+                                <th scope="col" class="num">chance of a hit</th>
+                                <th scope="col" class="num"
+                                    title="1 / the chance of a hit — how many packs, on average, before this one gives you something for the deck">
+                                    packs per new card
+                                </th>
+                                <th scope="col" class="num">cards it can give</th>
+                            </tr>
                         </thead>
                         <tbody>
                             @foreach (var standing in _ranked.Take(8))
@@ -271,6 +284,7 @@ else
                                         }
                                     </td>
                                     <td class="num">@standing.ChanceUseful.ToString("P1")</td>
+                                    <td class="num">@Text.Fmt.Packs(standing.PacksToNextUseful)</td>
                                     <td class="num">@standing.DemandsServed</td>
                                 </tr>
                             }

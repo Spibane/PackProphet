@@ -307,4 +307,132 @@ public sealed class PackOdds
         var p = ChanceOfUseful(packKey, outstanding);
         return p <= 0 ? double.PositiveInfinity : 1.0 / p;
     }
+
+    /// <summary>
+    /// Where in the pack the chance actually is, position by position.
+    ///
+    /// <see cref="ChanceOfUseful"/> answers "does this pack help", which is the right figure for
+    /// ranking and hides something worth knowing: a five-card pack's first three slots are
+    /// one-diamond commons and its last two carry everything rare, so a headline 7% can be 7% in
+    /// the fifth card alone. That changes what a pack is worth to someone who has finished the
+    /// commons, and it is the reason the same headline means different things in two sets.
+    ///
+    /// Adjacent positions with the same chance are merged into one range, which is what produces
+    /// the "1st-3rd card" reading. Merged from the numbers rather than hardcoded: which slots
+    /// share a distribution is a property of each set's published rates, and a set that breaks the
+    /// three-commons pattern would otherwise be reported wrongly rather than merely unmerged.
+    /// </summary>
+    /// <returns>
+    /// One entry per group of positions, in pack order. Empty when the pack has no published
+    /// rates, exactly as the other odds methods return zero rather than guessing.
+    /// </returns>
+    public IReadOnlyList<SlotOdds> ChanceOfUsefulBySlot(
+        string packKey, IReadOnlyCollection<Demand> outstanding)
+    {
+        if (outstanding.Count == 0) return [];
+
+        var set = packKey.Split(':')[0];
+        if (!_index.ByPack.TryGetValue(packKey, out var inPack)) return [];
+
+        var wanted = outstanding
+            .SelectMany(d => d.SuppliedBy)
+            .Select(c => c.Key)
+            .ToHashSet();
+        if (wanted.Count == 0) return [];
+
+        var byRung = inPack
+            .GroupBy(c => _index.Ladder.IndexOf(c.Rarity))
+            .Where(g => g.Key is not null)
+            .ToDictionary(g => g.Key!.Value, g => (IReadOnlyList<PocketCard>)g.ToArray());
+
+        // Per position: the weighted chance, and the weight that voted on it. Two variants of the
+        // same pack can hold different numbers of cards -- a rare-pack variant is one draw, the
+        // ordinary one five -- so a position present in only some of them must be averaged over
+        // those, not over every variant. Dividing by the full weight would report a fifth-card
+        // chance diluted by variants that have no fifth card.
+        var chance = new Dictionary<int, double>();
+        var voted = new Dictionary<int, double>();
+
+        foreach (var (_, weight, variant) in _rates.Variants(set))
+        {
+            // Ordered by key, not by dictionary order: the keys are opaque strings and the "Themed
+            // Rare Pack" numbers its slots from zero where everything else starts at one, so
+            // position is the rank of the key rather than the key itself.
+            var slots = variant.Slots
+                .OrderBy(kv => int.TryParse(kv.Key, out var n) ? n : int.MaxValue)
+                .ThenBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select(kv => kv.Value)
+                .ToArray();
+
+            for (var i = 0; i < slots.Length; i++)
+            {
+                var slotTotal = slots[i].Values.Sum();
+                if (slotTotal <= 0) continue;
+
+                var hit = 0.0;
+                foreach (var (code, pct) in slots[i])
+                {
+                    var candidates = Candidates(set, code, byRung);
+                    if (candidates.Count == 0) continue;
+
+                    var useful = candidates.Count(c => wanted.Contains(c.Key));
+                    if (useful == 0) continue;
+
+                    hit += (pct / slotTotal) * useful / candidates.Count;
+                }
+
+                var position = i + 1;
+                chance[position] = chance.GetValueOrDefault(position) + weight * Math.Clamp(hit, 0, 1);
+                voted[position] = voted.GetValueOrDefault(position) + weight;
+            }
+        }
+
+        if (chance.Count == 0) return [];
+
+        var perPosition = chance.Keys
+            .OrderBy(k => k)
+            .Select(k => (Position: k, Chance: voted[k] > 0 ? chance[k] / voted[k] : 0.0))
+            .ToArray();
+
+        // Merge runs of equal chance. The tolerance is there because these are sums of normalised
+        // percentages: two slots with identical published distributions can differ in the last
+        // bit, and reporting "1st card / 2nd card / 3rd card" with three identical figures would
+        // be noise dressed as detail.
+        var groups = new List<SlotOdds>();
+        var start = perPosition[0].Position;
+        var value = perPosition[0].Chance;
+        var last = start;
+
+        foreach (var (position, c) in perPosition.Skip(1))
+        {
+            if (position == last + 1 && Math.Abs(c - value) < 1e-9) { last = position; continue; }
+
+            groups.Add(new SlotOdds(start, last, value));
+            start = last = position;
+            value = c;
+        }
+        groups.Add(new SlotOdds(start, last, value));
+
+        return groups;
+    }
+}
+
+/// <summary>
+/// The chance that one group of card positions in a pack yields something still wanted.
+/// </summary>
+/// <param name="First">1-based position of the first card in the group.</param>
+/// <param name="Last">Same as <paramref name="First"/> for a group of one.</param>
+/// <param name="Chance">Probability that this group of positions supplies a wanted card.</param>
+public sealed record SlotOdds(int First, int Last, double Chance)
+{
+    /// <summary>"1st card", "1st-3rd card" — the reading a player recognises from the pack.</summary>
+    public string Label => First == Last ? $"{Ordinal(First)} card" : $"{Ordinal(First)}-{Ordinal(Last)} card";
+
+    private static string Ordinal(int n) => n switch
+    {
+        1 => "1st",
+        2 => "2nd",
+        3 => "3rd",
+        _ => $"{n}th",
+    };
 }

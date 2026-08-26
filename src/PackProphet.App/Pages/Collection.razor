@@ -85,8 +85,21 @@ else
                     <button class="set-tab @(set == _set ? "active" : "")"
                             @onclick="() => SelectSet(set)" disabled="@Busy.IsBusy"
                             title="@Session.Sets.DisplayName(set)">
-                        @set
-                        <span class="pct">@Progress(set).ToString("P0")</span>
+                        @* A wrapper from the set, so the row can be read at a glance rather than
+                           decoded from two-character codes: B2a and B2b are the same three
+                           characters in a different order, and their wrappers are not. The code
+                           and the percentage stay -- the art names the set, but only the code
+                           names the tab. Promos and any set whose art is unpublished simply get no
+                           thumbnail, and the button is the code and percentage it always was. *@
+                        @if (SetArtUrl(set) is { Length: > 0 } art)
+                        {
+                            <span class="pack-thumb" aria-hidden="true"
+                                  style="background-image:url('@art')"></span>
+                        }
+                        <span class="lbl">
+                            @set
+                            <span class="pct">@Progress(set).ToString("P0")</span>
+                        </span>
                     </button>
                 }
             }
@@ -294,15 +307,31 @@ else
 
             @* No pack filter for promo sets: their "Vol. N" groupings record how a promo was given
                away rather than packs you can open. *@
+            @* The boosters themselves rather than their names in a dropdown. A set has two or
+               three packs and you recognise them by the art on the wrapper -- it is what the game
+               shows you when you choose one -- so a row of wrappers is both faster to read and
+               fewer taps than opening a select. The name stays under each one: the art alone is
+               not a label, and a pack whose art has not been published yet would otherwise be a
+               blank button.
+
+               One at a time, not several. A card lists the packs it comes from, so "cards in
+               either of these two packs" is nearly the whole set and answers nothing; the question
+               this filter exists for is "what is still missing from the pack I am about to open".
+               Tapping the chosen pack again clears it. *@
             @if (!ViewingAll && !CardIndex.IsPromoSet(_set))
             {
-                <select class="form-select form-select-sm" style="max-width:12rem" aria-label="Filter by pack" @onchange="OnPackFilter">
-                    <option value="">all packs</option>
+                <div class="pack-picks" role="group" aria-label="Filter by pack">
                     @foreach (var p in PacksInSet)
                     {
-                        <option value="@p">@p</option>
+                        <button class="pack-pick @(_pack == p ? "on" : "")"
+                                @onclick="() => TogglePack(p)" aria-pressed="@(_pack == p)"
+                                title="@(_pack == p ? $"Show every pack in {_set} again" : $"Only cards from {p}")">
+                            <span class="pack-thumb" aria-hidden="true"
+                                  style="background-image:url('@Session.PackArtUrl($"{_set}:{p}")')"></span>
+                            <span class="nm">@p</span>
+                        </button>
                     }
-                </select>
+                </div>
             }
 
     
@@ -475,7 +504,6 @@ else
 
     private void OnSearch(ChangeEventArgs e) => _search = Text(e);
     private void OnOwnFilter(ChangeEventArgs e) => SetOwnFilter(Text(e) is { Length: > 0 } v ? v : "all");
-    private void OnPackFilter(ChangeEventArgs e) => SetPackFilter(Text(e));
 
     /// <summary>
     /// The promoted toggle. It goes back to "all cards" rather than to whatever was selected
@@ -494,6 +522,8 @@ else
         if (!_types.Remove(type)) _types.Add(type);
     }
 
+    private void TogglePack(string pack) => _pack = _pack == pack ? "" : pack;
+
     // One per chip on the toolbar. Parameterless because a Razor event handler cannot carry a
     // quoted string literal without escaping that the compiler then reads as an indexer.
     private void ClearSearch() => _search = "";
@@ -502,7 +532,6 @@ else
     private void ClearTypeFilter() => _types.Clear();
     private void ClearPackFilter() => _pack = "";
     private void SetOwnFilter(string v) => _own = v;
-    private void SetPackFilter(string v) => _pack = v;
 
     /// <summary>The wording the ownership dropdown uses, so a chip and its control agree.</summary>
     private string OwnFilterLabel => _own switch
@@ -586,6 +615,19 @@ else
 
     private double ProgressOf(IReadOnlyList<PocketCard> cards) =>
         cards.Count == 0 ? 0 : (double)cards.Count(c => Session.CountOf(c) > 0) / cards.Count;
+
+    /// <summary>
+    /// A wrapper to stand for a set: its first pack's art. A set with several packs gets the first
+    /// one rather than all of them -- the tab is a few characters wide and the point is
+    /// recognition, not a contents list -- and a set with no published art gets an empty string,
+    /// which the markup reads as "draw no thumbnail".
+    /// </summary>
+    private string SetArtUrl(string set) =>
+        Session.Index.ByPack.Keys
+            .Where(k => k.StartsWith($"{set}:", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .Select(Session.PackArtUrl)
+            .FirstOrDefault(u => !string.IsNullOrEmpty(u)) ?? "";
 
     private IEnumerable<string> PacksInSet =>
         InSet.Where(c => c.IsPackObtainable).SelectMany(c => c.Packs!)

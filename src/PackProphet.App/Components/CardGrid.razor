@@ -257,6 +257,7 @@
                 <span class="c-thumb @(Gold(card, count) ? "gold-flair" : "")"
                       data-tip-img="@card.ArtUrl" data-tip="@card.Name" role="gridcell">
                     <img class="thumb" data-src="@card.ArtUrl" alt="" decoding="async" draggable="false" />
+                    <span class="art-wait" aria-hidden="true"></span>
                 </span>
 
                 @* Always rendered, empty or not: the row is a CSS grid, so a skipped cell shifts

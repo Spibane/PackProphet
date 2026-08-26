@@ -603,6 +603,35 @@ main:focus { outline: none; }
 .set-tab.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
 .set-tab .pct { font-size: .82rem; opacity: .75; }
 
+/* With a wrapper on it the tab is a thumbnail beside its label rather than two stacked lines, so
+   the flex direction flips and the label keeps the stack it had. The thumbnail is the one used in
+   every table that names a pack, at the height of the two text lines beside it. */
+.set-tab:has(.pack-thumb) { flex-direction: row; align-items: center; gap: 0; }
+.set-tab .lbl { display: flex; flex-direction: column; line-height: 1.15; }
+.set-tab .pack-thumb { width: 1.1rem; height: 1.55rem; margin-right: .35rem; flex: none; }
+
+/* The boosters as the pack filter. Recognition rather than a dropdown of names: this is how the
+   game asks the same question. Wraps, because a set can have three packs and a phone is 375px. */
+.pack-picks { display: flex; flex-wrap: wrap; gap: .25rem; }
+.pack-pick {
+    display: inline-flex; align-items: center; gap: .35rem;
+    min-height: 2.75rem;
+    padding: .15rem .5rem .15rem .3rem;
+    border: 1px solid var(--bs-border-color); border-radius: .35rem;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .9rem; line-height: 1.2; white-space: nowrap;
+}
+.pack-pick:hover { border-color: var(--bs-primary); }
+/* Tinted rather than filled: the art is the point, and a solid primary behind a wrapper turns it
+   into a stamp you cannot read. */
+.pack-pick.on {
+    border-color: var(--bs-primary);
+    background: color-mix(in srgb, var(--bs-primary) 22%, var(--bs-body-bg));
+    font-weight: 600;
+}
+.pack-pick:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+.pack-pick .pack-thumb { width: 1.5rem; height: 2.05rem; margin: 0; flex: none; }
+
 /* A grid, not a flex row: with eight statistics the flex version wrapped into ragged rows whose
    columns did not line up. auto-fill keeps them aligned at any width without breakpoints. */
 /* Bootstrap's .table-responsive is an overflow-x scroller, and a scroller whose content is plain
@@ -2879,6 +2908,17 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 
 /* A row of toggle chips: rarity marks and type pips, several selectable at once. Replaces two
    single-select dropdowns whose whole vocabulary was words for things the game draws.
+
+   Two things in this file look like this one and are not:
+
+     .rarity-chip   one rung of the completion PLAN, cycling none/1/2 copies. A text label
+                    ("1◆ x2"), because a count has to be readable, and it configures the
+                    estimates rather than the list in front of you.
+     .chip-filter   the pill on the always-on bar reporting a filter that IS applied, whose only
+                    action is to clear it. A report, not a control you choose from.
+
+   What belongs here is a set of mutually compatible choices, drawn as the game draws them, where
+   selecting none means all.
 
    Wraps rather than scrolls sideways. Fourteen type pips need about 26rem and a phone has 23, so
    one line was never going to hold them at 375px; a wrapped second row is readable, whereas a

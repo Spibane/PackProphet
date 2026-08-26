@@ -85,16 +85,22 @@ else
                     <button class="set-tab @(set == _set ? "active" : "")"
                             @onclick="() => SelectSet(set)" disabled="@Busy.IsBusy"
                             title="@Session.Sets.DisplayName(set)">
-                        @* The set's logo, so the row can be read at a glance rather than decoded
-                           from two-character codes: B2a and B2b are the same three characters in a
-                           different order, and their logos are not. The code and the percentage
-                           stay -- the logo names the set, but only the code names the tab.
+                        @* A wrapper from the set, so the row can be read at a glance rather than
+                           decoded from two-character codes: B2a and B2b are the same three
+                           characters in a different order, and their wrappers are not.
 
-                           The same image the sticky strip and the log screen use. One set, one
-                           identity: a booster here and a wordmark there would be two pictures for
-                           the same thing. *@
-                        <span class="set-logo" aria-hidden="true"
-                              style="background-image:url('@PocketCard.SetLogoUrl(set)')"></span>
+                           A wrapper and not the set's logo, which is what the sticky strip shows.
+                           The logo is a wordmark 256px wide by 113 tall, and a tab has to hold it
+                           beside a code and a percentage -- at the height those two lines allow it
+                           is a smudge. A booster is tall, which is the shape the space left over
+                           here actually is, and it is recognisable at 18px wide where lettering is
+                           not. Same set, two pictures, because the two places have opposite
+                           shapes to fill. *@
+                        @if (SetArtUrl(set) is { Length: > 0 } art)
+                        {
+                            <span class="pack-thumb" aria-hidden="true"
+                                  style="background-image:url('@art')"></span>
+                        }
                         <span class="lbl">
                             @set
                             <span class="pct">@Progress(set).ToString("P0")</span>
@@ -650,6 +656,19 @@ else
 
     private double ProgressOf(IReadOnlyList<PocketCard> cards) =>
         cards.Count == 0 ? 0 : (double)cards.Count(c => Session.CountOf(c) > 0) / cards.Count;
+
+    /// <summary>
+    /// A wrapper to stand for a set on its tab: the first pack's art. A set with several packs gets
+    /// the first rather than all of them -- the tab is a few characters wide and the point is
+    /// recognition, not a contents list -- and a set with no published art gets an empty string,
+    /// which the markup reads as "draw no thumbnail".
+    /// </summary>
+    private string SetArtUrl(string set) =>
+        Session.Index.ByPack.Keys
+            .Where(k => k.StartsWith($"{set}:", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .Select(Session.PackArtUrl)
+            .FirstOrDefault(u => !string.IsNullOrEmpty(u)) ?? "";
 
     private IEnumerable<string> PacksInSet =>
         InSet.Where(c => c.IsPackObtainable).SelectMany(c => c.Packs!)

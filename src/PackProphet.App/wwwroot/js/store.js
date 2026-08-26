@@ -19,9 +19,10 @@ export function remove(key) {
     try { localStorage.removeItem(key); } catch { /* nothing to do */ }
 }
 
-/// Hand the user a file. Used for state export; nothing here ever leaves the device.
-export function download(filename, text) {
-    const blob = new Blob([text], { type: 'application/json' });
+/// Hand the user a file — a state backup, or a collection as CSV. The type is passed in
+/// rather than assumed, since those two are not the same. Nothing here ever leaves the device.
+export function download(filename, text, mime) {
+    const blob = new Blob([text], { type: mime || 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename;

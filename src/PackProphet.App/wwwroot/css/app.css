@@ -386,6 +386,85 @@ main:focus { outline: none; }
     --bs-secondary-bg: #e2e7ec;
 }
 
+/* ---------------------------------------------------------------- outline buttons
+
+   Bootstrap draws an outline button in its theme colour on a transparent background, which is a
+   contrast failure in BOTH themes and worse in dark. Measured with getComputedStyle against the
+   surface each button actually sits on — the raised panel, #edf0f4 light and #2b3035 dark, not
+   the body, since that is the darker or lighter of the two and every button clearing it also
+   clears the body.
+
+   Before, against that panel:
+
+     variant     light   dark
+     secondary   4.10    2.84
+     danger      3.96    2.94
+     primary     3.94    2.96
+
+   All six needed 4.5:1 and none had it; the dark ones were closer to half. The colours below are
+   the original hues mixed toward the surface's far end until they reach 4.8:1, which leaves a
+   little room for a future change to the panel fill without dropping back under the line. On the
+   body background they measure 5.5:1 or better.
+
+   Border as well as text: the outline IS the control's boundary, so it carries WCAG 1.4.11's
+   3:1 for non-text contrast, and it would look detached from the label if only one moved. */
+/* ---------------------------------------------------------------- de-emphasised text
+
+   `text-body-tertiary` is the app's quietest copy — the sentence under a destructive button, the
+   trademark notice. Bootstrap makes it the body colour at 50% alpha, which composites to a
+   contrast of 3.02:1 in light and 3.78:1 in dark against the panel it usually sits on. Both are
+   under 4.5:1, and the light one is barely half of it.
+
+   Quiet is a legitimate thing for this text to be, so the colour keeps its hue and only the alpha
+   moves: 0.7 is the first value clearing 4.8:1 in both themes on both surfaces (light needed
+   0.67, dark 0.61). It still reads as secondary to everything around it.
+
+   Worth saying which text this is NOT: `text-body-secondary` is the ordinary explanatory copy and
+   already passes. Only the tertiary rung was under. */
+[data-bs-theme="light"], :root:not([data-bs-theme="dark"]) {
+    --bs-tertiary-color: rgba(33, 37, 41, .7);
+}
+
+[data-bs-theme="dark"] {
+    --bs-tertiary-color: rgba(222, 226, 230, .7);
+}
+
+/* Written flat rather than nested. Nothing else in this file nests, and native CSS nesting is
+   unsupported before iOS 17.2 — where a nested block is not "mostly right", it is dropped whole,
+   putting the failing colours back with nothing to show for it. */
+[data-bs-theme="light"] .btn-outline-secondary,
+:root:not([data-bs-theme="dark"]) .btn-outline-secondary {
+    --bs-btn-color: #626a71;
+    --bs-btn-border-color: #626a71;
+}
+
+[data-bs-theme="light"] .btn-outline-danger,
+:root:not([data-bs-theme="dark"]) .btn-outline-danger {
+    --bs-btn-color: #c42f3d;
+    --bs-btn-border-color: #c42f3d;
+}
+
+[data-bs-theme="light"] .btn-outline-primary,
+:root:not([data-bs-theme="dark"]) .btn-outline-primary {
+    --bs-btn-color: #0c61e0;
+    --bs-btn-border-color: #0c61e0;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: #969ca2;
+    --bs-btn-border-color: #969ca2;
+}
+
+[data-bs-theme="dark"] .btn-outline-danger {
+    --bs-btn-color: #e87b85;
+    --bs-btn-border-color: #e87b85;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+    --bs-btn-color: #599cfe;
+    --bs-btn-border-color: #599cfe;
+}
+
 /* ================================================================= page chrome
 
    One contract, because the headers had drifted into ten different shapes: some pages opened

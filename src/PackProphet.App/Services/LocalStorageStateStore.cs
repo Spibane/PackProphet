@@ -92,6 +92,17 @@ public sealed class LocalStorageStateStore : IStateStore, IAsyncDisposable
         await module.InvokeVoidAsync("download", filename, StateSerializer.Export(state));
     }
 
+    /// <summary>
+    /// Hand the user any text file. The collection exports go through here rather than through
+    /// <see cref="ExportAsync"/>, which serialises the whole app state and is a backup — a
+    /// different thing with a different audience.
+    /// </summary>
+    public async Task DownloadAsync(string filename, string text, string mime = "text/csv")
+    {
+        var module = await ModuleAsync();
+        await module.InvokeVoidAsync("download", filename, text, mime);
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_module is null) return;

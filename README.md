@@ -135,7 +135,7 @@ container) you also need `libatomic`, which emscripten's bundled node links agai
 dotnet workload install wasm-tools
 
 dotnet run --project src/PackProphet.App          # http://localhost:5000
-dotnet test                                        # 568 tests
+dotnet test                                        # 764 tests
 ```
 
 `InvariantGlobalization` is on in Debug as well as Release. It changes string comparison and
@@ -190,10 +190,12 @@ Open problems, each with what has already been ruled out, live in
 
 Phases 1 and 2 are complete. See [CHANGELOG.md](CHANGELOG.md).
 
-- **Phase 3** — importing from other trackers, localisation, accessibility pass. Done: budget
-  allocation across packs ("Which pack" &rarr; splitting a budget), and shareable read-only
-  wishlist links (a wishlist's own page &rarr; share this list) — the recipient sees what is
-  wanted and, if they have their own collection loaded, which of it they already own.
+- **Phase 3** — localisation remains. Done: an accessibility pass (contrast measured in both
+  themes, names on every control, a text alternative for the chart), importing a collection from
+  another tracker and exporting it again (Settings &rarr; import/export, or `/collection/import`),
+  budget allocation across packs ("Which pack" &rarr; splitting a budget), and shareable
+  read-only wishlist links (a wishlist's own page &rarr; share this list) — the recipient sees
+  what is wanted and, if they have their own collection loaded, which of it they already own.
 - **Phase 4** — screenshot recognition of the in-game card list. Cloud sync last, since it is
   the first thing needing a backend.
 

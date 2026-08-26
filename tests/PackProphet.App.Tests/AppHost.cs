@@ -10,7 +10,13 @@ using PackProphet.Services;
 /// Refusing the CDN means every render test also exercises the offline fallback path: the loader
 /// tries the network first and falls back to the snapshot.
 /// </summary>
-internal sealed class SnapshotHandler : HttpMessageHandler
+/// <param name="onRemote">
+/// What a request that is not the local snapshot gets. The default is an immediate 404 — a CDN
+/// that is simply unreachable. A test that wants a CDN which hangs rather than fails passes
+/// something that never completes.
+/// </param>
+internal sealed class SnapshotHandler(
+    Func<CancellationToken, Task<HttpResponseMessage>>? onRemote = null) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken ct)
@@ -22,7 +28,8 @@ internal sealed class SnapshotHandler : HttpMessageHandler
         var marker = "data/snapshot/";
         var at = url.IndexOf(marker, StringComparison.Ordinal);
         if (at < 0 || request.RequestUri.Host != "test.local")
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            return onRemote?.Invoke(ct)
+                ?? Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
 
         var file = url[(at + marker.Length)..];
         var path = Path.Combine(AppContext.BaseDirectory, "snapshot", file);

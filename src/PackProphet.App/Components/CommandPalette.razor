@@ -238,6 +238,10 @@
         var actions = new List<Item>
         {
             new("action", "Import a deck from a screenshot", "scan the in-game code", "decks/import"),
+            new("action", "Import a collection from another tracker", "read a CSV export",
+                "collection/import"),
+            new("action", "Export this collection as CSV", "for a spreadsheet or another tracker",
+                "collection/export"),
             new("action", "New deck", "build one by hand", "decks/new"),
             new("action", "New wishlist", null, null, () => Nav.NavigateTo($"wishlists/{Session.CreateWishlist()}")),
             new("action", $"Theme: {Session.Theme}", "switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),

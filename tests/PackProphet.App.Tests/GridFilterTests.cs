@@ -1,6 +1,7 @@
 namespace PackProphet.App.Tests;
 
 using PackProphet.Pages;
+using PackProphet.Services;
 
 /// <summary>
 /// The grid's own bar: the filters that were promoted out of the disclosure, the chips that
@@ -165,10 +166,10 @@ public class GridFilterTests : AppHost
     }
 
     [Fact]
-    public async Task A_heart_on_the_tile_starts_a_wishlist_and_toggles_a_card_on_it()
+    public async Task A_heart_makes_the_want_list_and_toggles_a_card_on_it()
     {
-        // The whole point of the heart: wanting a card was reachable only from the card's own page,
-        // so recording it meant leaving the set you were looking at.
+        // The whole point of the heart: wanting a card was reachable only from that card's own
+        // page, so recording it meant leaving the set you were looking at.
         var page = await PageAsync();
 
         Assert.Empty(Session.Wishlists);
@@ -183,8 +184,10 @@ public class GridFilterTests : AppHost
 
         await ClickAsync(page, ".card-tile .want");
 
-        // A list appears without asking for a name, exactly as the card page does it.
+        // A list of its own, named and pointed at, without asking for anything.
         var list = Assert.Single(Session.Wishlists);
+        Assert.Equal(AppSession.WantListName, list.Name);
+        Assert.Equal(list.Id, Session.Profile.WantListId);
         Assert.Single(list.Wanted);
 
         page.WaitForAssertion(() =>
@@ -194,47 +197,77 @@ public class GridFilterTests : AppHost
         // And off again: one tap is the whole control, in both directions.
         await ClickAsync(page, ".card-tile .want");
         page.WaitForAssertion(() => Assert.Empty(Session.Wishlists[0].Wanted));
+
+        // The list stays. Emptying it is not the same as deleting it, and a heart that destroyed
+        // its own list would take the "hearts" mark with it every time you changed your mind.
+        Assert.Single(Session.Wishlists);
     }
 
     [Fact]
-    public async Task The_heart_names_which_list_it_writes_to_only_when_there_is_a_choice()
+    public async Task The_hearts_never_write_into_a_list_you_curated()
     {
+        // The reason the hearts have a list of their own. Filling whichever wishlist happened to be
+        // first would quietly rewrite the one thing on that page you built deliberately.
         var page = await PageAsync();
 
-        Session.CreateWishlist("first");
+        var mine = Session.CreateWishlist("Deck cards");
         page.Render();
-        Assert.Empty(page.FindAll(".want-target"));
-
-        Session.CreateWishlist("second");
-        page.Render();
-        Assert.Single(page.FindAll(".want-target"));
-
-        // The hearts follow the chosen list, not the first one.
-        var second = Session.Wishlists.First(w => w.Name == "second");
-        page.Find(".want-target select").Change(second.Id);
 
         page.Find(".grid-search").Input("wurmple");
         await ClickAsync(page, ".card-tile .want");
-        page.WaitForAssertion(() =>
-            Assert.NotEmpty(Session.Wishlists.First(w => w.Id == second.Id).Wanted));
 
-        Assert.Empty(Session.Wishlists.First(w => w.Name == "first").Wanted);
+        Assert.Empty(Session.Wishlists.First(w => w.Id == mine).Wanted);
+
+        var hearts = Session.Wishlists.First(w => w.Id == Session.Profile.WantListId);
+        Assert.NotEqual(mine, hearts.Id);
+        Assert.NotEmpty(hearts.Wanted);
     }
 
     [Fact]
-    public async Task The_set_strip_appears_only_where_the_list_spans_sets()
+    public async Task Deleting_the_want_list_lets_the_next_heart_make_another()
     {
+        // A stored id whose list has gone reads as "no list yet" rather than as a broken pointer,
+        // which is what makes the list safe to delete from the wishlists page.
         var page = await PageAsync();
 
-        // One set selected: the header two bars up already names it, so a strip repeating it would
-        // be a row spent on nothing.
-        await ChooseAsync(page, "A", "A1");
-        page.WaitForAssertion(() => Assert.Empty(page.FindAll(".grid-spy")));
+        page.Find(".grid-search").Input("wurmple");
+        await ClickAsync(page, ".card-tile .want");
 
-        // Every set: now there is something to say, and every row carries the answer for the
-        // script that reads it.
-        await ChooseAsync(page, "*", "All cards");
+        var first = Session.Profile.WantListId;
+        Assert.NotNull(first);
+
+        Session.DeleteWishlist(first!);
+        Assert.Empty(Session.Wishlists);
+
+        page.Render();
+        page.Find(".grid-search").Input("wurmple");
+        await ClickAsync(page, ".card-tile .want");
+
+        var second = Session.Profile.WantListId;
+        Assert.NotNull(second);
+        Assert.NotEqual(first, second);
+        Assert.NotEmpty(Session.Wishlists.Single().Wanted);
+    }
+
+    [Fact]
+    public async Task Rows_are_marked_with_their_set_only_where_the_list_spans_sets()
+    {
+        // The marking is the gate on the strip: the script reads it, so an unmarked grid leaves the
+        // strip empty and the stylesheet drops it. The strip element itself is always in the DOM,
+        // because the same script publishes where the sticky bars end, which every grid needs.
+        var page = await PageAsync();
+
+        await ChooseAsync(page, "A", "A1");
         page.WaitForAssertion(() => Assert.Single(page.FindAll(".grid-spy")));
+
+        // One set: the header two bars up already names it, so nothing is marked and the strip has
+        // nothing to say.
+        page.WaitForAssertion(() => Assert.Empty(page.FindAll("[data-group]")));
+
+        // Every set: now there is something to report, and every row carries the answer.
+        await ChooseAsync(page, "*", "All cards");
+
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[data-group]")));
 
         var groups = page.FindAll("[data-group]")
             .Select(e => e.GetAttribute("data-group"))

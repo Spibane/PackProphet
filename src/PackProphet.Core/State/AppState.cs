@@ -300,6 +300,20 @@ public sealed record Profile(
     /// </summary>
     public string? InGameName { get; init; }
 
+    /// <summary>
+    /// The wishlist the grid's hearts write to, or null until the first heart makes one.
+    ///
+    /// Its own list rather than "whichever wishlist happens to be first". A heart is a one-tap
+    /// note that you want a card; a wishlist is something you curate and price packs against, and
+    /// dropping every passing heart into the first curated list quietly rewrites the thing you
+    /// built on purpose. Named separately, so the two can be told apart on the wishlists page.
+    ///
+    /// An id rather than a name, so renaming the list keeps the hearts pointed at it, and nullable
+    /// so existing saves deserialize unchanged. A stale id -- the list was deleted -- reads as
+    /// "no list yet", and the next heart makes a new one.
+    /// </summary>
+    public string? WantListId { get; init; }
+
     public static Profile NewDefault(string id = "default", string name = "My collection") =>
         new(id, name, new(), TargetSettings.Default, [], [], [], [], Resources.Empty);
 }

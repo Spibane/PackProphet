@@ -100,6 +100,47 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **The hearts get a list of their own.** A heart used to fill whichever wishlist happened to be
+  first, which quietly rewrites the one list on that page you built deliberately. There is now a
+  **Want it** list, made by the first heart and marked as the hearts' list wherever wishlists are
+  shown. Deleting it is safe: the next heart makes another.
+
+- **The heart is off the tile grid on a touch screen.** A permanent button in the corner of every
+  tile is a permanent hazard in the one layout whose whole job is being tapped, and a miss there
+  costs a copy of the wrong card. The list view keeps its column, and a long press on a tile still
+  opens the card, where the wishlists have always been — so on a phone wanting a card is a
+  deliberate act on a screen with room for it.
+
+- **The heart has its own column in list view.** It was next to the −/+ buttons and beside the
+  count: three small square buttons in a row, one of which does something completely different
+  from the other two, sitting next to the number it was most likely to be confused with. It is now
+  at the front of the row, unbordered, where it reads as a mark against the row.
+
+- **The rarity and type chips say what they are.** Side by side on a wide screen they read as one
+  row of twenty-four unexplained buttons; stacked on a narrow one, two rows of unexplained buttons.
+  Each row is now a labelled group — RARITY, TYPE, PACK — separated by the same divider the bar
+  already uses, and the visible label is also the group's accessible name.
+
+- **One control height per bar.** Every bar mixed 31px Bootstrap controls, 40px set tabs and 44px
+  filter chips, which reads as a row that was assembled rather than designed. The height is now a
+  token: 36px on a mouse, 44px on a coarse pointer, so every control in a bar grows together rather
+  than singling out the chips. The page header is deliberately exempt — its 3rem is a contract the
+  sticky toolbar below it depends on, and at 44px the log screen's header squeezed the pack name
+  down to "R.".
+
+- **The sticky bars no longer hide what sticks under them.** The set strip and the list view's
+  column headers were both pinned at `top: 0` beneath a toolbar that is also pinned there and paints
+  over them — so both vanished on the first scroll, which is the state they exist for. CSS cannot
+  express "under my previous sibling" when that sibling's height depends on how many rows it wrapped
+  into, so the script that fills the strip now measures the bars and publishes the offset for the
+  stylesheet to use.
+
+- **The gap under the pinned header on the log screen.** The toolbar below it was pinned at a
+  constant `3rem + 1px`, which border-box rounding left a sub-pixel strip short of the header —
+  with the card grid scrolling through it. Measured now, and it was wrong in the other direction
+  too: once the controls grew on a phone the header became 56px and the same constant would have
+  pinned the toolbar nine pixels *underneath* it.
+
 - **The grid's own bar, rebuilt around what gets used.** Four things came out from behind the
   "filters and layout" summary. **List mode** now has its switch on the always-on bar: it is the
   view carrying the set and number, type, rarity, a count you can type into and the printed text,

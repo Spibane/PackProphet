@@ -79,6 +79,16 @@ else if (Id is null)
                             </div>
 
                             <div class="badges">
+                                @* Which list the grid's hearts fill. Said here because it is the
+                                   one list in here that fills itself, and someone deleting lists
+                                   should know which one that is before it goes. *@
+                                @if (list.Id == Session.Profile.WantListId)
+                                {
+                                    <span class="badge text-bg-info"
+                                          title="The heart on a card in the collection grid adds it to this list">
+                                        hearts
+                                    </span>
+                                }
                                 @if (list.Wanted == 0)
                                 {
                                     <span class="badge text-bg-secondary">empty</span>
@@ -144,7 +154,16 @@ else if (Id is null)
                     @foreach (var list in _lists)
                     {
                         <tr>
-                            <td><a href="wishlists/@list.Id"><strong>@list.Name</strong></a></td>
+                            <td>
+                                <a href="wishlists/@list.Id"><strong>@list.Name</strong></a>
+                                @if (list.Id == Session.Profile.WantListId)
+                                {
+                                    <span class="badge text-bg-info ms-1"
+                                          title="The heart on a card in the collection grid adds it to this list">
+                                        hearts
+                                    </span>
+                                }
+                            </td>
                             <td class="num">@list.Wanted</td>
                             <td class="num">
                                 @if (list.Wanted == 0)

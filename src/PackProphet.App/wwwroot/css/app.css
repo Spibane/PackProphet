@@ -1003,6 +1003,60 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
     box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
 }
 
+/* Want it: top-left, the last corner not already spoken for. Bottom-centre is the info button,
+   bottom-right the owned count, bottom-left the picked count, and top-right is the HP printed on
+   every Pokémon card. Top-left covers the stage word, which the list view also carries in a column
+   of its own.
+
+   Sized in percentages of the tile like everything else here, because the grid runs from three
+   columns to ten and a fixed rem is a slab at one end and a speck at the other. Unlike the info
+   button it does NOT hide on a touch screen: there is no long-press alternative for wanting a
+   card, so hiding it would remove the feature rather than tidy it. */
+.card-tile .want {
+    position: absolute; left: 4px; top: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 27%; min-width: 1.9rem; max-width: 2.6rem;
+    height: 22%; min-height: 1.9rem; max-height: 2.6rem;
+    padding: 0;
+    border-radius: .6rem;
+    background: rgba(0, 0, 0, .62);
+    border: 1px solid rgba(255, 255, 255, .3);
+    /* Unfilled, the heart is an outline in white; filled, it is the app's own accent, so "on" is
+       a change of colour AND of fill rather than colour alone. */
+    color: #fff;
+    opacity: .8;
+    transition: opacity .08s linear;
+}
+.card-tile:hover .want { opacity: 1; }
+.card-tile .want.on {
+    background: rgba(0, 0, 0, .72);
+    border-color: var(--bs-danger);
+    color: var(--bs-danger);
+    opacity: 1;
+}
+.card-tile .want svg { width: 62%; height: 62%; }
+.card-tile .want:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+
+/* The same toggle in a list row, where it is one button among three and sized like them. */
+.card-line .c-acts .want {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.7rem; height: 1.7rem;
+    border: 1px solid var(--bs-border-color); border-radius: .3rem;
+    background: var(--bs-body-bg); color: var(--bs-secondary-color);
+}
+.card-line .c-acts .want:hover { border-color: var(--bs-danger); color: var(--bs-danger); }
+.card-line .c-acts .want.on { color: var(--bs-danger); border-color: var(--bs-danger); }
+.card-line .c-acts .want:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+
+/* Which wishlist the hearts write to. A label, not a filter: it changes what a tap DOES rather
+   than which cards are listed, so it sits at the end of the row after the separator. */
+.want-target { display: inline-flex; align-items: center; gap: .35rem; }
+.want-target .ttl {
+    font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--bs-secondary-color); white-space: nowrap;
+}
+.want-target select { max-width: 9rem; }
+
 /* Sweep mode suppresses the browser's own touch gestures so a drag selects instead of
    scrolling. Only while armed. */
 .grid-wrap.sweeping, .grid-wrap.sweeping .card-tile { touch-action: none; }

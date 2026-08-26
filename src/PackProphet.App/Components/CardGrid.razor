@@ -355,6 +355,23 @@
                     }
                 </span>
                 <span class="c-acts" role="gridcell">
+                    @* The same toggle the tile carries. Both views, because either can be the one
+                       you are in when you notice you want something. *@
+                    @if (OnWant.HasDelegate)
+                    {
+                        var wanted = WantedOf?.Invoke(card) ?? 0;
+                        <button class="want @(wanted > 0 ? "on" : "")" @onclick="() => OnWant.InvokeAsync(card)"
+                                @onclick:stopPropagation="true"
+                                aria-pressed="@(wanted > 0 ? "true" : "false")"
+                                aria-label="@(wanted > 0 ? $"On your wishlist: {card.Name}" : $"Add {card.Name} to your wishlist")"
+                                title="@(wanted > 0 ? "On your wishlist" : "Add to your wishlist")">
+                            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
+                                <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
+                                      fill="@(wanted > 0 ? "currentColor" : "none")"
+                                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                    }
                     <button class="step" @onclick="() => Bump(card, -1)" @onclick:stopPropagation="true"
                             disabled="@(count == 0 && PickedOf is null)" aria-label="Remove one">&minus;</button>
                     <button class="step" @onclick="() => Bump(card, +1)" @onclick:stopPropagation="true"
@@ -379,6 +396,8 @@
                               Count="CountOf(card)"
                               Gold="@Gold(card, CountOf(card))"
                               Picked="@(PickedOf?.Invoke(card) ?? 0)"
+                              Wanted="@(WantedOf?.Invoke(card) ?? 0)"
+                              OnWant="OnWant"
                               ShowInfo="@(!Sweeping)"
                               OnHold="OpenDetail"
                               OnActivate="Activate" />
@@ -427,6 +446,16 @@
     /// off entirely rather than showing one that never changes.
     /// </summary>
     [Parameter] public Func<PocketCard, string>? GroupOf { get; set; }
+
+    /// <summary>
+    /// Copies of a card wanted on the wishlist the page is currently pointing at. Optional: where
+    /// it is absent no heart is drawn, which is right on a grid whose taps mean something other
+    /// than owning — logging a pack.
+    /// </summary>
+    [Parameter] public Func<PocketCard, int>? WantedOf { get; set; }
+
+    /// <summary>Toggle a card on that wishlist. The page owns which list "that" is.</summary>
+    [Parameter] public EventCallback<PocketCard> OnWant { get; set; }
 
     /// <summary>Rarity rung, for drawing the game's own symbols instead of a code.</summary>
     [Parameter] public Func<PocketCard, RarityRung?>? RungOf { get; set; }

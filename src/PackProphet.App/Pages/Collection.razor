@@ -198,6 +198,7 @@ else
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
               RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
               SortKeyOf="Session.Sets.SortKey" GroupOf="GroupLabel"
+              WantedOf="WantedOf" OnWant="ToggleWant"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady">
         @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
            header, the set tabs, a filter row and a control row, this page put five bars above the
@@ -334,7 +335,27 @@ else
                 </div>
             }
 
-    
+            @* Which list the hearts write to. Only with more than one: with a single wishlist the
+               question does not arise, and with none the first heart makes one.
+
+               It is a filter-bar control rather than a per-card menu because a heart has to stay
+               one tap. Choosing a list per card would put a menu between noticing you want
+               something and recording it, which is the friction that stops the feature being used
+               -- the same reason the card page will start a list without asking for a name. *@
+            @if (Session.Wishlists.Count > 1)
+            {
+                <span class="bar-sep" aria-hidden="true"></span>
+                <label class="want-target">
+                    <span class="ttl">hearts add to</span>
+                    <select class="form-select form-select-sm" @onchange="OnWantList"
+                            aria-label="Which wishlist the hearts add to">
+                        @foreach (var list in Session.Wishlists)
+                        {
+                            <option value="@list.Id" selected="@(list.Id == WantListId)">@list.Name</option>
+                        }
+                    </select>
+                </label>
+            }
         </Filters>
         <ToolbarExtras>
             @* Columns only mean something in the grid layout. *@
@@ -523,6 +544,44 @@ else
     }
 
     private void TogglePack(string pack) => _pack = _pack == pack ? "" : pack;
+
+    /// <summary>
+    /// The wishlist the hearts write to. Chosen, or the first one — not remembered in the profile:
+    /// it is a pointer for this visit rather than a setting, and a stored id would go stale the
+    /// moment that list was deleted.
+    /// </summary>
+    private string? _wantList;
+
+    private string? WantListId =>
+        _wantList is { Length: > 0 } id && Session.Wishlists.Any(w => w.Id == id)
+            ? id
+            : Session.Wishlists.FirstOrDefault()?.Id;
+
+    private void OnWantList(ChangeEventArgs e) => _wantList = Text(e);
+
+    /// <summary>
+    /// Copies of a card wanted on that list. The list rather than "any list": the heart is a
+    /// two-state control, and filling it for a card wanted somewhere else would make the next tap
+    /// -- which can only act on one list -- look like it had done nothing.
+    /// </summary>
+    private int WantedOf(PocketCard card) =>
+        WantListId is { } id && Session.Wishlists.FirstOrDefault(w => w.Id == id) is { } list
+            ? list.Wanted.GetValueOrDefault(card.OwnershipKey)
+            : 0;
+
+    /// <summary>
+    /// On or off, one copy. Wanting four of something is a wishlist-page question, and answering it
+    /// here would mean a heart that cycles through counts with no way to see what it landed on.
+    ///
+    /// With no wishlist at all the first heart makes one, unnamed, exactly as the card page does:
+    /// stopping to name something is the friction this is meant to remove.
+    /// </summary>
+    private void ToggleWant(PocketCard card)
+    {
+        var id = WantListId ?? Session.CreateWishlist();
+        _wantList = id;
+        Session.SetWanted(id, card.OwnershipKey, WantedOf(card) > 0 ? 0 : 1);
+    }
 
     /// <summary>
     /// aria-pressed as text rather than as a bool.

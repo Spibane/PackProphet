@@ -2877,6 +2877,45 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
     padding: .35rem calc(.75rem + var(--safe-r)) .6rem calc(.75rem + var(--safe-l));
 }
 
+/* A row of toggle chips: rarity marks and type pips, several selectable at once. Replaces two
+   single-select dropdowns whose whole vocabulary was words for things the game draws.
+
+   Wraps rather than scrolls sideways. Fourteen type pips need about 26rem and a phone has 23, so
+   one line was never going to hold them at 375px; a wrapped second row is readable, whereas a
+   horizontal scroller hides half the types behind a gesture with nothing to suggest it. Both rows
+   live inside the filters disclosure, so the two lines cost the grid nothing until opened.
+
+   Nothing selected is "everything", so an untouched row is all-quiet: no chip carries the on
+   state, and the bar above shows no chip. */
+.chip-toolbar { display: flex; flex-wrap: wrap; gap: .25rem; }
+.chip-tog {
+    display: inline-flex; align-items: center; justify-content: center;
+    /* A 44px touch target on a phone, where these are tapped, and the same box on a desktop so
+       the two rows do not change height between layouts. */
+    min-width: 2.75rem; min-height: 2.75rem;
+    padding: .1rem .35rem;
+    border: 1px solid var(--bs-border-color); border-radius: .35rem;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    line-height: 1;
+}
+.chip-tog:hover:not(:disabled) { border-color: var(--bs-primary); }
+/* The selected state is a filled chip rather than only a border, because a border alone against
+   the panel measured under 3:1 and a filter you cannot see is the failure mode this whole bar
+   exists to avoid. */
+.chip-tog.on {
+    border-color: var(--bs-primary);
+    background: color-mix(in srgb, var(--bs-primary) 22%, var(--bs-body-bg));
+}
+.chip-tog:disabled { opacity: .5; cursor: default; }
+.chip-tog:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+/* Same size as a list row draws them, so a chip and a card agree on what a rarity looks like. */
+.chip-tog .glyphs { font-size: 1.05rem; letter-spacing: -.04em; white-space: nowrap; }
+
+/* The grid/list switch, promoted from the disclosure to the always-on bar. Pinned to the far end
+   of the row: it is the one control there that changes nothing about WHICH cards are listed, and
+   the bar's own convention is filters left, layout right. */
+.grid-toolbar .layout-switch { flex: none; }
+
 /* An applied filter, and the control that removes it — the same object, because a chip that only
    reported the state would leave you hunting for the dropdown that set it. */
 .chip-filter {

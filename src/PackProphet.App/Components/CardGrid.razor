@@ -24,6 +24,10 @@
 <div class="grid-toolbar">
     @Search
 
+    @* The one or two filter states worth a tap rather than a trip into the disclosure. Passed in
+       by the page, because which view you reach for most often differs from page to page. *@
+    @Toggles
+
     @* An explicit add/remove mode, since there was otherwise no way to decrement on a touch
        device: shift-click is both undiscoverable and unavailable on a phone.
 
@@ -77,6 +81,25 @@
             <span class="text-danger-emphasis"> · @_imgFailed art failed</span>
         }
     </span>
+
+    <span class="bar-sep" aria-hidden="true"></span>
+
+    @* Promoted out of the disclosure it used to share with the layout options. List mode is not a
+       preference among equals: it is the only view that carries a count per row, a typed count, the
+       set and number, type, rarity and the printed text, and it is the answer to half of what a
+       tile grid cannot do. Behind a summary reading "filters and layout" it was findable only by
+       someone who already suspected it existed. The density toggle stays inside, because it only
+       means anything once you are in list mode and this row has to survive a phone. *@
+    <div class="btn-group btn-group-sm layout-switch" role="group" aria-label="Layout">
+        <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
+                @onclick="() => SetList(!ListView)" aria-pressed="@(!ListView)"
+                title="Card images in a grid">grid</button>
+        <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
+                @onclick="() => SetList(!ListView)" aria-pressed="@ListView"
+                title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
+            list
+        </button>
+    </div>
 </div>
 
 <details class="toolbar-more">
@@ -87,17 +110,6 @@
         @Filters
         <span class="bar-sep" aria-hidden="true"></span>
     }
-
-    <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
-        <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
-                @onclick="() => SetList(!ListView)" aria-pressed="@(!ListView)"
-                title="Card images in a grid">grid</button>
-        <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetList(!ListView)" aria-pressed="@ListView"
-                title="Compact rows with names and exact counts — easier to scan, and usable with images off">
-            list
-        </button>
-    </div>
 
     @* Density, list only. Compact fits far more cards on screen; roomy trades that for the
        attack and ability text inline, which compact can only show on hover. *@
@@ -463,6 +475,14 @@
     /// comment in the markup.
     /// </summary>
     [Parameter] public RenderFragment? Filters { get; set; }
+
+    /// <summary>
+    /// Filter toggles for the always-on bar — the one or two states a page is switched between
+    /// often enough that a trip into the disclosure is the wrong price. Not a replacement for the
+    /// control in <see cref="Filters"/> that sets the same state: a page offering six ownership
+    /// filters keeps the select, and promotes only the one that gets used every session.
+    /// </summary>
+    [Parameter] public RenderFragment? Toggles { get; set; }
 
     /// <summary>
     /// The search box. Kept out of <see cref="Filters"/> and out of the disclosure: it is the

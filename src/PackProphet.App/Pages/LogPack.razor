@@ -202,7 +202,7 @@ else
 
     @* No remove mode here: a tap means "this came out of the pack", and the picked strip above is
        how you take one back. *@
-    <CardGrid Cards="_inPack" CountOf="Session.CountOf" Columns="Session.GridColumns"
+    <CardGrid Cards="Shown" CountOf="Session.CountOf" Columns="Session.GridColumns"
               OnAdjust="OnTap" OnSweep="OnSweep" AllowRemove="false"
               PickedOf="PickedCount"
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
@@ -210,7 +210,28 @@ else
               RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
               SortKeyOf="Session.Sets.SortKey"
               Summary="@PickedSummary"
-              FactOf="Session.FactFor" FactsReady="Session.FactsReady" />
+              FactOf="Session.FactFor" FactsReady="Session.FactsReady">
+        @* The screen where speed matters most was the one screen with no way to type. A pack holds
+           up to two hundred and thirty cards and you are looking for five specific ones, so finding
+           them meant scanning the whole grid five times. Names, not counts: the counts here are
+           what you pulled, and those go in with a tap.
+
+           The picked strip above is unfiltered, so narrowing the grid never hides what you have
+           already logged -- which is what makes it safe to type a name, tap, and type the next. *@
+        <Search>
+            <input class="form-control form-control-sm grid-search"
+                   placeholder="find a card in this pack" aria-label="Find a card in this pack"
+                   value="@_find" @oninput="OnFind" />
+        </Search>
+
+        <FilterChips>
+            @if (_find is { Length: > 0 })
+            {
+                <button class="chip-filter" @onclick="ClearFind"
+                        aria-label="Clear the name search">name: @_find &times;</button>
+            }
+        </FilterChips>
+    </CardGrid>
 }
 
 @code {
@@ -218,6 +239,10 @@ else
     private string _series = "";
     private string? _pack;
     private IReadOnlyList<PocketCard> _inPack = [];
+
+    /// <summary>Name search over the pack in front of you. Never touches what has been picked.</summary>
+    private string _find = "";
+
     private readonly List<PocketCard> _picked = [];
     private (int cards, string set, int points, bool capped)? _justLogged;
 
@@ -326,6 +351,9 @@ else
         _justLogged = null;
         _miscount = null;
         _picked.Clear();
+        // A name typed while looking for a card in the last pack would otherwise hide most of the
+        // next one, with only a chip on the bar to explain why.
+        _find = "";
         // Set then number, not number alone: a Deluxe pack contains reprints from earlier sets,
         // so ordering by number interleaves them.
         _inPack = Session.Index.ByPack.TryGetValue(pack, out var cards)
@@ -333,7 +361,21 @@ else
             : [];
     }
 
-    private void Reset() { _pack = null; _picked.Clear(); _justLogged = null; _miscount = null; }
+    private void Reset() { _pack = null; _picked.Clear(); _justLogged = null; _miscount = null; _find = ""; }
+
+    /// <summary>
+    /// The pack, narrowed by the name box. Not cached: a pack is at most a few hundred cards and
+    /// the filter runs on a keystroke, where the collection grid's cache exists because that one
+    /// re-filters thousands on every tap.
+    /// </summary>
+    private IReadOnlyList<PocketCard> Shown =>
+        string.IsNullOrWhiteSpace(_find)
+            ? _inPack
+            : _inPack.Where(c => c.Name.Contains(_find, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+    private void OnFind(ChangeEventArgs e) => _find = e.Value?.ToString() ?? "";
+
+    private void ClearFind() => _find = "";
 
     // Tapping a card in this view means "this came out of the pack", not "+1 owned" — the
     // collection is only touched once the pack is committed, so a mis-tap costs nothing.

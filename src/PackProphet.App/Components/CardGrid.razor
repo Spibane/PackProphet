@@ -428,7 +428,28 @@
         <Virtualize Items="_rows" ItemSize="@RowHeight" Context="row" OverscanCount="3">
             @* The row's group is its FIRST card's. A row can straddle two sets, and the reader
                is asking "where am I", which the card at the left edge answers. *@
-            <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row"
+
+            @* Keyed on the row, not just on the tiles inside it, and that is what stops the whole
+               grid blinking on a fast scroll.
+               ==============================================================================
+               Blazor matches keys only among siblings. With the key one level down, on the tiles,
+               the row <div>s were matched POSITIONALLY: after a scroll of one row, item 0 is a
+               different row of cards, so its div was reused and every keyed tile in it was a new
+               key — destroy, rebuild — and the same again for item 1, item 2, all the way down.
+               Every visible tile's DOM was thrown away on every window change.
+
+               The <img> elements went with it. Their src is set by js/imgloader.js rather than by
+               the renderer, so a fresh element comes back with data-src and nothing else: hidden,
+               pending, waiting on the loader. All of them at once. Art that had been on screen for
+               a minute vanished for a frame or two and came back, which is the flash.
+
+               With the key here, a row still on screen is matched by identity and MOVED, DOM and
+               loaded images intact. Only rows genuinely scrolling into view are built, which is
+               what should have been happening all along. *@
+            @* Guarded like the attributes below it: a row is never empty by construction, and
+               the key must not be the thing that discovers otherwise. *@
+            <div @key="@(row.Count > 0 ? (object)row[0].Card.Key : row)"
+                 class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row"
                  data-group="@(row.Count > 0 ? GroupLabelOf(row[0].Card) : null)"
                  data-group-art="@(row.Count > 0 ? GroupArtFor(row[0].Card) : null)">
                 @foreach (var (card, idx) in row)

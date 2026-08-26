@@ -4,6 +4,36 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
+## 0.4.1 — 2026-08-26
+
+### Fixed
+
+- **The hover tooltip landed on the card below the one you were pointing at.** It was placed off
+  the target's bottom edge, which is right for the 32px thumbnail in list view and wrong for a tile
+  three hundred pixels tall: the label opened a whole card-height under the cursor, at the corner of
+  the card in the next row. On the last row that fits on screen there was nowhere for it to go — the
+  only space below is the sliver of the next row, so it sat jammed against the bottom edge or
+  flipped up and covered the row before. It anchors to the pointer within the target now, so it
+  opens just under the cursor, over the card it names. A small target is unaffected: the offset is
+  less than a thumbnail, so the list view's preview still hangs off the row as it did.
+
+- **The whole grid's art blinked out for a frame whenever you scrolled quickly.** Not the tiles
+  coming into view — the ones already on screen, art loaded, going blank together and coming back.
+  The tiles carried a `@key` and the rows holding them did not, and Blazor matches keys only among
+  siblings: with the key one level too deep, the row elements were matched by position, so a scroll
+  of a single row made every tile in every rendered row a new key. Destroy, rebuild, all of them, on
+  every window change. The `<img>` elements went with their tiles, and their `src` is set by
+  `js/imgloader.js` rather than by the renderer, so each one came back with nothing to show while
+  the loader worked through them again. Keyed at the row, a row still on screen is matched by
+  identity and moved, its loaded images intact.
+
+- **Art the browser already had still queued behind the loader's six slots.** The cap exists to keep
+  a fast scroll from opening hundreds of streams on one HTTP/2 connection and having the CDN drop it;
+  a cache hit opens none, so making one wait its turn bought nothing and cost a tile its picture.
+  Urls that have loaded once are now shown straight away, and where the browser can answer in the
+  same tick — the memory-cache case, which is most of them — the tile is never painted as pending at
+  all. A url that turns out to have been evicted falls back to the managed queue.
+
 ## 0.4.0 — 2026-08-25
 
 A pass over the collection grid and the screens around it, started by comparing the app against

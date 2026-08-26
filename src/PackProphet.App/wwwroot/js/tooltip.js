@@ -21,7 +21,7 @@
         return tip;
     }
 
-    function show(target) {
+    function show(target, px, py) {
         const text = target.getAttribute('data-tip');
         const art = target.getAttribute('data-tip-img');
         if (!text && !art) return;
@@ -50,18 +50,48 @@
         el.style.visibility = 'hidden';
         el.style.display = 'block';
 
-        // Measure, then place: prefer below-right of the element, but flip or clamp rather
-        // than letting it run off screen.
+        // Measure, then place: prefer below-right, but flip or clamp rather than letting it run
+        // off screen.
+        //
+        // Anchored to the POINTER inside the target, not to the target's box.
+        //
+        // The box is right for a small target and wrong for a big one, and this tooltip serves
+        // both: a 32px list thumbnail and a card tile that is three hundred pixels tall. Off the
+        // tile's bottom edge the label landed a whole card-height below the cursor -- which is to
+        // say on top of the card in the NEXT row, at its corner, describing a card the reader was
+        // not pointing at. On the last row that fits on screen it went further: the only space
+        // left below is the sliver of the next row, so the label sat jammed against the bottom
+        // edge, or flipped above and covered the row before instead. Never over the card it names.
+        //
+        // Clamping the anchor to the pointer's neighbourhood covers both cases with one rule. The
+        // gap is smaller than a thumbnail, so a small target still anchors to its own edges to
+        // within a few pixels and behaves as it always did; a tile anchors just under the cursor,
+        // which is over the card being described.
         const r = target.getBoundingClientRect();
         const t = el.getBoundingClientRect();
         const margin = 8;
+        const gap = 6;
 
-        let left = r.left;
+        // A pointer position is not always available -- a focus or a programmatic show -- so fall
+        // back to the box, which is the old behaviour exactly.
+        const x = typeof px === 'number' ? px : r.left;
+        const y = typeof py === 'number' ? py : r.bottom;
+
+        // The pointer's own offset. Enough to clear the cursor graphic, no more: this is also how
+        // far the label sits from the thing it belongs to.
+        const reach = 18;
+
+        let left = Math.min(Math.max(x, r.left), r.right);
         if (left + t.width > window.innerWidth - margin) left = window.innerWidth - t.width - margin;
         if (left < margin) left = margin;
 
-        let top = r.bottom + 6;
-        if (top + t.height > window.innerHeight - margin) top = r.top - t.height - 6;
+        // Below the pointer, or below the target where the target is the smaller of the two.
+        let top = Math.min(r.bottom, y + reach) + gap;
+        if (top + t.height > window.innerHeight - margin) {
+            // No room: go above, by the same rule mirrored, so a tall tile still puts the label
+            // just over the cursor rather than at the top of the card.
+            top = Math.max(r.top, y - reach) - t.height - gap;
+        }
         if (top < margin) top = margin;
 
         el.style.left = `${left}px`;
@@ -94,10 +124,12 @@
         pending = null;
     }
 
-    function schedule(target) {
+    // The pointer position is captured per scheduling rather than read at fire time, so the label
+    // opens where the pointer came to rest -- which is the position the delay was waiting for.
+    function schedule(target, x, y) {
         if (timer) clearTimeout(timer);
         pending = target;
-        timer = setTimeout(() => { timer = null; pending = null; show(target); }, DELAY);
+        timer = setTimeout(() => { timer = null; pending = null; show(target, x, y); }, DELAY);
     }
 
     const SELECTOR = '[data-tip],[data-tip-img]';
@@ -114,7 +146,7 @@
 
         lastX = e.clientX;
         lastY = e.clientY;
-        schedule(target);
+        schedule(target, lastX, lastY);
     });
 
     // Restarts the countdown while the pointer is still travelling, so the tooltip waits for the
@@ -125,7 +157,7 @@
         if (Math.abs(e.clientX - lastX) > STILL || Math.abs(e.clientY - lastY) > STILL) {
             lastX = e.clientX;
             lastY = e.clientY;
-            schedule(pending);
+            schedule(pending, lastX, lastY);
         }
     }, { passive: true });
 

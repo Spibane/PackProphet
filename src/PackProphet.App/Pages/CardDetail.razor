@@ -84,15 +84,34 @@ else
                from the list side. *@
             <div class="want-row">
                 <span class="label">want it</span>
-                @if (Session.Wishlists.Count == 0)
-                {
-                    <button class="btn btn-sm btn-outline-primary" @onclick="WantOnNewList">
-                        start a wishlist with this card
-                    </button>
+
+                @* The same heart the collection grid has, on the same list, doing the same one
+                   thing. It comes first and it is always here, whether or not that list exists yet
+                   -- on a phone the tile hearts are hidden, so this is the only route to wanting a
+                   card, and "no wishlists yet" must not be the reason there is no way to say so.
+                   The curated lists follow it, where they can carry counts. *@
+                @{ var hearted = Session.WantedOnHeartList(_card.OwnershipKey) > 0; }
+                <button class="btn btn-sm want-heart @(hearted ? "on" : "")"
+                        @onclick="() => Session.ToggleWanted(_card.OwnershipKey)"
+                        aria-pressed="@Aria.Flag(hearted)"
+                        title="@(hearted ? $"On your {AppSession.WantListName} list — tap to take it off" : $"Add to your {AppSession.WantListName} list")">
+                    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false">
+                        <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
+                              fill="@(hearted ? "currentColor" : "none")"
+                              stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                    </svg>
+                    @AppSession.WantListName
+                </button>
+
+                @{
+                    // The hearts' own list is the button above, not one of the rows below: two
+                    // controls for one list, disagreeing about whether a tap means "on" or "one
+                    // more", is how you get a heart that appears to do nothing.
+                    var curated = Session.Wishlists.Where(w => w.Id != Session.Profile.WantListId).ToArray();
                 }
-                else
+                @if (curated.Length > 0)
                 {
-                    @foreach (var list in Session.Wishlists)
+                    @foreach (var list in curated)
                     {
                         var wanted = list.Wanted.GetValueOrDefault(_card.OwnershipKey);
                         @* Each tap adds a copy, so wanting four is four taps. The separate remove
@@ -242,7 +261,7 @@ else
             }
         </div>
 
-        <div>
+        <div class="routes">
             <h2 class="h6">How to get it</h2>
             @* All four routes, including the ones that do not exist for this rarity, so the absence
                of a route is stated rather than left blank. *@
@@ -446,19 +465,6 @@ else
     private void OnKey(KeyboardEventArgs e)
     {
         if (e.Key == "Escape") Back();
-    }
-
-    /// <summary>
-    /// First wishlist and first card in one tap. Naming the list can wait — the point of
-    /// being on this screen is that you want THIS card, and stopping to name something is
-    /// exactly the friction that stops a feature being used.
-    /// </summary>
-    private void WantOnNewList()
-    {
-        if (_card is null) return;
-
-        var id = Session.CreateWishlist();
-        Session.SetWanted(id, _card.OwnershipKey, 1);
     }
 
     private static bool HasPip(string subtype) => PipTypes.Contains(subtype);

@@ -295,6 +295,16 @@ function onKeyDown(e) {
             if (state.idx >= 0) state.owner.invokeMethodAsync('KeyOpen', state.idx);
             break;
 
+        // Want it. The heart in the caption is out of the tab order like everything else in a tile
+        // -- a focus stop per card would put thousands of them between this grid and the rest of the
+        // page -- so without a key it was a control only a mouse could reach. The grid's contract is
+        // that the cursor plus a letter does whatever a tile's own furniture does.
+        case 'w':
+        case 'W':
+            clearRange(state);
+            if (state.idx >= 0) state.owner.invokeMethodAsync('KeyWant', state.idx);
+            break;
+
         default:
             // A digit sets the count outright: 0-9 in place of nine presses of +.
             if (e.key >= '0' && e.key <= '9' && state.idx >= 0) {

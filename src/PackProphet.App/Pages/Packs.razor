@@ -198,14 +198,14 @@ else
         <div class="panel-toggles mb-3">
             @if (!IsWishScope)
             {
-                <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@_advisorOpen"
+                <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@Aria.Flag(_advisorOpen)"
                         @onclick="ToggleAdvisor">cost per rarity</button>
             }
-            <button class="btn btn-sm @Toggled(_batchOpen)" aria-pressed="@_batchOpen"
+            <button class="btn btn-sm @Toggled(_batchOpen)" aria-pressed="@Aria.Flag(_batchOpen)"
                     @onclick="ToggleBatch">buying @GameRules.PacksPerBatch at once</button>
-            <button class="btn btn-sm @Toggled(_allocateOpen)" aria-pressed="@_allocateOpen"
+            <button class="btn btn-sm @Toggled(_allocateOpen)" aria-pressed="@Aria.Flag(_allocateOpen)"
                     @onclick="ToggleAllocate">splitting a budget</button>
-            <button class="btn btn-sm @Toggled(_pointsOpen)" aria-pressed="@_pointsOpen"
+            <button class="btn btn-sm @Toggled(_pointsOpen)" aria-pressed="@Aria.Flag(_pointsOpen)"
                     @onclick="TogglePoints">pack points</button>
         </div>
 
@@ -605,6 +605,30 @@ else
                                         Trade and Wonder Pick are priced in their own currencies
                                         and never converted into packs.
                                     </div>
+
+                                    @* Where in the pack the chance actually is. The column above
+                                       says whether a pack helps; this says which card in it will
+                                       do the helping, and the two are not the same story -- the
+                                       first three cards of a five-card pack are commons, so a
+                                       collection that has finished the commons has all of its
+                                       chance in the last two. It is also why the same percentage
+                                       means different things in two sets. *@
+                                    var slots = SlotOddsFor(row.PackKey);
+                                    @if (slots.Count > 1)
+                                    {
+                                        <div class="slot-odds">
+                                            <span class="ttl">where the chance is</span>
+                                            @foreach (var slot in slots)
+                                            {
+                                                <span class="slot @(slot.Chance <= 0 ? "none" : "")">
+                                                    <span class="pos">@slot.Label</span>
+                                                    <span class="pct">
+                                                        @(slot.Chance <= 0 ? "nothing you need" : slot.Chance.ToString("P2"))
+                                                    </span>
+                                                </span>
+                                            }
+                                        </div>
+                                    }
                                     <div class="supplied">
                                         @foreach (var (card, remaining) in supplied.Take(40))
                                         {
@@ -1031,6 +1055,17 @@ else
     /// Computed on expand rather than for every row: it is a scan of the pack's ~80 cards
     /// against outstanding demand, which is wasted work for the 20-odd rows nobody opens.
     /// </summary>
+    /// <summary>
+    /// Per-position odds for one pack, against the same outstanding demands the ranking used.
+    ///
+    /// Computed on expansion rather than for every row: it walks each variant's slots, and the
+    /// table can hold forty packs of which one is open.
+    /// </summary>
+    private IReadOnlyList<SlotOdds> SlotOddsFor(string packKey) =>
+        Session.Odds is null || _outstandingDemands.Count == 0
+            ? []
+            : Session.Odds.ChanceOfUsefulBySlot(packKey, _outstandingDemands);
+
     private IReadOnlyList<(PocketCard Card, int Remaining)> SuppliedBy(string packKey)
     {
         if (!Session.Index.ByPack.TryGetValue(packKey, out var inPack)) return [];

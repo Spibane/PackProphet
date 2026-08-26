@@ -103,6 +103,7 @@
    following item into the previous track. */
 .card-line { --pick-col: 0px; }
 .grid-wrap.picking .card-line { --pick-col: 1.8rem; }
+.grid-wrap.wanting .card-line { --want-col: 1.8rem; }
 
 :root {
     --measure-form: 38rem;
@@ -421,11 +422,22 @@ main:focus { outline: none; }
 
    Worth saying which text this is NOT: `text-body-secondary` is the ordinary explanatory copy and
    already passes. Only the tertiary rung was under. */
+/* A red that clears the contrast floor as a MARK rather than as text.
+   ==========================================================================================
+   The filled heart on a card tile is a graphic that carries meaning -- it is the only thing saying
+   "this is on your want list" -- so WCAG 1.4.11 asks 3:1 of it against what it sits on. Raw
+   --bs-danger measures 2.94:1 on the dark caption, which is the same failure the outline buttons
+   above had and the same two values fix it: 4.8:1 in both themes on both surfaces.
+
+   A token rather than repeating the hex, because three places draw this heart now -- the tile, the
+   list row and the card page -- and the value has to be the same in all of them. */
 [data-bs-theme="light"], :root:not([data-bs-theme="dark"]) {
     --bs-tertiary-color: rgba(33, 37, 41, .7);
+    --pp-want-ink: #c42f3d;
 }
 
 [data-bs-theme="dark"] {
+    --pp-want-ink: #e87b85;
     --bs-tertiary-color: rgba(222, 226, 230, .7);
 }
 
@@ -490,6 +502,51 @@ main:focus { outline: none; }
    Pages carry only the bars they need, and the order never changes. The split is also what
    keeps the header's height fixed: a single bar holding a title and six controls cannot be one
    row at every width, and the moment it wraps it is a different height. */
+/* One control height per bar.
+   ==========================================================================================
+   Every bar in this app mixes buttons, selects, text fields and chips, and each of those
+   arrives with a height of its own: Bootstrap's -sm controls land on 31px, a set tab carrying
+   two lines on 40, and the filter chips were built to a 44px touch target. Three heights in one
+   row reads as a row that was assembled rather than designed, and it is most obvious where the
+   controls sit side by side -- the filters disclosure had 31px selects between 44px chips.
+
+   So the height is a token, every control in a bar is pinned to it, and the value is set once per
+   bar rather than per control. 2.25rem clears the 24px WCAG 2.5.8 target on a mouse; a coarse
+   pointer raises the token to 44px, which grows every control in the bar together rather than
+   singling out the chips. Bars get taller on a phone, which is the correct trade: they are the
+   things being tapped.
+
+   Buttons need the flex centring as well as the height. Bootstrap's .btn is inline-block with
+   padding, so a min-height alone would leave the label sitting at the top of a taller box. */
+:root { --ctl-h: 2.25rem; }
+@media (pointer: coarse) { :root { --ctl-h: 2.75rem; } }
+
+.page-tools .btn, .grid-toolbar .btn, .toolbar-more-body .btn,
+.set-picker-body .btn, .rarity-plan .btn,
+.page-tools .form-select, .grid-toolbar .form-select,
+.toolbar-more-body .form-select, .set-picker-body .form-select, .rarity-plan .form-select,
+.page-tools .form-control, .grid-toolbar .form-control,
+.toolbar-more-body .form-control, .set-picker-body .form-control,
+.chip-tog, .pack-pick, .set-tab, .rarity-chip {
+    min-height: var(--ctl-h);
+}
+.page-tools .btn, .grid-toolbar .btn, .toolbar-more-body .btn,
+.set-picker-body .btn, .rarity-plan .btn, .rarity-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* NOT the page header. Its 3rem is a contract rather than a preference -- the toolbar below it is
+   pinned under it, and the app's other pages line their titles up against it -- and it holds one or
+   two controls rather than a row of them, so there is nothing in it to be uniform WITH. Growing it
+   on a phone also cost the one thing it exists to show: at 44px the log screen's header squeezed
+   the pack's name down to "R.". */
+
+/* The set picker is the one bar whose own control is taller than a button: a tab carries a code
+   and a percentage on two lines, and now a wrapper beside them. The bar takes ITS height rather
+   than shrinking the tabs to match a select. */
+.set-picker-body { --ctl-h: 2.5rem; }
+@media (pointer: coarse) { .set-picker-body { --ctl-h: 2.75rem; } }
+
 .page-head, .page-tools, .grid-toolbar {
     display: flex; align-items: center; gap: .5rem;
     flex: none;
@@ -516,7 +573,12 @@ main:focus { outline: none; }
    the header's own fixed height, which is a contract rather than an accident: .page-head is
    always exactly one row, hence a header that can be relied on to be 3rem plus its border. */
 .page-head.sticky-head { position: sticky; top: 0; z-index: 25; }
-.page-head.sticky-head ~ .grid-toolbar { top: calc(3rem + 1px); }
+/* One pixel INSIDE the header rather than one clear of it. The header is min-height: 3rem plus a
+   border, and border-box rounding lands its real height a fraction under 49px at some zoom levels
+   -- so `3rem + 1px` left a sub-pixel gap between the two pinned bars with the card grid scrolling
+   through it. Overlapping is safe in a way that clearing is not: the header has the higher
+   z-index, so it paints over the pixel it shares. */
+.page-head.sticky-head ~ .grid-toolbar { top: var(--head-h, calc(3rem - 1px)); }
 
 /* Divides the two halves of a shared control bar: what is shown, then how. Without it the
    filters and the layout buttons read as one undifferentiated row of eight controls. */
@@ -602,6 +664,45 @@ main:focus { outline: none; }
 }
 .set-tab.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
 .set-tab .pct { font-size: .82rem; opacity: .75; }
+
+/* With a wrapper on it the tab is a thumbnail beside its label rather than two stacked lines, so
+   the flex direction flips and the label keeps the stack it had. The thumbnail is the one used in
+   every table that names a pack, at the height of the two text lines beside it.
+
+   A booster rather than the set's logo, which the sticky strip shows instead. The tab's spare space
+   is a tall sliver beside two lines of text; a 256x113 wordmark squeezed into that is illegible,
+   while a booster is recognisable at this width because its shape and colour do the work rather
+   than its lettering. */
+/* One layout whether or not there is a thumbnail. It used to flip to a row only when a wrapper was
+   there, which left the two tabs that have none -- the "all of series" aggregate and the promo set
+   -- as narrow columns among a row of wider tabs: a different shape rather than the same shape
+   minus a picture. The label keeps its own stack either way. */
+.set-tab { flex-direction: row; align-items: center; gap: 0; }
+.set-tab .lbl { display: flex; flex-direction: column; line-height: 1.15; }
+.set-tab .pack-thumb { width: 1.1rem; height: 1.55rem; margin-right: .35rem; flex: none; }
+
+/* The boosters as the pack filter. Recognition rather than a dropdown of names: this is how the
+   game asks the same question. Wraps, because a set can have three packs and a phone is 375px. */
+.pack-picks { display: flex; flex-wrap: wrap; gap: .25rem; }
+.pack-pick {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .15rem .5rem .15rem .3rem;
+    border: 1px solid var(--bs-border-color); border-radius: .35rem;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .9rem; line-height: 1.2; white-space: nowrap;
+}
+.pack-pick:hover { border-color: var(--bs-primary); }
+/* Tinted rather than filled: the art is the point, and a solid primary behind a wrapper turns it
+   into a stamp you cannot read. */
+.pack-pick.on {
+    border-color: var(--bs-primary);
+    background: color-mix(in srgb, var(--bs-primary) 22%, var(--bs-body-bg));
+    font-weight: 600;
+}
+.pack-pick:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+/* Sized so the chip lands on --ctl-h rather than pushing past it: the wrapper is the tallest thing
+   in the chip, so its height plus the chip's padding and border IS the chip's height. */
+.pack-pick .pack-thumb { width: 1.3rem; height: 1.8rem; margin: 0; flex: none; }
 
 /* A grid, not a flex row: with eight statistics the flex version wrapped into ragged rows whose
    columns did not line up. auto-fill keeps them aligned at any width without breakpoints. */
@@ -800,26 +901,111 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
    and is unaffected. */
 .grid-wrap { min-height: 0; }
 
+/* Which set you are in, while you scroll. One strip under the toolbar rather than a header per
+   set: the grid is virtualised, so a group header would either break the uniform row height the
+   scrollbar depends on or scroll away inside its own spacer. Filled by js/gridspy.js.
+
+   Empty means "nothing to say" -- one set in scope -- and an empty strip takes no room at all, so
+   there is no hidden attribute for the script and Blazor's diff to disagree about. */
+.grid-spy {
+    /* Under the bars, not at the top of the viewport. The toolbar above is sticky at 0 with a
+       higher z-index, so a strip at top: 0 was hidden by it the moment the page scrolled -- which
+       is exactly the state the strip exists for. Its height is not knowable from CSS, since it
+       wraps into a second row on a phone and grows when a filter chip appears, so js/gridspy.js
+       measures it and publishes --bars-h. The fallback of 0 is what an unmeasured grid gets, which
+       is the old behaviour rather than a broken one. */
+    position: sticky; top: var(--bars-h, 0px); z-index: 4;
+    /* Hidden until the script has a set to name. A class rather than :empty, because the strip has
+       children of its own now; see the note in js/gridspy.js on why that is safe against the
+       render diff. */
+    display: none;
+    align-items: center; gap: .4rem;
+    padding: .2rem calc(.75rem + var(--safe-r)) .2rem calc(.75rem + var(--safe-l));
+    border-bottom: 1px solid var(--bs-border-color);
+    /* Opaque: cards scroll under it. */
+    background: var(--bs-tertiary-bg);
+    font-size: .8rem; font-weight: 600; letter-spacing: .02em;
+    color: var(--bs-secondary-color);
+}
+.grid-spy.on { display: flex; }
+
+/* The set's logo, the same picture the tabs and the log screen carry, for the same reason: nobody
+   recognises "B2b" and everybody recognises the wordmark. 256x113 published, so the box is that
+   ratio at the height of the strip, and `contain` because a cropped wordmark is unreadable.
+
+   Zero-width until there is one, so a set whose logo has not been published upstream leaves the
+   name standing alone rather than a blank slot in front of it. */
+.grid-spy .art {
+    flex: none;
+    /* The strip takes its height from this, so this is where the logo's legibility is decided.
+       1.15rem then 1.5rem were both too short -- a 256x113 wordmark scaled to 18 or 24 pixels tall
+       is a smudge, which is the whole complaint. 2.25rem is 36px, where the lettering resolves.
+
+       That makes the strip about 42px, which is a real cost on a sticky element, and the right
+       trade: it appears only when the list spans more than one set, and being recognised at a
+       glance is the only thing it does. */
+    width: 0; height: 2.25rem;
+    background-size: contain; background-position: center; background-repeat: no-repeat;
+}
+.grid-spy .art.has-art { width: 5.1rem; }
+.grid-spy .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .card-row { display: grid; gap: 4px; padding: 2px calc(4px + var(--safe-r)) 2px calc(4px + var(--safe-l)); }
 
+/* A tile is the art plus a caption strip under it.
+   ==========================================================================================
+   The count, the info button and the heart were all badges over the artwork. One was fine; three
+   covered three corners of the only thing this layout exists to show. They sit below it now.
+
+   The aspect ratio, the rounding, the clip and the gold flair moved with them, onto .art: left on
+   the tile they would have squashed the picture by the height of the caption.
+
+   An inline-size container rather than a size container. The tile's height is no longer
+   proportional to its width, so cqh stopped meaning anything -- every figure that was in cqh is
+   now in cqw, converted through the art's 367:512 ratio (1cqh of the old box is about 1.4cqw). */
 .card-tile {
     position: relative;
-    /* A size container, so badges can scale with the TILE rather than with the page. The grid
-       runs from 3 to 10 columns, so a tile is anywhere from a thumbnail to a playing card, and
-       anything sized in rem is oversized at one end and unreadable at the other. */
-    container-type: size;
-    aspect-ratio: 367 / 512;
-    border-radius: 6px;
-    overflow: hidden;
+    container-type: inline-size;
+    display: flex; flex-direction: column;
     cursor: pointer;
-    background: #2a2a2a;
-    outline: 1px solid var(--bs-border-color);
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     opacity: .45;                       /* unowned cards recede */
     transition: opacity .08s linear;
+
+    /* The frame is on the TILE, not on the art, so the art and the caption under it are visibly one
+       object. Without it the caption's right-hand count sat 4px from the next card's heart with
+       nothing between them, and the eye grouped across the gap instead of down the tile -- the row
+       read as "count, heart" pairs belonging to nobody. */
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bs-tertiary-bg);
+    outline: 1px solid var(--bs-border-color);
 }
+.card-tile .art {
+    position: relative;
+    display: block;
+    aspect-ratio: 367 / 512;
+    background: #2a2a2a;
+    /* Its own edge against the caption. The tile's frame handles the outside. */
+    border-bottom: 1px solid var(--bs-border-color);
+}
+/* The caption. One row, always the same height whether or not there is anything in it: a
+   virtualised grid needs every row to be the same height, and a strip that collapsed on the cards
+   you do not own would make the scrollbar lie about how long the list is. */
+.card-tile .cap {
+    display: flex; align-items: center;
+    /* Roomier than the 2px it started at. The heart, the name and the count are three different
+       kinds of thing -- a mark, a link and a fact -- and at 2px they read as one control with three
+       parts. The gap grows with the tile, like everything else in here. */
+    gap: clamp(.3rem, 3cqw, .6rem);
+    padding: clamp(2px, 1.5cqw, 5px) clamp(3px, 2cqw, 7px);
+    min-height: clamp(1.35rem, 13cqw, 2.1rem);
+}
+/* Set alongside the flair class on the art, because the mobile badge insets have to clear the ring
+   and they live outside the art box, where its own --gold-w cannot reach them. */
+.card-tile.gold { --gold-pad: 3.8cqw; }
 .card-tile.owned { opacity: 1; }
 /* The keyboard cursor. Distinct from .sel (a pointer sweep) and from :hover, because all three
    can be true of different tiles at once and "where am I" has to stay answerable. Drawn inside the
@@ -874,88 +1060,257 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-tile img { width: 100%; height: 100%; display: block; object-fit: cover; background: #333; }
 .card-tile img.img-failed { opacity: .25; }
 
+/* Waiting for art.
+   ==========================================================================================
+   An <img> with an alt but no src yet is drawn by the browser as its broken-image marker beside
+   the alt text — which is what a fast scroll showed on every tile it had not reached, because the
+   loader deliberately holds the src back until a slot is free (see js/imgloader.js). "Not loaded
+   yet" and "will never load" looked identical, and the one that happens constantly looked like the
+   one that is a fault.
+
+   So the image is hidden while it is pending or in flight, and a spinner stands in its place. The
+   failed state is untouched on purpose: the broken marker and the card's name beside it are the
+   most useful thing a tile with no art can show, and it is now the only thing that looks like a
+   fault.
+
+   Keyed off data-state, which imgloader.js already maintained: queued, loading, done, error. The
+   `:not([data-state])` case is the one the complaint was about — the moment before the observer has
+   even queued the element. */
+.card-tile img:not([data-state]),
+.card-tile img[data-state="queued"],
+.card-tile img[data-state="loading"],
+.card-line .thumb:not([data-state]),
+.card-line .thumb[data-state="queued"],
+.card-line .thumb[data-state="loading"] { visibility: hidden; }
+
+.art-wait { display: none; }
+/* A sibling selector off the image's own state: no pseudo-element, because gold flair already
+   owns both of the tile's, and no JavaScript, because the loader is already writing the one
+   attribute this needs. */
+img:not([data-state]) ~ .art-wait,
+img[data-state="queued"] ~ .art-wait,
+img[data-state="loading"] ~ .art-wait {
+    display: grid; place-items: center;
+    position: absolute; inset: 0;
+    pointer-events: none;
+}
+.art-wait::before {
+    content: "";
+    /* Sized against the tile, like everything else on it: the grid runs from three columns to ten,
+       so a fixed ring is a hoop at one end and a speck at the other. */
+    width: clamp(.7rem, 18cqw, 1.6rem); height: clamp(.7rem, 18cqw, 1.6rem);
+    border: 2px solid rgba(255, 255, 255, .18);
+    border-top-color: rgba(255, 255, 255, .55);
+    border-radius: 50%;
+    animation: art-wait-spin .9s linear infinite;
+}
+/* The list thumbnail is 32px and not a size container, so it takes a fixed ring. */
+.card-line .art-wait::before { width: .85rem; height: .85rem; border-width: 1.5px; }
+.card-line .c-thumb { position: relative; }
+
+@keyframes art-wait-spin { to { transform: rotate(1turn); } }
+
+/* A spinner per visible tile is a hundred animations. They are compositor-driven transforms, which
+   is cheap, but "cheap" is not a reason to spin anything at someone who asked us not to. Still
+   distinguishable stopped: a ring with one brighter quarter reads as unfinished either way. */
+@media (prefers-reduced-motion: reduce) {
+    .art-wait::before { animation: none; }
+}
+
 /* Info button, bottom-centre. Every corner of a card carries something — the stage, the HP, the
    set number, the illustrator — while the middle of the lower edge is flavour text, so a button
    there covers the least. Sized as a real target: a 1.1rem corner dot was effectively invisible. */
+/* The three caption items: heart, info, count. Left, middle, right — the heart is a mark on the
+   card, the count is a fact about it, and the action between them is the one that leaves the page.
+
+   All three are sized off the tile's width so they track the column count, and none of them sits
+   over the art any more, which is what let the two hiding rules go: there is no badge to collide
+   with and no picture to cover, so nothing has to disappear at eight columns and then reappear when
+   the layout changes. */
+.card-tile .want {
+    flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: clamp(1.15rem, 11cqw, 1.8rem); aspect-ratio: 1;
+    padding: 0;
+    border: 0; border-radius: .3rem;
+    background: none; color: var(--bs-secondary-color);
+    opacity: .85;
+    transition: color .08s linear, opacity .08s linear;
+}
+.card-tile .want:hover { color: var(--pp-want-ink); opacity: 1; }
+.card-tile .want.on { color: var(--pp-want-ink); opacity: 1; }
+.card-tile .want svg { width: 78%; height: 78%; }
+.card-tile .want:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+
+/* The name, which is also the link to detail. Takes the middle and whatever width is left, so it
+   is the easy target of the three at every column count.
+
+   Styled as a name rather than as a button: it carries text that means something on its own now, a
+   border around it would make three framed controls in a row out of one mark, one label and one
+   figure, and this is exactly how the list view already does it -- the name is the link, quiet until
+   hovered. Long names ellipsis; the tile's tooltip carries the whole thing with the set and
+   rarity. */
 .card-tile .info {
-    position: absolute; left: 50%; bottom: 4px;
-    transform: translateX(-50%);
-    /* Sized in percentages of the tile, not fixed rem: the grid runs from 3 to 10 columns, so a
-       fixed button is oversized at 3 and a speck at 10. */
-    min-width: 46%; height: 22%;
-    min-height: 1.5rem; max-height: 2.1rem;
-    padding: 0 .5rem;
-    display: flex; align-items: center; justify-content: center;
-    font-size: .88rem; font-weight: 700; line-height: 1;
+    flex: 1 1 auto; min-width: 0;
+    font-size: clamp(.62rem, 6cqw, .82rem); font-weight: 600; line-height: 1.2;
+    text-align: center;
     text-decoration: none; white-space: nowrap;
-    border-radius: .75rem;
-    background: rgba(0, 0, 0, .68); color: #fff;
-    border: 1px solid rgba(255, 255, 255, .35);
-    opacity: .8;
-    transition: opacity .08s linear, background-color .08s linear;
+    overflow: hidden; text-overflow: ellipsis;
+    color: var(--bs-body-color);
+    transition: color .08s linear;
 }
-.card-tile:hover .info { opacity: 1; }
-.card-tile .info:hover { background: var(--bs-primary); color: #fff; }
+.card-tile .info:hover { color: var(--bs-primary); text-decoration: underline; }
+.card-tile .info:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
 
-/* Hidden entirely on a touch screen. The long press IS the mobile affordance, so a permanent
-   button would sit on top of every tile in the grid covering art for nothing — and it cannot
-   even hide on hover there, because there is no hover to hide behind. */
-@media (hover: none) {
-    .card-tile .info { display: none; }
-}
-
-/* Below a certain tile size the info button and the count badge cannot both have the bottom edge,
-   so the info button yields — the same call already made for touch, on the other axis.
-
-   The two are laid out against the same 73% line: .info is centred with a 46% minimum, so its
-   right edge sits at 0.73W, while .cnt is 27% wide inset 4px from the right, putting its left
-   edge at 0.73W - 4. That is a 4px overlap at EVERY width, not a rounding artefact — the comment
-   below reasons that a 27% badge "never touches" the info button, which is true of the width and
-   forgets the inset. It only stops mattering above ~200px, where .cnt hits its 3.15rem max-width
-   and stops growing into the gap.
-
-   Measured on a real grid: a 4px overlap from 7 columns down, widening once .cnt's min-width
-   takes over below ~113px. Hiding .info under the threshold dissolves it at every column count
-   rather than fixing the arithmetic for the ones someone checked. */
-@container (width <= 200px) {
-    .card-tile .info { display: none; }
-}
-
-/* How many you own: the most important thing on the tile, and it used to be the smallest — a
-   .82rem badge that had to be squinted at on a phone.
-
-   Bottom-right, and its WIDTH is what is capped rather than its height. The info button is
-   centred with a 46% minimum width, so it occupies the middle 27%-73% of the bottom edge; a
-   badge narrower than the remaining 27% never touches it however tall it gets, so height is
-   free to be 1.5x the info button's while width stays clear of it.
-
-   Top-right was tried and is wrong: it covers the HP printed on every Pokémon card. */
+/* How many you own. Still the most important thing on a tile, and now it is the only one of the
+   three that carries a fill -- which is the whole reason it can be smaller here than it was as a
+   badge and still be the first thing you see. */
 .card-tile .cnt {
-    position: absolute; right: 4px; bottom: 4px;
+    flex: none;
     display: inline-flex; align-items: center; justify-content: center;
-    width: 27%; min-width: 1.9rem; max-width: 3.15rem;
-    /* 1.5x the info button's 22%, tracking it at every size — including its 1.5rem and 2.1rem
-       bounds, so the ratio holds at 3 columns and at 10. */
-    height: 33%; min-height: 2.25rem; max-height: 3.15rem;
-    /* Scaled off the container's height so the digits fill the badge at every column count. */
-    font-size: clamp(.95rem, 18cqh, 1.9rem);
+    min-width: clamp(1.3rem, 13cqw, 2.2rem);
+    height: clamp(1.15rem, 11cqw, 1.8rem);
+    padding: 0 .25rem;
+    font-size: clamp(.7rem, 7cqw, 1rem);
     font-weight: 700; line-height: 1;
-    background: var(--bs-primary); color: #fff; border-radius: 6px;
-    /* Sits over the art, so it needs an edge of its own to stay legible on a pale card. */
-    box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
+    background: var(--bs-primary); color: #fff; border-radius: .3rem;
 }
-/* Mirrors the owned count on the opposite corner, at the same size — on the log page both
-   appear on one tile, and one big badge beside one tiny one read as a mistake. */
+/* Nothing owned: the slot stays, so the row above and below it line up, and the caption is the
+   same height on every tile in the grid. */
+.card-tile .cnt.none { visibility: hidden; }
+
+/* Mirrors the owned count, in the same row — on the log screen both appear on one tile. */
 .card-tile .pick {
-    position: absolute; left: 4px; bottom: 4px;
+    flex: none;
     display: inline-flex; align-items: center; justify-content: center;
-    width: 27%; min-width: 1.9rem; max-width: 3.15rem;
-    height: 33%; min-height: 2.25rem; max-height: 3.15rem;
-    font-size: clamp(.95rem, 18cqh, 1.9rem);
+    min-width: clamp(1.3rem, 13cqw, 2.2rem);
+    height: clamp(1.15rem, 11cqw, 1.8rem);
+    padding: 0 .25rem;
+    font-size: clamp(.7rem, 7cqw, 1rem);
     font-weight: 700; line-height: 1;
-    background: var(--bs-success); color: #fff; border-radius: 6px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
+    background: var(--bs-success); color: #fff; border-radius: .3rem;
 }
+
+/* On a phone the caption would be a strip holding one number.
+   ==========================================================================================
+   The heart and the info button are both gone on a touch screen -- the long press opens the card,
+   and wanting one is a deliberate act on the card's own page -- so a caption there would cost every
+   tile a row of vertical space to show a count that only about one card in ten has. The count goes
+   back to being a badge on the art, which is exactly where it was, and the caption stops taking any
+   space at all: absolutely positioned, it is out of the flow, so the tile is the height of its art
+   again and a screenful holds as many cards as it did before.
+
+   Two conditions, either of which means the phone layout: a touch screen at any width, or any
+   window narrow enough that the rest of the page has already switched -- the tab bar appears and the
+   top nav goes at 1056px, so "mobile" means the same thing here as it does everywhere else in this
+   file.
+
+   `hover: none` alone was not enough, because a desktop window dragged narrow keeps its mouse. It
+   kept the caption while everything around it had become the phone layout.
+
+   What this costs, stated rather than hidden: a mouse in a narrow window has no info button, since
+   the long press that replaces it is a touch gesture. Card detail is still one `i` on the keyboard
+   cursor, one click on a name in list view, or one search in the command palette -- and the width
+   where it bites is the width where the app has already decided it is a phone. */
+@media (hover: none), (width <= 1056px) {
+    .card-tile .cap {
+        position: absolute; inset: 0;
+        padding: 0;
+        min-height: 0;
+        pointer-events: none;
+    }
+    /* Smaller than it was, and square. The old badge was 27% wide with a 1.9rem floor and a 2.25rem
+       height floor -- which on a six-column phone tile of 58px came out 30 by 36, half the width of
+       the card and nearly two thirds of its height, for one or two digits. The floors are what
+       matter at that size, so they are what came down: 28px square, which still clears a comfortable
+       tap-adjacent target and no longer competes with the art it sits on. */
+    .card-tile .cnt, .card-tile .pick {
+        position: absolute; bottom: calc(4px + var(--gold-pad, 0px));
+        width: 24%; min-width: 1.75rem; max-width: 2.8rem;
+        height: 19%; min-height: 1.75rem; max-height: 2.8rem;
+        /* The floor matters more than the cap here: at six columns on a phone the tile is 58px, so
+           the clamp lands on its minimum and that is the number a digit is actually read at. .9rem
+           in a 28px box is the same share of it the old badge gave a digit in its 36px one. */
+        font-size: clamp(.9rem, 24cqw, 1.7rem);
+        border-radius: 5px;
+        /* Over the art, so it needs an edge of its own to stay legible on a pale card. */
+        box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
+    }
+    .card-tile .cnt { right: calc(4px + var(--gold-pad, 0px)); }
+    .card-tile .pick { left: calc(4px + var(--gold-pad, 0px)); }
+    .card-tile .cnt.none { display: none; }
+    .card-tile .want, .card-tile .info { display: none; }
+    /* Nothing below the art to divide it from, so the rule under it would be a stray line along the
+       bottom edge of every card. */
+    .card-tile .art { border-bottom: 0; }
+}
+
+/* A narrow window with a mouse in it is the one case the rule above leaves without a way into a
+   card: the caption is gone at these widths and a long press is a touch gesture, so there was no
+   info button and no long press either. It comes back exactly where it lived before the caption
+   existed -- over the art, bottom centre, revealed on hover -- and only in this band. A real phone
+   gets nothing added back, because there the long press is the affordance. */
+@media (width <= 1056px) and (hover: hover) {
+    .card-tile .info {
+        display: flex; align-items: center; justify-content: center;
+        position: absolute; left: 50%; bottom: calc(4px + var(--gold-pad, 0px));
+        transform: translateX(-50%);
+        /* Narrower than the badge-free version it replaces: the count now sits at 24% of the tile
+           plus a 4px inset, so the button's own 62% keeps it clear of that corner at every column
+           count. */
+        max-width: 62%;
+        padding: 0 .45rem;
+        height: 19%; min-height: 1.4rem; max-height: 1.9rem;
+        font-size: .78rem; font-weight: 600; line-height: 1;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        border-radius: .7rem;
+        background: rgba(0, 0, 0, .72); color: #fff;
+        border: 1px solid rgba(255, 255, 255, .3);
+        opacity: 0;
+        transition: opacity .08s linear;
+    }
+    /* Only on hover, because it covers art. Here it is the fallback route rather than the main one,
+       so it costs nothing until you go looking for it. */
+    .card-tile:hover .info { opacity: 1; }
+    .card-tile .info:hover {
+        background: var(--bs-primary); color: #fff; text-decoration: none;
+        border-color: var(--bs-primary);
+    }
+    /* The caption is pointer-events: none at these widths so a tap lands on the tile, so the one
+       thing in it that is a control has to opt back in. */
+    .card-tile .info { pointer-events: auto; }
+}
+
+/* The same toggle in a list row, in a column of its own at the front.
+
+   It used to sit beside the -/+ buttons, which made three small square buttons in a row, one of
+   which does something completely different from the other two -- and it was next to the count,
+   which is the number it is most likely to be mistaken for. At the front of the row it reads as a
+   mark against the row, the way a starred message does, and it is nowhere near the count.
+
+   No border, unlike the steppers: a bordered box is what made it read as one of them. The outline
+   heart is affordance enough, and the filled one is unmistakable. */
+.card-line .c-want { display: flex; align-items: center; justify-content: center; }
+.card-line .c-want .want {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.6rem; height: 1.6rem;
+    padding: 0;
+    border: 0; border-radius: .3rem;
+    background: none; color: var(--bs-secondary-color);
+    opacity: .75;
+}
+.card-line .c-want .want:hover { color: var(--pp-want-ink); opacity: 1; }
+.card-line .c-want .want.on { color: var(--pp-want-ink); opacity: 1; }
+.card-line .c-want .want:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+
+/* Which wishlist the hearts write to. A label, not a filter: it changes what a tap DOES rather
+   than which cards are listed, so it sits at the end of the row after the separator. */
+.want-target { display: inline-flex; align-items: center; gap: .35rem; }
+.want-target .ttl {
+    font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--bs-secondary-color); white-space: nowrap;
+}
+.want-target select { max-width: 9rem; }
 
 /* Sweep mode suppresses the browser's own touch gestures so a drag selects instead of
    scrolling. Only while armed. */
@@ -997,6 +1352,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
     display: grid;
     grid-template-columns:
         var(--art-w)         /* art          */
+        var(--want-col)      /* want         */
         minmax(6rem, 1fr)    /* name         */
         4.6rem               /* set + number */
         var(--type-col)     /* type         */
@@ -1013,6 +1369,10 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
        templates just to change one track is how they drift out of sync. */
     --art-w: 32px;
     --art-h: 45px;
+    /* Collapses to nothing where the page passes no want handler -- a picker, or the log screen,
+       whose taps mean something else entirely. Same trick as --pick-col: one track that is
+       sometimes zero, rather than five templates that each know whether the column exists. */
+    --want-col: 0px;
     align-items: center;
     gap: .45rem;
     height: 50px;
@@ -1064,7 +1424,11 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 
 .card-line.head .c-nm { font-size: inherit; font-weight: inherit; }
 .card-line.head {
-    position: sticky; top: 0; z-index: 5;
+    /* Same problem as the set strip, and the same fix: these headers were sticking to the top of
+       the viewport underneath a toolbar that is also sticky and paints over them, so the column
+       names vanished on the first scroll of a list -- the one view where the columns need naming.
+       Offset by the measured height of the bars, plus the strip when it is showing. */
+    position: sticky; top: calc(var(--bars-h, 0px) + var(--spy-h, 0px)); z-index: 5;
     height: 38px;
     background: var(--bs-tertiary-bg);
     font-size: .84rem; text-transform: uppercase; letter-spacing: .03em;
@@ -1664,7 +2028,14 @@ tr.row-best {
     gap: 1.25rem;
     align-items: start;
 }
-@media (width <= 1100px) { .card-detail { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); } }
+/* Two columns on a tablet, and the third child then wraps onto a second row -- into column ONE,
+   which is the 12rem art column. So "How to get it" was a four-column table of packs, points, dust
+   and trades rendered 192px wide, on the widths where there is the most room to spare. It spans the
+   full width instead: it is a table, and a table in a sidebar column is the one place it cannot go. */
+@media (width <= 1100px) {
+    .card-detail { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); }
+    .card-detail .routes { grid-column: 1 / -1; }
+}
 @media (width <= 760px)  { .card-detail { grid-template-columns: minmax(0, 1fr); } }
 
 /* Ratio matched to the art so `contain` and `cover` coincide and nothing is cropped. */
@@ -1686,6 +2057,21 @@ tr.row-best {
    a row of them must not push the art column out of shape. */
 .card-detail .want-row { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; margin: .2rem 0 .5rem; }
 .card-detail .want-row .label { font-size: .9rem; color: var(--bs-secondary-color); }
+/* The heart, first in the want row and always present. Tinted rather than filled when on, so it
+   matches the hearts in the grid rather than the primary-filled wishlist buttons beside it -- those
+   carry counts and mean "one more", this one means on or off. */
+.card-detail .want-heart {
+    display: inline-flex; align-items: center; gap: .35rem;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg); color: var(--bs-secondary-color);
+}
+.card-detail .want-heart:hover { border-color: var(--pp-want-ink); color: var(--pp-want-ink); }
+.card-detail .want-heart.on {
+    border-color: var(--pp-want-ink); color: var(--pp-want-ink);
+    background: color-mix(in srgb, var(--pp-want-ink) 12%, var(--bs-body-bg));
+    font-weight: 600;
+}
+
 /* The list button and its remove stay glued together, so a row of several wishlists cannot
    wrap between a name and the minus that belongs to it. */
 .card-detail .want-pair { display: inline-flex; align-items: center; gap: .15rem; }
@@ -2038,11 +2424,11 @@ tr.row-best {
    scan a collection by. Type and rarity survive to the smallest size. */
 
 @media (width <= 1100px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) var(--pick-col) 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) var(--want-col) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) 2.4rem minmax(7rem,1fr) minmax(6rem,.8fr) var(--pick-col) 2.4rem 4.2rem; }
     .card-line .c-a2 { display: none; }
 }
 @media (width <= 900px) {
-    .card-line { grid-template-columns: var(--art-w) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) var(--pick-col) 2.4rem 4.2rem; }
+    .card-line { grid-template-columns: var(--art-w) var(--want-col) minmax(6rem,1fr) 4.6rem var(--type-col) 4rem var(--rarity-col) var(--pick-col) 2.4rem 4.2rem; }
     .card-line .c-a1, .card-line .c-a2, .card-line .c-ab, .card-line .c-hp { display: none; }
 }
 @media (width < 600px) {
@@ -2052,7 +2438,7 @@ tr.row-best {
        than out of a column, since each of the seven earns its place: the pick count is empty in
        the collection but not when this grid is embedded in a picker. */
     .card-line {
-        grid-template-columns: var(--art-w) minmax(4rem,1fr) var(--type-col) var(--rarity-col) var(--pick-col) 2rem 3.6rem;
+        grid-template-columns: var(--art-w) var(--want-col) minmax(4rem,1fr) var(--type-col) var(--rarity-col) var(--pick-col) 2rem 3.6rem;
         gap: .3rem;
         padding-left: calc(.35rem + var(--safe-l));
         padding-right: calc(.35rem + var(--safe-r));
@@ -2488,14 +2874,11 @@ tr.row-best {
     z-index: 1;
 }
 
-/* The tile's own furniture sits INSIDE the frame, as it does on a real card, rather than on top
-   of it. Nudged in by the ring's width so the gold band is never broken by a badge. */
-.card-tile.gold-flair .cnt,
-.card-tile.gold-flair .pick { bottom: calc(4px + var(--gold-w)); }
-.card-tile.gold-flair .cnt { right: calc(4px + var(--gold-w)); }
-.card-tile.gold-flair .pick { left: calc(4px + var(--gold-w)); }
-.card-tile.gold-flair .info { bottom: calc(4px + var(--gold-w)); }
-
+/* The tile's own furniture sits INSIDE the frame, as it does on a real card, rather than on top of
+   it — but only where it is still on the card at all. On a pointer the badges are in the caption
+   below the art, where there is no ring to break; on a touch screen the count is a badge again and
+   the inset comes back, via --gold-pad on the tile (see the caption rules above), because the flair
+   class and its --gold-w now live on the art box and a badge outside it cannot read them. */
 .card-tile .cnt, .card-tile .pick, .card-tile .info { z-index: 2; }
 
 /* Thinner on a big rendering, proportionally thicker on a thumbnail: 3cqw of a 32px thumb is
@@ -2777,6 +3160,33 @@ tr.row-best {
 .nav-more-search:hover { background: var(--bs-secondary-bg); color: var(--bs-body-color); }
 .nav-more-search:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
 
+/* Named way out of the sheet. On a phone the sheet is anchored to the bottom edge, over the tab
+   bar that opened it, so the opener cannot be tapped again to toggle it shut -- and the only
+   "outside" left to tap is the page content. At desk the More button stays visible and a second
+   tap on it closes the menu, so the button would be redundant there. */
+.nav-more-close {
+    display: block; width: 100%; margin-top: .6rem;
+    padding: .7rem .75rem;
+    border: 1px solid var(--bs-border-color); border-radius: .4rem;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .95rem;
+}
+.nav-more-close:hover { background: var(--bs-secondary-bg); }
+.nav-more-close:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+@media (width >= 1057px) { .nav-more-close { display: none; } }
+
+/* Catches the dismissing tap so it does not also land on the page. A popover's ::backdrop is
+   painted but not hit-testable, so without this the tap that closes the sheet opens whichever card
+   happened to be under it. Transparent, because the ::backdrop above still does the dimming --
+   both navs are in the DOM at once and so are both of their scrims, and two tinted layers would
+   stack into a darker one. Under the top layer, over the tab bar. */
+.nav-more-scrim { display: none; }
+body:has(.nav-more:popover-open) .nav-more-scrim {
+    display: block;
+    position: fixed; inset: 0; z-index: 1040;
+    background: transparent;
+}
+
 /* An empty list is not an error, so it is quiet: no border, no tint, no icon. It only has to say
    what is missing and offer the thing that fills it.
 
@@ -2849,6 +3259,147 @@ tr.row-best {
     display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
     padding: .35rem calc(.75rem + var(--safe-r)) .6rem calc(.75rem + var(--safe-l));
 }
+
+/* Back to the top of the list.
+   ==========================================================================================
+   Fixed rather than sticky: it belongs to the viewport, not to a place in the list, and a sticky
+   element inside a virtualised scroller has nothing stable to stick to.
+
+   Bottom-right, and above the tab bar where there is one -- the bar is fixed to the bottom edge
+   below the desk breakpoint, so anything else down there has to clear its height AND the inset it
+   sits above, which is the same sum <main> already reserves. Left of centre is where a thumb rests
+   on a phone; the right corner is the one place a floating button does not sit under it.
+
+   Hidden until js/gridspy.js says there is something to scroll back from. */
+.to-top {
+    display: none;
+    position: fixed;
+    right: calc(1rem + var(--safe-r));
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    z-index: 1020;
+    width: 2.75rem; height: 2.75rem;
+    align-items: center; justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg); color: var(--bs-body-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+.to-top.on { display: flex; }
+.to-top:hover { border-color: var(--bs-primary); color: var(--bs-primary); }
+.to-top:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
+/* Above the tab bar, which is fixed to the bottom edge at these widths. */
+@media (width <= 1056px) {
+    .to-top { bottom: calc(1rem + var(--tab-bar-h) + 1px + env(safe-area-inset-bottom)); }
+}
+
+/* A row of toggle chips: rarity marks and type pips, several selectable at once. Replaces two
+   single-select dropdowns whose whole vocabulary was words for things the game draws.
+
+   Two things in this file look like this one and are not:
+
+     .rarity-chip   one rung of the completion PLAN, cycling none/1/2 copies. A text label
+                    ("1◆ x2"), because a count has to be readable, and it configures the
+                    estimates rather than the list in front of you.
+     .chip-filter   the pill on the always-on bar reporting a filter that IS applied, whose only
+                    action is to clear it. A report, not a control you choose from.
+
+   What belongs here is a set of mutually compatible choices, drawn as the game draws them, where
+   selecting none means all.
+
+   Wraps rather than scrolls sideways. Fourteen type pips need about 26rem and a phone has 23, so
+   one line was never going to hold them at 375px; a wrapped second row is readable, whereas a
+   horizontal scroller hides half the types behind a gesture with nothing to suggest it. Both rows
+   live inside the filters disclosure, so the two lines cost the grid nothing until opened.
+
+   Nothing selected is "everything", so an untouched row is all-quiet: no chip carries the on
+   state, and the bar above shows no chip. */
+/* Each row of chips is a named group, and the name is what was missing: on a wide screen the two
+   rows sat side by side and read as one row of twenty-four unexplained buttons, and on a narrow one
+   they were two rows of unexplained buttons. The pips say which type; nothing said that the row
+   WAS type. A .bar-sep between the two groups does the rest -- the same divider this bar already
+   uses to separate what is shown from how it is shown.
+
+   The label is also the group's accessible name via aria-labelledby, so the visible word and the
+   announced one cannot drift. */
+.chip-group {
+    display: flex; align-items: center; gap: .4rem;
+    /* Its own line at the width where two groups plus a separator no longer fit, rather than
+       wrapping the chips of one group around the label of the next. */
+    flex: 0 1 auto; min-inline-size: 0;
+}
+.chip-group > .ttl {
+    flex: none;
+    font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--bs-secondary-color); white-space: nowrap;
+}
+.chip-toolbar { display: flex; flex-wrap: wrap; gap: .25rem; }
+.chip-tog {
+    display: inline-flex; align-items: center; justify-content: center;
+    /* Width still its own: a chip holding four diamonds is wider than one holding a pip, and
+       forcing them square would either crop the glyphs or pad the pips to nothing. Height comes
+       from --ctl-h with everything else in the bar. */
+    min-width: var(--ctl-h);
+    padding: .1rem .35rem;
+    border: 1px solid var(--bs-border-color); border-radius: .35rem;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    line-height: 1;
+}
+.chip-tog:hover:not(:disabled) { border-color: var(--bs-primary); }
+/* The selected state is a filled chip rather than only a border, because a border alone against
+   the panel measured under 3:1 and a filter you cannot see is the failure mode this whole bar
+   exists to avoid. */
+.chip-tog.on {
+    border-color: var(--bs-primary);
+    background: color-mix(in srgb, var(--bs-primary) 22%, var(--bs-body-bg));
+}
+.chip-tog:disabled { opacity: .5; cursor: default; }
+.chip-tog:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+/* Same size as a list row draws them, so a chip and a card agree on what a rarity looks like. */
+.chip-tog .glyphs { font-size: 1.05rem; letter-spacing: -.04em; white-space: nowrap; }
+
+/* The grid/list switch, promoted from the disclosure to the always-on bar. Pinned to the far end
+   of the row: it is the one control there that changes nothing about WHICH cards are listed, and
+   the bar's own convention is filters left, layout right. */
+.grid-toolbar .layout-switch { flex: none; }
+
+/* The wanted list as pasteable text. Monospaced, because the lines are set code, number, name
+   and rarity in fixed order and a proportional font makes four aligned columns look ragged.
+   Resizable vertically only: a list of forty cards wants to be dragged taller, and a textarea
+   that can be dragged wider breaks the row it sits in. */
+.trade-text {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .8rem; line-height: 1.45;
+    resize: vertical;
+    white-space: pre;
+}
+
+/* Where in a pack the chance is, under an expanded ranking row. A row of position-and-figure
+   pairs rather than a table: it is three or four values read left to right in pack order, and a
+   table would give four headers to four numbers.
+
+   Positions with nothing wanted in them are dimmed rather than dropped. "The first three cards
+   cannot help you" is the finding, and a list that silently began at the fourth card would look
+   like a pack with three cards in it. */
+.slot-odds {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem;
+    margin-bottom: .5rem;
+}
+.slot-odds .ttl {
+    font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.slot-odds .slot {
+    display: inline-flex; align-items: baseline; gap: .3rem;
+    padding: .1rem .45rem;
+    border: 1px solid var(--bs-border-color); border-radius: .3rem;
+    background: var(--bs-body-bg);
+    font-size: .82rem;
+}
+.slot-odds .slot .pos { color: var(--bs-secondary-color); }
+.slot-odds .slot .pct { font-variant-numeric: tabular-nums; font-weight: 600; }
+.slot-odds .slot.none { opacity: .65; }
+.slot-odds .slot.none .pct { font-weight: 400; font-style: italic; }
 
 /* An applied filter, and the control that removes it — the same object, because a chip that only
    reported the state would leave you hunting for the dropdown that set it. */

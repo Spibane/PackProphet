@@ -459,6 +459,61 @@ public sealed class AppSession : IAsyncDisposable
         return id;
     }
 
+    /// <summary>
+    /// The name a fresh hearts list gets. Not "Wishlist 1": the point of the separate list is that
+    /// it is recognisable as the one the hearts fill, and it reads as a sentence on the wishlists
+    /// page beside lists you named yourself.
+    /// </summary>
+    public const string WantListName = "Want it";
+
+    /// <summary>
+    /// The wishlist the grid's hearts write to, or null if there is not one yet.
+    ///
+    /// Resolved through the stored id every time rather than cached: the list can be renamed,
+    /// deleted from the wishlists page, or arrive from an import, and a cached reference would
+    /// outlive all three. A stored id whose list has gone reads as "no list", which is what makes
+    /// deleting it safe.
+    /// </summary>
+    public Wishlist? WantList =>
+        Profile.WantListId is { Length: > 0 } id
+            ? Profile.Wishlists.FirstOrDefault(w => w.Id == id)
+            : null;
+
+    /// <summary>
+    /// The hearts list, made if this is the first heart.
+    ///
+    /// The create and the card that follows it are two mutations, which the undo stack coalesces:
+    /// checked in the running app, one undo after a first heart leaves no list behind rather than
+    /// an empty one.
+    /// </summary>
+    public string EnsureWantList()
+    {
+        if (WantList is { } existing) return existing.Id;
+
+        var id = Guid.NewGuid().ToString("n")[..8];
+        Mutate(p => p with
+        {
+            Wishlists = [.. p.Wishlists, new Wishlist(id, WantListName, new())],
+            WantListId = id,
+        });
+        return id;
+    }
+
+    /// <summary>Copies of a card wanted on the hearts list. Zero when there is no such list yet.</summary>
+    public int WantedOnHeartList(string ownershipKey) =>
+        WantList?.Wanted.GetValueOrDefault(ownershipKey) ?? 0;
+
+    /// <summary>
+    /// Toggle a card on the hearts list: one copy, on or off. Wanting four of something is a
+    /// wishlist-page question, and a heart that cycled through counts would give no way to see
+    /// what it landed on.
+    /// </summary>
+    public void ToggleWanted(string ownershipKey)
+    {
+        var id = EnsureWantList();
+        SetWanted(id, ownershipKey, WantedOnHeartList(ownershipKey) > 0 ? 0 : 1);
+    }
+
     public void RenameWishlist(string id, string name)
     {
         var trimmed = name.Trim();

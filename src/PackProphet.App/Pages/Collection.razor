@@ -85,8 +85,26 @@ else
                     <button class="set-tab @(set == _set ? "active" : "")"
                             @onclick="() => SelectSet(set)" disabled="@Busy.IsBusy"
                             title="@Session.Sets.DisplayName(set)">
-                        @set
-                        <span class="pct">@Progress(set).ToString("P0")</span>
+                        @* A wrapper from the set, so the row can be read at a glance rather than
+                           decoded from two-character codes: B2a and B2b are the same three
+                           characters in a different order, and their wrappers are not.
+
+                           A wrapper and not the set's logo, which is what the sticky strip shows.
+                           The logo is a wordmark 256px wide by 113 tall, and a tab has to hold it
+                           beside a code and a percentage -- at the height those two lines allow it
+                           is a smudge. A booster is tall, which is the shape the space left over
+                           here actually is, and it is recognisable at 18px wide where lettering is
+                           not. Same set, two pictures, because the two places have opposite
+                           shapes to fill. *@
+                        @if (SetArtUrl(set) is { Length: > 0 } art)
+                        {
+                            <span class="pack-thumb" aria-hidden="true"
+                                  style="background-image:url('@art')"></span>
+                        }
+                        <span class="lbl">
+                            @set
+                            <span class="pct">@Progress(set).ToString("P0")</span>
+                        </span>
                     </button>
                 }
             }
@@ -101,7 +119,7 @@ else
     {
         <div class="gap-strip">
             <button class="hd" @onclick="() => _showGaps = !_showGaps"
-                    aria-expanded="@_showGaps">
+                    aria-expanded="@Aria.Flag(_showGaps)">
                 <span class="chev" aria-hidden="true">@(_showGaps ? "▾" : "▸")</span>
                 <strong>@gaps.BlockedCards</strong>
                 @(gaps.BlockedCards == 1 ? "card you own cannot evolve" : "cards you own cannot evolve")
@@ -184,7 +202,8 @@ else
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
               RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
-              SortKeyOf="Session.Sets.SortKey"
+              SortKeyOf="Session.Sets.SortKey" GroupOf="GroupLabel" GroupArtOf="GroupArt"
+              WantedOf="WantedOf" OnWant="ToggleWant"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady">
         @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
            header, the set tabs, a filter row and a control row, this page put five bars above the
@@ -193,6 +212,19 @@ else
             <input class="form-control form-control-sm grid-search"
                    placeholder="search name" aria-label="Search card names" value="@_search" @oninput="OnSearch" />
         </Search>
+
+        @* The one filter that gets used every session, promoted out of the disclosure. The select
+           below still offers all six, and this is option two of it: "missing only" is what you
+           reach for after opening a pack, and paying a trip into a summary for it every time was
+           the wrong price. Pressing it again goes back to everything rather than leaving you in a
+           filtered view you have to remember to undo. *@
+        <Toggles>
+            <button class="btn btn-sm @(_own == "missing" ? "btn-primary" : "btn-outline-secondary")"
+                    @onclick="ToggleMissing" aria-pressed="@Aria.Flag(_own == "missing")"
+                    title="@(_own == "missing" ? "Show every card again" : "Show only the cards you do not own yet")">
+                missing only
+            </button>
+        </Toggles>
 
         @* What is currently narrowing the list, said on the bar itself. The controls that set
            these are folded into the disclosure; this is the state they leave behind, and without
@@ -209,10 +241,15 @@ else
                 <button class="chip-filter" @onclick="ClearOwnFilter"
                         aria-label="Clear the ownership filter">@OwnFilterLabel &times;</button>
             }
-            @if (_rarity is { Length: > 0 })
+            @if (_rarities.Count > 0)
             {
                 <button class="chip-filter" @onclick="ClearRarityFilter"
                         aria-label="Clear the rarity filter">@RarityFilterLabel &times;</button>
+            }
+            @if (_types.Count > 0)
+            {
+                <button class="chip-filter" @onclick="ClearTypeFilter"
+                        aria-label="Clear the type filter">@TypeFilterLabel &times;</button>
             }
             @if (_pack is { Length: > 0 })
             {
@@ -236,28 +273,85 @@ else
                 }
             </select>
 
-            <select class="form-select form-select-sm" style="max-width:10rem" aria-label="Filter by rarity" @onchange="OnRarityFilter">
-                <option value="">all rarities</option>
+            @* Rarity and type as the game's own marks, and more than one at a time. A dropdown
+               could hold exactly one rarity, which is the wrong shape for the question people
+               actually ask -- "the stars and the crown, never mind the diamonds" -- and it named
+               each rung in words where the game names it in symbols. Nothing selected means every
+               rarity, so the control starts where the page starts.
+
+               Symbols rather than an icon font: these are the glyphs the list view already draws,
+               from the same rungs, so a chip and a card agree on what a rarity looks like. *@
+            <div class="chip-group">
+                <span class="ttl" id="rarity-chips-label">rarity</span>
+                <div class="chip-toolbar" role="group" aria-labelledby="rarity-chips-label">
                 @foreach (var rung in Session.Index.Ladder.Rungs)
                 {
-                    <option value="@rung.Index">@rung.Symbol</option>
+                    <button class="chip-tog @(_rarities.Contains(rung.Index) ? "on" : "")"
+                            @onclick="() => ToggleRarity(rung.Index)"
+                            aria-pressed="@Aria.Flag(_rarities.Contains(rung.Index))"
+                            title="@rung.Symbol">
+                        <span class="glyphs @rung.GlyphClass" aria-hidden="true">@rung.Glyphs</span>
+                        <span class="visually-hidden">@rung.Symbol</span>
+                    </button>
                 }
-            </select>
+                </div>
+            </div>
+
+            <span class="bar-sep" aria-hidden="true"></span>
+
+            @* Type needs the printed card detail, which downloads after the card list does, so the
+               control says so rather than quietly returning nothing. Ten energies and four trainer
+               kinds: too many for a dropdown to be worth reading, and each has a pip already. *@
+            <div class="chip-group">
+                <span class="ttl" id="type-chips-label">type</span>
+                <div class="chip-toolbar" role="group" aria-labelledby="type-chips-label">
+                @foreach (var type in FilterTypes)
+                {
+                    <button class="chip-tog @(_types.Contains(type) ? "on" : "")"
+                            @onclick="() => ToggleType(type)"
+                            aria-pressed="@Aria.Flag(_types.Contains(type))"
+                            disabled="@(!Session.FactsReady)"
+                            title="@(Session.FactsReady ? type : $"{type} — still loading card detail")">
+                        <EnergyPip Type="@type" />
+                        <span class="visually-hidden">@type</span>
+                    </button>
+                }
+                </div>
+            </div>
 
             @* No pack filter for promo sets: their "Vol. N" groupings record how a promo was given
                away rather than packs you can open. *@
+            @* The boosters themselves rather than their names in a dropdown. A set has two or
+               three packs and you recognise them by the art on the wrapper -- it is what the game
+               shows you when you choose one -- so a row of wrappers is both faster to read and
+               fewer taps than opening a select. The name stays under each one: the art alone is
+               not a label, and a pack whose art has not been published yet would otherwise be a
+               blank button.
+
+               One at a time, not several. A card lists the packs it comes from, so "cards in
+               either of these two packs" is nearly the whole set and answers nothing; the question
+               this filter exists for is "what is still missing from the pack I am about to open".
+               Tapping the chosen pack again clears it. *@
             @if (!ViewingAll && !CardIndex.IsPromoSet(_set))
             {
-                <select class="form-select form-select-sm" style="max-width:12rem" aria-label="Filter by pack" @onchange="OnPackFilter">
-                    <option value="">all packs</option>
+                <span class="bar-sep" aria-hidden="true"></span>
+                <div class="chip-group">
+                    <span class="ttl" id="pack-picks-label">pack</span>
+                    <div class="pack-picks" role="group" aria-labelledby="pack-picks-label">
                     @foreach (var p in PacksInSet)
                     {
-                        <option value="@p">@p</option>
+                        <button class="pack-pick @(_pack == p ? "on" : "")"
+                                @onclick="() => TogglePack(p)" aria-pressed="@Aria.Flag(_pack == p)"
+                                title="@(_pack == p ? $"Show every pack in {_set} again" : $"Only cards from {p}")">
+                            <span class="pack-thumb" aria-hidden="true"
+                                  style="background-image:url('@Session.PackArtUrl($"{_set}:{p}")')"></span>
+                            <span class="nm">@p</span>
+                        </button>
                     }
-                </select>
+                    </div>
+                </div>
             }
 
-    
         </Filters>
         <ToolbarExtras>
             @* Columns only mean something in the grid layout. *@
@@ -297,7 +391,16 @@ else
     private string _series = "A";
     private string _search = "";
     private string _own = "all";
-    private string _rarity = "";
+
+    /// <summary>
+    /// Rarity rungs to show. Empty means every rarity rather than none: a filter nobody has
+    /// touched must not hide the page's contents, and "show me nothing" is not a view anyone wants.
+    /// </summary>
+    private readonly HashSet<int> _rarities = [];
+
+    /// <summary>Card types to show, by the label the facts carry. Empty means every type.</summary>
+    private readonly HashSet<string> _types = new(StringComparer.OrdinalIgnoreCase);
+
     private string _pack = "";
 
     private string[] _sets = [];
@@ -418,18 +521,58 @@ else
 
     private void OnSearch(ChangeEventArgs e) => _search = Text(e);
     private void OnOwnFilter(ChangeEventArgs e) => SetOwnFilter(Text(e) is { Length: > 0 } v ? v : "all");
-    private void OnRarityFilter(ChangeEventArgs e) => SetRarityFilter(Text(e));
-    private void OnPackFilter(ChangeEventArgs e) => SetPackFilter(Text(e));
+
+    /// <summary>
+    /// The promoted toggle. It goes back to "all cards" rather than to whatever was selected
+    /// before: the button reads as a two-state switch, and restoring a hidden third state would
+    /// make the same tap mean different things on different days.
+    /// </summary>
+    private void ToggleMissing() => _own = _own == "missing" ? "all" : "missing";
+
+    private void ToggleRarity(int rung)
+    {
+        if (!_rarities.Remove(rung)) _rarities.Add(rung);
+    }
+
+    private void ToggleType(string type)
+    {
+        if (!_types.Remove(type)) _types.Add(type);
+    }
+
+    private void TogglePack(string pack) => _pack = _pack == pack ? "" : pack;
+
+    /// <summary>
+    /// The hearts read and write one list of their own — see <see cref="AppSession.WantList"/>.
+    /// The page holds no state for it: which list a heart fills is a property of the collection,
+    /// not of this visit to this page.
+    /// </summary>
+    private int WantedOf(PocketCard card) => Session.WantedOnHeartList(card.OwnershipKey);
+
+    private void ToggleWant(PocketCard card) => Session.ToggleWanted(card.OwnershipKey);
+
 
     // One per chip on the toolbar. Parameterless because a Razor event handler cannot carry a
     // quoted string literal without escaping that the compiler then reads as an indexer.
     private void ClearSearch() => _search = "";
     private void ClearOwnFilter() => _own = "all";
-    private void ClearRarityFilter() => _rarity = "";
+    private void ClearRarityFilter() => _rarities.Clear();
+    private void ClearTypeFilter() => _types.Clear();
     private void ClearPackFilter() => _pack = "";
     private void SetOwnFilter(string v) => _own = v;
-    private void SetRarityFilter(string v) => _rarity = v;
-    private void SetPackFilter(string v) => _pack = v;
+
+    /// <summary>
+    /// What the sticky strip calls the set a card belongs to, in the same words as the set picker's
+    /// summary: the code is what the tabs are labelled with, the name is what anyone would call it.
+    /// </summary>
+    private string GroupLabel(PocketCard card) => $"{card.Set} — {Session.Sets.DisplayName(card.Set)}";
+
+    /// <summary>
+    /// The set's own expansion logo, which is what the strip shows beside its name — and what the
+    /// log screen has always used for the same job. Published for every set at one size, so this
+    /// is a string build rather than a lookup; a set whose logo is missing upstream degrades to a
+    /// blank slot rather than a broken image, since a background-image fails silently.
+    /// </summary>
+    private static string GroupArt(PocketCard card) => PocketCard.SetLogoUrl(card.Set);
 
     /// <summary>The wording the ownership dropdown uses, so a chip and its control agree.</summary>
     private string OwnFilterLabel => _own switch
@@ -443,11 +586,30 @@ else
     };
 
     /// <summary>The rarity's own symbol rather than its ladder index, which means nothing on a chip.</summary>
+    /// <summary>
+    /// One rarity is named; several are counted. Four symbols side by side on the bar would be
+    /// wider than the count beside them and would read as the rarities themselves rather than as
+    /// a filter, and the chips that set them are one disclosure away.
+    /// </summary>
     private string RarityFilterLabel =>
-        int.TryParse(_rarity, out var i)
-        && Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == i) is { } rung
+        _rarities.Count == 1
+        && Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == _rarities.First()) is { } rung
             ? rung.Symbol
-            : _rarity;
+            : $"{_rarities.Count} rarities";
+
+    private string TypeFilterLabel =>
+        _types.Count == 1 ? _types.First() : $"{_types.Count} types";
+
+    /// <summary>
+    /// The types worth offering, in the game's own order: the ten energies, then the trainer
+    /// kinds. Fixed rather than derived from the loaded cards, so the row does not reshuffle as
+    /// card detail arrives, and it matches the pips the list view draws.
+    /// </summary>
+    private static readonly string[] FilterTypes =
+    [
+        "Grass", "Fire", "Water", "Lightning", "Psychic", "Fighting", "Darkness", "Metal",
+        "Dragon", "Colorless", "Item", "Supporter", "Tool", "Stadium"
+    ];
     private void OnColumns(ChangeEventArgs e)
     {
         if (int.TryParse(Text(e), out var n)) Session.SetGridColumns(n);
@@ -494,6 +656,27 @@ else
 
     private double ProgressOf(IReadOnlyList<PocketCard> cards) =>
         cards.Count == 0 ? 0 : (double)cards.Count(c => Session.CountOf(c) > 0) / cards.Count;
+
+    /// <summary>
+    /// A wrapper to stand for a set on its tab: the first pack's art. A set with several packs gets
+    /// the first rather than all of them -- the tab is a few characters wide and the point is
+    /// recognition, not a contents list -- and a set with none gets an empty string, which the
+    /// markup reads as "draw no thumbnail".
+    ///
+    /// The catalogue is asked directly rather than through Session.PackArtUrl, which never returns
+    /// nothing: where the catalogue has no mapping it guesses a URL from the pack's NAME. That
+    /// guess is right for a real booster and wrong for a promo set, whose "packs" are the Vol. 1,
+    /// Vol. 2 groupings recording how a promo was given away -- so every promo tab drew a
+    /// background-image that 404s, which is a blank grey box rather than no box. Here a missing
+    /// mapping has to mean no picture; the guess is still worth making everywhere a pack is named
+    /// by itself.
+    /// </summary>
+    private string SetArtUrl(string set) =>
+        Session.Index.ByPack.Keys
+            .Where(k => k.StartsWith($"{set}:", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .Select(k => Session.PackArt.UrlFor(k))
+            .FirstOrDefault(u => !string.IsNullOrEmpty(u)) ?? "";
 
     private IEnumerable<string> PacksInSet =>
         InSet.Where(c => c.IsPackObtainable).SelectMany(c => c.Packs!)
@@ -586,7 +769,15 @@ else
         get
         {
             var countsMatter = _own is "missing" or "owned" or "dupes" or "needed" or "gaps";
-            var signature = $"{_set}|{_series}|{_search}|{_own}|{_rarity}|{_pack}|" +
+            // Ordered, because a set's enumeration order is not part of its contract and an
+            // unstable signature would rebuild the list on every render.
+            var rarities = string.Join('.', _rarities.OrderBy(i => i));
+            var types = string.Join('.', _types.OrderBy(t => t, StringComparer.Ordinal));
+            var signature = $"{_set}|{_series}|{_search}|{_own}|{rarities}|{types}|{_pack}|" +
+                            // The type of a card comes from the printed detail, which downloads
+                            // after the card list. Without this the list built while it was still
+                            // arriving would be cached and never rebuilt.
+                            (_types.Count > 0 ? $"f{Session.FactsReady}|" : "") +
                             (countsMatter ? $"{Session.CollectionRevision}|{PlanSignature()}" : "");
 
             if (signature == _filteredFor) return _filtered;
@@ -620,8 +811,12 @@ else
             if (!string.IsNullOrWhiteSpace(_search))
                 q = q.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
 
-            if (int.TryParse(_rarity, out var tier))
-                q = q.Where(c => Session.Index.Ladder.IndexOf(c.Rarity) == tier);
+            if (_rarities.Count > 0)
+                q = q.Where(c => Session.Index.Ladder.IndexOf(c.Rarity) is { } tier
+                                 && _rarities.Contains(tier));
+
+            if (_types.Count > 0)
+                q = q.Where(c => _types.Contains(Session.TypeLabel(c)));
 
             if (!string.IsNullOrEmpty(_pack))
                 q = q.Where(c => c.Packs is not null && c.Packs.Contains(_pack));

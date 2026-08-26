@@ -2777,6 +2777,33 @@ tr.row-best {
 .nav-more-search:hover { background: var(--bs-secondary-bg); color: var(--bs-body-color); }
 .nav-more-search:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
 
+/* Named way out of the sheet. On a phone the sheet is anchored to the bottom edge, over the tab
+   bar that opened it, so the opener cannot be tapped again to toggle it shut -- and the only
+   "outside" left to tap is the page content. At desk the More button stays visible and a second
+   tap on it closes the menu, so the button would be redundant there. */
+.nav-more-close {
+    display: block; width: 100%; margin-top: .6rem;
+    padding: .7rem .75rem;
+    border: 1px solid var(--bs-border-color); border-radius: .4rem;
+    background: var(--bs-body-bg); color: var(--bs-body-color);
+    font-size: .95rem;
+}
+.nav-more-close:hover { background: var(--bs-secondary-bg); }
+.nav-more-close:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+@media (width >= 1057px) { .nav-more-close { display: none; } }
+
+/* Catches the dismissing tap so it does not also land on the page. A popover's ::backdrop is
+   painted but not hit-testable, so without this the tap that closes the sheet opens whichever card
+   happened to be under it. Transparent, because the ::backdrop above still does the dimming --
+   both navs are in the DOM at once and so are both of their scrims, and two tinted layers would
+   stack into a darker one. Under the top layer, over the tab bar. */
+.nav-more-scrim { display: none; }
+body:has(.nav-more:popover-open) .nav-more-scrim {
+    display: block;
+    position: fixed; inset: 0; z-index: 1040;
+    background: transparent;
+}
+
 /* An empty list is not an error, so it is quiet: no border, no tint, no icon. It only has to say
    what is missing and offer the thing that fills it.
 

@@ -165,6 +165,24 @@
     <span class="txt" data-spy-text></span>
 </div>
 
+@* Back to the top.
+   ==================================================================================
+   A set is a couple of hundred cards and "every set" is three and a half thousand, so getting back
+   to the controls -- the search box, the set picker, the filters -- was a flick and a wait. Every
+   one of those controls is at the top of the page and nowhere else.
+
+   Rendered always and shown by js/gridspy.js once there is enough scrolled past to be worth
+   undoing: a button that appears at the top of an unscrolled page is a button that says nothing.
+   It scrolls rather than animates, because a virtualised list of thousands smooth-scrolled is
+   every row in between rendered and every image in between queued for nothing. *@
+<button class="to-top" data-to-top type="button" @onclick="ScrollToTopAsync"
+        title="Back to the top of the list" aria-label="Back to the top of the list">
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+        <path d="M8 13V4M3.5 8.5 8 3.5l4.5 5" fill="none" stroke="currentColor"
+              stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+</button>
+
 @* "listing" is read by gridsweep.js, not by CSS: a mouse drag over list rows must obey the
    sweep toggle, while a drag over the tile grid need not. See the comment on onDown there. *@
 @* tabindex, role and aria-activedescendant are set from js/gridkeys.js, which owns the cursor —

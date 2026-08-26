@@ -78,6 +78,17 @@ function headHeight(label) {
     return head ? head.getBoundingClientRect().height : 0;
 }
 
+/// How far the list has been scrolled, from whichever thing is doing the scrolling.
+///
+/// Not window.scrollY alone: above the desk breakpoint the grid has its own scroller and the window
+/// never moves, so a button keyed to the window would never appear on a desktop.
+function scrolledBy(grid) {
+    const scroller = scrollerOf(grid);
+    return scroller === window
+        ? window.scrollY || document.documentElement.scrollTop || 0
+        : scroller.scrollTop;
+}
+
 export function watch(grid, label) {
     if (!grid || !label || watched.has(grid)) return;
 
@@ -134,6 +145,14 @@ export function watch(grid, label) {
         // of its own. Safe against Blazor: the class attribute it renders here is a constant, so the
         // diff never has a new value to write and never puts this back.
         label.classList.toggle('on', !!name);
+
+        // The back-to-top button, on the same pass and for the same reason: this is the one place
+        // that already knows how far down the page is, without a second scroll listener.
+        //
+        // One viewport as the threshold. Less and the button appears while the toolbar it returns
+        // you to is still on screen; more and you are hunting for it by the time it is worth having.
+        const up = host?.querySelector('[data-to-top]');
+        if (up) up.classList.toggle('on', scrolledBy(grid) > window.innerHeight);
     };
 
     // Coalesced to a frame. A scroll fires this dozens of times a second and the work is a handful

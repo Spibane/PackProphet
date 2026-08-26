@@ -660,14 +660,22 @@ else
     /// <summary>
     /// A wrapper to stand for a set on its tab: the first pack's art. A set with several packs gets
     /// the first rather than all of them -- the tab is a few characters wide and the point is
-    /// recognition, not a contents list -- and a set with no published art gets an empty string,
-    /// which the markup reads as "draw no thumbnail".
+    /// recognition, not a contents list -- and a set with none gets an empty string, which the
+    /// markup reads as "draw no thumbnail".
+    ///
+    /// The catalogue is asked directly rather than through Session.PackArtUrl, which never returns
+    /// nothing: where the catalogue has no mapping it guesses a URL from the pack's NAME. That
+    /// guess is right for a real booster and wrong for a promo set, whose "packs" are the Vol. 1,
+    /// Vol. 2 groupings recording how a promo was given away -- so every promo tab drew a
+    /// background-image that 404s, which is a blank grey box rather than no box. Here a missing
+    /// mapping has to mean no picture; the guess is still worth making everywhere a pack is named
+    /// by itself.
     /// </summary>
     private string SetArtUrl(string set) =>
         Session.Index.ByPack.Keys
             .Where(k => k.StartsWith($"{set}:", StringComparison.OrdinalIgnoreCase))
             .OrderBy(k => k, StringComparer.Ordinal)
-            .Select(Session.PackArtUrl)
+            .Select(k => Session.PackArt.UrlFor(k))
             .FirstOrDefault(u => !string.IsNullOrEmpty(u)) ?? "";
 
     private IEnumerable<string> PacksInSet =>

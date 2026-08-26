@@ -4,7 +4,7 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
-## Unreleased
+## 0.4.0 — 2026-08-25
 
 A pass over the collection grid and the screens around it, started by comparing the app against
 two other trackers — [PTCGP Tracker](https://ptcgp-tracker.com) and
@@ -232,7 +232,7 @@ another width is named.
   sibling of the popover catches the tap: it is outside the popover, so light dismiss still fires, and
   it is a real element, so nothing behind it is clicked.
 
-### Earlier, also unreleased
+### Earlier
 
 Work that had landed before this pass and has not been released either.
 

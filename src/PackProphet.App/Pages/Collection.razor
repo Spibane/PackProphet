@@ -197,7 +197,7 @@ else
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
               RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
-              SortKeyOf="Session.Sets.SortKey"
+              SortKeyOf="Session.Sets.SortKey" GroupOf="GroupLabel"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady">
         @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
            header, the set tabs, a filter row and a control row, this page put five bars above the
@@ -214,7 +214,7 @@ else
            filtered view you have to remember to undo. *@
         <Toggles>
             <button class="btn btn-sm @(_own == "missing" ? "btn-primary" : "btn-outline-secondary")"
-                    @onclick="ToggleMissing" aria-pressed="@(_own == "missing")"
+                    @onclick="ToggleMissing" aria-pressed="@Pressed(_own == "missing")"
                     title="@(_own == "missing" ? "Show every card again" : "Show only the cards you do not own yet")">
                 missing only
             </button>
@@ -280,7 +280,7 @@ else
                 {
                     <button class="chip-tog @(_rarities.Contains(rung.Index) ? "on" : "")"
                             @onclick="() => ToggleRarity(rung.Index)"
-                            aria-pressed="@_rarities.Contains(rung.Index)"
+                            aria-pressed="@Pressed(_rarities.Contains(rung.Index))"
                             title="@rung.Symbol">
                         <span class="glyphs @rung.GlyphClass" aria-hidden="true">@rung.Glyphs</span>
                         <span class="visually-hidden">@rung.Symbol</span>
@@ -296,7 +296,7 @@ else
                 {
                     <button class="chip-tog @(_types.Contains(type) ? "on" : "")"
                             @onclick="() => ToggleType(type)"
-                            aria-pressed="@_types.Contains(type)"
+                            aria-pressed="@Pressed(_types.Contains(type))"
                             disabled="@(!Session.FactsReady)"
                             title="@(Session.FactsReady ? type : $"{type} — still loading card detail")">
                         <EnergyPip Type="@type" />
@@ -324,7 +324,7 @@ else
                     @foreach (var p in PacksInSet)
                     {
                         <button class="pack-pick @(_pack == p ? "on" : "")"
-                                @onclick="() => TogglePack(p)" aria-pressed="@(_pack == p)"
+                                @onclick="() => TogglePack(p)" aria-pressed="@Pressed(_pack == p)"
                                 title="@(_pack == p ? $"Show every pack in {_set} again" : $"Only cards from {p}")">
                             <span class="pack-thumb" aria-hidden="true"
                                   style="background-image:url('@Session.PackArtUrl($"{_set}:{p}")')"></span>
@@ -524,6 +524,16 @@ else
 
     private void TogglePack(string pack) => _pack = _pack == pack ? "" : pack;
 
+    /// <summary>
+    /// aria-pressed as text rather than as a bool.
+    ///
+    /// Blazor drops an attribute whose value is <c>false</c>, which is right for <c>disabled</c>
+    /// and wrong for this: a toggle with no aria-pressed at all is announced as an ordinary
+    /// button, so the one state that needed saying -- "this filter is off" -- is the state that
+    /// said nothing. Every toggle on this page therefore renders the word.
+    /// </summary>
+    private static string Pressed(bool on) => on ? "true" : "false";
+
     // One per chip on the toolbar. Parameterless because a Razor event handler cannot carry a
     // quoted string literal without escaping that the compiler then reads as an indexer.
     private void ClearSearch() => _search = "";
@@ -532,6 +542,12 @@ else
     private void ClearTypeFilter() => _types.Clear();
     private void ClearPackFilter() => _pack = "";
     private void SetOwnFilter(string v) => _own = v;
+
+    /// <summary>
+    /// What the sticky strip calls the set a card belongs to, in the same words as the set picker's
+    /// summary: the code is what the tabs are labelled with, the name is what anyone would call it.
+    /// </summary>
+    private string GroupLabel(PocketCard card) => $"{card.Set} — {Session.Sets.DisplayName(card.Set)}";
 
     /// <summary>The wording the ownership dropdown uses, so a chip and its control agree.</summary>
     private string OwnFilterLabel => _own switch

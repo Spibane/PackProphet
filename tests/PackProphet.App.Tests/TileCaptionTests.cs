@@ -158,6 +158,76 @@ public class TileCaptionTests : AppHost
     }
 
     [Fact]
+    public async Task The_heart_is_reachable_from_the_keyboard()
+    {
+        // Everything in a tile is tabindex="-1" -- a focus stop per card would put thousands of them
+        // between this grid and the rest of the page -- so the grid's contract is that the cursor
+        // plus a letter does whatever a tile's furniture does. Adding a control without adding its
+        // key would have made the heart a mouse-only feature.
+        await ReadyAsync();
+        var cards = Session.Index.All.Take(3).ToArray();
+
+        var grid = RenderComponent<CardGrid>(p =>
+        {
+            p.Add(g => g.Cards, cards);
+            p.Add(g => g.CountOf, _ => 0);
+            p.Add(g => g.WantedOf, c => Session.WantedOnHeartList(c.OwnershipKey));
+            p.Add(g => g.OnWant, (PocketCard c) => Session.ToggleWanted(c.OwnershipKey));
+        });
+
+        // The key legend has to advertise it, or it is a secret.
+        Assert.Contains("want it", grid.Find(".kb-hint").TextContent);
+
+        await grid.InvokeAsync(() => grid.Instance.KeyWant(1));
+
+        var list = Assert.Single(Session.Wishlists);
+        Assert.True(list.Wanted.ContainsKey(cards[1].OwnershipKey));
+
+        // And back off again, like the button.
+        await grid.InvokeAsync(() => grid.Instance.KeyWant(1));
+        Assert.Empty(Session.Wishlists[0].Wanted);
+    }
+
+    [Fact]
+    public async Task The_want_key_does_nothing_where_there_is_no_list_to_write_to()
+    {
+        // The log screen passes no handler. A key that threw there would take the render loop with
+        // it, and one that silently created a wishlist would be worse.
+        await ReadyAsync();
+
+        var grid = RenderComponent<CardGrid>(p =>
+        {
+            p.Add(g => g.Cards, Session.Index.All.Take(3).ToArray());
+            p.Add(g => g.CountOf, _ => 0);
+        });
+
+        await grid.InvokeAsync(() => grid.Instance.KeyWant(0));
+
+        Assert.Empty(Session.Wishlists);
+        Assert.DoesNotContain("want it", grid.Find(".kb-hint").TextContent);
+    }
+
+    [Fact]
+    public async Task The_want_column_header_is_named_for_a_screen_reader()
+    {
+        // Blank on screen -- a visible "want" over a column of hearts explains an icon that already
+        // says it -- but a column header with no accessible name at all is announced as nothing.
+        await ReadyAsync();
+
+        var grid = RenderComponent<CardGrid>(p =>
+        {
+            p.Add(g => g.Cards, Session.Index.All.Take(3).ToArray());
+            p.Add(g => g.CountOf, _ => 0);
+            p.Add(g => g.ListView, true);
+            p.Add(g => g.OnWant, (PocketCard _) => { });
+        });
+
+        var header = grid.Find(".card-line.head .c-want");
+        Assert.Equal("want", header.TextContent.Trim());
+        Assert.NotNull(header.QuerySelector(".visually-hidden"));
+    }
+
+    [Fact]
     public async Task How_to_get_it_is_addressable_so_it_can_span_the_width_on_a_tablet()
     {
         // Two columns at tablet widths puts the third child on a second row — in column one, the

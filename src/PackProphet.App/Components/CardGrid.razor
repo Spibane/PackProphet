@@ -133,7 +133,7 @@
        knowing about it. It is also the switch a pointer user wants when they stop tapping and
        start typing counts. *@
     <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
-            title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail. Shift+move selects a range to add or remove in bulk.">
+            title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
         keyboard
     </button>
 
@@ -181,6 +181,10 @@
         <span><kbd>&minus;</kbd> remove one</span>
         <span><kbd>shift</kbd>+move select a range, then <kbd>enter</kbd>/<kbd>&minus;</kbd> applies to all</span>
         <span><kbd>i</kbd> card detail, <kbd>esc</kbd> back</span>
+        @if (OnWant.HasDelegate)
+        {
+            <span><kbd>w</kbd> want it</span>
+        }
     </div>
 
     @if (Cards.Count == 0)
@@ -202,9 +206,11 @@
                number it was most likely to be mistaken for. At the front it reads as a mark against
                the row, the way a starred message does.
 
-               The header cell stays empty. "want" over a column of hearts would be the only header
-               in the row explaining an icon that already says it, and this column does not sort. *@
-            <span class="c-want" role="columnheader"></span>
+               The header is named for a screen reader and blank on screen: a visible "want" over a
+               column of hearts would be the only header in the row explaining an icon that already
+               says it, but a column header with no accessible name at all is announced as nothing.
+               The column does not sort, so it is not a button. *@
+            <span class="c-want" role="columnheader"><span class="visually-hidden">want</span></span>
             <button class="c-nm" role="columnheader" @onclick="() => SortBy(ListSort.Name)">name @Caret(ListSort.Name)</button>
             <button class="c-id" role="columnheader" @onclick="() => SortBy(ListSort.Number)">set @Caret(ListSort.Number)</button>
             @* The column is a row of pips, so its heading is one too — a three-wedge key rather
@@ -1192,6 +1198,19 @@
         OpenDetail(Cards[index]);
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Toggle the cursor card on the want list, from the keyboard.
+    ///
+    /// The heart is <c>tabindex="-1"</c> like the rest of a tile's furniture, so this is the only
+    /// route to it without a pointer. Silent where the page passes no handler -- the log screen has
+    /// no list to write to, and a key that does nothing is better than one that throws.
+    /// </summary>
+    [JSInvokable]
+    public Task KeyWant(int index) =>
+        index >= 0 && index < Cards.Count && OnWant.HasDelegate
+            ? OnWant.InvokeAsync(Cards[index])
+            : Task.CompletedTask;
 
     /// <summary>Called once by gridsweep.js when a drag is released.</summary>
     [JSInvokable]

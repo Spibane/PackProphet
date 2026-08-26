@@ -38,12 +38,12 @@
 
     <div class="btn-group btn-group-sm" role="group" aria-label="Card pool">
         <button class="btn @(_ownedOnly ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@_ownedOnly"
+                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@Aria.Flag(_ownedOnly)"
                 title="Only cards you already own">
             I own
         </button>
         <button class="btn @(_ownedOnly ? "btn-outline-secondary" : "btn-secondary")"
-                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@(!_ownedOnly)"
+                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@Aria.Flag(!_ownedOnly)"
                 title="Every card in the game">
             all
         </button>

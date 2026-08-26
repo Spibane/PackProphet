@@ -96,7 +96,7 @@ else
                     var on = _draft.Energies.Contains(energy);
                     <button class="energy-chip @(on ? "on" : "")" @onclick="() => ToggleEnergy(energy)"
                             disabled="@(!on && _draft.Energies.Count >= GameRules.MaxEnergyTypes)"
-                            aria-pressed="@on">
+                            aria-pressed="@Aria.Flag(on)">
                         <EnergyPip Type="@energy.ToString()" />
                         <span>@energy</span>
                     </button>
@@ -139,7 +139,7 @@ else
                                        while a deck is built around one Pokémon. *@
                                     <button class="face-pick @(IsFace(entry.Nr) ? "on" : "")"
                                             @onclick="() => SetFace(entry.Nr)"
-                                            aria-pressed="@IsFace(entry.Nr)"
+                                            aria-pressed="@Aria.Flag(IsFace(entry.Nr))"
                                             title="@(IsFace(entry.Nr) ? "This is the deck's face card — tap to unset" : "Use as the deck's face card")">
                                         ★
                                     </button>

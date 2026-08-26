@@ -44,12 +44,12 @@
            states, "the other one" is unambiguous. *@
         <div class="btn-group btn-group-sm" role="group" aria-label="@Gesture action">
             <button class="btn @(Removing ? "btn-outline-secondary" : "btn-success")"
-                    @onclick="() => Removing = !Removing" aria-pressed="@(!Removing)"
+                    @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(!Removing)"
                     title="@(Removing ? $"Switch back to adding a copy per {Gesture}" : $"{GestureVerb} adds a copy")">
                 add
             </button>
             <button class="btn @(Removing ? "btn-danger" : "btn-outline-secondary")"
-                    @onclick="() => Removing = !Removing" aria-pressed="@Removing"
+                    @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
                     title="@(Removing ? $"{GestureVerb} removes a copy" : $"Switch to removing a copy per {Gesture}")">
                 remove
             </button>
@@ -92,10 +92,10 @@
        means anything once you are in list mode and this row has to survive a phone. *@
     <div class="btn-group btn-group-sm layout-switch" role="group" aria-label="Layout">
         <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
-                @onclick="() => SetList(!ListView)" aria-pressed="@(!ListView)"
+                @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
                 title="Card images in a grid">grid</button>
         <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetList(!ListView)" aria-pressed="@ListView"
+                @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
                 title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
             list
         </button>
@@ -117,10 +117,10 @@
     {
         <div class="btn-group btn-group-sm" role="group" aria-label="Row height">
             <button class="btn @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
-                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@(!Roomy)"
+                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
                     title="Short rows — most cards per screen">compact</button>
             <button class="btn @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
-                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Roomy"
+                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
                     title="Taller rows with attack and ability text shown in full">roomy</button>
         </div>
     }
@@ -362,7 +362,7 @@
                         var wanted = WantedOf?.Invoke(card) ?? 0;
                         <button class="want @(wanted > 0 ? "on" : "")" @onclick="() => OnWant.InvokeAsync(card)"
                                 @onclick:stopPropagation="true"
-                                aria-pressed="@(wanted > 0 ? "true" : "false")"
+                                aria-pressed="@Aria.Flag(wanted > 0)"
                                 aria-label="@(wanted > 0 ? $"On your wishlist: {card.Name}" : $"Add {card.Name} to your wishlist")"
                                 title="@(wanted > 0 ? "On your wishlist" : "Add to your wishlist")">
                             <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">

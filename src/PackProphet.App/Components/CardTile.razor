@@ -62,7 +62,7 @@
                 @onpointerdown:stopPropagation="true"
                 @oncontextmenu:stopPropagation="true"
                 tabindex="-1"
-                aria-pressed="@(Wanted > 0 ? "true" : "false")"
+                aria-pressed="@Aria.Flag(Wanted > 0)"
                 aria-label="@(Wanted > 0 ? $"On your wishlist: {Card.Name}" : $"Add {Card.Name} to your wishlist")"
                 title="@(Wanted > 0 ? "On your wishlist" : "Add to your wishlist")">
             @* Drawn, not typed: the heart characters that carry a filled and an outlined form are

@@ -104,7 +104,7 @@ else if (_pack is null)
                     @* Always on the tile rather than revealed on hover: this page is used on a
                        phone beside the game, where there is no hover, and a control you can only
                        find with a mouse is no control at all. *@
-                    <button class="pin-pack @(pinned ? "on" : "")" aria-pressed="@pinned"
+                    <button class="pin-pack @(pinned ? "on" : "")" aria-pressed="@Aria.Flag(pinned)"
                             @onclick="() => Session.SetPackPinned(pack, !pinned)"
                             aria-label="@(pinned ? $"Unpin {name}" : $"Pin {name}")"
                             title="@(pinned

@@ -153,10 +153,23 @@ running app at 375x812 unless another width is named.
   It gets the "packs per new card" column the Which-pack table has, from a figure the ranker
   already returned.
 
-- **`aria-pressed` was silently absent on every unpressed toggle.** Blazor drops an attribute whose
-  value is `false`, so a filter that was off announced itself as an ordinary button — the one state
-  that needed saying. Found by a test that clicked `button[aria-pressed]` and hit "add". Fixed on
-  the new toggles; the older button groups in the card grid still do it.
+- **`aria-pressed` was silently absent on every unpressed toggle, everywhere.** Blazor omits an
+  attribute whose value is `false` — right for HTML's own booleans, since `disabled="false"` would
+  disable a control, and wrong for every ARIA state, where the two values are the *words* "true"
+  and "false" and the absence of the attribute says the element has no such state at all. So a
+  toggle that was off announced itself as an ordinary button: the one state that needed saying was
+  the only one that said nothing, and the markup looked correct — the attribute was written, it
+  just never arrived.
+
+  Found by a test that clicked `button[aria-pressed]` and hit "add", because the unpressed button
+  did not match the selector. Fixed at all 26 sites across eleven files, through one `Aria.Flag`
+  helper. The worst of them was the rarity plan on the Which-pack page, where six of the ten chips
+  that configure every estimate in the app were announced as plain buttons.
+
+  Guarded by a test that reads the `.razor` sources rather than the DOM, because from the DOM side
+  a dropped attribute is invisible: what you see is an element with no `aria-pressed`, which is
+  exactly what a plain button looks like. It was checked against a deliberately reintroduced
+  violation.
 
 - **Wishlists took Wonder Pick's place in both nav bars.** The four primary destinations are the
   ones you visit while you are handling cards; a wishlist is consulted every time you open a pack

@@ -67,6 +67,19 @@
              Link="pages\%(Filename).razor.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The components and the layout, as text as well, so a rule about how markup is WRITTEN can be
+       asserted over all of it. Rendering cannot answer this one: an ARIA state that Blazor dropped
+       is absent from the DOM, and a test looking at the DOM sees an element that simply has no such
+       state rather than one that lost it. -->
+  <ItemGroup>
+    <Content Include="..\..\src\PackProphet.App\Components\*.razor"
+             Link="markup\components\%(Filename).razor.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\PackProphet.App\Pages\*.razor"
+             Link="markup\pages\%(Filename).razor.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\PackProphet.App\Layout\*.razor"
+             Link="markup\layout\%(Filename).razor.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- The same vendored snapshot the app ships, served to the loader over a fake HttpClient so a
        page renders against real card data rather than a handful of fixtures. -->
   <ItemGroup>

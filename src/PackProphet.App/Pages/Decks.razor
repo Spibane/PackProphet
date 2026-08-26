@@ -29,10 +29,10 @@ else
             <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
                 <button class="btn @(Session.DeckGrid ? "btn-outline-secondary" : "btn-secondary")"
                         @onclick="() => Session.SetDeckGrid(!Session.DeckGrid)"
-                        aria-pressed="@(!Session.DeckGrid)" title="A table, for comparing">list</button>
+                        aria-pressed="@Aria.Flag(!Session.DeckGrid)" title="A table, for comparing">list</button>
                 <button class="btn @(Session.DeckGrid ? "btn-secondary" : "btn-outline-secondary")"
                         @onclick="() => Session.SetDeckGrid(!Session.DeckGrid)"
-                        aria-pressed="@Session.DeckGrid" title="Cards, for recognising">grid</button>
+                        aria-pressed="@Aria.Flag(Session.DeckGrid)" title="Cards, for recognising">grid</button>
             </div>
         </div>
     }

@@ -114,7 +114,7 @@ else
     {
         <div class="gap-strip">
             <button class="hd" @onclick="() => _showGaps = !_showGaps"
-                    aria-expanded="@_showGaps">
+                    aria-expanded="@Aria.Flag(_showGaps)">
                 <span class="chev" aria-hidden="true">@(_showGaps ? "▾" : "▸")</span>
                 <strong>@gaps.BlockedCards</strong>
                 @(gaps.BlockedCards == 1 ? "card you own cannot evolve" : "cards you own cannot evolve")
@@ -215,7 +215,7 @@ else
            filtered view you have to remember to undo. *@
         <Toggles>
             <button class="btn btn-sm @(_own == "missing" ? "btn-primary" : "btn-outline-secondary")"
-                    @onclick="ToggleMissing" aria-pressed="@Pressed(_own == "missing")"
+                    @onclick="ToggleMissing" aria-pressed="@Aria.Flag(_own == "missing")"
                     title="@(_own == "missing" ? "Show every card again" : "Show only the cards you do not own yet")">
                 missing only
             </button>
@@ -281,7 +281,7 @@ else
                 {
                     <button class="chip-tog @(_rarities.Contains(rung.Index) ? "on" : "")"
                             @onclick="() => ToggleRarity(rung.Index)"
-                            aria-pressed="@Pressed(_rarities.Contains(rung.Index))"
+                            aria-pressed="@Aria.Flag(_rarities.Contains(rung.Index))"
                             title="@rung.Symbol">
                         <span class="glyphs @rung.GlyphClass" aria-hidden="true">@rung.Glyphs</span>
                         <span class="visually-hidden">@rung.Symbol</span>
@@ -297,7 +297,7 @@ else
                 {
                     <button class="chip-tog @(_types.Contains(type) ? "on" : "")"
                             @onclick="() => ToggleType(type)"
-                            aria-pressed="@Pressed(_types.Contains(type))"
+                            aria-pressed="@Aria.Flag(_types.Contains(type))"
                             disabled="@(!Session.FactsReady)"
                             title="@(Session.FactsReady ? type : $"{type} — still loading card detail")">
                         <EnergyPip Type="@type" />
@@ -325,7 +325,7 @@ else
                     @foreach (var p in PacksInSet)
                     {
                         <button class="pack-pick @(_pack == p ? "on" : "")"
-                                @onclick="() => TogglePack(p)" aria-pressed="@Pressed(_pack == p)"
+                                @onclick="() => TogglePack(p)" aria-pressed="@Aria.Flag(_pack == p)"
                                 title="@(_pack == p ? $"Show every pack in {_set} again" : $"Only cards from {p}")">
                             <span class="pack-thumb" aria-hidden="true"
                                   style="background-image:url('@Session.PackArtUrl($"{_set}:{p}")')"></span>
@@ -583,15 +583,6 @@ else
         Session.SetWanted(id, card.OwnershipKey, WantedOf(card) > 0 ? 0 : 1);
     }
 
-    /// <summary>
-    /// aria-pressed as text rather than as a bool.
-    ///
-    /// Blazor drops an attribute whose value is <c>false</c>, which is right for <c>disabled</c>
-    /// and wrong for this: a toggle with no aria-pressed at all is announced as an ordinary
-    /// button, so the one state that needed saying -- "this filter is off" -- is the state that
-    /// said nothing. Every toggle on this page therefore renders the word.
-    /// </summary>
-    private static string Pressed(bool on) => on ? "true" : "false";
 
     // One per chip on the toolbar. Parameterless because a Razor event handler cannot carry a
     // quoted string literal without escaping that the compiler then reads as an indexer.

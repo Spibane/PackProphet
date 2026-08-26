@@ -29,10 +29,10 @@ else if (Id is null)
             <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
                 <button class="btn @(Session.WishGrid ? "btn-outline-secondary" : "btn-secondary")"
                         @onclick="() => Session.SetWishGrid(!Session.WishGrid)"
-                        aria-pressed="@(!Session.WishGrid)" title="A table, for comparing">list</button>
+                        aria-pressed="@Aria.Flag(!Session.WishGrid)" title="A table, for comparing">list</button>
                 <button class="btn @(Session.WishGrid ? "btn-secondary" : "btn-outline-secondary")"
                         @onclick="() => Session.SetWishGrid(!Session.WishGrid)"
-                        aria-pressed="@Session.WishGrid" title="Cards, for recognising">grid</button>
+                        aria-pressed="@Aria.Flag(Session.WishGrid)" title="Cards, for recognising">grid</button>
             </div>
         </div>
     }

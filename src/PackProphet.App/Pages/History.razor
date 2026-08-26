@@ -194,7 +194,7 @@ else
                             var on = Session.HitTiers.Contains(rung.Index);
                             <button class="rarity-chip @(on ? "on" : "")"
                                     @onclick="() => Session.ToggleHitTier(rung.Index)"
-                                    aria-pressed="@on" title="@rung.Symbol">
+                                    aria-pressed="@Aria.Flag(on)" title="@rung.Symbol">
                                 <span class="glyphs @rung.GlyphClass">@rung.Glyphs</span>
                                 @rung.Symbol
                             </button>
@@ -335,12 +335,12 @@ else
                 {
                     <div class="btn-group btn-group-sm" role="group" aria-label="Sample">
                         <button class="btn @(_lifetime ? "btn-outline-secondary" : "btn-secondary")"
-                                @onclick="() => SetLifetimeCheck(false)" aria-pressed="@(!_lifetime)"
+                                @onclick="() => SetLifetimeCheck(false)" aria-pressed="@Aria.Flag(!_lifetime)"
                                 title="Only the packs logged here, where both sides are measured">
                             logged packs
                         </button>
                         <button class="btn @(_lifetime ? "btn-secondary" : "btn-outline-secondary")"
-                                @onclick="() => SetLifetimeCheck(true)" aria-pressed="@_lifetime"
+                                @onclick="() => SetLifetimeCheck(true)" aria-pressed="@Aria.Flag(_lifetime)"
                                 title="Scaled up to every pack the game says you have opened">
                             all @Session.LifetimePacks packs
                         </button>

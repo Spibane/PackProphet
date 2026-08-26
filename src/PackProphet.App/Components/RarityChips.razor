@@ -11,7 +11,7 @@
 {
     var want = Plan.Copies(rung.Index);
     <button class="rarity-chip @(want > 0 ? "on" : "")"
-            aria-pressed="@(want > 0)"
+            aria-pressed="@Aria.Flag(want > 0)"
             title="@(want == 0 ? $"Not collecting {rung.Symbol}" : $"Collecting {want} of each {rung.Symbol}") — tap to change"
             @onclick="() => OnCycle.InvokeAsync(rung.Index)">
         @rung.Symbol@(want > 1 ? $" x{want}" : "")
@@ -28,7 +28,7 @@
        parallel foil is a separate printing, so wanting two of every diamond says nothing about how
        many foils you want. *@
     <button class="rarity-chip @(Session.FoilCopies > 0 ? "on" : "")"
-            aria-pressed="@(Session.FoilCopies > 0)"
+            aria-pressed="@Aria.Flag(Session.FoilCopies > 0)"
             @onclick="() => OnCycleFoils.InvokeAsync()"
             title="@(Session.FoilCopies == 0
                 ? "Parallel foils are not counted. There are 139 of them — the Deluxe set's second printings of its 1-3 diamond cards — and they come only from a limited-time pack. Tap to collect them."

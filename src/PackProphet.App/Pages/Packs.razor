@@ -198,14 +198,14 @@ else
         <div class="panel-toggles mb-3">
             @if (!IsWishScope)
             {
-                <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@_advisorOpen"
+                <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@Aria.Flag(_advisorOpen)"
                         @onclick="ToggleAdvisor">cost per rarity</button>
             }
-            <button class="btn btn-sm @Toggled(_batchOpen)" aria-pressed="@_batchOpen"
+            <button class="btn btn-sm @Toggled(_batchOpen)" aria-pressed="@Aria.Flag(_batchOpen)"
                     @onclick="ToggleBatch">buying @GameRules.PacksPerBatch at once</button>
-            <button class="btn btn-sm @Toggled(_allocateOpen)" aria-pressed="@_allocateOpen"
+            <button class="btn btn-sm @Toggled(_allocateOpen)" aria-pressed="@Aria.Flag(_allocateOpen)"
                     @onclick="ToggleAllocate">splitting a budget</button>
-            <button class="btn btn-sm @Toggled(_pointsOpen)" aria-pressed="@_pointsOpen"
+            <button class="btn btn-sm @Toggled(_pointsOpen)" aria-pressed="@Aria.Flag(_pointsOpen)"
                     @onclick="TogglePoints">pack points</button>
         </div>
 

@@ -100,6 +100,97 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **Contrast, measured rather than eyeballed.** Every text colour on every page was read with
+  getComputedStyle in both themes and checked against the surface it actually sits on. Two things
+  were under WCAG AA's 4.5:1, both from Bootstrap's defaults rather than from this project:
+
+  - **Outline buttons**, in *both* themes and worse in dark. Against the raised panel they
+    measured secondary 4.10 light / 2.84 dark, danger 3.96 / 2.94, primary 3.94 / 2.96 — six
+    values, none of them passing, the dark ones close to half. Each hue is now mixed toward its
+    theme's far end until it reaches 4.8:1, which leaves room for a later change to the panel fill
+    without dropping back under. Border as well as text, since the outline is the control's
+    boundary and carries its own 3:1 requirement.
+  - **`text-body-tertiary`**, the quietest copy in the app — the line under a destructive button,
+    the trademark notice. Bootstrap ships it at 50% alpha, which composites to 3.02:1 in light and
+    3.78:1 in dark. The hue is unchanged and only the alpha moved, to the first value clearing
+    4.8:1 in both themes.
+
+  The rules are written flat rather than nested: nothing else in the stylesheet nests, and native
+  CSS nesting is unsupported before iOS 17.2, where a nested block is not degraded but dropped
+  whole — which would have restored the failing colours with nothing to show for it.
+- **Contrast is now a test.** The colours are read back out of the stylesheet and the ratios
+  recomputed, so editing one re-runs the arithmetic instead of quietly invalidating a comment.
+  Selectors are matched as whole comma-separated entries, not as substrings — matching by
+  substring finds `[data-bs-theme="dark"]` inside the light rule's own
+  `:root:not([data-bs-theme="dark"])` and reads the light colour as the dark one, which is how
+  this test first "failed", reporting a ratio that existed nowhere in the app.
+- **Three controls were named only by their placeholder** — the deck screenshot picker, the
+  share-code box beside it, and the new-collection field in Settings. A placeholder disappears the
+  moment anyone types into it, which is also the moment they most need to be told what the field
+  was. All three have real labels now.
+- **The packs-per-day chart says what it shows.** It was `role="img"` labelled "Packs opened per
+  day", which names the picture and says nothing about it — and `role="img"` hides an element's
+  children, so the thirty bars inside it did not exist for a screen reader. The label now carries
+  the range, the total and the busiest day, and the figures themselves sit under it as a real
+  table behind a disclosure. Collapsed rather than visually hidden: thirty rows read out before
+  the rest of the page is a worse answer than a control that says what it opens, and it is also
+  the only way a sighted reader gets an exact figure off a bar.
+- **Accessibility rules that hold everywhere are now swept over every page**: form controls have
+  names, buttons and links have names, images have alternatives, and heading levels never skip.
+  Driven from the same reflection list as the render tests, so a page added later is covered
+  without anyone remembering. Heading order was already clean; the sweep is what keeps it so.
+- **Import a collection from another tracker.** A CSV or `.xlsx` export, read entirely in the
+  browser and never uploaded. The figures come first — cards, copies, rows read, and any row that
+  did not match, named with its line — and nothing is written until a destination is chosen. The
+  default is a new collection, which cannot lose what is already there; merge and replace sit
+  beside it, and only those two advertise an undo, because switching collections clears the undo
+  history and the third would be promising something it cannot do.
+- **One import pipeline, no per-tracker code.** Every tracker surveyed names a card by the same
+  two facts, set code and number, and none of them agree on the shape:
+  tcgpocketcollectiontracker.com writes a single `A1-1`, PTCGP Tracker writes a `set_id` of `A1`
+  beside a `card_id` of `1` — the same column name the first gives to the whole identifier. A
+  header cannot say which it is, so the identifier is reassembled per row: the whole id is tried
+  first and the set column consulted only if that fails. Composing first would ask for `A1-A1-1`
+  on every row of tcgpocketcollectiontracker's file, which carries both.
+- **Upper-casing a set code loses eight of the twenty-two sets.** `A1a` becomes `A1A`, which
+  matches nothing, so the whole of A1a, A2a, A2b, A3a, A3b, A4a, A4b and their B-series
+  equivalents import as unknown rows while every other set succeeds — no exception, no malformed
+  row, just a third of a collection quietly missing. A4b is also where all 214 re-listings live,
+  so the same bug broke the reprint merge. Set codes are matched against the card database rather
+  than normalised by rule. Found by a test that imports all 3,761 entries at once.
+- **An import collapses and an export expands.** This app keys ownership by artwork; the trackers
+  key it by set entry. So 3,761 rows fold into 3,546 cards on the way in — two rows can name one
+  artwork — and 3,546 cards are written back as 3,761 rows on the way out. Counts merge by the
+  larger of the two rather than the sum: two rows about one card are two opinions about one
+  number, and summing would double a Deluxe-set owner's whole collection.
+- **An `.xlsx` reader**, because PTCGP Tracker exports a workbook and a file that has been opened
+  in Excel comes back as one whichever way it started. About 200 lines and no dependency: the App
+  ships to a browser, and a spreadsheet library is payload every user downloads to read a file
+  most of them never have. It follows the workbook relationships to find the first sheet rather
+  than assuming `sheet1.xml`, since sheet order is not file order, and fills sparse cells from
+  their `A1`-style references, since reading cells in document order shifts every value left of a
+  gap. The kind of file is decided by the zip signature rather than the extension.
+- **Export the collection as CSV**, aimed at no site in particular: `set`, `number`, `card_id`,
+  `name`, `rarity`, `quantity`. The identifier is written twice, in both shapes the trackers use,
+  so a reader looking for either finds it — one column of redundancy in place of a guess about
+  what some particular site wants. Unowned cards are written as zeros rather than left out,
+  because a reader cannot tell "none of these" from "no opinion" and at least one tracker's import
+  deletes what a file reports as zero. No byte order mark: Excel would prefer one for the names
+  carrying ♀ and ♂, but a reader that does not expect it takes it as part of the first column's
+  name and then recognises no column at all.
+- **Writing for one particular tracker was tried and abandoned.**
+  tcgpocketcollectiontracker.com's importer checks that a human-readable `Id` column is present
+  and then ignores it, writing by its own `internal_id`. Those are not derivable — the gaps are
+  irregular — so a file it accepts would mean vendoring 3,546 of another project's database keys,
+  and a stale copy would write correct-looking counts against the wrong cards, in the one column
+  a person could not check.
+- Probing that format turned up something worth recording: their 3,761 entries carry only
+  **3,546 distinct `internal_id` values**, and `A4b-1` shares one with `A1-1`. Their internal id
+  is an ownership key. Two projects reached the same conclusion independently — that a card
+  re-listed in a later set is one card — from the same published data.
+- The import fixtures are **real exports**, kept byte for byte as the tracker wrote them, in both
+  CSV and `.xlsx`. A fixture written by this project would only prove the reader can read its own
+  output. Both forms of the same collection are asserted to import identically, card by card.
 - **A CDN that hung, rather than failed, left every page on "Loading card data…" for good.** The
   fallback to the vendored snapshot only runs when a CDN attempt returns, so a request that is
   neither answered nor refused — a network that drops packets to jsdelivr rather than rejecting

@@ -236,7 +236,9 @@
     </p>
 
     <div class="input-group input-group-sm mb-2" style="max-width:22rem">
-        <input class="form-control" placeholder="name a new collection" @bind="_newProfile"
+        <label class="visually-hidden" for="new-profile">Name for the new collection</label>
+        <input class="form-control" id="new-profile" placeholder="name a new collection"
+               @bind="_newProfile"
                @bind:event="oninput" @onkeydown="NewProfileKey" />
         <button class="btn btn-outline-primary" @onclick="AddProfile"
                 disabled="@string.IsNullOrWhiteSpace(_newProfile)">add</button>
@@ -268,6 +270,12 @@
             import backup
             <InputFile OnChange="Import" style="display:none" accept=".json" />
         </label>
+        <a class="btn btn-sm btn-outline-primary" href="collection/import">
+            import from another tracker
+        </a>
+        <a class="btn btn-sm btn-outline-primary" href="collection/export">
+            export collection as CSV
+        </a>
         <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmReset" aria-live="polite">
             @* Names the collection once there is more than one: "erase collection" beside a list
                of three reads as all of them, and it only ever erases the active one. *@

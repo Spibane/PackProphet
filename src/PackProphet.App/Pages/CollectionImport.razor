@@ -1,0 +1,434 @@
+@page "/collection/import"
+@page "/collection/export"
+@inject AppSession Session
+@inject LocalStorageStateStore Store
+@implements IDisposable
+
+<PageTitle>Import and export · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <Loading />
+}
+else
+{
+    <div class="page-head">
+        <a class="btn btn-sm btn-outline-secondary" href="settings">&larr; settings</a>
+        <h1 class="title">Import and export</h1>
+        <span class="subtitle">move a collection between trackers</span>
+    </div>
+
+    <PageShell Measure="PageShell.Width.Form">
+
+        @* The file never leaves the browser, and that is the first thing someone handing over
+           their whole collection wants to know. *@
+        <p class="text-body-secondary">
+            Export your collection from your other tracker and pick the file here &mdash; a CSV
+            or an Excel workbook, whichever it gives you. It is read
+            <strong>in this browser</strong> and never uploaded.
+        </p>
+
+        @if (_preview is null)
+        {
+            <InputFile class="form-control mb-2" OnChange="Read" accept=".csv,.txt,.xlsx,text/csv"
+                       disabled="@_reading" aria-label="collection export file" />
+
+            @if (_reading)
+            {
+                <Notice Severity="Notice.Level.Info">Reading the file&hellip;</Notice>
+            }
+
+            @if (_problem is not null)
+            {
+                <Notice Severity="Notice.Level.Warning">@_problem</Notice>
+            }
+
+            <details class="mt-3">
+                <summary class="small text-body-secondary">Which files work</summary>
+                <div class="pt-2 small text-body-secondary">
+                    <p>
+                        Any CSV or <code>.xlsx</code> with a column naming the card &mdash;
+                        <code>Id</code>, <code>card_id</code> or <code>card number</code> &mdash;
+                        and a column counting copies, such as <code>NumberOwned</code> or
+                        <code>quantity</code>. A file recording only whether a card is held
+                        imports as one copy each.
+                    </p>
+                    <p>
+                        The card can be one column of <code>A1-1</code>, or a
+                        <code>set_id</code> of <code>A1</code> beside a number on its own.
+                        Promos are matched whether they are written <code>P-A-1</code> or
+                        <code>PROMO-A-1</code>.
+                    </p>
+                    <p class="mb-0">
+                        Some trackers export <strong>one set per file</strong>. Import them one
+                        after another, choosing <em>merge</em> for every file after the first.
+                    </p>
+                </div>
+            </details>
+        }
+        else
+        {
+            var p = _preview;
+
+            @* The figures come before the destination on purpose. The question the user is being
+               asked is not "where should this go" but "is this the right file", and that is
+               answered by the counts. *@
+            <h2 class="h5">What this file says</h2>
+            <DataTable Label="Import summary" Fit="true" Class="mb-3">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <th scope="row" class="fw-normal">Cards owned</th>
+                            <td class="text-end fw-semibold">@p.DistinctOwned.ToString("N0")</td>
+                        </tr>
+                        <tr>
+                            <th scope="row" class="fw-normal">Copies in total</th>
+                            <td class="text-end">@p.TotalCopies.ToString("N0")</td>
+                        </tr>
+                        <tr>
+                            <th scope="row" class="fw-normal">Rows read</th>
+                            <td class="text-end">@p.RowsRead.ToString("N0")</td>
+                        </tr>
+                        @if (p.RowsUnmatched > 0)
+                        {
+                            <tr>
+                                <th scope="row" class="fw-normal text-warning-emphasis">
+                                    Rows not recognised
+                                </th>
+                                <td class="text-end text-warning-emphasis">
+                                    @p.RowsUnmatched.ToString("N0")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </DataTable>
+
+            @if (p.DistinctOwned == 0)
+            {
+                <Notice Severity="Notice.Level.Warning">
+                    Nothing in that file matched a card, so there is nothing to import. Check it is
+                    a collection export rather than a deck list or a card database.
+                </Notice>
+            }
+
+            @if (p.RowsUnmatched > 0)
+            {
+                @* Named rather than counted. "31 rows not recognised" is a number nobody can act
+                   on; the first few, with their line numbers, is something the user can go and
+                   look at. *@
+                <Notice Severity="Notice.Level.Warning">
+                    <p class="mb-1">
+                        @p.RowsUnmatched.ToString("N0") @Fmt.S(p.RowsUnmatched, "row") did not match a card and
+                        will not be imported. Most often this is a set added to the other tracker before this
+                        one has it.
+                    </p>
+                    <ul class="mb-0 ps-3">
+                        @foreach (var problem in p.Problems.Take(ProblemsShown))
+                        {
+                            <li>line @problem.Line: @Describe(problem)</li>
+                        }
+                        @if (p.Problems.Count > ProblemsShown)
+                        {
+                            <li>&hellip; and @(p.Problems.Count - ProblemsShown) more</li>
+                        }
+                    </ul>
+                </Notice>
+            }
+
+            @if (p.DistinctOwned > 0)
+            {
+                <h2 class="h5 mt-4">Where it should go</h2>
+
+                <fieldset class="mb-3">
+                    <legend class="visually-hidden">Import destination</legend>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="dest-new"
+                               name="dest" checked="@(_destination == Destination.NewCollection)"
+                               @onchange="@(() => _destination = Destination.NewCollection)" />
+                        <label class="form-check-label" for="dest-new">
+                            <strong>A new collection</strong>
+                            <span class="d-block small text-body-secondary">
+                                Nothing already here is touched. The safe choice, and the one to
+                                take if you are not sure the file is right.
+                            </span>
+                        </label>
+                    </div>
+
+                    @if (_destination == Destination.NewCollection)
+                    {
+                        <div class="ms-4 mb-2" style="max-width: 22rem">
+                            <label class="form-label small mb-1" for="dest-name">Call it</label>
+                            <input class="form-control form-control-sm" id="dest-name"
+                                   @bind="_newName" @bind:event="oninput" />
+                        </div>
+                    }
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="dest-merge"
+                               name="dest" checked="@(_destination == Destination.Merge)"
+                               @onchange="@(() => _destination = Destination.Merge)" />
+                        <label class="form-check-label" for="dest-merge">
+                            <strong>Merge into @Session.Profile.Name</strong>
+                            <span class="d-block small text-body-secondary">
+                                Keeps whichever count is larger for each card, and keeps anything
+                                the file does not mention.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="dest-replace"
+                               name="dest" checked="@(_destination == Destination.Replace)"
+                               @onchange="@(() => _destination = Destination.Replace)" />
+                        <label class="form-check-label" for="dest-replace">
+                            <strong>Replace @Session.Profile.Name</strong>
+                            <span class="d-block small text-body-secondary">
+                                @* Said plainly, with the number, because this is the one option
+                                   that throws work away. *@
+                                Everything currently in it is discarded &mdash;
+                                @Session.Owned.DistinctOwned.ToString("N0")
+                                @Fmt.S(Session.Owned.DistinctOwned, "card") &mdash; and the file
+                                becomes the whole collection.
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-primary" @onclick="Apply" disabled="@_applying">
+                        @ApplyLabel
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="Discard">
+                        pick a different file
+                    </button>
+                </div>
+
+                @if (_destination is Destination.Merge or Destination.Replace)
+                {
+                    <p class="small text-body-secondary mt-2 mb-0">
+                        Undoable with <kbd>Ctrl</kbd>+<kbd>Z</kbd> afterwards.
+                    </p>
+                }
+            }
+            else
+            {
+                <button class="btn btn-outline-secondary" @onclick="Discard">
+                    pick a different file
+                </button>
+            }
+        }
+
+        <hr class="mt-4" />
+
+        <h2 class="h5">Send this collection somewhere else</h2>
+        <p class="small text-body-secondary">
+            A plain CSV, aimed at no site in particular: one row per card with
+            <code>set</code>, <code>number</code>, <code>card_id</code>, <code>name</code>,
+            <code>rarity</code> and <code>quantity</code>. The card is named both ways &mdash;
+            <code>A1-1</code> and <code>A1</code> plus <code>1</code> &mdash; so a tracker
+            expecting either will find it.
+        </p>
+        <p class="small text-body-secondary">
+            @* The one thing about the file that will surprise anyone who compares the two
+               numbers, so it is said before they do. *@
+            A card printed in more than one set is written once per set, because the game counts
+            it as owned in each. So the file has @Entries.ToString("N0") rows for
+            @Session.Index.DistinctOwnableCards.ToString("N0") cards.
+        </p>
+
+        <button class="btn btn-outline-primary btn-sm" @onclick="Download"
+                disabled="@(!Session.Ready)">
+            download @Session.Profile.Name as CSV
+        </button>
+
+        @if (_exported is not null)
+        {
+            <Notice Severity="Notice.Level.Success" Class="mt-2">@_exported</Notice>
+        }
+
+        @if (_done is not null)
+        {
+            <Notice Severity="Notice.Level.Success" Class="mt-3">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span>@_done</span>
+                    <a class="btn btn-sm btn-outline-primary py-0" href="collection">
+                        see the collection
+                    </a>
+                </div>
+            </Notice>
+        }
+    </PageShell>
+}
+
+@code {
+    /// <summary>
+    /// Enough unrecognised lines to show the user what the failures have in common — one bad set
+    /// code, or a file that is not an export at all — without the notice becoming the page.
+    /// </summary>
+    private const int ProblemsShown = 5;
+
+    private enum Destination { NewCollection, Merge, Replace }
+
+    private ImportPreview? _preview;
+    private Destination _destination = Destination.NewCollection;
+    private string _newName = "Imported collection";
+
+    private string? _exported;
+
+    /// <summary>Rows an export will have: set entries, not ownable cards.</summary>
+    private int Entries => Session.Ready ? Session.Index.All.Count : 0;
+
+    private bool _reading;
+    private bool _applying;
+    private string? _problem;
+    private string? _done;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+    }
+
+    public void Dispose() => Session.Changed -= OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task Download()
+    {
+        var csv = TrackerExport.ToCsv(Session.Owned, Session.Index);
+        var name = TrackerExport.FileName(DateTimeOffset.Now);
+
+        await Store.DownloadAsync(name, csv);
+        _exported = $"{name} downloaded. It stays on this device unless you upload it somewhere.";
+    }
+
+    private string ApplyLabel => _destination switch
+    {
+        Destination.Merge => "merge in",
+        Destination.Replace => $"replace {Session.Profile.Name}",
+        _ => "create the collection",
+    };
+
+    private static string Describe(ImportProblem problem) => problem.Kind switch
+    {
+        ImportProblemKind.UnknownCard => $"no card called {problem.Value}",
+        ImportProblemKind.BadCount => $"\"{problem.Value}\" is not a number of copies",
+        _ => "no card id in that row",
+    };
+
+    /// <summary>
+    /// Parse only. Nothing is written until the user has seen the figures and chosen a
+    /// destination, because a mis-detected column or the wrong file entirely both parse
+    /// successfully and produce a plausible-looking result.
+    /// </summary>
+    private async Task Read(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        _reading = true;
+        _problem = null;
+        _done = null;
+
+        try
+        {
+            // 16 MB. A complete export is a few hundred kilobytes — every card in the game with a
+            // name and a count — so the cap exists to refuse something that is not one at all
+            // rather than to constrain a large collection.
+            await using var stream = file.OpenReadStream(16 * 1024 * 1024);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+
+            // Read as bytes rather than text so the same picker takes a workbook, and so the kind
+            // of file is decided by what is in it rather than by what it is called.
+            var preview = TrackerImport.From(buffer.ToArray(), Session.Index);
+
+            // An empty preview means the header matched nothing, which is a different failure from
+            // a file whose rows did not match: there is no summary worth showing, so say so here
+            // instead of putting up a table of zeroes.
+            if (preview.RowsRead == 0)
+            {
+                _problem = "That file has no rows this could read as a collection. It needs a "
+                         + "header row naming a card column and a count column, in a CSV or an "
+                         + "Excel workbook.";
+                return;
+            }
+
+            _preview = preview;
+
+            // Named after the file it came from, so two imports are told apart in the collection
+            // switcher without the user renaming either.
+            _newName = NameFrom(file.Name);
+        }
+        catch (IOException)
+        {
+            _problem = "That file was too large to read.";
+        }
+        finally
+        {
+            _reading = false;
+        }
+    }
+
+    private static string NameFrom(string fileName)
+    {
+        var stem = System.IO.Path.GetFileNameWithoutExtension(fileName ?? "");
+        return string.IsNullOrWhiteSpace(stem) || stem.Length > 40 ? "Imported collection" : stem;
+    }
+
+    private void Discard()
+    {
+        _preview = null;
+        _problem = null;
+        _done = null;
+    }
+
+    private void Apply()
+    {
+        if (_preview is not { DistinctOwned: > 0 } preview) return;
+
+        _applying = true;
+        try
+        {
+            switch (_destination)
+            {
+                case Destination.NewCollection:
+                    Session.ImportAsNewProfile(_newName, preview.Counts);
+
+                    // No undo offered, and none implied: switching collections clears the history.
+                    // Nothing was lost, so the way back is to delete this collection.
+                    _done = $"{preview.DistinctOwned:N0} {Fmt.S(preview.DistinctOwned, "card")} imported into "
+                          + $"{Session.Profile.Name}, now the collection you are looking at. "
+                          + "Delete it in Settings if it is not what you wanted.";
+                    break;
+
+                case Destination.Merge:
+                    var merged = preview.MergedInto(Session.Owned);
+                    Session.Mutate(p => p with { Collection = new(merged.Raw) });
+                    _done = $"Merged in. {merged.DistinctOwned:N0} {Fmt.S(merged.DistinctOwned, "card")} owned now.";
+                    break;
+
+                case Destination.Replace:
+                    Session.Mutate(p => p with { Collection = new(preview.Counts) });
+                    _done = $"{Session.Profile.Name} replaced with "
+                          + $"{preview.DistinctOwned:N0} {Fmt.S(preview.DistinctOwned, "card")} "
+                          + "from the file.";
+                    break;
+            }
+
+            _preview = null;
+
+            // The next file almost certainly belongs with this one. Trackers that export a set at
+            // a time turn one collection into a stack of files, and leaving the destination on
+            // "a new collection" would make the second file a second collection — twenty files,
+            // twenty collections, none of them complete.
+            _destination = Destination.Merge;
+        }
+        finally
+        {
+            _applying = false;
+        }
+    }
+}

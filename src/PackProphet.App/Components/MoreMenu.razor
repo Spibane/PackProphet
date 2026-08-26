@@ -31,7 +31,7 @@
     <p class="nav-more-head" id="@($"{Id}-head")">Everything else</p>
     <nav aria-labelledby="@($"{Id}-head")">
         <NavLink class="nav-more-item" href="decks">Decks</NavLink>
-        <NavLink class="nav-more-item" href="wishlists">Wishlists</NavLink>
+        <NavLink class="nav-more-item" href="wonder">Wonder Pick</NavLink>
         <NavLink class="nav-more-item" href="trades">Trades</NavLink>
         <NavLink class="nav-more-item" href="board">In-game list</NavLink>
         @* Only with something to compare: a link that always says "you have one collection" is a
@@ -44,7 +44,20 @@
         <NavLink class="nav-more-item" href="history">History</NavLink>
         <NavLink class="nav-more-item" href="settings">Settings</NavLink>
     </nav>
+
+    @* Light dismiss alone left the phone with no way out that was not also a tap on the page: the
+       sheet covers the bar it was opened from, so the only "outside" left to tap is the collection
+       grid. A named way to close it, at the bottom where the thumb already is. Hidden at desk,
+       where the opener stays visible and a dropdown with a Close button reads as a dialog. *@
+    <button class="nav-more-close" popovertarget="@Id" popovertargetaction="hide">Close</button>
 </div>
+
+@* The other half of that fix. A popover's ::backdrop is not hit-testable, so the tap that light
+   dismisses lands on whatever is under it -- opening a card the user was only trying to get away
+   from. This takes the tap instead: it is outside the popover, so it still dismisses, and it is a
+   real element, so nothing behind it is clicked. Sibling rather than a child, since a child would
+   count as inside and dismiss nothing. *@
+<div class="nav-more-scrim" aria-hidden="true"></div>
 
 @code {
     /// <summary>DOM id the opening button points at with popovertarget. Unique per nav.</summary>

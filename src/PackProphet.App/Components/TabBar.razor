@@ -3,8 +3,9 @@
 @implements IDisposable
 
 @* The five destinations that carry the loop the app is built around: record what you own, see
-   which pack, log what you opened. Wonder Pick is a separate in-game mechanic that is also a
-   daily action. Everything else is a place you go occasionally, and lives behind More.
+   which pack, log what you opened, and keep the list of what you are still missing. Wonder Pick
+   is a separate in-game mechanic and sits behind More with everything else you go to
+   occasionally.
 
    Hiding those seven is legitimate under the rule the rest of the UI follows: hide controls
    freely, never hide active state that changes what the numbers mean. A destination is not a
@@ -43,14 +44,15 @@
         <span class="lbl">Log</span>
     </NavLink>
 
-    <NavLink class="tab" href="wonder">
+    <NavLink class="tab" href="wishlists">
         <span class="ico" aria-hidden="true">
+            @* A bookmark, not a heart: these are the cards you are hunting, not the ones you love. *@
             <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
-                <path d="M12 3.5l2.1 5.1 5.4.4-4.1 3.5 1.3 5.3L12 15l-4.7 2.8 1.3-5.3-4.1-3.5 5.4-.4z"
-                      fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+                <path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z"
+                      fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
             </svg>
         </span>
-        <span class="lbl">Wonder</span>
+        <span class="lbl">Wishlists</span>
     </NavLink>
 
     @* A native popover: top layer, light dismiss and Escape come free, and unlike a dialog it is

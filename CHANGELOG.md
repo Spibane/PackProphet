@@ -100,6 +100,21 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **Wishlists took Wonder Pick's place in both nav bars.** The four primary destinations are the
+  ones you visit while you are handling cards; a wishlist is consulted every time you open a pack
+  or weigh a trade, and Wonder Pick is a once-a-day errand with its own screen. Wonder Pick moves
+  into More, which is where the rest of the occasional destinations already live. Both navs read
+  from the same list, so the swap happened once.
+
+- **Backing out of the More sheet no longer taps the page underneath.** On a phone the sheet is
+  anchored to the bottom edge, over the tab bar that opened it, so the More button cannot be
+  tapped a second time to close it — and the only "outside" left is the collection grid. A
+  popover's `::backdrop` is painted but not hit-testable, so that dismissing tap went straight
+  through to whichever card was under it. The sheet now has a **Close** button at the bottom, and
+  a transparent sibling of the popover catches the tap: it is outside the popover, so light
+  dismiss still fires, and it is a real element, so nothing behind it is clicked. Desktop gets
+  the same click-catcher and not the button, since the More button there is never covered.
+
 - **Contrast, measured rather than eyeballed.** Every text colour on every page was read with
   getComputedStyle in both themes and checked against the surface it actually sits on. Two things
   were under WCAG AA's 4.5:1, both from Bootstrap's defaults rather than from this project:

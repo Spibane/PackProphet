@@ -45,14 +45,21 @@ public class TileCaptionTests : AppHost
     }
 
     [Fact]
-    public async Task The_caption_carries_the_heart_the_info_link_and_the_count()
+    public async Task The_caption_carries_the_heart_the_name_and_the_count()
     {
-        var tile = Tile(await AnyCardAsync(), count: 3, want: true);
+        var card = await AnyCardAsync();
+        var tile = Tile(card, count: 3, want: true);
 
         var cap = tile.Find(".card-tile .cap");
         Assert.NotNull(cap.QuerySelector("button.want"));
-        Assert.NotNull(cap.QuerySelector("a.info"));
         Assert.Equal("3", cap.QuerySelector(".cnt")!.TextContent.Trim());
+
+        // The link is the card's NAME, not the word "info". Below the art those six characters
+        // labelled a thing that already has a label, and the printed name on a 200px tile is small,
+        // stylised and sometimes behind an ex badge.
+        var link = cap.QuerySelector("a.info")!;
+        Assert.Equal(card.Name, link.TextContent.Trim());
+        Assert.Contains(card.Name, link.GetAttribute("aria-label")!);
     }
 
     [Fact]

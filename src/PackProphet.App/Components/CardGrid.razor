@@ -157,7 +157,13 @@
    stylesheet drops an empty strip, so there is no attribute for Blazor's diff and the script to
    fight over. aria-hidden because it duplicates what every row already carries and changes on
    every scroll, which a screen reader would read out as a stream of set names nobody asked for. *@
-<div class="grid-spy" @ref="_spyEl" aria-hidden="true"></div>
+<div class="grid-spy" @ref="_spyEl" aria-hidden="true">
+    @* Two spans rather than one, so the script that fills this can set a background-image and a
+       text node without ever writing markup: the wrapper's URL goes on one, the set's name on the
+       other. Both are always present and empty until there is something to say. *@
+    <span class="art" data-spy-art></span>
+    <span class="txt" data-spy-text></span>
+</div>
 
 @* "listing" is read by gridsweep.js, not by CSS: a mouse drag over list rows must obey the
    sweep toggle, while a drag over the tile grid need not. See the comment on onDown there. *@
@@ -256,6 +262,7 @@
                gridkeys.js announces as the cursor moves, so it has to be the whole sentence. *@
             <div @key="card.Key" class="card-line @(Roomy ? "roomy" : "") @(count > 0 ? "owned" : "")"
                  data-idx="@idx" data-group="@GroupLabelOf(card)"
+                 data-group-art="@GroupArtFor(card)"
                  id="@($"{_gridId}-tile-{idx}")" role="row"
                  aria-label="@Describe(card, count)">
                 @* The image is pointer-events:none so sweep hit-testing lands on the row, so
@@ -404,7 +411,8 @@
             @* The row's group is its FIRST card's. A row can straddle two sets, and the reader
                is asking "where am I", which the card at the left edge answers. *@
             <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row"
-                 data-group="@(row.Count > 0 ? GroupLabelOf(row[0].Card) : null)">
+                 data-group="@(row.Count > 0 ? GroupLabelOf(row[0].Card) : null)"
+                 data-group-art="@(row.Count > 0 ? GroupArtFor(row[0].Card) : null)">
                 @foreach (var (card, idx) in row)
                 {
                     <CardTile @key="card.Key" Card="card" Index="idx"
@@ -473,6 +481,14 @@
 
     /// <summary>Toggle a card on that wishlist. The page owns which list "that" is.</summary>
     [Parameter] public EventCallback<PocketCard> OnWant { get; set; }
+
+    /// <summary>
+    /// Art to stand for the group a card belongs to — in practice a wrapper from its set, which is
+    /// what the set picker uses for the same reason: nobody recognises "B2b", everybody recognises
+    /// the pack. Optional, and null per card is fine: a promo set has no wrapper, and the strip
+    /// then shows the name on its own rather than a gap where a picture should be.
+    /// </summary>
+    [Parameter] public Func<PocketCard, string?>? GroupArtOf { get; set; }
 
     /// <summary>Rarity rung, for drawing the game's own symbols instead of a code.</summary>
     [Parameter] public Func<PocketCard, RarityRung?>? RungOf { get; set; }
@@ -602,6 +618,10 @@
     /// </summary>
     private string? GroupLabelOf(PocketCard card) =>
         GroupOf is not null && _multiGroup ? GroupOf(card) : null;
+
+    /// <summary>Gated on the same thing: an unmarked row carries neither the name nor the art.</summary>
+    private string? GroupArtFor(PocketCard card) =>
+        GroupArtOf is not null && GroupOf is not null && _multiGroup ? GroupArtOf(card) : null;
 
     private IJSObjectReference? _sweep, _images, _metrics, _spy;
     private string _lastListSignature = "";

@@ -100,6 +100,12 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **The sticky set strip shows the set's logo beside its name**, and the set tabs now use the same
+  logo rather than a booster wrapper. One set, one identity: the log screen already used the
+  expansion wordmark for exactly this job, so a booster in the picker and a wordmark on the log
+  screen were two pictures for the same thing. The code and the percentage stay on each tab — the
+  logo names the set, but only the code names the tab you are on.
+
 - **The corner info button is back for narrow desktops**, over the art and revealed on hover, since
   the caption is gone at those widths and the long press that replaces it is a touch gesture. Only
   in that band — a real phone still gets the long press and nothing added back.

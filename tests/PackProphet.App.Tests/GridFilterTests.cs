@@ -277,4 +277,41 @@ public class GridFilterTests : AppHost
         Assert.NotEmpty(groups);
         Assert.All(groups, g => Assert.Contains("—", g!));
     }
+
+    [Fact]
+    public async Task The_strip_carries_the_sets_logo_beside_its_name()
+    {
+        // The wordmark, not a booster: it is what the log screen and the set tabs both use, and one
+        // set with two different pictures in three places is three things to learn instead of one.
+        var page = await PageAsync();
+        await ChooseAsync(page, "*", "All cards");
+
+        // Two nodes, so the script can write a background-image on one and a text node on the other
+        // without ever assembling markup out of data.
+        var strip = page.Find(".grid-spy");
+        Assert.NotNull(strip.QuerySelector("[data-spy-art]"));
+        Assert.NotNull(strip.QuerySelector("[data-spy-text]"));
+
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("[data-group-art]")));
+
+        var art = page.FindAll("[data-group-art]")
+            .Select(e => e.GetAttribute("data-group-art"))
+            .Where(a => !string.IsNullOrEmpty(a))
+            .ToArray();
+
+        Assert.NotEmpty(art);
+        Assert.All(art, a => Assert.Contains("LOGO_expansion_", a!));
+    }
+
+    [Fact]
+    public async Task One_set_in_scope_marks_neither_the_name_nor_the_logo()
+    {
+        // The marking is the gate on the whole strip, and both halves are gated together: art on a
+        // row the strip will never read from is bytes in the DOM for nothing.
+        var page = await PageAsync();
+        await ChooseAsync(page, "A", "A1");
+
+        page.WaitForAssertion(() => Assert.Empty(page.FindAll("[data-group]")));
+        Assert.Empty(page.FindAll("[data-group-art]"));
+    }
 }

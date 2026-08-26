@@ -85,17 +85,16 @@ else
                     <button class="set-tab @(set == _set ? "active" : "")"
                             @onclick="() => SelectSet(set)" disabled="@Busy.IsBusy"
                             title="@Session.Sets.DisplayName(set)">
-                        @* A wrapper from the set, so the row can be read at a glance rather than
-                           decoded from two-character codes: B2a and B2b are the same three
-                           characters in a different order, and their wrappers are not. The code
-                           and the percentage stay -- the art names the set, but only the code
-                           names the tab. Promos and any set whose art is unpublished simply get no
-                           thumbnail, and the button is the code and percentage it always was. *@
-                        @if (SetArtUrl(set) is { Length: > 0 } art)
-                        {
-                            <span class="pack-thumb" aria-hidden="true"
-                                  style="background-image:url('@art')"></span>
-                        }
+                        @* The set's logo, so the row can be read at a glance rather than decoded
+                           from two-character codes: B2a and B2b are the same three characters in a
+                           different order, and their logos are not. The code and the percentage
+                           stay -- the logo names the set, but only the code names the tab.
+
+                           The same image the sticky strip and the log screen use. One set, one
+                           identity: a booster here and a wordmark there would be two pictures for
+                           the same thing. *@
+                        <span class="set-logo" aria-hidden="true"
+                              style="background-image:url('@PocketCard.SetLogoUrl(set)')"></span>
                         <span class="lbl">
                             @set
                             <span class="pct">@Progress(set).ToString("P0")</span>
@@ -197,7 +196,7 @@ else
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
               RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
-              SortKeyOf="Session.Sets.SortKey" GroupOf="GroupLabel"
+              SortKeyOf="Session.Sets.SortKey" GroupOf="GroupLabel" GroupArtOf="GroupArt"
               WantedOf="WantedOf" OnWant="ToggleWant"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady">
         @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
@@ -561,6 +560,14 @@ else
     /// </summary>
     private string GroupLabel(PocketCard card) => $"{card.Set} — {Session.Sets.DisplayName(card.Set)}";
 
+    /// <summary>
+    /// The set's own expansion logo, which is what the strip shows beside its name — and what the
+    /// log screen has always used for the same job. Published for every set at one size, so this
+    /// is a string build rather than a lookup; a set whose logo is missing upstream degrades to a
+    /// blank slot rather than a broken image, since a background-image fails silently.
+    /// </summary>
+    private static string GroupArt(PocketCard card) => PocketCard.SetLogoUrl(card.Set);
+
     /// <summary>The wording the ownership dropdown uses, so a chip and its control agree.</summary>
     private string OwnFilterLabel => _own switch
     {
@@ -643,19 +650,6 @@ else
 
     private double ProgressOf(IReadOnlyList<PocketCard> cards) =>
         cards.Count == 0 ? 0 : (double)cards.Count(c => Session.CountOf(c) > 0) / cards.Count;
-
-    /// <summary>
-    /// A wrapper to stand for a set: its first pack's art. A set with several packs gets the first
-    /// one rather than all of them -- the tab is a few characters wide and the point is
-    /// recognition, not a contents list -- and a set with no published art gets an empty string,
-    /// which the markup reads as "draw no thumbnail".
-    /// </summary>
-    private string SetArtUrl(string set) =>
-        Session.Index.ByPack.Keys
-            .Where(k => k.StartsWith($"{set}:", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(k => k, StringComparer.Ordinal)
-            .Select(Session.PackArtUrl)
-            .FirstOrDefault(u => !string.IsNullOrEmpty(u)) ?? "";
 
     private IEnumerable<string> PacksInSet =>
         InSet.Where(c => c.IsPackObtainable).SelectMany(c => c.Packs!)

@@ -100,6 +100,13 @@ running app at 375x812 unless another width is named.
 
 ### Also unreleased
 
+- **A CDN that hung, rather than failed, left every page on "Loading card data…" for good.** The
+  fallback to the vendored snapshot only runs when a CDN attempt returns, so a request that is
+  neither answered nor refused — a network that drops packets to jsdelivr rather than rejecting
+  them — never reached it. Each request that leaves the origin now carries a deadline: five
+  seconds on the boot path, thirty on the card detail that loads afterwards, and a hang is
+  treated exactly like a failure. Verified by reverting the deadline and watching the new test go
+  red.
 - **Dates on the history chart printed on top of each other.** The axis marked both ends, every
   month start and every Monday, with no rule against two marks landing in the same place — and a
   label is about three days wide. 24 August is a Monday one day before the 25th, so the last two

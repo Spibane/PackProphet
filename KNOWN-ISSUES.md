@@ -35,6 +35,13 @@ first renders on a phone. That timing is suggestive, not established.
 | The CDN card-data fetch failing | `CardDataLoader` catches a CDN failure and falls back to the vendored snapshot by design. |
 | An unsupported browser API | The modules that load on `/` use only `IntersectionObserver` and `MutationObserver`, both long-supported on iOS. |
 
+**One row of that table has since been narrowed.** "The CDN card-data fetch failing" was killed
+on the grounds that `CardDataLoader` falls back to the snapshot — true of a fetch that *fails*,
+but until the CDN requests were given a deadline it was not true of one that *hangs*. That does
+not revive the hypothesis here: on the phone the page loads and everything on it works, so the
+loader plainly returned. It only means the fallback covers less than the row assumed, and the
+row's reasoning now holds for both cases rather than one.
+
 **Does not reproduce** in a desktop browser at the same LAN origin, so it is not simply a
 consequence of the app being served over plain HTTP from an IP address.
 

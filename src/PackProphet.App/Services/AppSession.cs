@@ -1339,6 +1339,35 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     /// <summary>
+    /// A new collection holding counts read from another tracker's export, switched to at once.
+    ///
+    /// The default destination for an import, because it is the only one that cannot lose
+    /// anything: whatever was here before is still here, under its own name, and a bad import is
+    /// undone by deleting the collection it made rather than by trusting an undo stack.
+    ///
+    /// Switching clears the undo history — see <see cref="SwitchProfile"/> — so this deliberately
+    /// offers no undo, and the caller should not imply one. There is nothing to undo.
+    /// </summary>
+    public string ImportAsNewProfile(string name, IReadOnlyDictionary<string, int> counts)
+    {
+        var id = CreateProfile(name);
+
+        State = State with
+        {
+            Profiles = State.Profiles
+                .Select(p => p.Id == id
+                    ? p with { Collection = counts.ToDictionary(kv => kv.Key, kv => kv.Value) }
+                    : p)
+                .ToList()
+        };
+
+        // Not a plain assignment to ActiveProfileId: switching is what clears undo and rebuilds
+        // the derived collection, and doing half of it here is how the two drift apart.
+        SwitchProfile(id);
+        return id;
+    }
+
+    /// <summary>
     /// Copy a whole collection, cards and all — for trying a different plan or a different set of
     /// decks without touching the real numbers.
     /// </summary>

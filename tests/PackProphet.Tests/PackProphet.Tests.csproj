@@ -37,4 +37,14 @@
     <Using Include="PackProphet.Domain" />
   </ItemGroup>
 
+
+  <!-- A real export from PTCGP Tracker, kept byte for byte as that site wrote it. A fixture we
+       authored ourselves would only prove this code can read its own output; the point of this
+       one is that it was produced by the tracker rather than by us. Card counts only — the
+       columns are set_id, card_id, card_name and quantity. -->
+  <ItemGroup>
+    <Content Include="fixtures\*" Link="fixtures\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

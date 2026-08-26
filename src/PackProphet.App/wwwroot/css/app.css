@@ -829,6 +829,23 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
    and is unaffected. */
 .grid-wrap { min-height: 0; }
 
+/* Which set you are in, while you scroll. One strip under the toolbar rather than a header per
+   set: the grid is virtualised, so a group header would either break the uniform row height the
+   scrollbar depends on or scroll away inside its own spacer. Filled by js/gridspy.js.
+
+   Empty means "nothing to say" -- one set in scope -- and an empty strip takes no room at all, so
+   there is no hidden attribute for the script and Blazor's diff to disagree about. */
+.grid-spy {
+    position: sticky; top: 0; z-index: 4;
+    padding: .2rem calc(.75rem + var(--safe-r)) .2rem calc(.75rem + var(--safe-l));
+    border-bottom: 1px solid var(--bs-border-color);
+    /* Opaque: cards scroll under it. */
+    background: var(--bs-tertiary-bg);
+    font-size: .8rem; font-weight: 600; letter-spacing: .02em;
+    color: var(--bs-secondary-color);
+}
+.grid-spy:empty { display: none; }
+
 .card-row { display: grid; gap: 4px; padding: 2px calc(4px + var(--safe-r)) 2px calc(4px + var(--safe-l)); }
 
 .card-tile {

@@ -149,6 +149,19 @@
     </div>
 </details>
 
+@* Which set is under your thumb, while you scroll. Only where the list spans more than one: with
+   a single set selected the header two bars up already says it, and a strip repeating it would be
+   one more row between the toolbar and the first card.
+
+   Filled by js/gridspy.js rather than by a render, and empty until it has something to say -- the
+   stylesheet drops an empty strip, so there is no attribute for Blazor's diff and the script to
+   fight over. aria-hidden because it duplicates what every row already carries and changes on
+   every scroll, which a screen reader would read out as a stream of set names nobody asked for. *@
+@if (GroupOf is not null && _multiGroup)
+{
+    <div class="grid-spy" @ref="_spyEl" aria-hidden="true"></div>
+}
+
 @* "listing" is read by gridsweep.js, not by CSS: a mouse drag over list rows must obey the
    sweep toggle, while a drag over the tile grid need not. See the comment on onDown there. *@
 @* tabindex, role and aria-activedescendant are set from js/gridkeys.js, which owns the cursor —
@@ -230,7 +243,8 @@
             @* A row of cells, so the list reads as the data table it looks like. The label is what
                gridkeys.js announces as the cursor moves, so it has to be the whole sentence. *@
             <div @key="card.Key" class="card-line @(Roomy ? "roomy" : "") @(count > 0 ? "owned" : "")"
-                 data-idx="@idx" id="@($"{_gridId}-tile-{idx}")" role="row"
+                 data-idx="@idx" data-group="@GroupOf?.Invoke(card)"
+                 id="@($"{_gridId}-tile-{idx}")" role="row"
                  aria-label="@Describe(card, count)">
                 @* The image is pointer-events:none so sweep hit-testing lands on the row, so
                    the hover target has to be this wrapper rather than the image itself. *@
@@ -353,7 +367,10 @@
     {
         @* ItemSize is measured, not guessed — see the note on RowHeight and js/gridmetrics.js. *@
         <Virtualize Items="_rows" ItemSize="@RowHeight" Context="row" OverscanCount="3">
-            <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row">
+            @* The row's group is its FIRST card's. A row can straddle two sets, and the reader
+               is asking "where am I", which the card at the left edge answers. *@
+            <div class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row"
+                 data-group="@(row.Count > 0 ? GroupOf?.Invoke(row[0].Card) : null)">
                 @foreach (var (card, idx) in row)
                 {
                     <CardTile @key="card.Key" Card="card" Index="idx"
@@ -403,6 +420,13 @@
     [Parameter] public bool Roomy { get; set; }
 
     [Parameter] public EventCallback<bool> RoomyChanged { get; set; }
+
+    /// <summary>
+    /// What to call the group a card belongs to — in practice its set, named as the page names it.
+    /// Optional: a grid holding one pack has nothing to group, and passing nothing turns the strip
+    /// off entirely rather than showing one that never changes.
+    /// </summary>
+    [Parameter] public Func<PocketCard, string>? GroupOf { get; set; }
 
     /// <summary>Rarity rung, for drawing the game's own symbols instead of a code.</summary>
     [Parameter] public Func<PocketCard, RarityRung?>? RungOf { get; set; }
@@ -516,7 +540,12 @@
     // Virtualize needs an ICollection, which IReadOnlyList is not.
     private List<PocketCard> _flat = [];
     private ElementReference _gridEl;
-    private IJSObjectReference? _sweep, _images, _metrics;
+    private ElementReference _spyEl;
+
+    /// <summary>Whether the cards in scope span more than one group, and the strip is worth a row.</summary>
+    private bool _multiGroup;
+
+    private IJSObjectReference? _sweep, _images, _metrics, _spy;
     private string _lastListSignature = "";
     private DotNetObjectReference<CardGrid>? _self;
     private IJSObjectReference? _keys;
@@ -752,6 +781,22 @@
     private void Rechunk()
     {
         _flat = Sorted();
+
+        // Whether the strip is worth a row at all. Stops at the second distinct value rather than
+        // collecting them: the answer is a yes/no, and in the common case -- one set selected --
+        // the first mismatch never comes, which is the pass this has to be cheap for.
+        _multiGroup = false;
+        if (GroupOf is not null && _flat.Count > 1)
+        {
+            var first = GroupOf(_flat[0]);
+            for (var i = 1; i < _flat.Count; i++)
+            {
+                if (GroupOf(_flat[i]) == first) continue;
+                _multiGroup = true;
+                break;
+            }
+        }
+
         _indexOf = new Dictionary<string, int>(_flat.Count);
         for (var i = 0; i < _flat.Count; i++) _indexOf[_flat[i].Key] = i;
 
@@ -807,6 +852,12 @@
             }
 
             await MeasureRowsAsync();
+            if (_disposed) return;
+
+            // A new window of rows is a new answer, and no scroll event follows a re-render. Also
+            // the point at which the strip first appears or disappears, since _multiGroup is
+            // decided in Rechunk.
+            await AttachSpyAsync();
             return;
         }
         _attached = true;
@@ -853,6 +904,12 @@
         if (_disposed) { await ReleaseModulesAsync(); return; }
 
         await MeasureRowsAsync();
+        if (_disposed) { await ReleaseModulesAsync(); return; }
+
+        _spy = await JS.InvokeAsync<IJSObjectReference>("import", "./js/gridspy.js");
+        if (_disposed) { await ReleaseModulesAsync(); return; }
+
+        await AttachSpyAsync();
         if (_disposed) { await ReleaseModulesAsync(); return; }
 
         _images = await JS.InvokeAsync<IJSObjectReference>("import", "./js/imgloader.js");
@@ -912,6 +969,24 @@
     {
         if (_keys is null) return;
         try { await _keys.InvokeVoidAsync("focusGrid", _gridEl, index, Cards.Count); }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    /// <summary>
+    /// Point the scroll spy at the strip, or bring it up to date if it is already watching. Both
+    /// calls are safe when the strip is not rendered: <c>_spyEl</c> is then the default reference,
+    /// and the module ignores a null element.
+    /// </summary>
+    private async Task AttachSpyAsync()
+    {
+        if (_spy is null || GroupOf is null || !_multiGroup) return;
+
+        try
+        {
+            await _spy.InvokeVoidAsync("watch", _gridEl, _spyEl);
+            await _spy.InvokeVoidAsync("refresh", _gridEl, _spyEl);
+        }
         catch (JSDisconnectedException) { }
         catch (JSException) { }
     }
@@ -1138,6 +1213,14 @@
             catch (JSException) { }
         }
 
+        // Also element-scoped: what it removes is a scroll listener watching this grid.
+        if (_spy is not null)
+        {
+            try { await _spy.InvokeVoidAsync("dispose", _gridEl); await _spy.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+            catch (JSException) { }
+        }
+
         foreach (var m in new[] { _sweep, _images, _keys })
         {
             if (m is null) continue;
@@ -1145,6 +1228,6 @@
             catch (JSDisconnectedException) { }
             catch (JSException) { }
         }
-        _sweep = _images = _keys = _metrics = null;
+        _sweep = _images = _keys = _metrics = _spy = null;
     }
 }

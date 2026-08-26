@@ -79,11 +79,17 @@
         </button>
     }
 
-    @* Detail needs its own target: a tap on the tile means "I own one more", so it cannot also mean
-       "tell me about this". Centre of the caption, and a long press on the art for a finger.
+    @* The card's name, and the way into its detail page.
+       ==================================================================================
+       It said "info" while it was a button over the art, where a name would not have fitted and
+       there was nothing to name -- the art was right there. Below the art the same six characters
+       are a label for a thing that already has one, and the printed name on a 200px tile is small,
+       stylised and sometimes behind an ex badge. So the button became the name, which is both the
+       useful text and the same convention the list view uses: the name is the link.
 
-       Still gone while a sweep is armed: a link in the middle of the tile would swallow the start
-       of a drag. *@
+       Detail still needs its own target -- a tap on the tile means "I own one more", so it cannot
+       also mean "tell me about this" -- and it is still gone while a sweep is armed, because a link
+       across the middle of the tile would swallow the start of a drag. *@
     @if (ShowInfo)
     {
         @* Its context menu is stopped rather than prevented, so "open in new tab" still works on
@@ -91,10 +97,11 @@
         @* Out of the tab order: a focus stop per tile would put thousands of them between the grid
            and whatever follows it. The keyboard route to detail is `i` on the cursor, which
            gridkeys.js sends to KeyOpen. *@
-        <a class="info" href="card/@Card.Key" title="Card detail" aria-label="Detail for @Card.Name"
+        <a class="info" href="card/@Card.Key" title="@Card.Name — card detail"
+           aria-label="Detail for @Card.Name"
            tabindex="-1"
            @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true"
-           @oncontextmenu:stopPropagation="true">info</a>
+           @oncontextmenu:stopPropagation="true">@Card.Name</a>
     }
 
     @* The count keeps the end of the row whether or not there is one to show, so a caption is the

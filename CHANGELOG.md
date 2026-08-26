@@ -101,12 +101,21 @@ running app at 375x812 unless another width is named.
 ### Also unreleased
 
 - **The tile is the art again.** The count, the info button and the heart were all badges over the
-  artwork, covering three corners of the only thing the grid layout exists to show. On a pointer they
-  now sit in a caption strip under the picture — heart, info, count, left to right. On a touch screen
-  there is no caption at all: the heart and the info button do not exist there, so a strip would cost
-  every tile a row of space to show a count that one card in ten has, and the count goes back to
-  being a badge exactly where it was. The tile is the height of its art again on a phone, so a
-  screenful holds as many cards as before.
+  artwork, covering three corners of the only thing the grid layout exists to show. At desk widths
+  they now sit in a caption strip under the picture — heart, **card name**, count, left to right. The
+  name replaces the word "info": below the art those six characters labelled a thing that already
+  has a label, and the printed name on a 200px tile is small, stylised and sometimes behind an ex
+  badge. It is styled as a name rather than a button, which is how the list view already does it.
+
+  The frame moved from the art onto the whole tile, so the art and its caption read as one object.
+  Without that, a tile's count sat four pixels from the next card's heart with nothing between them,
+  and the eye grouped across the gutter instead of down the tile.
+
+  **At mobile widths nothing changed**: no caption, the count back to a badge exactly where it was,
+  and the tile the height of its art, so a screenful holds as many cards as before. That switch is
+  on the same 1056px breakpoint as the tab bar rather than on `hover`, because a desktop window
+  dragged narrow keeps its mouse — it was keeping the caption while everything else on the page had
+  already become the phone layout.
 
 - **A spinner while art loads, instead of a broken-image icon.** The loader holds an image's `src`
   back until one of its six slots is free, and an `<img>` with an alt and no src is drawn by the
@@ -129,6 +138,11 @@ running app at 375x812 unless another width is named.
   long press that replaces them does not arrive until 1057px. Between the two there was a mouse, no
   corner button and no way to open a card except the keyboard. In the caption there is nothing to
   collide with, so neither rule is needed at all.
+
+  One consequence, stated rather than hidden: with a mouse in a window under 1056px there is now no
+  info button, since the caption is gone at those widths and a long press is a touch gesture. Card
+  detail is still one `i` on the keyboard cursor, one click on a name in list view, or one search in
+  the command palette.
 
 - **The hearts get a list of their own.** A heart used to fill whichever wishlist happened to be
   first, which quietly rewrites the one list on that page you built deliberately. There is now a

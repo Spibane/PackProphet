@@ -47,23 +47,29 @@ public class GridFilterTests : AppHost
         page.InvokeAsync(() => page.FindAll(".chip-toolbar").ToArray()[row]
                                    .QuerySelectorAll(".chip-tog").ToArray()[index].Click());
 
-    /// <summary>How many cards the bar says are listed.</summary>
+    /// <summary>
+    /// How many cards the bar says are listed. The set bar, with the set name and the percentage —
+    /// the total moved there off the grid's own bar, which wraps as soon as a filter is on.
+    /// </summary>
     private static int Listed(IRenderedComponent<Collection> page)
     {
-        var text = page.Find(".grid-count").TextContent;
-        var digits = new string(text.TakeWhile(c => char.IsDigit(c) || c == ' ').ToArray()).Trim();
+        var text = page.Find(".set-picker > summary .tally").TextContent;
+        var digits = new string(text.SkipWhile(c => !char.IsDigit(c)).TakeWhile(char.IsDigit).ToArray());
         return int.Parse(digits);
     }
 
     [Fact]
-    public async Task The_missing_filter_is_on_the_always_on_bar()
+    public async Task The_missing_filter_is_in_the_disclosure_and_nowhere_else()
     {
-        // On the bar as a button, not only as an option in the select inside the disclosure — which
-        // still offers all six filters and still calls this one the same thing.
+        // One control, in the select with the other five ownership filters. It had a button of its
+        // own on the always-on bar as well, which is six controls' worth of bar on a phone and the
+        // same state said twice: pressed button, and a chip beside it reading "missing only".
         var page = await PageAsync();
 
-        Assert.Contains(page.FindAll(".grid-toolbar button"),
-                        b => b.TextContent.Contains("missing only"));
+        Assert.DoesNotContain(page.FindAll(".grid-toolbar button"),
+                              b => b.TextContent.Contains("missing only"));
+        Assert.Contains(page.FindAll(".toolbar-more-body option"),
+                        o => o.TextContent.Contains("missing only"));
 
         // A collection that owns nothing has nothing missing to hide, so the filter would pass this
         // test by doing nothing at all. Own one card first.
@@ -73,12 +79,13 @@ public class GridFilterTests : AppHost
 
         var all = Listed(page);
 
-        await ClickAsync(page, ".grid-toolbar button[aria-pressed]");
+        await page.InvokeAsync(() =>
+            page.Find(".toolbar-more-body select").Change("missing"));
         page.WaitForAssertion(() => Assert.True(Listed(page) < all,
             $"missing-only listed {Listed(page)} of {all}"));
 
-        // Two-state: pressing again is the way back, not a third hidden state.
-        await ClickAsync(page, ".grid-toolbar button[aria-pressed]");
+        // The chip is the way back, as it is for every other filter.
+        await ClickAsync(page, ".chip-filter");
         page.WaitForAssertion(() => Assert.Equal(all, Listed(page)));
     }
 

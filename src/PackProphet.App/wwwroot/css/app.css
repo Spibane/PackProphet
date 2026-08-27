@@ -535,6 +535,23 @@ main:focus { outline: none; }
     display: inline-flex; align-items: center; justify-content: center;
 }
 
+/* 16px on a phone for anything you can type into or open. Bootstrap's small controls are .875rem,
+   which is the right size in a dense bar on a laptop and reads as fine print on a phone: 14px of
+   grey label in a 44px-tall box, under body text set at 16. It also has a second cost that only
+   shows on a real device -- iOS Safari zooms the whole page in when a focused input or select is
+   smaller than 16px, and does not zoom back out, so choosing a filter left the layout magnified
+   and scrolled somewhere else.
+
+   Buttons keep .875rem: they cannot be focused into a keyboard, so they cannot trigger the zoom,
+   and a one-word label in a bordered pill was not the thing that was hard to read. The height of
+   every control in the bar still comes from --ctl-h, so nothing here changes what lines up. */
+@media (width < 600px) {
+    .page-tools .form-select, .grid-toolbar .form-select, .toolbar-more-body .form-select,
+    .set-picker-body .form-select, .rarity-plan .form-select,
+    .page-tools .form-control, .grid-toolbar .form-control,
+    .toolbar-more-body .form-control, .set-picker-body .form-control { font-size: 1rem; }
+}
+
 /* NOT the page header. Its 3rem is a contract rather than a preference -- the toolbar below it is
    pinned under it, and the app's other pages line their titles up against it -- and it holds one or
    two controls rather than a row of them, so there is nothing in it to be uniform WITH. Growing it
@@ -641,7 +658,41 @@ main:focus { outline: none; }
 .set-picker > summary:hover .fold-hint { color: var(--bs-body-color); }
 .set-picker > summary:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
 .set-picker > summary .cur { font-weight: 600; }
-.set-picker > summary .pct { color: var(--bs-secondary-color); font-variant-numeric: tabular-nums; }
+.set-picker > summary .pct {
+    color: var(--bs-secondary-color); font-variant-numeric: tabular-nums;
+    /* Three characters, and it broke between the number and the sign the moment the row was told
+       not to wrap: "0" on one line and "%" under it, which made the bar two lines tall by way of
+       the one thing on it that could not be misread. */
+    white-space: nowrap;
+}
+/* How many cards the filters left, moved here off the grid's own bar. Quiet like the percentage
+   beside it -- this bar is read, not scanned for -- and never wrapped: "233" on one line and
+   "cards" on the next reads as two figures. */
+.set-picker > summary .tally {
+    color: var(--bs-secondary-color);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.set-picker > summary .tally .fail { color: var(--bs-danger-text-emphasis); }
+/* With the total on it, this bar holds four things at 375px and the set's own name is the long
+   one, so the name shortens rather than wrapping the row -- the same contract .page-head keeps,
+   for the same reason: a bar that is one line at some widths and two at others moves everything
+   under it. Wrapping had to be turned off for the name to shorten at all: flex decides where to
+   break from each item's base size, so a full-length name breaks the line before anything is
+   given the chance to shrink. The set code leads the label, so what survives the ellipsis is the
+   half that identifies the set. */
+@media (width < 600px) {
+    .set-picker > summary { flex-wrap: nowrap; }
+    .set-picker > summary .cur {
+        min-inline-size: 0;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    /* The three short ones keep their width: the name is what gives, and a figure squeezed to
+       fewer characters than it has is not a figure. */
+    .set-picker > summary .pct,
+    .set-picker > summary .tally,
+    .set-picker > summary .fold-hint { flex: none; }
+}
 /* Pushed to the far edge only where there is an edge to push to. At 375px `margin-left: auto`
    consumed the last of the line and dropped the pill onto a row of its own, which is the row the
    fold was meant to save. Below the phone breakpoint it just follows the text. */
@@ -3237,6 +3288,41 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 .grid-search { max-width: 14rem; flex: 1 1 8rem; }
 .grid-count { white-space: nowrap; }
 
+/* Two deliberate rows on a phone, instead of one row and a broken one.
+
+   Five controls want this bar -- search, the missing-only toggle, the add/remove mode, a chip per
+   active filter, and grid/list -- plus the count on pages that say it here. At 375px there are
+   351px to spend and they cost about 420px, so the bar has always wrapped at this width; what it
+   did with the second line was the problem. Source order sent the count there next, and the count
+   is pushed right by an auto margin, so the line opened with 200px of nothing while the search box
+   above it was squeezed to its 8rem minimum -- an auto margin takes all of a line's free space
+   before flex-grow sees any of it. Every control was on screen and the row still read as a
+   mistake.
+
+   So the wrap is chosen rather than left to source order, and each row gets a job:
+
+     row 1  what a card looks like and what a tap does -- search, taking the slack the auto margin
+            used to hold, then the mode, then grid/list at the end.
+     row 2  what is being shown -- the count where the page still says it here, then a chip per
+            active filter.
+
+   Chips come last of all because they are the part there can be any number of: a third row, when
+   one happens, is chips rather than a stranded control -- which is what grid/list became when it
+   sat after them. The separator goes: it divides filters from layout only while they share a line,
+   and the rows now do that job. */
+@media (width < 600px) {
+    .grid-toolbar > .bar-sep { display: none; }
+
+    .grid-toolbar > .grid-search { order: 0; }
+    /* The mode. Not the layout switch, which is a btn-group too and has its own place. */
+    .grid-toolbar > .btn-group:not(.layout-switch) { order: 1; }
+    .grid-toolbar > .layout-switch { order: 2; }
+    /* An auto margin eats the whole of a line's free space before flex-grow sees any of it, which
+       is what starved the search box, so on this bar the count gives its `ms-auto` up. */
+    .grid-toolbar > .grid-count { order: 3; margin-left: 0 !important; }
+    .grid-toolbar > .chip-filter { order: 4; }
+}
+
 /* Everything that only SETS state. Closed by default: on a phone these were three rows of
    controls sitting above the first card on every visit, most of them left alone most of the time. */
 .toolbar-more {
@@ -3258,6 +3344,58 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 .toolbar-more-body {
     display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
     padding: .35rem calc(.75rem + var(--safe-r)) .6rem calc(.75rem + var(--safe-l));
+}
+
+/* Rows on a phone, rather than eleven controls of nine different widths poured into a wrap.
+
+   Left to itself the panel broke wherever each control happened to end: the ownership select alone
+   on the first line with half the width unused, a pack wrapper sharing a line with "keyboard", the
+   column count between "sweep off" and "fill target", and every line ragged down the right. The
+   controls were all there and it read as spillage.
+
+   Two sizes, and every line comes out flush:
+
+     full width   the ownership filter, and each labelled chip group -- rarity, type, pack. These
+                  are the things with a label of their own and an unpredictable number of chips, so
+                  they get a row and wrap inside it, under their own heading.
+     half width   everything that is one control with one word on it. A basis of 8rem puts two on a
+                  row at 375px, and flex-grow means the last row's fill it rather than leaving a
+                  hole where a third would have gone. A row of two 8rem buttons is also a bigger
+                  target than the same buttons at their text width.
+
+   One divider survives, the one between the filters and the layout controls -- the others separate
+   groups that no longer share a line. It turns on its side to do it: a 1px column between two rows
+   is a tick with nothing either side of it, and a 1px row between them is the line the panel was
+   missing. */
+@media (width < 600px) {
+    .toolbar-more-body { align-items: stretch; }
+
+    .toolbar-more-body > .form-select:not(.select-narrow),
+    .toolbar-more-body > .chip-group { flex: 1 1 100%; max-width: none !important; }
+
+    /* One column for the three labels, so the chips beside them start at the same place. Each
+       label was as wide as its own word -- RARITY is 45px, TYPE 32, PACK 33 -- which stepped the
+       first chip of each row in and out by 13px down the panel and made three rows of the same
+       thing look like three unrelated ones. 3rem clears the longest of them; the chips take the
+       rest of the row and wrap back to that same edge. */
+    .toolbar-more-body > .chip-group > .ttl { min-inline-size: 3rem; }
+
+    /* !important because the widths it overrides are inline, per control, and right for the wide
+       panel this same markup renders. */
+    .toolbar-more-body > .btn,
+    .toolbar-more-body > .btn-group,
+    .toolbar-more-body > .select-narrow { flex: 1 1 8rem; max-width: none !important; }
+
+    .toolbar-more-body > .bar-sep { display: none; }
+    /* The last one is the divider the grid itself renders after the page's filters; the earlier
+       ones come from inside them, between one chip group and the next. */
+    .toolbar-more-body > .bar-sep:last-of-type {
+        display: block;
+        flex: 1 1 100%;
+        inline-size: auto; block-size: 1px;
+        align-self: center;
+        margin: .15rem 0;
+    }
 }
 
 /* Back to the top of the list.

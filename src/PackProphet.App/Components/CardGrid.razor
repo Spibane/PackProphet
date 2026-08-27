@@ -24,10 +24,6 @@
 <div class="grid-toolbar">
     @Search
 
-    @* The one or two filter states worth a tap rather than a trip into the disclosure. Passed in
-       by the page, because which view you reach for most often differs from page to page. *@
-    @Toggles
-
     @* An explicit add/remove mode, since there was otherwise no way to decrement on a touch
        device: shift-click is both undiscoverable and unavailable on a phone.
 
@@ -58,29 +54,46 @@
 
     @FilterChips
 
-    <span class="ms-auto small text-body-secondary grid-count">
-        @if (ListView && FactOf is not null && !FactsReady)
-        {
-            <span class="text-body-tertiary">loading card detail&hellip; &middot; </span>
-        }
-        @if (Removing && (!ListView || Sweeping))
-        {
-            <span class="text-danger-emphasis fw-semibold">@Gesture removes a copy &middot; </span>
-        }
-        @if (Summary is not null)
-        {
-            @Summary
-        }
-        else
-        {
-            @Cards.Count
-            <text> cards</text>
-        }
-        @if (_imgFailed > 0)
-        {
-            <span class="text-danger-emphasis"> · @_imgFailed art failed</span>
-        }
-    </span>
+    @{
+        var saysDetail = ListView && FactOf is not null && !FactsReady;
+        var saysMode = Removing && (!ListView || Sweeping);
+    }
+    @* The strip is dropped entirely when it would be empty -- a page that says the total on a bar
+       of its own leaves nothing here most of the time -- but its auto margin is what pins the
+       layout switch to the far end of a wide bar, so a spacer takes that job over. *@
+    @if (ShowCount || saysDetail || saysMode)
+    {
+        <span class="ms-auto small text-body-secondary grid-count">
+            @if (saysDetail)
+            {
+                <span class="text-body-tertiary">loading card detail&hellip;@(ShowCount || saysMode ? " · " : "")</span>
+            }
+            @if (saysMode)
+            {
+                <span class="text-danger-emphasis fw-semibold">@Gesture removes a copy@(ShowCount ? " · " : "")</span>
+            }
+            @if (ShowCount)
+            {
+                @if (Summary is not null)
+                {
+                    @Summary
+                }
+                else
+                {
+                    @Cards.Count
+                    <text> cards</text>
+                }
+                @if (_imgFailed > 0)
+                {
+                    <span class="text-danger-emphasis"> · @_imgFailed art failed</span>
+                }
+            }
+        </span>
+    }
+    else
+    {
+        <span class="ms-auto" aria-hidden="true"></span>
+    }
 
     <span class="bar-sep" aria-hidden="true"></span>
 
@@ -602,14 +615,6 @@
     [Parameter] public RenderFragment? Filters { get; set; }
 
     /// <summary>
-    /// Filter toggles for the always-on bar — the one or two states a page is switched between
-    /// often enough that a trip into the disclosure is the wrong price. Not a replacement for the
-    /// control in <see cref="Filters"/> that sets the same state: a page offering six ownership
-    /// filters keeps the select, and promotes only the one that gets used every session.
-    /// </summary>
-    [Parameter] public RenderFragment? Toggles { get; set; }
-
-    /// <summary>
     /// The search box. Kept out of <see cref="Filters"/> and out of the disclosure: it is the
     /// fastest way to narrow a set and belongs in reach, not behind a summary.
     /// </summary>
@@ -625,6 +630,29 @@
     /// the bar (the mode warning, failed art) still shows: this replaces the count, not the strip.
     /// </summary>
     [Parameter] public RenderFragment? Summary { get; set; }
+
+    /// <summary>
+    /// Whether the always-on bar is where the total is said.
+    ///
+    /// Set false by a page that already has a bar for reading rather than for changing — the
+    /// collection says its total beside the set name and the percentage, where the other figures
+    /// about what is in front of you live, and that bar is on screen whether this one has wrapped
+    /// or not. The count then leaves this bar entirely, which is six controls' worth of room back
+    /// on a phone. The mode warning and the card-detail notice stay: both are about what a tap is
+    /// doing right now, which belongs next to the control that set it.
+    ///
+    /// Failed art goes with the count wherever it goes, reported through
+    /// <see cref="ImgFailedChanged"/>, since it is a caveat on the total rather than a fact of its
+    /// own.
+    /// </summary>
+    [Parameter] public bool ShowCount { get; set; } = true;
+
+    /// <summary>
+    /// Raised when the number of images that failed to load changes. Only of interest to a page
+    /// that has taken the count over via <see cref="ShowCount"/>; the figure is polled from the
+    /// image loader rather than counted here, so there is nothing the page could compute itself.
+    /// </summary>
+    [Parameter] public EventCallback<int> ImgFailedChanged { get; set; }
 
     /// <summary>
     /// One chip per filter currently applied. This is the half of filtering that may never hide —
@@ -1044,7 +1072,17 @@
             try
             {
                 var st = await _images.InvokeAsync<ImgStats>("stats");
-                if (st.failed != _imgFailed) { _imgFailed = st.failed; await InvokeAsync(StateHasChanged); }
+                if (st.failed != _imgFailed)
+                {
+                    _imgFailed = st.failed;
+                    // On the renderer's context, both of them: the timer runs on a pool thread, and
+                    // the callback re-renders whichever page took the count over.
+                    await InvokeAsync(async () =>
+                    {
+                        StateHasChanged();
+                        await ImgFailedChanged.InvokeAsync(_imgFailed);
+                    });
+                }
             }
             catch { /* page torn down */ }
         }, null, 1000, 1500);

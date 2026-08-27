@@ -46,8 +46,21 @@ else
        across a pick, which is what you want while comparing percentages across sets. *@
     <details class="set-picker">
         <summary>
-            <span class="cur">@CurrentSetLabel</span>
+            @* Titled as well as shown: below 600px the name is shortened to keep this bar one
+               line, and the full one should still be readable somewhere. *@
+            <span class="cur" title="@CurrentSetLabel">@CurrentSetLabel</span>
             <span class="pct">@CurrentProgress.ToString("P0")</span>
+            @* How many cards the filters have left, beside the two figures it belongs with: this
+               bar is the one that says what you are looking at, and it is one line at every width,
+               where the grid's bar wraps as soon as a filter is on. Failed art is a caveat on this
+               number rather than a fact of its own, so it travels with it. *@
+            <span class="tally">
+                @Filtered.Count cards
+                @if (_artFailed > 0)
+                {
+                    <span class="fail">&middot; @_artFailed art failed</span>
+                }
+            </span>
             <span class="fold-hint">change set</span>
         </summary>
 
@@ -204,6 +217,7 @@ else
               RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
               SortKeyOf="Session.Sets.SortKey" GroupOf="GroupLabel" GroupArtOf="GroupArt"
               WantedOf="WantedOf" OnWant="ToggleWant"
+              ShowCount="false" ImgFailedChanged="OnArtFailed"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady">
         @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
            header, the set tabs, a filter row and a control row, this page put five bars above the
@@ -212,19 +226,6 @@ else
             <input class="form-control form-control-sm grid-search"
                    placeholder="search name" aria-label="Search card names" value="@_search" @oninput="OnSearch" />
         </Search>
-
-        @* The one filter that gets used every session, promoted out of the disclosure. The select
-           below still offers all six, and this is option two of it: "missing only" is what you
-           reach for after opening a pack, and paying a trip into a summary for it every time was
-           the wrong price. Pressing it again goes back to everything rather than leaving you in a
-           filtered view you have to remember to undo. *@
-        <Toggles>
-            <button class="btn btn-sm @(_own == "missing" ? "btn-primary" : "btn-outline-secondary")"
-                    @onclick="ToggleMissing" aria-pressed="@Aria.Flag(_own == "missing")"
-                    title="@(_own == "missing" ? "Show every card again" : "Show only the cards you do not own yet")">
-                missing only
-            </button>
-        </Toggles>
 
         @* What is currently narrowing the list, said on the bar itself. The controls that set
            these are folded into the disclosure; this is the state they leave behind, and without
@@ -355,7 +356,9 @@ else
         </Filters>
         <ToolbarExtras>
             @* Columns only mean something in the grid layout. *@
-            <select class="form-select form-select-sm" style="max-width:6rem" aria-label="Columns in the grid" @onchange="OnColumns"
+            @* select-narrow: on a phone the panel gives a full row to anything that sets a filter
+               and half a row to a single control, and this is one of the single controls. *@
+            <select class="form-select form-select-sm select-narrow" style="max-width:6rem" aria-label="Columns in the grid" @onchange="OnColumns"
                     hidden="@Session.ListView">
                 @foreach (var n in new[] { 3, 4, 5, 6, 8, 10 })
                 {
@@ -391,6 +394,15 @@ else
     private string _series = "A";
     private string _search = "";
     private string _own = "all";
+
+    /// <summary>
+    /// Art the CDN did not give us, reported by the grid. Said beside the total on the set bar,
+    /// because it is what stops the total from being the number of cards you can actually see.
+    /// </summary>
+    private int _artFailed;
+
+    /// <summary>The grid polls the image loader for this, so it arrives rather than being read.</summary>
+    private void OnArtFailed(int failed) => _artFailed = failed;
 
     /// <summary>
     /// Rarity rungs to show. Empty means every rarity rather than none: a filter nobody has
@@ -521,13 +533,6 @@ else
 
     private void OnSearch(ChangeEventArgs e) => _search = Text(e);
     private void OnOwnFilter(ChangeEventArgs e) => SetOwnFilter(Text(e) is { Length: > 0 } v ? v : "all");
-
-    /// <summary>
-    /// The promoted toggle. It goes back to "all cards" rather than to whatever was selected
-    /// before: the button reads as a two-state switch, and restoring a hidden third state would
-    /// make the same tap mean different things on different days.
-    /// </summary>
-    private void ToggleMissing() => _own = _own == "missing" ? "all" : "missing";
 
     private void ToggleRarity(int rung)
     {

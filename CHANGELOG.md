@@ -8,6 +8,61 @@ until then the minor number tracks the roadmap phase.
 
 ### Fixed
 
+- **The card total now sits with the set name and the percentage**, and the grid's own bar stops
+  wrapping into one full row and one broken one on a phone. Six things wanted that bar — search, a
+  promoted missing-only toggle, the add/remove mode, a chip per active filter, the count and
+  grid/list — and at 375px there are 351px to spend. Worse, source order put the count first onto
+  the second line and an auto margin pushes it right, so that line opened with 200px of nothing
+  while the search box above was squeezed to its 8rem minimum: an auto margin takes all of a line's
+  free space before flex-grow sees any of it.
+
+  Three changes, and the bar is two full rows at 375px in every state but one:
+
+  - **The total moved to the set bar**, where it belongs with the figures it is read beside — how
+    far through the set you are, and which set that is — and where the row is one line at every
+    width. Failed art went with it: it is the caveat that stops the total being the number of cards
+    you can actually see, reported out of the grid rather than counted a second time. With four
+    things on it the set's own name now shortens with an ellipsis rather than wrapping the row, the
+    same contract `.page-head` keeps; the set code leads the label, so what survives identifies the
+    set, and the full name is on the title. Wrapping had to be turned off for the name to shorten at
+    all — flex breaks a line from each item's base size, so a full-length name broke the row before
+    anything was given the chance to shrink.
+  - **The missing-only toggle is back to being one control**, the ownership select in the
+    disclosure with the other five. On the bar it was also the same state said twice: a pressed
+    button, and a chip beside it reading "missing only". The chip stays, because it is what says a
+    filter is on while the control that set it is folded away, and it is how you clear it.
+  - **What is left wraps on purpose.** Row one is what a card looks like and what a tap does —
+    search, taking the slack the auto margin used to hold, then the mode, then grid/list. Row two is
+    what is being shown — a chip per active filter, and the mode warning where there is one. Chips
+    come last of all because they are the part there can be any number of, so a third row, when one
+    happens, is chips rather than a stranded control, which is what grid/list became when it sat
+    after them. The separator goes below 600px: it divides filters from layout only while the two
+    share a line.
+
+  Nothing above 600px changed, apart from the count no longer being said twice.
+- **The filters panel is rows on a phone, not a wrap.** Eleven controls of nine different widths
+  broke wherever each one happened to end: the ownership select alone on the first line with half
+  the width unused, a pack wrapper sharing a line with "keyboard", the column count between "sweep
+  off" and "fill target", every line ragged down the right. Two sizes now, and every line comes out
+  flush: full width for the ownership filter and for each labelled chip group — rarity, type, pack —
+  which have a heading of their own and an unpredictable number of chips, and half width for
+  everything that is one control with one word on it, at a basis that puts two on a row at 375px and
+  lets the last row's grow to fill it rather than leaving a hole. One divider survives, the one
+  between the filters and the layout controls, turned on its side: a 1px column between two rows is
+  a tick with nothing either side of it, and a 1px row between them is the line the panel was
+  missing. The others separated groups that no longer share a line. The three labels also share a
+  column now — each was as wide as its own word, RARITY 45px against TYPE's 32, so the first chip
+  of each row stepped in and out by 13px down the panel and three rows of the same thing read as
+  three unrelated ones. Nothing above 600px changed.
+- **Every control you can type into or open is 16px on a phone.** Bootstrap's small controls are
+  .875rem, which is right in a dense bar on a laptop and reads as fine print on a phone — 14px of
+  grey label in a 44px-tall box, under body text set at 16. It has a second cost that only shows on
+  a real device: iOS Safari zooms the page in when a focused input or select is smaller than 16px,
+  and does not zoom back out, so choosing a filter left the layout magnified and scrolled somewhere
+  else. Buttons keep .875rem — they cannot take a keyboard, so they cannot trigger the zoom, and a
+  one-word label in a bordered pill was not the thing that was hard to read. Control heights still
+  come from `--ctl-h`, so nothing that lined up stopped lining up.
+
 - **The hover tooltip landed on the card below the one you were pointing at.** It was placed off
   the target's bottom edge, which is right for the 32px thumbnail in list view and wrong for a tile
   three hundred pixels tall: the label opened a whole card-height under the cursor, at the corner of

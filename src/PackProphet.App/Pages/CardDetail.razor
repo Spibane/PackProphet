@@ -405,7 +405,7 @@ else
 
         _owned = Session.CountOf(_card);
         _fact = Session.FactFor(_card);
-        _rung = RungOf(_card);
+        _rung = Session.Index.Rung(_card);
         _routes = Session.Routes?.For(_card, Session.Owned);
 
         // Only openable packs: a promo's "Vol. 3" grouping records how it was handed out at an
@@ -421,12 +421,6 @@ else
         // Per PRINTING, not per identity: an art rare and its base card share attacks and stage
         // but not price, so an identity lookup would report the base card's.
         _printingPoints = Session.Facts.ForPrinting(_card)?.PackPoints;
-    }
-
-    private RarityRung? RungOf(PocketCard card)
-    {
-        var index = Session.Index.Ladder.IndexOf(card.Rarity);
-        return index is null ? null : Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == index);
     }
 
     private void Bump(int delta)

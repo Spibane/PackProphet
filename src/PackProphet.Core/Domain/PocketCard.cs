@@ -40,8 +40,7 @@ public sealed class PocketCard
     /// same card for deck purposes.
     /// </summary>
     public int VariantIndex =>
-        System.Text.RegularExpressions.Regex.Match(Image ?? "", @"^c[A-Z]+_\d+_\d{6}_(\d+)_")
-            is { Success: true } m && int.TryParse(m.Groups[1].Value, out var v) ? v : 0;
+        CardImageName.TryParse(Image, out var name) ? name.Variant : 0;
 
     /// <summary>
     /// A promo card. Promos are collectible and worth tracking, but their "Vol. N" groupings are

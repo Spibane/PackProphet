@@ -48,6 +48,21 @@
            box's, and a sibling selector off the image's own data-state is what makes "loading"
            and "failed" distinguishable without JavaScript touching this at all. *@
         <span class="art-wait" aria-hidden="true"></span>
+
+        @* Art that is never going to arrive. A set is playable in-game days before the community
+           CDN has scanned its cards, so on a brand-new set every tile fails at once -- the one
+           time the grid is a wall of broken-image markers rather than the odd gap.
+
+           The set and number stand in, because that is the same pair the game prints in the card's
+           own corner: it is what you match against when the picture is what you have not got. Not
+           the name, which the caption below already carries.
+
+           aria-hidden, like the spinner: the tile's own label names the card, and a screen reader
+           reading "A1 127" after it would be repeating the id for no one who needed it. *@
+        <span class="art-none" aria-hidden="true">
+            <span class="s">@Card.Set</span>
+            <span class="n">@Card.Number</span>
+        </span>
     </span>
 
     <span class="cap">

@@ -269,7 +269,7 @@ else
               PickedOf="PickedCount"
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
-              RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
+              RungOf="Session.Index.Rung" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
               SortKeyOf="Session.Sets.SortKey"
               Summary="@PickedSummary"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady">
@@ -622,12 +622,6 @@ else
     private void MarkPackOnSale()
     {
         if (_pack is not null) Session.SetLimitedPackAvailable(_pack, true);
-    }
-
-    private RarityRung? RungOf(PocketCard card)
-    {
-        var i = Session.Index.Ladder.IndexOf(card.Rarity);
-        return i is null ? null : Session.Index.Ladder.Rungs[i.Value];
     }
 
     public void Dispose()

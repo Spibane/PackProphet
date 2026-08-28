@@ -2,6 +2,8 @@
 
 **[spibane.github.io/PackProphet](https://spibane.github.io/PackProphet/)**
 
+[![AI: pair](https://img.shields.io/badge/AI-pair-blue)](AI-DECLARATION.md)
+
 A collection tracker for **Pokémon TCG Pocket** built around one question:
 
 > **Which pack should I open next?**
@@ -279,7 +281,7 @@ outage and writes nothing.
 | | |
 | --- | --- |
 | **PackProphet.Core** | Pure C#, no UI. Data layer, game rules, odds engine, targets, deck codec and linter. Warnings are errors. |
-| **PackProphet.App** | Blazor WebAssembly + Blazor Bootstrap. |
+| **PackProphet.App** | Blazor WebAssembly. Two vendored Bootstrap files for the stylesheet and its popovers; the Blazor.Bootstrap component package was dropped and nothing replaced it. |
 | **PackProphet.Tests** | xUnit, run against the same vendored data snapshot the app ships. |
 
 The maths: a card's per-pack arrival rate is summed across pack variants and slots, then
@@ -345,6 +347,9 @@ Data sources, the reverse-engineered deck format, and bundled third-party code a
 [flibustier/pokemon-tcg-pocket-database](https://github.com/flibustier/pokemon-tcg-pocket-database)
 and are published nowhere else; card detail from
 [chase-mew/pokemon-tcg-pocket-cards](https://github.com/chase-mew/pokemon-tcg-pocket-cards).
+
+How much of this was written with an AI assistant, and which parts were not, is stated in
+[AI-DECLARATION.md](AI-DECLARATION.md).
 
 Pokémon and Pokémon TCG Pocket are trademarks of Nintendo, Creatures Inc. and GAME FREAK inc.
 This is an unofficial fan tool, unaffiliated with and unendorsed by any of them.

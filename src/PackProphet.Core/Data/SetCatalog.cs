@@ -137,11 +137,25 @@ public sealed class SetCatalog
         var series = SeriesOf(setCode);
         var promo = CardIndex.IsPromoSet(setCode) ? "1" : "0";
 
-        var match = System.Text.RegularExpressions.Regex.Match(setCode, @"^([A-Za-z]+)(\d+)([A-Za-z]*)$");
-        if (!match.Success) return $"{series}{promo}{setCode}";
+        // Letters, digits, then an optional suffix — "A2b" is series A, set 2, revision b. Read by
+        // hand rather than by regex so the app can ship without System.Text.RegularExpressions.
+        var code = setCode.AsSpan();
+        var letters = 0;
+        while (letters < code.Length && char.IsAsciiLetter(code[letters])) letters++;
 
-        var number = int.TryParse(match.Groups[2].Value, out var n) ? n : 0;
-        return $"{series}{promo}{number:D4}{match.Groups[3].Value}";
+        var digits = letters;
+        while (digits < code.Length && char.IsAsciiDigit(code[digits])) digits++;
+
+        var suffix = digits;
+        while (suffix < code.Length && char.IsAsciiLetter(code[suffix])) suffix++;
+
+        // Anything left over, or no digits at all, is a code of a shape this does not know. It
+        // sorts under its own text rather than being forced into a number it does not have.
+        if (letters == 0 || digits == letters || suffix != code.Length)
+            return $"{series}{promo}{setCode}";
+
+        var number = int.TryParse(code[letters..digits], out var n) ? n : 0;
+        return $"{series}{promo}{number:D4}{code[digits..]}";
     }
 
     /// <summary>The same ordering applied to a card, so a flat list of cards sorts by set then number.</summary>

@@ -20,18 +20,15 @@ const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
 // extension alone it would be the one uncached request keeping the app from working offline.
 const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html/, /\.js$/, /\.json$/, /\.css$/, /\.woff/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/, /\.svg$/, /^data\//];
 // Precaching is not free: the worker downloads every match on the first visit, so anything the app
-// never references is a straight cost. Measured against the live deploy, these came to about 663 KB
-// of a 4.3 MB first visit for files no page loads.
+// never references is a straight cost.
 //
-// The .map files are already absent, but only because they end in .map and no include pattern
-// matches them — renaming an include pattern could pull 700 KB of source maps into the cache.
+// This list used to carry a second entry, excluding the vendored Bootstrap files that index.html
+// does not link — unminified copies, right-to-left variants, ESM builds, the grid/reboot/utilities
+// subsets and their source maps, about 663 KB of a 4.3 MB first visit. Those files are no longer in
+// the repository, so the exclusion had nothing left to match. Vendor only the two files the app
+// links and this list stays a one-liner; re-vendor a whole dist and it will need the rule back.
 const offlineAssetsExclude = [
     /^service-worker\.js$/,
-
-    // Bootstrap is vendored whole, and index.html links exactly two files out of it. The rest —
-    // unminified copies, right-to-left variants, ESM builds, and the grid/reboot/utilities
-    // subsets — is never requested by anything.
-    /^lib\/bootstrap\/(?!dist\/css\/bootstrap\.min\.css$|dist\/js\/bootstrap\.bundle\.min\.js$)/,
 ];
 
 // The base path, taken from the worker's own URL: the app is hosted under /<repo>/ on GitHub

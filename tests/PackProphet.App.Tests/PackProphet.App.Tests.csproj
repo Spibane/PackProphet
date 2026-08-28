@@ -97,6 +97,16 @@
              Condition="Exists('..\..\src\PackProphet.App\wwwroot\data\card-hashes.txt')" />
   </ItemGroup>
 
+  <!-- The vendored Bootstrap files, as a directory listing rather than as content: the precache
+       rules no longer carry an exclusion for the unlinked half of the dist, because the unlinked
+       half is not in the repository. A glob rather than two named files, so re-vendoring the whole
+       dist shows up here as extra copies and fails the test that counts them. -->
+  <ItemGroup>
+    <Content Include="..\..\src\PackProphet.App\wwwroot\lib\bootstrap\dist\**\*"
+             Link="lib\bootstrap\dist\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- The same real PTCGP Tracker export the engine suite reads, so the page can be driven with a
        genuine workbook rather than one this project produced. -->
   <ItemGroup>

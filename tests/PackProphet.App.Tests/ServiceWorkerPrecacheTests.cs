@@ -70,14 +70,6 @@ public class ServiceWorkerPrecacheTests
     public void Is_precached(string url) => Assert.True(Precached(url), $"{url} must be precached");
 
     [Theory]
-    // Bootstrap is vendored whole and index.html links two files out of it.
-    [InlineData("lib/bootstrap/dist/js/bootstrap.min.js")]
-    [InlineData("lib/bootstrap/dist/js/bootstrap.js")]
-    [InlineData("lib/bootstrap/dist/js/bootstrap.esm.min.js")]
-    [InlineData("lib/bootstrap/dist/css/bootstrap.css")]
-    [InlineData("lib/bootstrap/dist/css/bootstrap.rtl.min.css")]
-    [InlineData("lib/bootstrap/dist/css/bootstrap-grid.min.css")]
-    [InlineData("lib/bootstrap/dist/css/bootstrap-reboot.min.css")]
     // Caching the worker itself would pin the old one forever.
     [InlineData("service-worker.js")]
     public void Is_not_precached(string url) =>
@@ -86,11 +78,26 @@ public class ServiceWorkerPrecacheTests
     [Fact]
     public void Source_maps_are_left_out()
     {
-        // True today only because .map matches no include pattern, not because anything excludes
-        // it — and there is about 700 KB of them. Pinned so a widened include pattern cannot
-        // quietly pull them in.
-        Assert.False(Precached("lib/bootstrap/dist/css/bootstrap.css.map"));
-        Assert.False(Precached("lib/bootstrap/dist/js/bootstrap.bundle.min.js.map"));
+        // True only because .map matches no include pattern, not because anything excludes it.
+        // Pinned so a widened include pattern cannot quietly start precaching source maps if a
+        // future vendored library brings some with it.
+        Assert.False(Precached("lib/some-library/library.css.map"));
+        Assert.False(Precached("lib/some-library/library.min.js.map"));
+    }
+
+    [Fact]
+    public void Only_the_linked_bootstrap_files_are_vendored()
+    {
+        // The exclusion rule that used to keep the rest of the Bootstrap dist out of the cache is
+        // gone, because the rest of the dist is gone. That only stays true if nobody re-vendors
+        // the whole thing — at which point the unlinked files would sail into the precache, since
+        // they are .css and .js and nothing excludes them any more.
+        var dist = Path.Combine(AppContext.BaseDirectory, "lib", "bootstrap", "dist");
+        var vendored = Directory.EnumerateFiles(dist, "*", SearchOption.AllDirectories)
+            .Select(Path.GetFileName)
+            .Order(StringComparer.Ordinal);
+
+        Assert.Equal(["bootstrap.bundle.min.js", "bootstrap.min.css"], vendored);
     }
 
     [Fact]
@@ -100,6 +107,6 @@ public class ServiceWorkerPrecacheTests
         // rather than silently classifying everything as not-precached.
         Assert.NotEmpty(Patterns("offlineAssetsInclude"));
         Assert.NotEmpty(Patterns("offlineAssetsExclude"));
-        Assert.Contains(Patterns("offlineAssetsExclude"), p => p.ToString().Contains("bootstrap"));
+        Assert.Contains(Patterns("offlineAssetsExclude"), p => p.ToString().Contains("service-worker"));
     }
 }

@@ -32,31 +32,8 @@ else
     </div>
 
     <div class="page-tools">
-        <select class="form-select form-select-sm" style="max-width:16rem" aria-label="What counts as wanted" @onchange="OnScope">
-            <option value="everything">valued against everything I collect</option>
-            @if (Session.Wishlists.Count > 0)
-            {
-                <optgroup label="wishlists">
-                    @foreach (var list in Session.Wishlists)
-                    {
-                        <option value="wish:@list.Id" selected="@(_scope == $"wish:{list.Id}")">
-                            @list.Name
-                        </option>
-                    }
-                </optgroup>
-            }
-            @foreach (var series in Session.Sets.Series)
-            {
-                <optgroup label="series @series">
-                    @foreach (var set in Session.Sets.SetsIn(series).Where(Session.Index.OpenableSets.Contains))
-                    {
-                        <option value="@set" selected="@(_scope == set)">
-                            @set &mdash; @Session.Sets.DisplayName(set)
-                        </option>
-                    }
-                </optgroup>
-            }
-        </select>
+        <ScopePicker Label="What counts as wanted" Everything="valued against everything I collect"
+                     Grouped="true" Scope="@_scope" OnScope="OnScope" />
 
         <span class="bar-sep" aria-hidden="true"></span>
 
@@ -197,7 +174,7 @@ else
                                           style="background-image:url('@c.Card.ArtUrl')"></span>
                                     <strong>@c.Card.Name</strong>
                                     <span class="small text-body-secondary ms-1">@c.Card.Set</span>
-                                    @if (RungOf(c.Card) is { } rung)
+                                    @if (Session.Index.Rung(c.Card) is { } rung)
                                     {
                                         <span class="glyphs @rung.GlyphClass ms-1" title="@rung.Symbol">@rung.Glyphs</span>
                                     }
@@ -328,16 +305,7 @@ else
         InvokeAsync(StateHasChanged);
     }
 
-    private ICompletionTarget Target()
-    {
-        if (_scope.StartsWith("wish:", StringComparison.Ordinal)
-            && Session.WishlistById(_scope[5..]) is { } list)
-            return Session.TargetForWishlist(list);
-
-        return _scope == "everything"
-            ? Session.TargetForEverything()
-            : Session.TargetForSet(_scope);
-    }
+    private ICompletionTarget Target() => Session.TargetForScope(_scope);
 
     /// <summary>
     /// Rebuilt from the log rather than kept as a running figure: the value of a past offer
@@ -506,12 +474,6 @@ else
             : $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina, above "
               + "the bar you have been holding out for."
     };
-
-    private RarityRung? RungOf(PocketCard card)
-    {
-        var index = Session.Index.Ladder.IndexOf(card.Rarity);
-        return index is null ? null : Session.Index.Ladder.Rungs[index.Value];
-    }
 
     // Forwards to the shared formatter. Five pages each had their own version of this and they
     // disagreed - the same card's cost printed as "16.0" here, "16" on card detail and "1.6k" past

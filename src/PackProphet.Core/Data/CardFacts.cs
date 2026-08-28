@@ -1,6 +1,5 @@
 namespace PackProphet.Data;
 
-using System.Text.RegularExpressions;
 using System.Text.Json.Serialization;
 using PackProphet.Domain;
 
@@ -40,20 +39,69 @@ public sealed class CardAttack
         {
             if (Damage is not int damage) return "";
 
-            var effect = Effect ?? "";
-            if (Multiplier.IsMatch(effect)) return $"{damage}×";
-            if (Bonus.IsMatch(effect)) return $"{damage}+";
-            return damage.ToString();
+            return Modifier(Effect ?? "") switch
+            {
+                DamageModifier.Multiplier => $"{damage}×",
+                DamageModifier.Bonus => $"{damage}+",
+                _ => damage.ToString()
+            };
         }
     }
 
-    // "for each", not "to each": "does 30 damage to each of your opponent's Benched Pokémon"
-    // hits every Bench member for a fixed 30 and is printed as a plain number.
-    private static readonly Regex Multiplier =
-        new(@"does\s+\d+\s+damage\s+for each", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    private enum DamageModifier { None, Multiplier, Bonus }
 
-    private static readonly Regex Bonus =
-        new(@"does\s+\d+\s+more damage", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    /// <summary>
+    /// Which modifier, if either, the effect text applies to this attack's damage. Both phrases
+    /// open "does &lt;number&gt;" and then diverge:
+    ///
+    ///   "does 50 damage for each heads"   a multiplier
+    ///   "does 30 more damage"             a bonus
+    ///
+    /// "for each", not "to each": "does 30 damage to each of your opponent's Benched Pokémon"
+    /// hits every Bench member for a fixed 30 and is printed as a plain number.
+    ///
+    /// Was a pair of regular expressions. Scanning by hand keeps the app from shipping
+    /// System.Text.RegularExpressions, which is 114 KB gzipped for these two phrases and three
+    /// filename shapes. The whole text is searched for a multiplier before any bonus is accepted,
+    /// which is what the two patterns did when they ran in order.
+    /// </summary>
+    private static DamageModifier Modifier(string effect)
+    {
+        var found = DamageModifier.None;
+
+        for (var i = 0; i < effect.Length; i++)
+        {
+            if (!effect.AsSpan(i).StartsWith("does", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var j = i + 4;
+            if (!SkipRun(effect, ref j, char.IsWhiteSpace)) continue;
+            if (!SkipRun(effect, ref j, char.IsAsciiDigit)) continue;
+            if (!SkipRun(effect, ref j, char.IsWhiteSpace)) continue;
+
+            var rest = effect.AsSpan(j);
+
+            if (rest.StartsWith("damage", StringComparison.OrdinalIgnoreCase))
+            {
+                var k = j + 6;
+                if (SkipRun(effect, ref k, char.IsWhiteSpace)
+                    && effect.AsSpan(k).StartsWith("for each", StringComparison.OrdinalIgnoreCase))
+                    return DamageModifier.Multiplier;
+            }
+
+            if (rest.StartsWith("more damage", StringComparison.OrdinalIgnoreCase))
+                found = DamageModifier.Bonus;
+        }
+
+        return found;
+    }
+
+    /// <summary>Consumes one or more matching characters, reporting whether there were any.</summary>
+    private static bool SkipRun(string text, ref int at, Func<char, bool> take)
+    {
+        var start = at;
+        while (at < text.Length && take(text[at])) at++;
+        return at > start;
+    }
 
     /// <summary>Cost as readable energy names, e.g. "GCC" to Grass, Colorless, Colorless.</summary>
     public IReadOnlyList<string> CostSymbols =>

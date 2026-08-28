@@ -104,6 +104,43 @@ public class TileCaptionTests : AppHost
     }
 
     [Fact]
+    public async Task A_tile_whose_art_never_arrives_shows_the_card_number_instead()
+    {
+        // A set is playable in-game days before the community CDN has scanned its cards, so on a
+        // brand-new set every tile fails at once. The set and number stand in — the same pair the
+        // game prints in the card's own corner — and the stylesheet reveals them off the image's
+        // data-state. This asserts the text is there to reveal, and that it names THIS card.
+        var card = await AnyCardAsync();
+        var tile = Tile(card);
+
+        var placeholder = tile.Find(".card-tile .art .art-none");
+
+        Assert.Equal(card.Set, placeholder.QuerySelector(".s")!.TextContent.Trim());
+        Assert.Equal(card.Number.ToString(), placeholder.QuerySelector(".n")!.TextContent.Trim());
+
+        // The tile's own label already names the card, so a screen reader reading the id after it
+        // would be repeating an identifier nobody asked for.
+        Assert.Equal("true", placeholder.GetAttribute("aria-hidden"));
+    }
+
+    [Fact]
+    public async Task The_list_row_gets_no_placeholder_because_it_already_prints_the_id()
+    {
+        // Deliberately absent rather than overlooked: the row carries the same set and number in
+        // its own cell a few pixels to the right, and the thumbnail is 32px.
+        await ReadyAsync();
+        var grid = RenderComponent<CardGrid>(p =>
+        {
+            p.Add(g => g.Cards, Session.Index.All.Take(4).ToArray());
+            p.Add(g => g.CountOf, _ => 0);
+            p.Add(g => g.ListView, true);
+        });
+
+        Assert.Empty(grid.FindAll(".card-line .art-none"));
+        Assert.NotEmpty(grid.FindAll(".card-line .c-id"));
+    }
+
+    [Fact]
     public async Task The_list_row_thumbnail_has_the_same_stand_in()
     {
         await ReadyAsync();

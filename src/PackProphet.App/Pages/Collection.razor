@@ -214,7 +214,7 @@ else
               OnAdjust="OnAdjust" OnSweep="OnSweep" OnSet="OnSet"
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
-              RungOf="RungOf" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
+              RungOf="Session.Index.Rung" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
               SortKeyOf="Session.Sets.SortKey" GroupOf="GroupLabel" GroupArtOf="GroupArt"
               WantedOf="WantedOf" OnWant="ToggleWant"
               ShowCount="false" ImgFailedChanged="OnArtFailed"
@@ -554,7 +554,6 @@ else
     private int WantedOf(PocketCard card) => Session.WantedOnHeartList(card.OwnershipKey);
 
     private void ToggleWant(PocketCard card) => Session.ToggleWanted(card.OwnershipKey);
-
 
     // One per chip on the toolbar. Parameterless because a Razor event handler cannot carry a
     // quoted string literal without escaping that the compiler then reads as an indexer.
@@ -909,12 +908,6 @@ else
                 next[d.Key] = (next.TryGetValue(d.Key, out var c) ? c : 0) + d.Remaining;
             return p with { Collection = next };
         });
-    }
-
-    private RarityRung? RungOf(PocketCard card)
-    {
-        var i = Session.Index.Ladder.IndexOf(card.Rarity);
-        return i is null ? null : Session.Index.Ladder.Rungs[i.Value];
     }
 
     public void Dispose()

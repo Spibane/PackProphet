@@ -1,0 +1,49 @@
+@* One card in a "what this supplies" list: art, name, how many are still wanted, its rarity, and
+   how you would actually get it.
+
+   The Packs page draws this list twice — once under a pack that supplies the card, once for the
+   cards no pack has ever sold — and the two copies had drifted in the cells they share as well as
+   the ones they do not. The genuine differences are the two parameters below. *@
+
+@inject AppSession Session
+
+<div class="supplied-row">
+    @* A link only where the row is not already inside something clickable. Nested interactive
+       elements are the reason this is a parameter rather than always an anchor: the pack rows
+       expand on click, and a link inside one is a second target in the same place. *@
+    @if (Linked)
+    {
+        <a class="pack-thumb deck-thumb" href="card/@Card.Key"
+           data-tip-img="@Card.ArtUrl" data-tip="@Card.Name"
+           style="background-image:url('@Card.ArtUrl')"
+           aria-label="@Card.Name"></a>
+    }
+    else
+    {
+        <span class="pack-thumb deck-thumb"
+              data-tip-img="@Card.ArtUrl" data-tip="@Card.Name"
+              style="background-image:url('@Card.ArtUrl')"></span>
+    }
+    <span class="nm">
+        @Card.Name
+        @if (Remaining > 1)
+        {
+            <span class="text-body-secondary">&times;@Remaining</span>
+        }
+    </span>
+    <span class="rr">@Session.Index.Symbol(Card)</span>
+    <span class="rt">@Route</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PocketCard Card { get; set; } = default!;
+
+    /// <summary>How many copies are still wanted. Shown only past the first, since "×1" is noise.</summary>
+    [Parameter] public int Remaining { get; set; }
+
+    /// <summary>The cheapest route in words — never a bare number.</summary>
+    [Parameter, EditorRequired] public string Route { get; set; } = default!;
+
+    /// <summary>Whether the art links through to the card. See the note above the thumb.</summary>
+    [Parameter] public bool Linked { get; set; }
+}

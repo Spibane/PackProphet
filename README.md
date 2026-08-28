@@ -1,4 +1,4 @@
-<h1 align="center">&#127924; PackProphet</h1>
+<h1 align="center">PackProphet</h1>
 
 <h2 align="center"><strong>Collection tracker for Pokémon TCG Pocket — record what you own, say what you want, and see which pack gets you there fastest.</strong></h2>
 

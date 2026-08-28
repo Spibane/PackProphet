@@ -721,7 +721,7 @@ else
                 var card = Session.Index.ByOwnershipKey.GetValueOrDefault(key)?.FirstOrDefault();
                 if (card is null) continue;
 
-                var rung = Rung(card.Rarity);
+                var rung = Session.Index.Ladder.RungOf(card.Rarity);
                 if (rung is null || !wanted.Contains(rung.Index)) continue;
 
                 found.Add(new Hit(card, rung, entry.At));
@@ -749,12 +749,6 @@ else
         _showcase = others[Random.Shared.Next(others.Length)];
     }
 
-    private RarityRung? Rung(string rarityCode)
-    {
-        var index = Session.Index.Ladder.IndexOf(rarityCode);
-        return index is null ? null : Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == index);
-    }
-
     private string HitNote()
     {
         if (_hits == 0) return "none yet";
@@ -767,8 +761,6 @@ else
 
         return rate;
     }
-
-
 
     private void BuildTotals()
     {

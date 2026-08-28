@@ -4,6 +4,63 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
+## 0.5.1 — 2026-08-28
+
+Housekeeping before the first public test: a lighter first visit, a smaller repository, and one
+fix for what a brand-new set looks like before its art exists.
+
+### Added
+
+- **A card with no art shows its set and number instead of a broken-image marker.** A set is
+  playable in-game days before the community CDN has scanned its cards, so the app has the card
+  data and none of the pictures — and every tile in the set failed at once, which read as the app
+  being broken rather than the set being new. The tile now stands the set and number in the art's
+  place, the same pair the game prints in the card's own corner. Past ten columns the set line
+  drops and the number stays, since the grid is usually filtered to one set anyway. The list
+  layout gets no stand-in on purpose: that row already prints the same id in its own cell.
+
+- **[AI-DECLARATION.md](AI-DECLARATION.md)**, stating which parts of this project were written with
+  an AI assistant and which were not.
+
+### Changed
+
+- **164 KB less to download on a first visit**, measured over the service worker's precache:
+
+  - **System.Text.RegularExpressions is no longer shipped** (111 KB gzipped, now a 8 KB stub).
+    Five patterns needed it — a set-code parse, two damage-phrase matchers and two artwork-filename
+    shapes — and all five were simple enough to scan by hand. Two of them described the same
+    filename format in two places, so they are now one parser rather than two descriptions that
+    could disagree. Also faster: the variant index is read inside the odds engine's per-card loop,
+    and it was a regex match per card.
+
+  - **cards.extra.json is gone** (57 KB gzipped, 787 KB on disk). It had been replaced because its
+    stats were wrong, and nothing had loaded it since — but it still shipped and was still
+    precached.
+
+- **The deploy artifact is 11.6 MB rather than 19.7 MB.** The SDK writes a `.gz` and a `.br` beside
+  every published asset for a host that serves precompressed files. GitHub Pages does not; it
+  compresses on the fly, and nothing in the published output refers to the sidecars. Users receive
+  identical bytes.
+
+### Removed
+
+- **8.25 MB of vendored Bootstrap.** The whole `dist` was committed while `index.html` links two
+  files out of it: the unminified copies, right-to-left variants, ESM builds, the grid/reboot/
+  utilities subsets and 900 KB of source maps are gone. The service worker had been carrying a
+  lookahead rule to keep them out of the precache, which no longer has anything to match; a test
+  now fails if the whole dist is ever re-vendored.
+
+### Fixed
+
+- **Seven pages had their own copy of the same rarity lookup**, written two different ways, and a
+  shared helper for it already existed — doing a linear scan when the ladder has a dictionary. One
+  lookup now, and the shared one got faster.
+
+- **Four pages each had their own scope picker and their own scope reader**, and they had drifted:
+  two spelled a set `set:A1` and two spelled it `A1`, and only one knew about whole-series and
+  all-wishlist scopes. One `ScopePicker` component and one `AppSession.TargetForScope`, which reads
+  every spelling any of them ever produced.
+
 ## 0.5.0 — 2026-08-28
 
 Phase 4's headline feature, taken ahead of Phase 3's remaining localisation because it is the

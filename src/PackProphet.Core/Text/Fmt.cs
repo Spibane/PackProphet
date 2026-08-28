@@ -67,12 +67,19 @@ public static class Fmt
 
 /// <summary>
 /// Rarity as the UI shows it. Four one-line helpers that had been copy-pasted into three pages
-/// apiece; the ladder lookup behind them is a linear scan.
+/// apiece.
 /// </summary>
 public static class RarityDisplay
 {
+    /// <summary>
+    /// The rung a card sits on, or null for an unknown rarity.
+    ///
+    /// Was a linear scan of every rung's code list, which is what seven pages were also each
+    /// doing by hand. The ladder already builds a code-to-rung dictionary for
+    /// <see cref="RarityLadder.IndexOf"/>, so this is a lookup.
+    /// </summary>
     public static RarityRung? Rung(this CardIndex index, PocketCard card) =>
-        index.Ladder.Rungs.FirstOrDefault(r => r.Codes.Contains(card.Rarity));
+        index.Ladder.RungOf(card.Rarity);
 
     /// <summary>The in-game symbol, e.g. "3◆". Falls back to the raw code for unknown rarities.</summary>
     public static string Symbol(this CardIndex index, PocketCard card) =>

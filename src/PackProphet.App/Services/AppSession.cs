@@ -1233,6 +1233,60 @@ public sealed class AppSession : IAsyncDisposable
     public ICompletionTarget TargetForEverything() =>
         new CompositeTarget(Index.OpenableSets.Select(TargetForSet).ToArray(), "everything");
 
+    /// <summary>
+    /// A scope string resolved to the target it names.
+    ///
+    /// Four pages let you pick what to rank against, and four pages had written their own version
+    /// of this. They had drifted: two spelled a set "set:A1" and two spelled it "A1", only one
+    /// knew about "wishes" and "series:", and a scope one page could produce was a scope another
+    /// read as "everything". The grammars do not collide, so one reader accepts all of them.
+    ///
+    /// Anything unresolvable — a wishlist since deleted, a series with no openable sets left —
+    /// falls back to everything rather than to an empty target, which would read as "nothing left
+    /// to collect". Callers that also need the dropdown to stop showing the dead option run
+    /// <see cref="NormalizeScope"/> over the string first.
+    /// </summary>
+    public ICompletionTarget TargetForScope(string scope)
+    {
+        if (scope.StartsWith("wish:", StringComparison.Ordinal))
+            return WishlistById(scope[5..]) is { } list
+                ? TargetForWishlist(list)
+                : TargetForEverything();
+
+        // Merged, not summed: CompositeTarget takes the LARGEST requirement per card, so a card
+        // on two lists is still one card.
+        if (scope == "wishes")
+            return Wishlists.Count > 0
+                ? new CompositeTarget(Wishlists.Select(TargetForWishlist).ToArray(), "all wishlists")
+                : TargetForEverything();
+
+        if (scope.StartsWith("series:", StringComparison.Ordinal))
+        {
+            var sets = SetsInSeries(scope[7..]);
+            return sets.Length > 0
+                ? new CompositeTarget(sets.Select(TargetForSet).ToArray(), $"series {scope[7..]}")
+                : TargetForEverything();
+        }
+
+        var set = scope.StartsWith("set:", StringComparison.Ordinal) ? scope[4..] : scope;
+        return scope == "everything" ? TargetForEverything() : TargetForSet(set);
+    }
+
+    /// <summary>
+    /// The same scope, or "everything" when what it named is gone. A picker showing a deleted
+    /// wishlist keeps offering it; resolving to a fallback alone would leave the control and the
+    /// results disagreeing about what is being ranked.
+    /// </summary>
+    public string NormalizeScope(string scope) =>
+        scope.StartsWith("wish:", StringComparison.Ordinal) && WishlistById(scope[5..]) is null ? "everything"
+        : scope == "wishes" && Wishlists.Count == 0 ? "everything"
+        : scope.StartsWith("series:", StringComparison.Ordinal) && SetsInSeries(scope[7..]).Length == 0 ? "everything"
+        : scope;
+
+    /// <summary>The openable sets of one series, in the order the pickers list them.</summary>
+    public string[] SetsInSeries(string series) =>
+        Sets.SetsIn(series).Where(Index.OpenableSets.Contains).ToArray();
+
     // ---- Storage health -------------------------------------------------------------
     // Each of these is a state the app announces rather than absorbs: a tracker whose writes are
     // failing looks identical to one that is working, until the reload.

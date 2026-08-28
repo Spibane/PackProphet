@@ -21,48 +21,8 @@ else
            each changes what the ranking is of, so every figure below means something different
            afterwards. *@
         @* Grouped by series so this stays usable as sets accumulate. *@
-        <select class="form-select form-select-sm" style="max-width:16rem" aria-label="What to rank packs against" @onchange="OnScope">
-            <option value="everything">everything</option>
-            @* Wishlists sit in the same control as sets because they are the same thing to the
-               engine: a target. A separate "wishlist mode" would imply the ranking works
-               differently for them. *@
-            @if (Session.Wishlists.Count > 0)
-            {
-                <optgroup label="wishlists">
-                    @* Every list at once, merged. Demands overlapping between lists count once,
-                       so two lists that both want the same card do not double its price. *@
-                    @if (Session.Wishlists.Count > 1)
-                    {
-                        <option value="wishes" selected="@(_scope == "wishes")">
-                            all wishlists together
-                        </option>
-                    }
-                    @foreach (var list in Session.Wishlists)
-                    {
-                        <option value="wish:@list.Id" selected="@(_scope == $"wish:{list.Id}")">
-                            @list.Name
-                        </option>
-                    }
-                </optgroup>
-            }
-            @foreach (var series in Session.Sets.Series)
-            {
-                <optgroup label="series @series">
-                    @* A whole series is a scope people actually think in — "am I done with the
-                       A sets" — and it sits above its own sets rather than in a separate list,
-                       so the dropdown reads as one hierarchy. *@
-                    <option value="series:@series" selected="@(_scope == $"series:{series}")">
-                        series @series
-                    </option>
-                    @foreach (var set in Session.Sets.SetsIn(series).Where(s => _sets.Contains(s)))
-                    {
-                        <option value="@set" selected="@(_scope == set)">
-                            @set &mdash; @Session.Sets.DisplayName(set)
-                        </option>
-                    }
-                </optgroup>
-            }
-        </select>
+        <ScopePicker Label="What to rank packs against" Everything="everything"
+                     Grouped="true" Merged="true" Scope="@_scope" OnScope="OnScope" />
 
         @* No premium switch here. It is a subscription -- set once, changed almost never -- and a
            control that permanent does not earn a place in a bar you pass through every time you
@@ -632,20 +592,8 @@ else
                                     <div class="supplied">
                                         @foreach (var (card, remaining) in supplied.Take(40))
                                         {
-                                            <div class="supplied-row">
-                                                <span class="pack-thumb deck-thumb"
-                                                      data-tip-img="@card.ArtUrl" data-tip="@card.Name"
-                                                      style="background-image:url('@card.ArtUrl')"></span>
-                                                <span class="nm">
-                                                    @card.Name
-                                                    @if (remaining > 1)
-                                                    {
-                                                        <span class="text-body-secondary">&times;@remaining</span>
-                                                    }
-                                                </span>
-                                                <span class="rr">@(RungOf(card)?.Symbol ?? card.Rarity)</span>
-                                                <span class="rt">@RouteNote(card)</span>
-                                            </div>
+                                            <SuppliedRow Card="card" Remaining="remaining"
+                                                         Route="@RouteNote(card)" />
                                         }
                                     </div>
                                     @if (supplied.Count > 40)
@@ -732,21 +680,7 @@ else
                 <div class="supplied mt-2">
                     @foreach (var (card, remaining) in _neverInPack.Take(UnreachableShown))
                     {
-                        <div class="supplied-row">
-                            <a class="pack-thumb deck-thumb" href="card/@card.Key"
-                               data-tip-img="@card.ArtUrl" data-tip="@card.Name"
-                               style="background-image:url('@card.ArtUrl')"
-                               aria-label="@card.Name"></a>
-                            <span class="nm">
-                                @card.Name
-                                @if (remaining > 1)
-                                {
-                                    <span class="text-body-secondary">&times;@remaining</span>
-                                }
-                            </span>
-                            <span class="rr">@(RungOf(card)?.Symbol ?? card.Rarity)</span>
-                            <span class="rt">trade only</span>
-                        </div>
+                        <SuppliedRow Card="card" Remaining="remaining" Route="trade only" Linked="true" />
                     }
                 </div>
                 @if (_neverInPack.Count > UnreachableShown)
@@ -1076,7 +1010,7 @@ else
             .Select(d => (Card: d.SuppliedBy.FirstOrDefault(c => keys.Contains(c.OwnershipKey)), d.Remaining))
             .Where(x => x.Card is not null)
             .Select(x => (x.Card!, x.Remaining))
-            .OrderByDescending(x => RungOf(x.Item1)?.Index ?? -1)
+            .OrderByDescending(x => Session.Index.Rung(x.Item1)?.Index ?? -1)
             .ThenBy(x => x.Item1.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
     }
@@ -1104,15 +1038,9 @@ else
         }
 
         return result
-            .OrderByDescending(x => RungOf(x.Item1)?.Index ?? -1)
+            .OrderByDescending(x => Session.Index.Rung(x.Item1)?.Index ?? -1)
             .ThenBy(x => x.Item1.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
-    }
-
-    private RarityRung? RungOf(PocketCard card)
-    {
-        var index = Session.Index.Ladder.IndexOf(card.Rarity);
-        return index is null ? null : Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == index);
     }
 
     /// <summary>
@@ -1163,34 +1091,15 @@ else
 
     private string _advisorFor = "";
 
+    /// <summary>
+    /// The target the ranking runs against. Normalised on the way through, unlike the other
+    /// pickers: this page keeps the choice, so a scope naming something deleted has to stop being
+    /// the selected option as well as stop being ranked.
+    /// </summary>
     private ICompletionTarget CurrentTarget()
     {
-        if (_scope.StartsWith("wish:", StringComparison.Ordinal))
-        {
-            var list = Session.WishlistById(_scope[5..]);
-            // A deleted wishlist falls back rather than ranking an empty target, which would
-            // read as "nothing left to collect".
-            if (list is not null) return Session.TargetForWishlist(list);
-            _scope = "everything";
-        }
-
-        if (_scope == "wishes" && Session.Wishlists.Count > 0)
-            // Merged, not summed: CompositeTarget takes the LARGEST requirement per card, so a
-            // card on two lists is still one card.
-            return new CompositeTarget(
-                Session.Wishlists.Select(Session.TargetForWishlist).ToArray(), "all wishlists");
-
-        if (_scope.StartsWith("series:", StringComparison.Ordinal))
-        {
-            var sets = ScopeSets();
-            if (sets.Length > 0)
-                return new CompositeTarget(
-                    sets.Select(Session.TargetForSet).ToArray(), $"series {_scope[7..]}");
-
-            _scope = "everything";
-        }
-
-        return _scope == "everything" ? Session.TargetForEverything() : Session.TargetForSet(_scope);
+        _scope = Session.NormalizeScope(_scope);
+        return Session.TargetForScope(_scope);
     }
 
     /// <summary>
@@ -1198,16 +1107,10 @@ else
     /// only means anything over sets — a wishlist scope has no sets of its own and falls back to
     /// all of them.
     /// </summary>
-    private string[] ScopeSets()
-    {
-        if (_scope.StartsWith("series:", StringComparison.Ordinal))
-        {
-            var series = _scope[7..];
-            return Session.Sets.SetsIn(series).Where(_sets.Contains).ToArray();
-        }
-
-        return _sets.Contains(_scope) ? [_scope] : _sets;
-    }
+    private string[] ScopeSets() =>
+        _scope.StartsWith("series:", StringComparison.Ordinal) ? Session.SetsInSeries(_scope[7..])
+        : _sets.Contains(_scope) ? [_scope]
+        : _sets;
 
     private void Recompute()
     {

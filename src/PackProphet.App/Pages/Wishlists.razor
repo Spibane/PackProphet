@@ -371,7 +371,7 @@ else
                 <tbody>
                 @foreach (var (card, wanted, owned) in _cards)
                 {
-                    var rung = RungOf(card);
+                    var rung = Session.Index.Rung(card);
                     var fact = Session.FactFor(card);
                     <tr class="wish-row @(owned >= wanted ? "got" : "")">
                         <td class="thumb"><a class="pack-thumb deck-thumb @(Session.HasGoldFlair(card) ? "gold-flair" : "")"
@@ -531,7 +531,7 @@ else
         foreach (var (card, wanted, owned) in short_)
         {
             var need = wanted - owned;
-            var rarity = RungOf(card)?.Symbol ?? card.Rarity;
+            var rarity = Session.Index.Rung(card)?.Symbol ?? card.Rarity;
             lines.Add($"{card.Set}-{card.Number} {card.Name} ({rarity})"
                       + (need > 1 ? $" x{need}" : ""));
         }
@@ -760,12 +760,6 @@ else
     {
         Session.Undo();
         _added = 0;
-    }
-
-    private RarityRung? RungOf(PocketCard card)
-    {
-        var index = Session.Index.Ladder.IndexOf(card.Rarity);
-        return index is null ? null : Session.Index.Ladder.Rungs[index.Value];
     }
 
     private static string Fmt(double packs) => Text.Fmt.Packs(packs);

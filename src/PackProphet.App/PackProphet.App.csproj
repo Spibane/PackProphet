@@ -37,6 +37,18 @@
     <ProjectReference Include="..\PackProphet.Core\PackProphet.Core.csproj" />
   </ItemGroup>
 
+  <!-- No .gz/.br sidecars. The SDK writes a compressed copy of every published asset for a host
+       that does content negotiation; GitHub Pages does not serve them, it compresses on the fly.
+       Nothing in the published output references them either — the runtime asks for the plain
+       .wasm and the service worker manifest lists only plain files — so they were 7.3 MB of a
+       19.7 MB artifact built, uploaded and deployed on every push for nothing.
+
+       Turn this back on when moving to a host that serves precompressed files, which is the only
+       thing that reads them. -->
+  <PropertyGroup>
+    <CompressionEnabled>false</CompressionEnabled>
+  </PropertyGroup>
+
   <!-- Offline support. The dev worker is a no-op: a caching worker in development serves
        yesterday's _framework files after a rebuild, which is indistinguishable from a broken
        build. Only the published build gets the real one, and the SDK generates the asset manifest

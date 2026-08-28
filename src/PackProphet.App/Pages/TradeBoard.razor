@@ -17,26 +17,7 @@ else
     </div>
 
     <div class="page-tools">
-        <select class="form-select form-select-sm" style="max-width:16rem" aria-label="What the board should chase" @onchange="OnScope">
-            <option value="everything">everything I collect</option>
-            @if (Session.Wishlists.Count > 0)
-            {
-                <optgroup label="wishlists">
-                    @foreach (var list in Session.Wishlists)
-                    {
-                        <option value="wish:@list.Id" selected="@(_scope == $"wish:{list.Id}")">
-                            @list.Name
-                        </option>
-                    }
-                </optgroup>
-            }
-            <optgroup label="sets">
-                @foreach (var set in Session.Index.OpenableSets.OrderBy(Session.Sets.SortKey, StringComparer.Ordinal))
-                {
-                    <option value="set:@set" selected="@(_scope == $"set:{set}")">@set</option>
-                }
-            </optgroup>
-        </select>
+        <ScopePicker Label="What the board should chase" Scope="@_scope" OnScope="OnScope" />
 
         @* Three knobs, each with its own visible label, wrapped this bar to three rows at 375px.
            The labels go into the options — a dropdown reading "4 slots kept for likely offers"
@@ -368,15 +349,7 @@ else
         _plan = Session.RecommendBoard(CurrentTarget(), _liquidSlots, _floor, _foils);
     }
 
-    private ICompletionTarget CurrentTarget() => _scope switch
-    {
-        var s when s.StartsWith("wish:") =>
-            Session.Wishlists.FirstOrDefault(w => w.Id == s[5..]) is { } list
-                ? Session.TargetForWishlist(list)
-                : Session.TargetForEverything(),
-        var s when s.StartsWith("set:") => Session.TargetForSet(s[4..]),
-        _ => Session.TargetForEverything()
-    };
+    private ICompletionTarget CurrentTarget() => Session.TargetForScope(_scope);
 
     /// <summary>
     /// Selection order is by value; this is the order you will TYPE it in, walking the in-game

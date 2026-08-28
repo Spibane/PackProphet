@@ -83,6 +83,17 @@ public sealed class RarityLadder
         _rungByCode.TryGetValue(rarityCode, out var i) ? i : null;
 
     /// <summary>
+    /// The rung a rarity code sits on, or null if the code is unknown.
+    ///
+    /// Seven pages each carried their own copy of this, written two different ways — half indexed
+    /// Rungs directly, half searched it for a matching Index. Those agree only because a rung's
+    /// Index is its position, which is true here and was never stated anywhere the copies could
+    /// see. Reading a rung is what the callers actually wanted; the index was a step on the way.
+    /// </summary>
+    public RarityRung? RungOf(string rarityCode) =>
+        IndexOf(rarityCode) is int i ? Rungs[i] : null;
+
+    /// <summary>
     /// True when a card's rarity is one of the selected rungs. Unknown rarities are excluded, so
     /// the selection under-claims rather than inventing a requirement.
     /// </summary>

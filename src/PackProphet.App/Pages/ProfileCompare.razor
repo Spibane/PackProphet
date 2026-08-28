@@ -117,51 +117,13 @@ else
                                 (@_swaps.ShareDays @Day(_swaps.ShareDays))
                             </span>
                         </p>
-                        @if (_swaps.IncomingShares.Count == 0)
-                        {
-                            <p class="small text-body-secondary">Nothing this way.</p>
-                        }
-                        else
-                        {
-                            <ol class="small mb-0">
-                                @foreach (var gift in _swaps.IncomingShares)
-                                {
-                                    <li>
-                                        <a href="card/@gift.Card.Key">@gift.Card.Name</a>
-                                        <span class="text-body-secondary">
-                                            @gift.Card.Set &middot; @Session.Index.Symbol(gift.Card) &middot;
-                                            @Fmt.PacksPhrase(gift.PacksSaved)
-                                            @(gift.Copies > 1 ? $" · ×{gift.Copies}" : "")
-                                        </span>
-                                    </li>
-                                }
-                            </ol>
-                        }
+                        @ShareList(_swaps.IncomingShares)
                     </div>
                     <div>
                         <p class="small fw-semibold mb-1">
                             @_swaps.Mine.Name sends &rarr; @_swaps.Theirs.Name
                         </p>
-                        @if (_swaps.OutgoingShares.Count == 0)
-                        {
-                            <p class="small text-body-secondary">Nothing this way.</p>
-                        }
-                        else
-                        {
-                            <ol class="small mb-0">
-                                @foreach (var gift in _swaps.OutgoingShares)
-                                {
-                                    <li>
-                                        <a href="card/@gift.Card.Key">@gift.Card.Name</a>
-                                        <span class="text-body-secondary">
-                                            @gift.Card.Set &middot; @Session.Index.Symbol(gift.Card) &middot;
-                                            @Fmt.PacksPhrase(gift.PacksSaved)
-                                            @(gift.Copies > 1 ? $" · ×{gift.Copies}" : "")
-                                        </span>
-                                    </li>
-                                }
-                            </ol>
-                        }
+                        @ShareList(_swaps.OutgoingShares)
                     </div>
                 </div>
 
@@ -368,6 +330,33 @@ else
 }
 
 @code {
+    @*  Both columns of the Free-to-send grid render the same list of gifts and differ only in
+        which way it points. Written out twice, they had already drifted once: a change to how a
+        multiple-copy gift is labelled landed on the incoming side only. *@
+    private RenderFragment<IReadOnlyList<DiffGift>> ShareList => gifts =>
+        @<text>
+            @if (gifts.Count == 0)
+            {
+                <p class="small text-body-secondary">Nothing this way.</p>
+            }
+            else
+            {
+                <ol class="small mb-0">
+                    @foreach (var gift in gifts)
+                    {
+                        <li>
+                            <a href="card/@gift.Card.Key">@gift.Card.Name</a>
+                            <span class="text-body-secondary">
+                                @gift.Card.Set &middot; @Session.Index.Symbol(gift.Card) &middot;
+                                @Fmt.PacksPhrase(gift.PacksSaved)
+                                @(gift.Copies > 1 ? $" · ×{gift.Copies}" : "")
+                            </span>
+                        </li>
+                    }
+                </ol>
+            }
+        </text>;
+
     private string? _otherId;
     private bool _readyOnly;
     private ProfileSwaps? _swaps;

@@ -1114,7 +1114,6 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-line.sel { background: color-mix(in srgb, var(--bs-primary) 22%, transparent); }
 
 .card-tile img { width: 100%; height: 100%; display: block; object-fit: cover; background: #333; }
-.card-tile img.img-failed { opacity: .25; }
 
 /* Waiting for art.
    ==========================================================================================
@@ -1138,6 +1137,46 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-line .thumb:not([data-state]),
 .card-line .thumb[data-state="queued"],
 .card-line .thumb[data-state="loading"] { visibility: hidden; }
+
+/* Art that failed.
+   ==========================================================================================
+   This used to be left at opacity .25, on the reasoning that the broken marker plus the alt text
+   was the most useful thing a tile with no art could show, and that it SHOULD look like a fault.
+
+   That holds for the odd missing scan. It does not hold for the case that actually happens: a set
+   goes live in the game, the app has its card data immediately, and the community CDN has no
+   images for it for days. Every tile in the set fails at once and the grid reads as broken rather
+   than as new — and the marker is the same either way, so it tells you nothing you did not already
+   know from the wall of them.
+
+   So the marker goes, and on the tile the card's set and number take its place. In the list layout
+   nothing takes its place: that row already prints the same id in its own .c-id cell a few pixels
+   to the right, and the thumbnail is 32px, which is not a size anything legible fits in. */
+.card-tile img.img-failed,
+.card-line .thumb.img-failed { visibility: hidden; }
+
+.art-none { display: none; }
+img[data-state="error"] ~ .art-none {
+    display: grid; place-content: center; justify-items: center;
+    position: absolute; inset: 0;
+    pointer-events: none;
+    line-height: 1.15;
+    color: rgba(255, 255, 255, .55);
+    /* The art box is not a text container and the tile runs from three columns to ten, so both
+       lines are sized off the tile like the spinner ring above them. */
+    font-variant-numeric: tabular-nums;
+}
+.art-none .s { font-size: clamp(.56rem, 8.5cqw, .8rem); opacity: .72; }
+.art-none .n { font-size: clamp(.7rem, 15cqw, 1.5rem); font-weight: 600; }
+
+/* Past ten columns the set line would be drawn at six or seven pixels, which is not small text
+   but a grey smudge. It is also the line you can most afford to lose: the grid is filtered to one
+   set most of the time, so every tile on screen repeats it, while the number is what tells one
+   tile from the next. Dropped at the width where its own clamp bottoms out, so it is never
+   rendered below the size that floor was chosen as legible at. */
+@container (max-width: 104px) {
+    .art-none .s { display: none; }
+}
 
 .art-wait { display: none; }
 /* A sibling selector off the image's own state: no pseudo-element, because gold flair already

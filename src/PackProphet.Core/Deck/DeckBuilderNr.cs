@@ -1,6 +1,6 @@
-using System.Text.RegularExpressions;
-
 namespace PackProphet.Deck;
+
+using PackProphet.Domain;
 
 /// <summary>
 /// A card's internal game id, recovered from its artwork filename.
@@ -24,9 +24,6 @@ public static class DeckBuilderNr
     /// <summary>Numbers at or above this belong to the leading (trainer) segment of a deck code.</summary>
     public const int SpecialThreshold = 100_000;
 
-    private static readonly Regex ImagePattern =
-        new(@"^c([A-Z]+)_\d+_(\d{6})_", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
     /// <summary>True when this number denotes a Trainer card.</summary>
     public static bool IsTrainer(int nr) => nr >= SpecialThreshold;
 
@@ -37,18 +34,11 @@ public static class DeckBuilderNr
     /// </summary>
     public static int? FromImage(string? image)
     {
-        if (string.IsNullOrEmpty(image)) return null;
+        // The embedded value is always the id x10; anything else means the format moved, which
+        // DeckId reports as no id rather than as a number that would decode to the wrong card.
+        if (!CardImageName.TryParse(image, out var name)) return null;
+        if (name.DeckId is not int nr) return null;
 
-        var m = ImagePattern.Match(image);
-        if (!m.Success) return null;
-
-        if (!int.TryParse(m.Groups[2].Value, out var raw)) return null;
-        // The embedded value is always the id x10; anything else means the format moved.
-        if (raw % 10 != 0) return null;
-
-        var nr = raw / 10;
-        if (nr <= 0) return null;
-
-        return m.Groups[1].Value == "TR" ? TrainerOffset + nr : nr;
+        return name.IsTrainer ? TrainerOffset + nr : nr;
     }
 }

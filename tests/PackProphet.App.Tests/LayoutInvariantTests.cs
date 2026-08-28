@@ -220,6 +220,59 @@ public class LayoutInvariantTests
         }
     }
 
+    /// <summary>
+    /// Every file whose markup can carry a grid template: the pages, plus the grid component
+    /// that lays a row of tiles out from a column count the user picked.
+    /// </summary>
+    public static TheoryData<string> MarkupFiles()
+    {
+        var data = new TheoryData<string>();
+        foreach (var f in Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "pages"), "*.razor.txt"))
+            data.Add(f);
+        data.Add(Path.Combine(AppContext.BaseDirectory, "CardGrid.razor.txt"));
+        return data;
+    }
+
+    /// <summary>
+    /// A bare 1fr means minmax(AUTO, 1fr), and an auto minimum is the track's min-content width —
+    /// so the track never shrinks below the longest unbreakable thing in it, however narrow the
+    /// screen. On a grid whose column count the user chose, that is not a hypothetical: six pack
+    /// tiles at 375px needed about 460px, so the last column was cut off AND the browser widened
+    /// its layout viewport to fit, which pushed the fixed bottom bar off the bottom of the screen.
+    /// One overflowing grid, two symptoms that look unrelated.
+    ///
+    /// minmax(0, 1fr) is the same layout wherever there is room and the only one that degrades. It
+    /// is checked rather than remembered because the failure is invisible at a desk, which is where
+    /// the column count gets changed.
+    /// </summary>
+    private static readonly Regex BareFrTrack = new(@"repeat\(\s*[^,()]+,\s*1fr\s*\)", RegexOptions.Compiled);
+
+    [Theory]
+    [MemberData(nameof(MarkupFiles))]
+    public void No_markup_repeats_a_bare_1fr_track(string file)
+    {
+        var markup = File.ReadAllText(file);
+        var name = Path.GetFileName(file);
+
+        Assert.False(BareFrTrack.IsMatch(markup),
+            $"{name} lays a grid out with repeat(n, 1fr). That is minmax(auto, 1fr), so the tracks " +
+            "cannot shrink below their content and the grid overflows the screen instead of " +
+            "fitting it. Use minmax(0, 1fr).");
+    }
+
+    [Fact]
+    public void No_stylesheet_rule_repeats_a_bare_1fr_track()
+    {
+        var offenders = TrackDeclarations()
+            .Where(d => BareFrTrack.IsMatch(d.Tracks))
+            .Select(d => $"{d.Selector} {{ grid-template-columns: {d.Tracks} }}")
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            "These cannot shrink below their content, so they widen the page rather than fit it. " +
+            "Use minmax(0, 1fr): " + string.Join("; ", offenders));
+    }
+
     private static int Height(string pattern)
     {
         var m = Regex.Match(WithoutComments(Css), pattern, RegexOptions.Singleline);

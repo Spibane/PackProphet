@@ -31,4 +31,10 @@ builder.Services.AddScoped<PaletteSwitch>();
 // anywhere.
 builder.Services.AddScoped<GridFocus>();
 
+// Screenshot import. Both are lazy inside — the fingerprint table is not fetched, and the
+// JavaScript module is not imported, until someone actually picks an image — so registering them
+// here costs a page that never opens the feature nothing.
+builder.Services.AddScoped<ArtHashSource>();
+builder.Services.AddScoped<ShotScanner>();
+
 await builder.Build().RunAsync();

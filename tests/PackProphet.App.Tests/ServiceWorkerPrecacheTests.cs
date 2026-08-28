@@ -62,6 +62,11 @@ public class ServiceWorkerPrecacheTests
     // Kept despite being loaded only on demand: importing a deck from a screenshot should still
     // work with no connection.
     [InlineData("js/vendor-jsQR.js")]
+    // Likewise the screenshot import, which is the one feature in the app that does its whole job
+    // locally — recognising a card is a comparison against this file, so leaving it out would make
+    // the most obviously offline feature the one that needs a network.
+    [InlineData("js/cardshot.js")]
+    [InlineData("data/card-hashes.txt")]
     public void Is_precached(string url) => Assert.True(Precached(url), $"{url} must be precached");
 
     [Theory]

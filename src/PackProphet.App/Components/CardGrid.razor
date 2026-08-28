@@ -462,7 +462,7 @@
             @* Guarded like the attributes below it: a row is never empty by construction, and
                the key must not be the thing that discovers otherwise. *@
             <div @key="@(row.Count > 0 ? (object)row[0].Card.Key : row)"
-                 class="card-row" style="grid-template-columns:repeat(@Columns,1fr)" role="row"
+                 class="card-row" style="grid-template-columns:repeat(@Columns,minmax(0,1fr))" role="row"
                  data-group="@(row.Count > 0 ? GroupLabelOf(row[0].Card) : null)"
                  data-group-art="@(row.Count > 0 ? GroupArtFor(row[0].Card) : null)">
                 @foreach (var (card, idx) in row)

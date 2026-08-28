@@ -4,6 +4,240 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
+## 0.5.0 — 2026-08-28
+
+Phase 4's headline feature, taken ahead of Phase 3's remaining localisation because it is the
+larger of the two. Reading cards off a screenshot of the game: a set's card list, the five cards
+from a pack, or a Wonder Pick line-up.
+
+### Added
+
+- **Cards can be read out of a screenshot.** Every card's artwork was reduced to 128 bits offline
+  and the 3,761 fingerprints ship with the app, so recognising a card is a Hamming distance against a
+  150 KB text file. No model, no service, nothing uploaded, and it works offline — the fingerprint
+  table and the reader are both precached, which is asserted rather than assumed.
+
+- **Each import sits where its answer is useful**, rather than in one place that then asks what you
+  meant. The same five cards mean different things in different places, and a choice offered in the
+  wrong place is a wrong answer waiting to happen:
+
+  | Screen | Where the import is | What it does |
+  | --- | --- | --- |
+  | Opening Results | Log a pack | Works out which pack from the cards, and fills the log in |
+  | Wonder Pick | Wonder Pick | Feeds the five cards into the appraisal; changes nothing |
+  | My Cards, five across | Collection | Whole set, blanks for what is missing — reads both ways |
+  | My Cards, three across | Collection | Only what you own, with copy counts |
+
+- **A pack identifies itself from the cards that came out of it.** A card lists the packs it can come
+  from, so the packs that could have produced a whole hand are the intersection of five short lists.
+  Genetic Apex gives each pack about 80 exclusive cards against 46 shared, so one exclusive card in a
+  hand settles it — and a hand of five nearly always has one. Where the cards genuinely do not
+  narrow it, which is what a God Pack looks like because it holds only the rarities every pack
+  shares, the shortlist is offered as buttons rather than a one-in-three guess made. The log screen
+  then sits exactly where it would after picking the pack and tapping five cards, and no further:
+  the same button commits it, against the same grid, so a card read wrongly is visible first.
+
+- **The two card lists are read differently, and the difference is a safety rule.** The five-across
+  list draws unowned cards as blank slots, so a blank is a card known to be missing and the numbering
+  around it supplies the name. The three-across list leaves unowned cards out instead — so a gap in
+  it means "not shown", which may be unowned, or on the next page, or filtered. Positional reasoning
+  is therefore switched off on that list rather than merely allowed to fail, and it can never report
+  a card missing. A coincidental arithmetic run is all it would take to propose deleting a card
+  someone owns.
+
+- **The ownership list is anchored per row** rather than once for the whole grid. The slot detector
+  tiles the entire screenshot, and a real one has a status bar above the list, navigation below it,
+  and a set heading part-way down interrupting the grid — one screen-wide offset would be thrown off
+  by any of those, where a row of furniture recognises nothing and so anchors nothing.
+
+- **It declines to guess.** Two cards whose artwork is too alike to choose between, a slot matching
+  nothing, a list sorted by rarity rather than by number: each comes back as a slot that was not
+  recognised and is left out of what gets applied. A slot with art in it that could not be named is
+  counted, never reported as missing — the reason it was unreadable might be a foil or a crop, and
+  calling it missing would delete a card the user owns.
+
+- **Marking cards as not owned is off until asked for.** It is the only half of an import that can
+  destroy something; everything else adds. The whole import is one undo step either way.
+
+- **The page says which sets it cannot recognise yet, and when the table was built.** Card lists come
+  live from the community CDN, so a new set is browsable within days; fingerprints cannot work that
+  way, because generating one means downloading the art. Between those two moments a set is fully
+  browsable and completely unrecognisable, and a screenshot of it reading as "no cards found" would
+  look like a broken feature rather than a dated table.
+
+- **`.github/workflows/card-hashes.yml` closes that gap weekly.** It looks for cards the table has
+  never seen, downloads only those, and opens a pull request if it found any — listing every set
+  still short of its card count, since a set far short of it is artwork upstream has not published
+  yet and a later run will pick it up. The stamp in the file header is ignored when deciding whether
+  anything changed, so a quiet Monday does not produce a pull request to close.
+
+- **`tools/CardHashGen`** generates the table. Deliberately absent from `PackProphet.slnx`: it needs a
+  native WebP decoder, and `dotnet test` resolves the solution, so including it would put SkiaSharp on
+  the deploy path for no reason. A run merges rather than replaces, and a run that fetches less than
+  two thirds of what the table already held is treated as an outage and writes nothing.
+
+- **The artwork independently confirms the ownership model.** `PocketCard.OwnershipKey` has claimed
+  since 0.1.0 that the artwork filename is a card's identity, and `CardIndex` counts 3,546 ownable
+  cards among 3,761 entries on the strength of that claim. Fingerprinting every card's art arrives at
+  the same number from the pixels: **3,546 distinct fingerprints**, with 214 of them shared by 429
+  entries, because a reprint is the same picture. Two independent routes to one answer, and now a
+  test.
+
+### Changed
+
+- **Only a card's window is fingerprinted, not the whole card**, and this is the change that made
+  recognition work on a real screenshot at all. A card on screen is not its artwork file: the game
+  draws a gold flair border over any card held ten times or more, prints a copy-count badge across
+  the bottom, and clips the last row at the screen edge. Sampling the whole card scored **0 bits**
+  against screenshots built from the artwork files and recognised **one real card in nine** — the
+  flair alone was worth 19 to 26 bits of error. Sampling everything but the frame and the bottom
+  sixth recognises **six of six** whole cards on the fixture, at 4 to 12 bits of 128, with no other
+  card within the threshold.
+
+  Two things fell out of measuring it that reasoning had got backwards. **A tighter window is not a
+  safer one**: the illustration panel alone matched about as well and collapsed 58 cards into
+  indistinguishable pairs, because a foil printing differs from its plain twin mostly *outside* the
+  panel. The wider window separates those by 18 to 25 bits, and the table is back to 3,546 distinct
+  fingerprints — the ownable-card count exactly. And **insetting buys nothing against a badly located
+  card**: shifting the box 8px on a 192px card costs about 40 bits whichever window is used, because
+  a shift moves the sampling grid wherever its edges are.
+
+- **The ambiguity rule is keyed on the ownable card, not on the fingerprint.** It used to wave
+  through any rival carrying the winner's exact fingerprint, on the grounds that reprints share
+  artwork. Once the card's frame was outside the window that reasoning broke: a foil printing differs
+  from its plain twin in nothing but the frame, so it sits at distance 0 from a *different* ownable
+  card and was being treated as the same answer — which would have recorded the wrong printing
+  silently. `ArtHashTable` now returns ranked candidates and `ScreenshotReader` groups them by
+  `OwnershipKey`, because it is the only side that knows which card an entry belongs to.
+
+- **Columns are worked out per row, which is what made the pack reveal and Wonder Pick screens
+  work.** A hand of five is laid out three then two, and the second row sits half a column across
+  from the first — so one set of columns shared by both rows describes neither, and the second row's
+  slots were never looked at. That is where the missing cards were: a **white-bodied card has no
+  colour for the mask to catch and only sparse text**, so it is not found by looking at it at all.
+  It is found because the other card in its row fixes the phase, the column pitch says where the
+  second slot must be, and the fingerprint decides whether a card is there.
+
+  Dunsparce on a Wisdom of Sea and Sky pack reveal and Raticate on a Shining Revelry Wonder Pick are
+  both recovered this way, taking both screens from four of five to **five of five**. The pack is
+  then named from the cards — three of those five are exclusive to Lugia — so logging a pack from a
+  screenshot needs nothing said about which pack it was.
+
+- **A card is offered to the matcher as nine crops, not one**, and this is what made the Wonder Pick
+  screen work. The detector puts a box within two to four pixels of a card's true edges and cannot
+  reliably do better — the box comes from a mask whose extent depends on what the card has near its
+  border — while the fingerprint has no tolerance for it: on a real line-up the centre crops score
+  21, 22, 21 and 12 bits against the right cards, and crops three pixels over score 5, 11, 12 and 2.
+  One card recognised became four.
+
+  Every crop still has to pass the same test on its own — close enough, and clear of the next
+  different card by the full margin — so nine crops cannot turn a doubtful reading into a confident
+  one. Among those that pass, the **nearest** wins. Taking the one with the widest margin was tried
+  and is a trap: margin alone ignores distance, so a crop where the card is 40 bits away and
+  everything else is 43 beats one where it is 4 bits away and clear by 20. The centre crop is tried
+  first and short-circuits when it already identifies the card comfortably, because nine passes over
+  3,761 fingerprints per cell is seconds of work on a phone.
+
+- **The three-across card list gives up how many copies you hold**, read off the badge the game
+  prints across each card's bottom-left corner. Ten shapes in the game's own fixed-pitch font, matched
+  against glyphs cut from the reference screenshots — real digits, not a font this project drew. On
+  the two three-across fixtures that is 6 of 6 counts and 7 of 9, with none wrong.
+
+  Two things it does rather than guess. A count is read **completely or not at all**: dropping an
+  unreadable leading digit turns 14 into 4, so a partial read is not a smaller answer but a different
+  number. And an unread count is **null, never zero** — null means "the screen did not say", where
+  zero would mean "you own none" and erase a card. The page shows what it read, says "not read" where
+  it could not, and counts those out loud.
+
+  Getting the digits apart needed two things that a bitmap comparison alone did not give. The glyphs
+  are compared as **grey ink coverage** rather than black and white, because a digit is about ten
+  pixels across and how much of a cell a stroke covers is most of what separates an 8 from a 3.
+  And the glyph's **width-to-height ratio is kept separately**, because normalising every digit into
+  one box throws it away and it is what tells a 1 from everything else outright — 0.38 against 0.63
+  and up. Binary comparison alone misclassified six of twenty-one samples; with both, leave-one-out
+  over every digit that has a second sample is 16 of 16.
+
+- **Cards are found as regions and framed by consensus**, which is the third detector and the first
+  that works on a real screenshot. Autocorrelating the edge profile to find the grid's period reports
+  a 42px pitch on cards 192px apart, because a real screenshot is mostly text and text carries far
+  more edge energy than the gutters between cards. Finding cards as connected coloured-or-textured
+  regions locates them well, and framing each one by its own extent was still eight pixels out —
+  a region is the extent of the mask, not of the card, and with the right box a card sits 6 bits from
+  its entry against 30 with that one.
+
+  So the regions are used to find the cards and their individual extents are then thrown away: the
+  card size and the rows and columns are rebuilt from what all the cards agree on, and every box comes
+  from that. Which statistic to agree by took measuring: the **median** of the region sizes is right
+  on one fixture and eight pixels small on another, because the mask can fall short of a card's edge
+  but never reach past one — so a **high quantile** is the honest one, and it gives the same 192x268
+  for both. Rows are anchored from the **bottom** edge, which under-reaches least, and only from
+  cards the screen shows whole: one row cut off at the bottom of the screen, used as an anchor, moved
+  every other row by 40 bits' worth.
+
+  Together that recognises **6 of 6** whole cards on one fixture and **9 of 9** on the other. Blank
+  slots are placed across a full-width list, which is what lets the five-across view say what is
+  missing.
+
+- **The card box is measured once per screenshot, not once per slot.** This was a real bug, found
+  only by testing against real artwork, and it is worth recording because everything synthetic
+  passed. The first version cut each card out of its slot by eating uniform lines inward from the
+  slot's edges — but "uniform" is a property of the card, not of the gutter. A card with a bright
+  border stopped the trim dead; a card whose border blended into the dark background had the trim eat
+  into its artwork until it hit its own safety cap. The same thirteen cards that fingerprint **0 bits**
+  from the table when read from their art files came back **4 to 43 bits** away when read out of a
+  screenshot built from those same files, and five of thirteen were recognised.
+
+  The gutter is now measured from the whole image at once, by folding the edge-energy profile over one
+  slot pitch: the card's two outer borders are the only feature every card shares in the same place,
+  so they dominate the fold while a bright line inside one card's art blurs away. The card is the
+  longer of the two arcs between those peaks. The box now lands **within one pixel** of where the
+  cards were drawn, and **13 of 13** are recognised at 2 to 8 bits, against a nearest wrong card at 19
+  or more. The measurement is pinned as a regression test.
+
+- **The match threshold is 14 bits of 128, not 22.** 22 was the median distance between two different
+  cards in the table, which is exactly the wrong place to put a cutoff: a threshold as wide as the
+  typical gap between cards will match a card that is not in the table at all — and a set released
+  since the last workflow run is precisely a screenful of those. 14 is several times the drift that
+  rescaling introduces and comfortably inside the typical gap.
+
+### Fixed
+
+- **The pack picker no longer runs off the side of a phone, and the bottom bar stays put.** At six
+  columns on a 375px screen the last pack was cut off and the tab bar could only be reached by
+  scrolling. One cause, and not the one it looked like: the grid asked for `repeat(n, 1fr)`, which
+  means `minmax(AUTO, 1fr)`, and an auto minimum is the track's min-content width — so a track never
+  shrank below the longest word in a pack name. Six tiles wanted about 460px, the grid overflowed by
+  a hundred, and the browser widened its layout viewport to fit the page, which is what put the
+  fixed bottom bar below the bottom of the screen. `minmax(0, 1fr)` is the same layout wherever
+  there is room and the only one that degrades. The tile's own labels are told their width too: a
+  centred flex column leaves a child as wide as its content, so a name wider than its tile spilled
+  over its neighbours instead of ellipsising.
+
+  Checked by a test rather than remembered, in both the stylesheet and the markup, because the
+  failure is invisible at a desk — which is where the column count gets changed.
+
+- **An import's confirmation is clear of the button that produced it, and offers a button to undo.**
+  The "Recorded N cards" banner sat flush against "apply", so it read as part of the control rather
+  than as the answer to pressing it. It also said "undoable with Ctrl+Z" — on the device this page
+  exists for, that is not an instruction. Both imports now put an **undo that** button in the
+  confirmation, and the CSV import's up-front promise is worded without the keystroke.
+
+- **The three-across card list no longer explains what it cannot see.** It carried a warning that
+  the list shows only cards you own, so nothing in it can say what is missing, and pointed at the
+  five-across view instead. The section is an import: it adds the cards it read. The note answered a
+  question the screen never raised, and sat on top of the reading, which is the thing there to read.
+
+- **Less prose across the screenshot import.** The intro, the layout hints, the checkbox
+  explanations, the failure advice, the coverage warning and the how-it-works disclosure were each
+  saying in three clauses what one says. Trimmed to the instruction or the fact, with the reasoning
+  left in the code where it belongs.
+
+- **The log header keeps the pack name on a phone.** With "change pack" spelled out and "picked N"
+  beside a button that already reads "add N to collection", a 375px header left the title about ten
+  pixels and "Mega Altaria" rendered as "M." — the one thing on the bar that says which pack you are
+  logging. The button's word and the duplicated count are dropped below 600px; the arrow keeps its
+  full tap target and its label goes to the accessible name.
+
 ## 0.4.1 — 2026-08-26
 
 ### Fixed

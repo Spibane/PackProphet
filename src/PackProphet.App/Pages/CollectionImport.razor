@@ -207,8 +207,10 @@ else
 
                 @if (_destination is Destination.Merge or Destination.Replace)
                 {
+                    @* Not "Ctrl+Z": the promise has to hold on the device the page is used on,
+                       and the control that keeps it appears in the confirmation below. *@
                     <p class="small text-body-secondary mt-2 mb-0">
-                        Undoable with <kbd>Ctrl</kbd>+<kbd>Z</kbd> afterwards.
+                        You can undo this afterwards.
                     </p>
                 }
             }
@@ -253,6 +255,12 @@ else
             <Notice Severity="Notice.Level.Success" Class="mt-3">
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <span>@_done</span>
+                    @if (Session.CanUndo)
+                    {
+                        <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoImport">
+                            undo that
+                        </button>
+                    }
                     <a class="btn btn-sm btn-outline-primary py-0" href="collection">
                         see the collection
                     </a>
@@ -284,6 +292,12 @@ else
     private bool _applying;
     private string? _problem;
     private string? _done;
+
+    private void UndoImport()
+    {
+        Session.Undo();
+        _done = null;
+    }
 
     protected override async Task OnInitializedAsync()
     {

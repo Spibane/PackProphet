@@ -238,6 +238,13 @@
         var actions = new List<Item>
         {
             new("action", "Import a deck from a screenshot", "scan the in-game code", "decks/import"),
+            // Three imports in three places, because the same five cards mean different things
+            // depending on where you are. Named by the in-game screen rather than by what the app
+            // does with it, since the screen is what the user is looking at.
+            new("action", "Import cards from a My Cards screenshot", "read your card list off the game",
+                "collection/screenshot"),
+            new("action", "Log a pack from a screenshot", "reads the pack from the cards", "log"),
+            new("action", "Read a Wonder Pick from a screenshot", "appraise the offer", "wonder"),
             new("action", "Import a collection from another tracker", "read a CSV export",
                 "collection/import"),
             new("action", "Export this collection as CSV", "for a spreadsheet or another tracker",

@@ -1,0 +1,340 @@
+@* Reads cards off a screenshot of the game, and shows what it found.
+
+   One component, three hosts, because the reading is the same work every time and only the meaning
+   of the answer differs. A pack's five cards belong on the log screen, where the pack itself gets
+   logged; a Wonder Pick's line-up belongs on the Wonder Pick screen, where it feeds an appraisal;
+   the two card lists belong with the collection. Each host renders its own actions into
+   <Actions>, and none of them has to know how a screenshot is read.
+
+   Everything the hosts share lives here: the promise that nothing is uploaded, the warning about
+   sets too new to recognise, the file input, the failure advice, and the table of what was found. *@
+
+@inject AppSession Session
+@inject ArtHashSource Hashes
+@inject ShotScanner Scanner
+
+@if (_coverageWarning is not null)
+{
+    @* The one thing about this feature that will otherwise look like a bug. Card lists come live
+       from the community database and fingerprints ship with the build, so the newest set is
+       browsable and unrecognisable at the same time.
+
+       Info rather than Warning: it is a plain fact about how current the build is, stated before
+       the user has done anything, and nobody did anything wrong. *@
+    <Notice Severity="Notice.Level.Info">@_coverageWarning</Notice>
+}
+
+@if (Intro is not null)
+{
+    <div class="text-body-secondary mb-2">@Intro</div>
+}
+
+@* The one claim worth making up front, in the fewest words that make it. How the recognition
+   works is in the host's own disclosure, for anyone who wants it. *@
+<p class="small text-body-secondary">
+    Read <strong>in this browser</strong>. Nothing is uploaded.
+</p>
+
+@if (Choices.Count > 1)
+{
+    <fieldset class="mb-3">
+        @* fs-6 because Bootstrap sizes a legend like a heading, and beside the file label below it
+           this is a field label of exactly the same rank. *@
+        <legend class="form-label fs-6 mb-1">@ChoiceLegend</legend>
+
+        @* Offered before the file and re-applied after it. Re-reading a scan under a different
+           screen costs nothing — the pixels were measured once and only the interpretation
+           changes — which is exactly why the two halves are split. *@
+        @foreach (var (value, label, hint) in Choices)
+        {
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="@_group"
+                       id="@($"{_group}-{value?.ToString() ?? "auto"}")"
+                       checked="@(_screen == value)"
+                       @onchange="@(() => ChooseScreen(value))" />
+                <label class="form-check-label" for="@($"{_group}-{value?.ToString() ?? "auto"}")">
+                    @label
+                    <span class="d-block small text-body-secondary">@hint</span>
+                </label>
+            </div>
+        }
+    </fieldset>
+}
+
+<label class="form-label" for="@FileId">The screenshot</label>
+<InputFile id="@FileId" class="form-control mb-2" OnChange="Read"
+           accept="image/*" disabled="@_busy" />
+
+@if (_busy)
+{
+    <Notice Severity="Notice.Level.Info">Reading the image&hellip;</Notice>
+}
+
+@if (_reading is { Ok: false })
+{
+    <Notice Severity="Notice.Level.Warning">@_reading.Error</Notice>
+    @* Three things to try, not three things to read. Each is an instruction; the reason it works
+       is not what someone staring at a failure needs. *@
+    <ul class="small text-body-secondary">
+        <li>Screenshot the <strong>whole screen</strong>, not one card.</li>
+        <li>A screenshot, not a photo of a screen.</li>
+        <li>Wait for the cards to stop moving.</li>
+    </ul>
+}
+else if (_reading is { Ok: true } reading)
+{
+    <h2 class="h5 mt-4">What this picture says</h2>
+
+    @if (reading.ScreenWasInferred && Choices.Count > 1)
+    {
+        <Notice Severity="Notice.Level.Info" Dense="true">
+            Read as <strong>@ScreenName(reading.Screen)</strong>. Say which above if that is wrong.
+        </Notice>
+    }
+
+    <DataTable Label="Cards read from the screenshot" Fit="true" Class="mb-3">
+        <table class="table table-sm mb-0">
+            <tbody>
+                <tr>
+                    <th scope="row" class="fw-normal">Cards recognised</th>
+                    <td class="text-end fw-semibold">@reading.RecognisedCount.ToString("N0")</td>
+                </tr>
+                @if (reading.Screen == CardScreen.OwnershipGrid)
+                {
+                    <tr>
+                        <th scope="row" class="fw-normal">Named by their place in the list</th>
+                        <td class="text-end">
+                            @reading.Matches.Count(m => m.Source == MatchSource.GridPosition).ToString("N0")
+                        </td>
+                    </tr>
+                }
+                @if (reading.UnreadCells > 0)
+                {
+                    <tr>
+                        <th scope="row" class="fw-normal text-warning-emphasis">
+                            Card slots not recognised
+                        </th>
+                        <td class="text-end text-warning-emphasis">
+                            @reading.UnreadCells.ToString("N0")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </DataTable>
+
+    @foreach (var note in reading.Notes)
+    {
+        <Notice Severity="Notice.Level.Warning">@note</Notice>
+    }
+
+    @if (reading.Matches.Count == 0)
+    {
+        <Notice Severity="Notice.Level.Warning">
+            Card slots were found but none could be named. A set released in the last few weeks may
+            not have its artwork in this build yet.
+        </Notice>
+    }
+    else
+    {
+        <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Cards read from the screenshot</caption>
+                <thead>
+                    <tr>
+                        <th scope="col" colspan="2">Card</th>
+                        <th scope="col">Read as</th>
+                        @* Only the three-across list prints a count, so the column is only worth its
+                           width on that screen. *@
+                        @if (ShowsCopies(reading))
+                        {
+                            <th scope="col" class="text-end">Copies</th>
+                        }
+                        <th scope="col" class="text-end">You have</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var match in reading.Matches)
+                    {
+                        <tr>
+                            <td style="width: 2.5rem">
+                                <span class="thumb"
+                                      style="background-image:url('@match.Card.ArtUrl')"
+                                      role="img" aria-label="@match.Card.Name"></span>
+                            </td>
+                            <td>
+                                <a href="card/@match.Card.Key">@match.Card.Name</a>
+                                <span class="d-block small text-body-secondary">@match.Card.Key</span>
+                            </td>
+                            <td class="small">@ReadAs(match)</td>
+                            @if (ShowsCopies(reading))
+                            {
+                                <td class="text-end">
+                                    @if (match.Copies is { } copies)
+                                    {
+                                        @copies
+                                    }
+                                    else
+                                    {
+                                        @* Said, not left blank. A blank cell reads as "none". *@
+                                        <span class="text-body-secondary" title="The badge could not be read">not read</span>
+                                    }
+                                </td>
+                            }
+                            <td class="text-end">@Session.CountOf(match.Card)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @Actions(reading)
+    }
+}
+
+@code {
+    /// <summary>
+    /// 12 MB, matching the deck screenshot import. A phone screenshot is a few megabytes and the cap
+    /// is only here to refuse something that plainly is not one.
+    /// </summary>
+    private const int MaxBytes = 12 * 1024 * 1024;
+
+    /// <summary>
+    /// What this host lets the user say the picture is. One entry means the host already knows —
+    /// the log screen only ever imports a pack — and the picker is not rendered at all.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<(CardScreen? Value, string Label, string Hint)> Choices { get; set; } = [];
+
+    /// <summary>The legend over the picker, where there is one.</summary>
+    [Parameter] public string ChoiceLegend { get; set; } = "What is in the picture";
+
+    /// <summary>Host-specific instructions: which screen to photograph, and how to get to it.</summary>
+    [Parameter] public RenderFragment? Intro { get; set; }
+
+    /// <summary>What the host offers to do with a reading. Only rendered when something was found.</summary>
+    [Parameter, EditorRequired] public RenderFragment<ShotReading> Actions { get; set; } = default!;
+
+    /// <summary>
+    /// Distinguishes this instance's radio group and input ids from any other on the page. The log
+    /// screen has its own controls and a duplicate id would tie the wrong label to the wrong input.
+    /// </summary>
+    [Parameter] public string Group { get; set; } = "shot";
+
+    private string _group = "shot";
+
+    /// <summary>The file input's id, kept distinct per instance so its label cannot bind to another.</summary>
+    private string FileId => $"{_group}-file";
+
+    private bool _busy;
+    private CardScreen? _screen;
+    private ShotScan? _scan;
+    private ShotReading? _reading;
+    private string? _coverageWarning;
+    private ArtHashTable _table = ArtHashTable.Empty;
+
+    protected override void OnParametersSet()
+    {
+        _group = Group;
+
+        // A host offering exactly one screen has said what the picture is; there is nothing to infer
+        // and nothing to ask.
+        if (Choices.Count == 1) _screen = Choices[0].Value;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetched before a file is chosen, so the coverage warning is on screen before someone
+        // spends a minute finding a screenshot of a set this build cannot recognise.
+        _table = await Hashes.GetAsync();
+        _coverageWarning = ArtHashCoverage.Of(_table, Session.Index, Session.Sets)
+                                         .Warning(Session.Sets);
+    }
+
+    /// <summary>Throws away the reading, so a host can put the page back to waiting for a picture.</summary>
+    public void Clear()
+    {
+        _scan = null;
+        _reading = null;
+        StateHasChanged();
+    }
+
+    private async Task Read(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        _busy = true;
+        _reading = null;
+        _scan = null;
+
+        try
+        {
+            // The table is fetched when the component initialises, but the file input is on screen
+            // before that finishes — so a picture chosen quickly would be read against an empty
+            // table and reported as unrecognisable. Awaiting the memoised task costs nothing once it
+            // has landed and waits exactly as long as needed when it has not.
+            _table = await Hashes.GetAsync();
+
+            await using var stream = file.OpenReadStream(MaxBytes);
+            using var buffer = new MemoryStream();
+            await stream.CopyToAsync(buffer);
+
+            var mime = string.IsNullOrEmpty(file.ContentType) ? "image/png" : file.ContentType;
+            _scan = await Scanner.ScanAsync(
+                $"data:{mime};base64,{Convert.ToBase64String(buffer.ToArray())}");
+
+            Interpret();
+        }
+        catch (Exception ex)
+        {
+            _reading = ShotReading.Failed(
+                $"That file could not be read ({ex.GetType().Name}).",
+                _screen ?? CardScreen.OwnershipGrid);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>
+    /// Re-reads the scan the page already has. Changing which screen the picture is of does not need
+    /// the image again: the pixel work produced measurements, and only their meaning is in question.
+    /// </summary>
+    private void Interpret()
+    {
+        if (_scan is null) return;
+        _reading = new ScreenshotReader(Session.Index, _table).Read(_scan, _screen);
+    }
+
+    private void ChooseScreen(CardScreen? screen)
+    {
+        _screen = screen;
+        Interpret();
+    }
+
+    private static string ScreenName(CardScreen screen) => screen switch
+    {
+        CardScreen.OwnershipGrid => "a set's card list, five across",
+        CardScreen.CopiesGrid => "your own cards, three across",
+        CardScreen.PackReveal => "the cards from a pack",
+        _ => "a Wonder Pick line-up",
+    };
+
+    /// <summary>
+    /// How a row was arrived at, in the user's terms. Confidence is a word rather than a number: the
+    /// distance behind it is meaningful against a threshold and meaningless as a quantity, and
+    /// printing "7" would invite a precision that is not there.
+    /// </summary>
+    /// <summary>Whether this reading came off the one screen that prints how many copies you hold.</summary>
+    private static bool ShowsCopies(ShotReading reading) =>
+        reading.Screen == CardScreen.CopiesGrid;
+
+    private static string ReadAs(ShotMatch match) => match switch
+    {
+        { Source: MatchSource.GridPosition } => "blank slot, named by the cards around it",
+        { IsMarginal: true } => "artwork recognised, less certainly",
+        _ => "artwork recognised",
+    };
+}

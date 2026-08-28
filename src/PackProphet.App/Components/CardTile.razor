@@ -59,10 +59,8 @@
 
            aria-hidden, like the spinner: the tile's own label names the card, and a screen reader
            reading "A1 127" after it would be repeating the id for no one who needed it. *@
-        <span class="art-none" aria-hidden="true">
-            <span class="s">@Card.Set</span>
-            <span class="n">@Card.Number</span>
-        </span>
+        <span class="art-none" aria-hidden="true"
+              data-set="@Card.Set" data-nr="@Card.Number"></span>
     </span>
 
     <span class="cap">

@@ -115,8 +115,10 @@ public class TileCaptionTests : AppHost
 
         var placeholder = tile.Find(".card-tile .art .art-none");
 
-        Assert.Equal(card.Set, placeholder.QuerySelector(".s")!.TextContent.Trim());
-        Assert.Equal(card.Number.ToString(), placeholder.QuerySelector(".n")!.TextContent.Trim());
+        // Attributes rather than child elements: the stylesheet draws both lines from these, so
+        // one element carries what two spans used to on every tile of a couple-hundred-tile grid.
+        Assert.Equal(card.Set, placeholder.GetAttribute("data-set"));
+        Assert.Equal(card.Number.ToString(), placeholder.GetAttribute("data-nr"));
 
         // The tile's own label already names the card, so a screen reader reading the id after it
         // would be repeating an identifier nobody asked for.

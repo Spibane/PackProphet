@@ -126,9 +126,10 @@ public sealed class SetCatalog
     /// <summary>
     /// Memoised per set, because this is called once per card while sorting a list.
     ///
-    /// It parses the code with a regex, and a list of 1,862 cards re-sorted on every render meant
-    /// 1,862 regex matches per keystroke and per tap, which was visible lag on the WebAssembly
-    /// interpreter. There are twenty-two sets, so the cache is two dozen entries.
+    /// A list of 1,862 cards re-sorted on every render meant 1,862 parses per keystroke and per
+    /// tap, which was visible lag on the WebAssembly interpreter. There are twenty-two sets, so
+    /// the cache is two dozen entries. (The parse was a regex until the app stopped shipping
+    /// System.Text.RegularExpressions; the cache is what made it cheap either way.)
     /// </summary>
     private readonly Dictionary<string, string> _sortKeys = new(StringComparer.OrdinalIgnoreCase);
 

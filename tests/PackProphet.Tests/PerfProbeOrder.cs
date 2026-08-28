@@ -35,6 +35,12 @@ public class PerfProbeOrder
         // view meant 3,546 regex matches on every render — and a render happens on every tap.
         var sets = new SetCatalog(Snapshot.PublishedSets(), Snapshot.Index().BySet.Keys);
 
+        // Warmed first, like the sibling test above. Without this the loop is timed while the JIT
+        // is still at tier 0, so the figure is a measure of how contended the machine was rather
+        // than of the cache — which is how it came to report 107ms on a CI runner against the 1ms
+        // it costs warm, and fail a budget it has fifty times the headroom for.
+        for (var i = 0; i < 100_000; i++) _ = sets.SortKey("A1");
+
         var sw = Stopwatch.StartNew();
         for (var i = 0; i < 100_000; i++) _ = sets.SortKey("A1");
         sw.Stop();

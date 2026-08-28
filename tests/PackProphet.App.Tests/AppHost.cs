@@ -88,6 +88,14 @@ public abstract class AppHost : TestContext
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
 
+        // bUnit waits one second by default, which is a budget rather than a limit: the assertion
+        // passes the moment the render lands, so a longer ceiling costs nothing on a machine that
+        // is keeping up and only matters on one that is not. The collection page renders a couple
+        // of hundred tiles and takes ~130ms here; on a contended CI runner that is close enough to
+        // one second to fail on load rather than on behaviour, which is what it did — reporting a
+        // check count of zero, meaning the wait expired before the assertion ran even once.
+        DefaultWaitTimeout = TimeSpan.FromSeconds(10);
+
         Services.AddSingleton(new HttpClient(new SnapshotHandler())
         {
             BaseAddress = new Uri("https://test.local/")

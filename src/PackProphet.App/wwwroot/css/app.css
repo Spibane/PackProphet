@@ -1166,8 +1166,18 @@ img[data-state="error"] ~ .art-none {
        lines are sized off the tile like the spinner ring above them. */
     font-variant-numeric: tabular-nums;
 }
-.art-none .s { font-size: clamp(.56rem, 8.5cqw, .8rem); opacity: .72; }
-.art-none .n { font-size: clamp(.7rem, 15cqw, 1.5rem); font-weight: 600; }
+/* Both lines are pseudo-elements reading the tile's own attributes, rather than two spans. The
+   grid renders a couple of hundred tiles at a time and this element is on every one of them, so
+   the span version was 699 extra nodes of a 3,324-node page for two short strings. .art already
+   spends both of its pseudo-elements on gold flair; this element has its own two free. */
+.art-none::before {
+    content: attr(data-set);
+    font-size: clamp(.56rem, 8.5cqw, .8rem); opacity: .72;
+}
+.art-none::after {
+    content: attr(data-nr);
+    font-size: clamp(.7rem, 15cqw, 1.5rem); font-weight: 600;
+}
 
 /* Past ten columns the set line would be drawn at six or seven pixels, which is not small text
    but a grey smudge. It is also the line you can most afford to lose: the grid is filtered to one
@@ -1175,7 +1185,7 @@ img[data-state="error"] ~ .art-none {
    tile from the next. Dropped at the width where its own clamp bottoms out, so it is never
    rendered below the size that floor was chosen as legible at. */
 @container (max-width: 104px) {
-    .art-none .s { display: none; }
+    .art-none::before { content: none; }
 }
 
 .art-wait { display: none; }

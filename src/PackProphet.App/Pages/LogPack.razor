@@ -62,10 +62,63 @@ else if (_pack is null)
 
     <PageShell>
 
+        @* Reading the pack off a screenshot, before the picker, because it is the faster route when
+           it works: the game has just shown you the five cards, and the cards themselves say which
+           pack they came out of — so neither the pack nor the five taps are needed.
+
+           A disclosure rather than the whole screen, because picking a pack by hand always works and
+           this does not: a set released since the last fingerprint refresh cannot be recognised. *@
+        <details class="mb-3">
+            <summary class="small text-body-secondary">Read it off a screenshot instead</summary>
+            <div class="pt-2">
+                <ShotImport Group="pack" Choices="@ShotChoices">
+                    <Intro>
+                        Screenshot the <strong>Opening Results</strong> screen, with all five cards
+                        showing. The cards say which pack it was.
+                    </Intro>
+                    <Actions Context="reading">
+                        @{
+                            var guess = PackIdentifier.Identify(Session.Index, reading);
+                        }
+
+                        @if (guess.Note is not null)
+                        {
+                            <Notice Severity="Notice.Level.Warning">@guess.Note</Notice>
+                        }
+
+                        @if (guess.PackKey is not null)
+                        {
+                            <button class="btn btn-primary" @onclick="() => AdoptShot(reading, guess.PackKey)">
+                                open @guess.PackKey.Split(':')[1] with these
+                                @reading.RecognisedCount @Fmt.S(reading.RecognisedCount, "card")
+                            </button>
+                        }
+                        else if (guess.Candidates.Count > 1)
+                        {
+                            @* The cards narrowed it and could not finish. Offering the shortlist is
+                               the whole of what is left to ask, and it is a tap rather than a hunt
+                               through the picker. *@
+                            <p class="small mb-2">Which pack was it?</p>
+                            <div class="d-flex gap-2 flex-wrap">
+                                @foreach (var candidate in guess.Candidates)
+                                {
+                                    var pack = candidate;
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            @onclick="() => AdoptShot(reading, pack)">
+                                        @pack.Split(':')[1]
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </Actions>
+                </ShotImport>
+            </div>
+        </details>
+
         @* One flat grid rather than a group per set. The per-set headings cost more vertical space
            than the tiles they labelled — eleven sets meant roughly thirty rem of headings and
            margins — so the set code lives on the tile instead. *@
-        <div class="pack-picker" style="grid-template-columns:repeat(@Session.PackColumns,1fr)">
+        <div class="pack-picker" style="grid-template-columns:repeat(@Session.PackColumns,minmax(0,1fr))">
             @foreach (var pack in PacksShown())
             {
                 var name = pack.Split(':')[1];
@@ -124,7 +177,14 @@ else
        a pack meant scrolling back up past everything you had just tapped to press it. The count
        beside it is the running total, which is the other thing worth having on screen throughout. *@
     <div class="page-head sticky-head">
-        <button class="btn btn-sm btn-outline-secondary" @onclick="Reset">&larr; change pack</button>
+        @* The words collapse to the arrow on a phone. This bar carries four things and only one of
+           them says WHICH pack you are logging, so that is the one that must survive: with the
+           full label here and "picked N" beside the button, a 375px header left the title about
+           ten pixels and "Mega Altaria" rendered as "M.". The arrow is still the same control and
+           still the same size to tap -- the aria-label carries the wording the eye loses. *@
+        <button class="btn btn-sm btn-outline-secondary" @onclick="Reset" aria-label="Change pack">
+            &larr; <span class="wide-only">change pack</span>
+        </button>
         <h1 class="title">@_pack.Split(':')[1]</h1>
         @* The instruction has to match the view. In the tile grid a tap on a card picks it; in
            list mode a tap on a row does nothing and the row's own + is what picks. Telling
@@ -134,7 +194,9 @@ else
             @(Session.ListView ? "add each card that came out" : "tap each card that came out")
         </span>
         <span class="actions">
-            <span class="small">picked @_picked.Count</span>
+            @* Dropped on a phone rather than shortened: the button next to it already reads
+               "add N to collection", so this is the one thing on the bar that is said twice. *@
+            <span class="small wide-only">picked @_picked.Count</span>
             <button class="btn btn-sm btn-success" disabled="@(_picked.Count == 0 || Busy.IsBusy)" @onclick="Commit">
                 add @_picked.Count to collection
             </button>
@@ -362,6 +424,35 @@ else
     }
 
     private void Reset() { _pack = null; _picked.Clear(); _justLogged = null; _miscount = null; _find = ""; }
+
+    /// <summary>
+    /// One choice, so <see cref="ShotImport"/> renders no picker: on this page the picture is a
+    /// pack's reveal by definition. A Wonder Pick line-up looks identical and belongs on its own
+    /// page, where it means something different.
+    /// </summary>
+    private static readonly (CardScreen? Value, string Label, string Hint)[] ShotChoices =
+    [
+        (CardScreen.PackReveal, "The cards from a pack", ""),
+    ];
+
+    /// <summary>
+    /// Takes a reading and sets the page up as if the pack had been picked and the cards tapped.
+    ///
+    /// Deliberately stops there rather than committing. The screenshot has filled in the two
+    /// tedious steps and the user still confirms with the same button they would have used anyway,
+    /// against the same grid showing what was picked — so a card read wrongly is visible and
+    /// fixable before anything reaches the collection.
+    /// </summary>
+    private void AdoptShot(ShotReading reading, string pack)
+    {
+        // Sets the pack and clears the picks, so the cards have to go in afterwards.
+        ChooseCore(pack);
+
+        // Only artwork matches. Nothing on a reveal screen is placed by position, but the reading
+        // type is shared with the card lists, where things are.
+        foreach (var match in reading.Matches.Where(m => m.Source == MatchSource.Art))
+            _picked.Add(match.Card);
+    }
 
     /// <summary>
     /// The pack, narrowed by the name box. Not cached: a pack is at most a few hundred cards and

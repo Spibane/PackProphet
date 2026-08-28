@@ -637,6 +637,11 @@ main:focus { outline: none; }
     /* The subtitle is explanatory, and a phone header has room for the title and the buttons
        or for prose, not both. */
     .page-head .subtitle { display: none; }
+    /* Wording a header can afford at a desk and not on a phone: a button's word beside its arrow,
+       a count already spelled out on the button next to it. Marked in the markup rather than
+       guessed at here, because only the page knows which of its words are the spare ones. The
+       title is never one of them -- it is what the bar is for. */
+    .page-head .wide-only { display: none; }
 }
 
 /* No inset of its own: this sits inside .page-tools, which already carries one, and adding a
@@ -1631,12 +1636,19 @@ img[data-state="loading"] ~ .art-wait {
 /* ================================================================= pack picker and table */
 
 /* Column count is chosen by the user, as in the collection grid, rather than fixed by an
-   auto-fill guess — a booster is worth seeing at a decent size. */
-.pack-picker { display: grid; gap: .5rem; grid-template-columns: repeat(4, 1fr); }
+   auto-fill guess — a booster is worth seeing at a decent size.
+
+   minmax(0, 1fr) rather than a bare 1fr, which means minmax(AUTO, 1fr): an auto minimum is the
+   track's min-content width, so a track never shrinks below the longest word in a pack name. Six
+   columns of "Gyarados" need about 460px, so on a 375px phone the grid was 100px wider than the
+   screen -- the last column was cut off, and the browser widened its layout viewport to fit,
+   which pushed the fixed bottom bar off the bottom of the screen until you scrolled. One
+   overflowing grid, both symptoms. A zero minimum lets the tracks divide whatever there is. */
+.pack-picker { display: grid; gap: .5rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 /* The tile and its pin. Two controls, so two elements: a button inside a button is invalid and
    the browser throws one of them away. The cell is what the grid lays out; the tile fills it. */
-.pack-cell { position: relative; display: flex; }
+.pack-cell { position: relative; display: flex; min-width: 0; }
 .pack-cell .pack-choice { flex: 1 1 auto; min-width: 0; }
 
 /* A pinned pack is drawn as pinned wherever it appears, because it appears out of its series:
@@ -1714,12 +1726,21 @@ img[data-state="loading"] ~ .art-wait {
     background-size: cover; background-position: center; background-repeat: no-repeat;
 }
 
+/* Both labels are told their width, not left to take it. The tile is a centred flex column, so
+   an auto-width child is as wide as its own content -- and a name wider than the tile spilled out
+   over its neighbours instead of ellipsising, however narrow the tile got. Clipping to the tile is
+   what makes the ellipsis do its job. */
 .pack-choice .nm {
+    width: 100%;
     font-size: .9rem; line-height: 1.15;
     overflow: hidden; text-overflow: ellipsis;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
-.pack-choice .st { font-size: .82rem; color: var(--bs-secondary-color); }
+.pack-choice .st {
+    max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: .82rem; color: var(--bs-secondary-color);
+}
 .pack-choice .ltd {
     position: absolute; top: .2rem; right: .2rem;
     font-size: .74rem; padding: 0 .25rem; border-radius: .2rem;

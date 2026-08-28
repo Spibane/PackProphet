@@ -54,6 +54,75 @@ target, bulk drag-select and undo/redo.
 Ownership is keyed by **artwork**, not by set entry, matching how the game treats it — a card
 reprinted in a later set is one card you own.
 
+### Import from a screenshot
+Screenshot the game and the cards are read off the picture. Nothing is uploaded and it works
+offline: every card's artwork was reduced to 128 bits offline and the fingerprints ship with the
+app, so recognising a card is a distance comparison against a 150 KB table rather than a model or a
+server.
+
+Four in-game screens can be read, and the import lives **where the answer is useful** rather than
+in one place that then asks what you meant:
+
+| Screen | Where | What it does |
+| --- | --- | --- |
+| Opening Results | [Log a pack](#log-a-pack) | Works out **which pack** from the cards, and fills the log in |
+| Wonder Pick | [Wonder Pick](#wonder-pick) | Feeds the five cards straight into the appraisal |
+| My Cards, five across | Collection | Whole set, blanks for what you are missing &mdash; reads both ways |
+| My Cards, three across | Collection | Only what you own, **with how many copies** |
+
+- **The pack identifies itself.** A card lists the packs it can come from, so the packs that could
+  have produced a whole hand are the intersection of five short lists. In Genetic Apex, where each
+  pack has about 80 exclusive cards against 46 shared, one exclusive card settles it. When the cards
+  genuinely do not narrow it &mdash; a God Pack holds only the rarities every pack shares &mdash; the
+  shortlist is offered rather than a guess made.
+- **The two card lists are read differently, and that is a safety rule.** The five-across list draws
+  unowned cards as blank slots, so a blank is a card known to be missing and the numbering around it
+  gives its name. The three-across list leaves unowned cards out instead, so a gap there means
+  nothing at all &mdash; positional reasoning is switched off on it, and it can never report a card
+  missing.
+- **It stops rather than guesses.** Two cards whose artwork is too alike to choose between, a slot
+  matching nothing, a list not in number order: each comes back as a slot that was not recognised
+  and is left out.
+- **Nothing is applied without being shown.** Marking cards as *not* owned is off until asked for,
+  and the whole import is one undo step.
+
+Fingerprints are the one piece of card data that cannot be newer than the deploy, since generating
+one means downloading the art. Card lists come live from the CDN, so a set can be browsable and
+unrecognisable at the same time &mdash; the page says which sets those are and when the table was
+built. A weekly workflow closes the gap; see [Refreshing the fingerprints](#refreshing-the-fingerprints).
+
+Only a card's **window** is fingerprinted — everything but the outer frame and the bottom sixth —
+because a card on screen is not its artwork file. The game draws a gold flair border over any card
+held ten times or more and prints a copy-count badge across the bottom. Measured on a real
+screenshot, this recognises six of six whole cards at 4 to 12 bits of 128, flair and all; sampling
+the whole card managed one in nine.
+
+Cards are found by their colour and texture against the page, and then every box is rebuilt from
+what all the cards on screen **agree** about — the median size, the median row and column — because
+one card's own outline is measured eight pixels differently from its neighbour's, and eight pixels is
+enough to change its fingerprint completely.
+
+The three-across list also gives up **how many copies** you hold, read off the badge the game prints
+on each card. Ten shapes in a fixed-pitch font is a far easier problem than card art, and a far less
+forgiving one — 1 recorded where the badge said 14 is silent — so a count is read completely or
+reported as unknown, never in part.
+
+A card's box is only ever located to within a few pixels, and the fingerprint has no tolerance for
+that — three pixels is worth ten bits or more. So each card is offered to the matcher as nine crops,
+nudged three pixels each way, and the most confidently identified one wins. Every crop still has to
+clear the same threshold and margin on its own, so more crops cannot manufacture a confident answer.
+
+A card is not always found by looking at it. A white-bodied card has no colour to catch and only
+sparse text, so the mask misses it entirely — it is read because the other cards in its row fix the
+row's phase and the column pitch says where the remaining slots must be. The fingerprint then decides
+whether a card is there, rather than the mask.
+
+> **All four screens read on real screenshots**: both card lists with copy counts, a pack's reveal
+> with the pack named from the cards, and a Wonder Pick line-up — five of five on each. One fixture
+> still reads nothing, a pack reveal in which *every* card is white-bodied, so no row has anything to
+> extend from. The six real fixtures, the measurements, and everything already ruled out are in
+> [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
+
 ### Decks
 Import a deck by **screenshotting the in-game share code**, decoded in the browser. Or build
 one by hand, with live legality checking and a search that covers rules text and card type as
@@ -156,7 +225,7 @@ container) you also need `libatomic`, which emscripten's bundled node links agai
 dotnet workload install wasm-tools
 
 dotnet run --project src/PackProphet.App          # http://localhost:5000
-dotnet test                                        # 764 tests
+dotnet test                                        # 946 tests
 ```
 
 `InvariantGlobalization` is on in Debug as well as Release. It changes string comparison and
@@ -176,6 +245,32 @@ The workflow handles three Blazor-on-Pages traps, each of which fails silently o
 rewriting `<base href>` **before** publish rather than after — the service worker pins
 `index.html` by SHA-256, so a later edit makes its install fail and offline support never
 happens. A build step re-hashes every precached asset and fails the deploy on a mismatch.
+
+### Refreshing the fingerprints
+
+`.github/workflows/card-hashes.yml` runs weekly, looks for cards the fingerprint table has never
+seen, downloads only those, and opens a pull request if it found any. The pull request body lists
+every set the table still does not cover completely, with counts — a set far short of its card count
+is artwork upstream has not published yet, and a later run picks it up.
+
+`tools/CardHashGen` is the generator behind it, and is deliberately **absent from
+`PackProphet.slnx`**: it needs a native WebP decoder, and `dotnet test` resolves the solution, so
+including it would put SkiaSharp on the deploy path for no reason. Run it by path.
+
+```bash
+# everything, from scratch — about 3,700 downloads
+dotnet run --project tools/CardHashGen
+
+# only cards with no fingerprint yet, which is what CI does
+dotnet run --project tools/CardHashGen -- --only-missing
+
+# one set, to a scratch file
+dotnet run --project tools/CardHashGen -- --set A1a --out /tmp/hashes.txt
+```
+
+A run merges rather than replaces: art that 404s today must not remove a card the app can currently
+recognise. A run that fetches less than two thirds of what the table already held is treated as an
+outage and writes nothing.
 
 ---
 
@@ -197,8 +292,16 @@ JavaScript covers what Blazor cannot reach: capped-concurrency image loading (na
 `loading="lazy"` queued thousands of requests on a fast scroll and the CDN dropped the
 connection), touch drag-select (touch's implicit pointer capture makes per-tile `pointerenter`
 useless), grid keyboard navigation (selective `preventDefault` on the scroller), theme
-application before first paint, document-level hotkeys, tooltips, and a vendored jsQR loaded
-only when a screenshot import is attempted.
+application before first paint, document-level hotkeys, tooltips, a vendored jsQR loaded only when
+a deck code is scanned, and finding the card slots in a screenshot.
+
+That last one is the sharpest example of where the line falls. `js/cardshot.js` locates a repeating
+grid of card-shaped regions and measures each one; it does not know what a card is. Which card a
+slot holds, whether it is owned, which in-game screen this is and what to tell the user are all
+decided in `PackProphet.Core.Vision`, where they are asserted from hand-written measurements with no
+browser and no image. The fingerprint itself is computed on both sides — in Core for the generated
+table, in JavaScript for the screenshot — and the two are pinned to a shared golden vector, because
+a hash computed a different way is not a near miss, it is a different card.
 
 ---
 
@@ -217,8 +320,13 @@ Phases 1 and 2 are complete. See [CHANGELOG.md](CHANGELOG.md).
   budget allocation across packs ("Which pack" &rarr; splitting a budget), and shareable
   read-only wishlist links (a wishlist's own page &rarr; share this list) — the recipient sees
   what is wanted and, if they have their own collection loaded, which of it they already own.
-- **Phase 4** — screenshot recognition of the in-game card list. Cloud sync last, since it is
-  the first thing needing a backend.
+- **Phase 4** — under way ahead of Phase 3's remaining localisation, since it is the larger
+  feature. Done: screenshot recognition of the card list, a pack's five cards and a Wonder Pick
+  line-up (Collection &rarr; import from a screenshot, or `/collection/screenshot`), with the
+  fingerprint table refreshed weekly by a workflow. The match thresholds are set from the shape of
+  the problem and from synthetic art rather than from a corpus of real screenshots, so they are the
+  first thing to revisit once there is one. Cloud sync last, since it is the first thing needing a
+  backend.
 
 Out of scope: meta tier lists, matchup data, tournament results, a battle simulator, a trade
 marketplace, accounts and social features, collection value scores.

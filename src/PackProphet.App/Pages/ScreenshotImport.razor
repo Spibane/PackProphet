@@ -1,0 +1,195 @@
+@page "/collection/screenshot"
+@inject AppSession Session
+@implements IDisposable
+
+<PageTitle>Import from a screenshot · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <Loading />
+}
+else
+{
+    <div class="page-head">
+        <a class="btn btn-sm btn-outline-secondary" href="collection">&larr; collection</a>
+        <h1 class="title">Import from a screenshot</h1>
+        <span class="subtitle">read your cards straight off the game</span>
+    </div>
+
+    <PageShell Measure="PageShell.Width.Form">
+
+        @* Only the two card lists here. A pack's five cards belong on the log screen, where the
+           pack gets logged as well as the cards, and a Wonder Pick's line-up belongs on the Wonder
+           Pick screen, where it is an offer to weigh up rather than anything to record. *@
+        <ShotImport Group="cards" Choices="@Layouts" ChoiceLegend="Which card list">
+            <Intro>
+                In the game: the <strong>My Cards</strong> screen, in either layout.
+            </Intro>
+            <Actions Context="reading">
+                @if (Found(reading).Count > 0)
+                {
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="apply-found"
+                               checked="@_applyFound" @onchange="@(e => _applyFound = Checked(e))" />
+                        <label class="form-check-label" for="apply-found">
+                            <strong>
+                                Record @Found(reading).Count.ToString("N0")
+                                @Fmt.S(Found(reading).Count, "card") as owned
+                            </strong>
+                            <span class="d-block small text-body-secondary">
+                                Never lowers a count you already have.
+                            </span>
+                        </label>
+                    </div>
+                }
+
+                @if (Missing(reading).Count > 0)
+                {
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="apply-missing"
+                               checked="@_applyMissing" @onchange="@(e => _applyMissing = Checked(e))" />
+                        <label class="form-check-label" for="apply-missing">
+                            <strong>
+                                Mark @Missing(reading).Count.ToString("N0")
+                                @Fmt.S(Missing(reading).Count, "card") as not owned
+                            </strong>
+                            @* Off unless asked for. This is the only half of the reading that can
+                               destroy something: every other outcome adds a card, and this one
+                               removes counts the user typed in by hand. *@
+                            <span class="d-block small text-body-secondary">
+                                Off by default &mdash; it deletes counts. A card that could not be
+                                read looks missing too.
+                            </span>
+                        </label>
+                    </div>
+                }
+
+                <button class="btn btn-primary" @onclick="@(() => Apply(reading))"
+                        disabled="@(!_applyFound && !_applyMissing)">
+                    apply to @Session.Profile.Name
+                </button>
+            </Actions>
+        </ShotImport>
+
+        @* Clear of the apply button above it: the two were flush, so the confirmation read as part
+           of the control rather than as the answer to pressing it. *@
+        @if (_applied is not null)
+        {
+            <Notice Severity="Notice.Level.Success" Class="mt-3">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span>@_applied</span>
+                    @* A button, not a keystroke. This is the page you use on a phone beside the
+                       game, where Ctrl+Z is not a thing you can press. *@
+                    @if (Session.CanUndo)
+                    {
+                        <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoApply">
+                            undo that
+                        </button>
+                    }
+                    <a href="collection">Back to the collection</a>
+                </div>
+            </Notice>
+        }
+
+        @* Folded away, and short even so. Someone who opens this wants to know whether to trust
+           the reading, not how the reading is done. *@
+        <details class="mt-4">
+            <summary class="small text-body-secondary">How this works, and where it fails</summary>
+            <div class="pt-2 small text-body-secondary">
+                <p>
+                    Each card's artwork was reduced to 128 bits offline, and those fingerprints ship
+                    with the app. A screenshot is read by finding the card-sized slots in it and
+                    taking the nearest match to each. Nothing is uploaded.
+                </p>
+                <p class="mb-0">
+                    It gives up rather than guessing: artwork too alike to choose between, a slot
+                    matching nothing, a list out of number order. Those are the slots counted above
+                    as not recognised, and they are left out of what gets applied.
+                </p>
+            </div>
+        </details>
+    </PageShell>
+}
+
+@code {
+    /// <summary>
+    /// The two layouts the My Cards screen offers, plus letting the app tell them apart — which it
+    /// can, since one fits five cards across and the other three.
+    /// </summary>
+    private static readonly (CardScreen? Value, string Label, string Hint)[] Layouts =
+    [
+        (null, "Work it out from the picture",
+         "Told apart by how many cards fit across a row."),
+        (CardScreen.OwnershipGrid, "Five across, with blanks",
+         "The whole set, blanks for what you are missing."),
+        (CardScreen.CopiesGrid, "Three across, with copy counts",
+         "Only cards you own, with copy counts."),
+    ];
+
+    private bool _applyFound = true;
+    private bool _applyMissing;
+    private string? _applied;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        await Session.InitAsync();
+    }
+
+    public void Dispose() => Session.Changed -= OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private static bool Checked(ChangeEventArgs e) => e.Value is true;
+
+    private static IReadOnlyList<ShotMatch> Found(ShotReading reading) =>
+        reading.Matches.Where(m => m.Owned).ToArray();
+
+    private static IReadOnlyList<ShotMatch> Missing(ShotReading reading) =>
+        reading.Matches.Where(m => !m.Owned).ToArray();
+
+    /// <summary>
+    /// One mutation for the whole reading, so the undo history holds "imported a screenshot" rather
+    /// than forty separate card edits.
+    /// </summary>
+    private void Apply(ShotReading reading)
+    {
+        var add = _applyFound ? Found(reading) : [];
+        var remove = _applyMissing ? Missing(reading) : [];
+        if (add.Count == 0 && remove.Count == 0) return;
+
+        Session.Mutate(p =>
+        {
+            var next = new Dictionary<string, int>(p.Collection);
+
+            // A card list says a card is held, not how many are — so it only ever raises a zero to
+            // one, and never overwrites a count the user typed in. The three-across list does print
+            // a copy count, and once that is read this is where it will be used.
+            foreach (var match in add)
+            {
+                var key = match.Card.OwnershipKey;
+                next[key] = Math.Max(next.GetValueOrDefault(key), match.Copies ?? 1);
+            }
+
+            foreach (var match in remove) next.Remove(match.Card.OwnershipKey);
+
+            return p with { Collection = next };
+        });
+
+        _applied = Describe(add.Count, remove.Count);
+    }
+
+    private void UndoApply()
+    {
+        Session.Undo();
+        _applied = null;
+    }
+
+    private static string Describe(int added, int removed) => (added, removed) switch
+    {
+        (0, _) => $"Marked {removed:N0} {Fmt.S(removed, "card")} as not owned.",
+        (_, 0) => $"Recorded {added:N0} {Fmt.S(added, "card")} as owned.",
+        _ => $"Recorded {added:N0} {Fmt.S(added, "card")} as owned. "
+             + $"Marked {removed:N0} {Fmt.S(removed, "card")} as not owned.",
+    };
+}

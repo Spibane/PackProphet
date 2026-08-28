@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Build-time only. Generates the card art fingerprints the screenshot import matches against,
+       and is never shipped to a browser — which is why it may reach for a native image decoder that
+       would be unthinkable in the app itself.
+
+       Deliberately absent from PackProphet.slnx. `dotnet test` and `dotnet publish` resolve the
+       solution, and neither has any business restoring SkiaSharp's native assets on the deploy path;
+       the workflow that regenerates the table builds this project by path instead. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>PackProphet.Tools</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- For the WebP decoder. MIT, and the Linux native assets are named explicitly so a CI runner
+         without a system libSkiaSharp still works. -->
+    <PackageReference Include="SkiaSharp" Version="3.119.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PackProphet.Core\PackProphet.Core.csproj" />
+  </ItemGroup>
+
+</Project>

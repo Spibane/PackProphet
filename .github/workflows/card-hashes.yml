@@ -1,0 +1,151 @@
+name: Refresh card art fingerprints
+
+# The screenshot import recognises a card by comparing it against a fingerprint of its artwork, and
+# those fingerprints are committed rather than fetched — generating one means downloading the art.
+# Everything else about a new set reaches users without a deploy, because card data comes live from
+# the community CDN. Fingerprints cannot, so this closes the gap: it looks for cards the table has
+# never seen, fingerprints those and only those, and opens a pull request when it found any.
+#
+# The distinction that matters, and the reason this is a scheduled job rather than a release step:
+# a set's CARD data appears upstream days or weeks before all of its ART does. Running weekly means
+# each visit picks up whatever art has landed since the last one, and a set that arrives half-drawn
+# is completed by a later run rather than being stuck at whatever the first attempt managed.
+
+on:
+  schedule:
+    # Weekly, early Monday UTC. Sets do not arrive faster than that, and each run is a few hundred
+    # requests to a public CDN at most.
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 'Re-fingerprint every card, not only the ones with no fingerprint'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: card-hashes
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # By path, not through the solution. CardHashGen is deliberately not in PackProphet.slnx so
+      # that the deploy workflow's `dotnet test` never restores a native image decoder it has no
+      # use for.
+      - name: Generate
+        run: |
+          dotnet run --project tools/CardHashGen/CardHashGen.csproj -c Release -- \
+            --out src/PackProphet.App/wwwroot/data/card-hashes.txt \
+            --report /tmp/coverage.json \
+            ${{ inputs.full && ' ' || '--only-missing' }}
+
+      # The stamp in the header changes on every run, so it is not evidence of anything. Only a
+      # change to a fingerprint line means new art was found — otherwise this exits quietly rather
+      # than opening a pull request a maintainer has to close every Monday.
+      - name: Did anything actually change
+        id: changed
+        run: |
+          if git diff --quiet -- src/PackProphet.App/wwwroot/data/card-hashes.txt; then
+            echo "changed=none" >> "$GITHUB_OUTPUT"
+            echo "no change at all"
+            exit 0
+          fi
+
+          added=$(git diff --numstat -- src/PackProphet.App/wwwroot/data/card-hashes.txt | awk '{print $1}')
+          removed=$(git diff --numstat -- src/PackProphet.App/wwwroot/data/card-hashes.txt | awk '{print $2}')
+          # Three lines of header, and the stamp is one of them. A diff of exactly one line each way
+          # is the date and nothing else.
+          if [ "$added" = "1" ] && [ "$removed" = "1" ]; then
+            echo "changed=stamp" >> "$GITHUB_OUTPUT"
+            echo "only the generated-on date moved"
+            exit 0
+          fi
+
+          echo "changed=fingerprints" >> "$GITHUB_OUTPUT"
+          echo "$added line(s) added, $removed removed"
+
+      - name: Summarise coverage
+        if: steps.changed.outputs.changed == 'fingerprints'
+        id: summary
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+
+          report = json.load(open('/tmp/coverage.json'))
+          gaps = [s for s in report['sets'] if s['have'] < s['want']]
+
+          lines = [
+              f"Fingerprinted {report['fetchedNow']} card(s) this run.",
+              f"The table now holds {report['fingerprints']} fingerprints, stamped {report['generated']}.",
+              "",
+          ]
+
+          if gaps:
+              # Named, not counted. A set at 4/120 is art that has not been published yet and will
+              # be picked up by a later run; a set at 118/120 is two cards that will never exist.
+              # The difference matters to whoever reads the pull request, and only the numbers show it.
+              lines.append("Sets the table still does not cover completely:")
+              lines.append("")
+              lines.append("| set | fingerprinted | cards |")
+              lines.append("|---|---:|---:|")
+              lines += [f"| {s['set']} | {s['have']} | {s['want']} |" for s in gaps]
+              lines.append("")
+              lines.append("A set far short of its card count is art that upstream has not "
+                           "published yet; the next scheduled run will pick it up.")
+          else:
+              lines.append("Every card in every set now has a fingerprint.")
+
+          body = "\n".join(lines)
+          print("body<<EOF_BODY")
+          print(body)
+          print("EOF_BODY")
+          PY
+
+      - name: Open a pull request
+        if: steps.changed.outputs.changed == 'fingerprints'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.summary.outputs.body }}
+        run: |
+          base="${{ github.event.repository.default_branch }}"
+          # One branch, not one per run. A refresh nobody has merged yet should grow on the next
+          # Monday rather than opening a second pull request beside the first.
+          branch="chore/card-hashes"
+
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b "$branch"
+          git add src/PackProphet.App/wwwroot/data/card-hashes.txt
+          git commit -m 'Fingerprint the card art that has appeared since the last run'
+
+          # --force-with-lease refuses outright when there is no remote ref to hold a lease on, so
+          # the first push of this branch has to be a plain one. Later pushes replace a branch only
+          # this workflow writes to, and the lease still guards against racing another run.
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            git push --force-with-lease origin "$branch"
+          else
+            git push origin "$branch"
+          fi
+
+          # Reuse an open pull request from the same branch rather than stacking a new one every
+          # week: an unmerged refresh should grow, not multiply.
+          if gh pr view "$branch" --json state --jq .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$branch" --body "$BODY"
+            echo "updated the existing pull request"
+          else
+            gh pr create --base "$base" --head "$branch" \
+              --title 'Fingerprint the card art that has appeared since the last run' \
+              --body "$BODY"
+          fi

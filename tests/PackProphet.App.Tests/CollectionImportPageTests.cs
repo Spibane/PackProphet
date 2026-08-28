@@ -114,11 +114,16 @@ public class CollectionImportPageTests : AppHost
 
         // Asserted while the choice is still on screen: after the import the hint is gone whatever
         // destination was taken, so a check made afterwards could not fail.
+        //
+        // The promise is worded without a keystroke, because this page is used on a phone as often
+        // as at a desk and Ctrl+Z is not a thing you can press there. The control that keeps it is
+        // the button in the confirmation.
         Assert.DoesNotContain("Ctrl", Text(page));
+        Assert.DoesNotContain("You can undo this", Text(page));
         Choose(page, "dest-replace");
-        Assert.Contains("Ctrl", Text(page));
+        Assert.Contains("You can undo this", Text(page));
         Choose(page, "dest-new");
-        Assert.DoesNotContain("Ctrl", Text(page));
+        Assert.DoesNotContain("You can undo this", Text(page));
 
         page.Find(".btn-primary").Click();
 

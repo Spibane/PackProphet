@@ -89,6 +89,14 @@
   </ItemGroup>
 
 
+  <!-- The card art fingerprints, so the screenshot import page renders against the same table it
+       will have in production rather than against nothing. -->
+  <ItemGroup>
+    <Content Include="..\..\src\PackProphet.App\wwwroot\data\card-hashes.txt"
+             Link="card-hashes.txt" CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('..\..\src\PackProphet.App\wwwroot\data\card-hashes.txt')" />
+  </ItemGroup>
+
   <!-- The same real PTCGP Tracker export the engine suite reads, so the page can be driven with a
        genuine workbook rather than one this project produced. -->
   <ItemGroup>

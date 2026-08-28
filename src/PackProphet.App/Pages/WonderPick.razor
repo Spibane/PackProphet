@@ -251,6 +251,43 @@ else
             }
         }
 
+        @* Reading the offer off a screenshot, above the picker, because it replaces the slow part:
+           the game has the five cards on screen and entering them by hand is five searches.
+
+           A disclosure rather than the whole screen, because the picker always works and this does
+           not — a set released since the last fingerprint refresh cannot be recognised. *@
+        @if (_offer.Count == 0)
+        {
+            <details class="mt-3">
+                <summary class="small text-body-secondary">Read the offer off a screenshot instead</summary>
+                <div class="pt-2">
+                    <ShotImport Group="wonder" Choices="@ShotChoices">
+                        <Intro>
+                            Screenshot the <strong>Wonder Pick</strong> screen. One offer per picture
+                            &mdash; @GameRules.WonderPickCardsShown cards.
+                        </Intro>
+                        <Actions Context="reading">
+                            <button class="btn btn-primary" @onclick="() => AdoptShot(reading)">
+                                appraise these @reading.RecognisedCount
+                                @Text.Fmt.S(reading.RecognisedCount, "card")
+                            </button>
+                            @if (reading.RecognisedCount > GameRules.WonderPickCardsShown)
+                            {
+                                @* More than one offer in frame. Taking the first five would appraise
+                                   a mixture of two offers, which is worse than saying so. *@
+                                <p class="small text-warning-emphasis mt-2 mb-0">
+                                    That is more than @GameRules.WonderPickCardsShown cards, so the
+                                    picture probably holds more than one offer. Crop to the offer you
+                                    are deciding about and try again &mdash; only the first
+                                    @GameRules.WonderPickCardsShown would be used.
+                                </p>
+                            }
+                        </Actions>
+                    </ShotImport>
+                </div>
+            </details>
+        }
+
         @if (_offer.Count < GameRules.WonderPickCardsShown)
         {
             <div class="mt-3">
@@ -350,6 +387,37 @@ else
 
         _received = "";
         _logged = null;
+        Appraise();
+    }
+
+    /// <summary>
+    /// One choice, so <see cref="ShotImport"/> renders no picker: on this page the picture is a
+    /// Wonder Pick line-up by definition. A pack's reveal looks identical and belongs on the log
+    /// screen, where it means cards acquired rather than cards on offer.
+    /// </summary>
+    private static readonly (CardScreen? Value, string Label, string Hint)[] ShotChoices =
+    [
+        (CardScreen.WonderPick, "A Wonder Pick line-up", ""),
+    ];
+
+    /// <summary>
+    /// Fills the offer from a reading and appraises it, which is the whole of what this page needed
+    /// from a screenshot — the cards were always the tedious part and the judgement was always the
+    /// point.
+    ///
+    /// Capped at the five slots an offer has. A screenshot of the Wonder Pick list can hold several
+    /// offers at once, and the page says so rather than quietly appraising a mixture of two.
+    /// </summary>
+    private void AdoptShot(ShotReading reading)
+    {
+        _offer.Clear();
+        _received = "";
+        _logged = null;
+
+        foreach (var match in reading.Matches.Where(m => m.Source == MatchSource.Art)
+                                             .Take(GameRules.WonderPickCardsShown))
+            _offer.Add(match.Card);
+
         Appraise();
     }
 

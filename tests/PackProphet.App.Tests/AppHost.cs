@@ -23,6 +23,21 @@ internal sealed class SnapshotHandler(
     {
         var url = request.RequestUri!.ToString();
 
+        // The card art fingerprints, served as the text file they are. Not JSON and not under the
+        // snapshot folder, so it needs its own branch — and it is worth having one: without it the
+        // screenshot import page renders against an empty table, which is the one state its own
+        // coverage warning is designed to describe and therefore the least useful one to test in.
+        if (request.RequestUri.Host == "test.local" && url.EndsWith("data/card-hashes.txt", StringComparison.Ordinal))
+        {
+            var table = Path.Combine(AppContext.BaseDirectory, "card-hashes.txt");
+            return Task.FromResult(File.Exists(table)
+                ? new HttpResponseMessage(HttpStatusCode.OK)
+                  {
+                      Content = new StringContent(File.ReadAllText(table), System.Text.Encoding.UTF8, "text/plain")
+                  }
+                : new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
         // Only the local root is answered. Anything on a remote host is a miss, so the loader
         // downgrades to the snapshot exactly as it would offline.
         var marker = "data/snapshot/";
@@ -88,6 +103,8 @@ public abstract class AppHost : TestContext
         Services.AddSingleton<NavHistory>();
         Services.AddSingleton<PaletteSwitch>();
         Services.AddSingleton<GridFocus>();
+        Services.AddSingleton<ArtHashSource>();
+        Services.AddSingleton<ShotScanner>();
     }
 
     /// <summary>

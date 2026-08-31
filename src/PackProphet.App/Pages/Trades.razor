@@ -13,7 +13,7 @@ else
 {
     <div class="page-head">
         <h1 class="title">Trades</h1>
-        <span class="subtitle">which one deserves your next stamina</span>
+        <span class="subtitle">Which one deserves your next stamina</span>
     </div>
 
     <div class="page-tools">
@@ -22,14 +22,14 @@ else
         <span class="bar-sep" aria-hidden="true"></span>
         @* The two facts the whole page turns on, where they can be read rather than remembered. *@
         <span class="avail-chip @(_stamina.Balance > 0 ? "on" : "off")">
-            <span class="ttl">trade stamina</span>
+            <span class="ttl">Trade Stamina</span>
             <span>@_stamina.Balance of @_stamina.Cap</span>
         </span>
         <span class="avail-chip off">
-            <span class="ttl">shinedust</span>
+            <span class="ttl">Shinedust</span>
             <span>@Session.Profile.Resources.Shinedust.ToString("N0")</span>
         </span>
-        <a class="btn btn-sm btn-outline-secondary" href="resources">edit</a>
+        <a class="btn btn-sm btn-outline-secondary" href="resources">Edit</a>
 
         @* What is currently shaping the list, on the bar rather than inside the disclosure that
            sets it. The rows below are a ranking, and a ranking read without knowing it is filtered
@@ -49,11 +49,11 @@ else
         }
         @if (ShowFoilFilter && _foils != "with")
         {
-            <button class="chip-filter" @onclick="ResetFoils" aria-label="Include parallel foils">foils: @_foils &times;</button>
+            <button class="chip-filter" @onclick="ResetFoils" aria-label="Include parallel foils">Foils: @_foils &times;</button>
         }
         @if (_readyOnly)
         {
-            <button class="chip-filter" @onclick="ResetReady" aria-label="Show all rows">doable only &times;</button>
+            <button class="chip-filter" @onclick="ResetReady" aria-label="Show all rows">Doable Only &times;</button>
         }
     </div>
 
@@ -64,26 +64,26 @@ else
     @* The controls that set all of the above. Folded by default: two full bars of selects sat
        over this table on every visit, 242px of them, and the page's answer is the table. *@
     <details class="toolbar-more">
-        <summary>view, ranking and filters</summary>
+        <summary>View, ranking and filters</summary>
         <div class="toolbar-more-body">
         <select class="form-select form-select-sm" style="max-width:12rem" aria-label="Group the rows by" @onchange="OnView">
-            <option value="all" selected="@(_view == "all")">everything, ranked</option>
-            <option value="rarity" selected="@(_view == "rarity")">best per rarity</option>
-            <option value="pack" selected="@(_view == "pack")">best per pack</option>
-            <option value="set" selected="@(_view == "set")">best per set</option>
+            <option value="all" selected="@(_view == "all")">Everything, Ranked</option>
+            <option value="rarity" selected="@(_view == "rarity")">Best per Rarity</option>
+            <option value="pack" selected="@(_view == "pack")">Best per Pack</option>
+            <option value="set" selected="@(_view == "set")">Best per Set</option>
         </select>
 
         <select class="form-select form-select-sm" style="max-width:13rem" aria-label="Rank by" @onchange="OnSort">
-            <option value="packs" selected="@(_sort == "packs")">hardest to pull</option>
-            <option value="points" selected="@(_sort == "points")">furthest off by points</option>
-            <option value="dust" selected="@(_sort == "dust")">dearest in dust</option>
-            <option value="cheap" selected="@(_sort == "cheap")">cheapest in dust</option>
+            <option value="packs" selected="@(_sort == "packs")">Hardest to Pull</option>
+            <option value="points" selected="@(_sort == "points")">Furthest off by points</option>
+            <option value="dust" selected="@(_sort == "dust")">Dearest in Dust</option>
+            <option value="cheap" selected="@(_sort == "cheap")">Cheapest in Dust</option>
         </select>
 
         <span class="bar-sep" aria-hidden="true"></span>
 
         <select class="form-select form-select-sm" style="max-width:9rem" aria-label="Filter by rarity" @onchange="OnRarity">
-            <option value="" selected="@(_rarity.Length == 0)">any rarity</option>
+            <option value="" selected="@(_rarity.Length == 0)">Any Rarity</option>
             @foreach (var rung in Session.Index.Ladder.Rungs)
             {
                 <option value="@rung.Index" selected="@(_rarity == rung.Index.ToString())">
@@ -107,7 +107,7 @@ else
         <button class="btn btn-sm @(_readyOnly ? "btn-secondary" : "btn-outline-secondary")"
                 @onclick="() => SetReadyOnly(!_readyOnly)" aria-pressed="@Aria.Flag(_readyOnly)"
                 title="Hide trades you cannot make today">
-            @(_readyOnly ? "doable only" : "all rows")
+            @(_readyOnly ? "Doable Only" : "All Rows")
         </button>
         </div>
     </details>
@@ -228,19 +228,19 @@ else
                     <tr>
                         @if (_view != "all")
                         {
-                            <th scope="col">@(_view == "rarity" ? "rarity" : _view)</th>
+                            <th scope="col">@ViewColumn</th>
                         }
-                        <th scope="col" data-pri="1">card</th>
-                        <th scope="col" data-pri="3">rarity</th>
+                        <th scope="col" data-pri="1">Card</th>
+                        <th scope="col" data-pri="3">Rarity</th>
                         @* A column rather than a badge on the name. Most rows are shareable, so as
                            a badge it repeated down the whole table; as a column it is scannable,
                            and the rows that say no stand out. *@
-                        <th scope="col" data-pri="3" title="Whether a friend could simply send it: 1-4 diamonds only">share?</th>
-                        <th scope="col" class="num" data-pri="2" title="Expected packs you would not have to open">packs saved</th>
-                        <th scope="col" class="num" data-pri="3" title="Pack points still to earn in this card's own set before the shop could sell it">points short</th>
-                        <th scope="col" class="num" data-pri="3">dust</th>
-                        <th scope="col" data-pri="3">what you could offer</th>
-                        <th scope="col" data-pri="1">status</th>
+                        <th scope="col" data-pri="3" title="Whether a friend could simply send it: 1-4 diamonds only">Share?</th>
+                        <th scope="col" class="num" data-pri="2" title="Expected packs you would not have to open">Packs Saved</th>
+                        <th scope="col" class="num" data-pri="3" title="Pack points still to earn in this card's own set before the shop could sell it">Points Short</th>
+                        <th scope="col" class="num" data-pri="3">Dust</th>
+                        <th scope="col" data-pri="3">What you could offer</th>
+                        <th scope="col" data-pri="1">Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -271,14 +271,14 @@ else
                                 {
                                     <span class="text-success-emphasis"
                                           title="A friend sends it and gets nothing back — no card at this rarity, no dust, no stamina. One a day. Ask before spending on a trade.">
-                                        ask instead
+                                        Ask Instead
                                     </span>
                                 }
                                 else
                                 {
                                     <span class="text-body-secondary"
                                           title="Above 4 diamonds, so a Share cannot carry it. Trading or opening packs is the only way.">
-                                        no
+                                        No
                                     </span>
                                 }
                             </td>
@@ -290,7 +290,7 @@ else
                                 }
                                 else if (row.Candidate.PointsShort == 0)
                                 {
-                                    <span class="text-success-emphasis" title="Your balance in this set already covers it">buy it</span>
+                                    <span class="text-success-emphasis" title="Your balance in this set already covers it">Buy It</span>
                                 }
                                 else
                                 {
@@ -303,7 +303,7 @@ else
                             <td class="small" data-pri="3">
                                 @if (row.Candidate.CouldOffer.Count == 0)
                                 {
-                                    <span class="text-body-secondary">no spare at this rarity</span>
+                                    <span class="text-body-secondary">No spare at this rarity</span>
                                 }
                                 else
                                 {
@@ -315,7 +315,7 @@ else
                                     </span>
                                 }
                             </td>
-                            <td class="small">@Explain(row.Candidate)</td>
+                            <td class="small">@ExplainCell(row.Candidate)</td>
                         </tr>
                     }
                 </tbody>
@@ -355,6 +355,15 @@ else
     private sealed record Row(string Group, TradeCandidate Candidate);
 
     private string _view = "all";
+
+    /// <summary>Heading for the grouping column: the view's own name, capitalised for the header row.</summary>
+    private string ViewColumn => _view switch
+    {
+        "rarity" => "Rarity",
+        "pack" => "Pack",
+        _ => "Set",
+    };
+
     private string _sort = "packs";
     private string _rarity = "";
     private bool _readyOnly;
@@ -566,6 +575,10 @@ else
             : "out of stamina",
         _ => ""
     };
+
+    /// <summary>The same clause standing alone in a cell, so it starts with a capital.</summary>
+    private string ExplainCell(TradeCandidate row) =>
+        Explain(row) is { Length: > 0 } s ? char.ToUpperInvariant(s[0]) + s[1..] : "";
 
     public void Dispose() => Session.Changed -= OnChanged;
 }

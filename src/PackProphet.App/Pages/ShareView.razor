@@ -31,11 +31,11 @@ else
         <span class="subtitle">
             @if (_shared.InGameName is { Length: > 0 } inGame)
             {
-                <span>find them in-game as <strong>@inGame</strong></span>
+                <span>Find them in-game as <strong>@inGame</strong></span>
             }
             else
             {
-                <span>wanted by @_shared.OwnerName</span>
+                <span>Wanted by @_shared.OwnerName</span>
             }
             &mdash; shared read-only
         </span>
@@ -64,22 +64,22 @@ else
         <PageShell>
         <div class="summary">
             <div class="stat">
-                <span class="label">cards wanted</span>
+                <span class="label">Cards Wanted</span>
                 <span class="value">@_rows.Count</span>
             </div>
             <div class="stat">
-                <span class="label">you could help with</span>
+                <span class="label">You could help with</span>
                 <span class="value">@_canHelpWith</span>
-                <span class="sub">cards you already own at least one of</span>
+                <span class="sub">Cards you already own at least one of</span>
             </div>
         </div>
 
         <DataTable Label="Cards on this chase list">
             <thead>
                 <tr>
-                    <th scope="col">card</th>
-                    <th scope="col" class="num">wants</th>
-                    <th scope="col" class="num">you own</th>
+                    <th scope="col">Card</th>
+                    <th scope="col" class="num">Wants</th>
+                    <th scope="col" class="num">You Own</th>
                 </tr>
             </thead>
             <tbody>
@@ -96,7 +96,7 @@ else
                             </span>
                             @if (row.YouOwn > 0)
                             {
-                                <span class="badge text-bg-primary ms-1">you can offer this</span>
+                                <span class="badge text-bg-primary ms-1">You can offer this</span>
                             }
                         </td>
                         <td class="num">@row.Wanted</td>

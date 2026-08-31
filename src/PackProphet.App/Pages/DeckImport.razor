@@ -15,7 +15,7 @@ else
     <div class="page-head">
         <a class="btn btn-sm btn-outline-secondary" href="decks">&larr; decks</a>
         <h1 class="title">Import a deck</h1>
-        <span class="subtitle">from a screenshot of the in-game code</span>
+        <span class="subtitle">From a screenshot of the in-game code</span>
     </div>
 
     <PageShell Measure="PageShell.Width.Form">
@@ -64,10 +64,10 @@ else
                    into it, which is also when a screen reader stopped having a name for it. *@
                 <label class="form-label small" for="deck-code">Share code</label>
                 <textarea class="form-control form-control-sm mb-2" rows="2" id="deck-code"
-                          placeholder="paste the share code"
+                          placeholder="Paste the share code"
                           @bind="_codeText" @bind:event="oninput"></textarea>
                 <button class="btn btn-sm btn-outline-primary" @onclick="ImportCode"
-                        disabled="@string.IsNullOrWhiteSpace(_codeText)">import code</button>
+                        disabled="@string.IsNullOrWhiteSpace(_codeText)">Import Code</button>
             </div>
         </details>
 

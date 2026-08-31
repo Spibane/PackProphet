@@ -13,7 +13,7 @@ else
     <div class="page-head">
         <a class="btn btn-sm btn-outline-secondary" href="collection">&larr; collection</a>
         <h1 class="title">Import from a screenshot</h1>
-        <span class="subtitle">read your cards straight off the game</span>
+        <span class="subtitle">Read your cards straight off the game</span>
     </div>
 
     <PageShell Measure="PageShell.Width.Form">
@@ -83,7 +83,7 @@ else
                    pressed reads as a broken button rather than an empty result. *@
                 <button class="btn btn-primary" @onclick="@(() => Apply(found, missing))"
                         disabled="@(!(_applyFound && found.Count > 0) && !(_applyMissing && missing.Count > 0))">
-                    apply to @Session.Profile.Name
+                    Apply to @Session.Profile.Name
                 </button>
             </Together>
         </ShotImport>
@@ -100,7 +100,7 @@ else
                     @if (Session.CanUndo)
                     {
                         <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoApply">
-                            undo that
+                            Undo That
                         </button>
                     }
                     <a href="collection">Back to the collection</a>

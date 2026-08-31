@@ -14,7 +14,7 @@ else if (_card is null)
 {
     <PageShell Measure="PageShell.Width.Text">
         <p>No card with the code <code>@Key</code>.</p>
-        <a class="btn btn-sm btn-primary" href="collection">back to the collection</a>
+        <a class="btn btn-sm btn-primary" href="collection">Back to the Collection</a>
     </PageShell>
 }
 else
@@ -39,7 +39,7 @@ else
             }
             @if (_card.IsPromo)
             {
-                <span class="badge text-bg-secondary">promo</span>
+                <span class="badge text-bg-secondary">Promo</span>
             }
         </span>
     </div>
@@ -72,7 +72,7 @@ else
             }
 
             <div class="own-row">
-                <span class="label">you own</span>
+                <span class="label">You Own</span>
                 <button class="step" @onclick="() => Bump(-1)"
                         disabled="@(_owned == 0)" aria-label="Remove one">&minus;</button>
                 <span class="count">@_owned</span>
@@ -83,7 +83,7 @@ else
                the card in hand, so the chase lists live here rather than requiring another search
                from the list side. *@
             <div class="want-row">
-                <span class="label">want it</span>
+                <span class="label">Want It</span>
 
                 @* The same heart the collection grid has, on the same list, doing the same one
                    thing. It comes first and it is always here, whether or not that list exists yet
@@ -170,7 +170,7 @@ else
                         @if (_fact.Subtype is { Length: > 0 } sub)
                         {
                             <tr>
-                                <td>type</td>
+                                <td>Type</td>
                                 <td>
                                     @if (HasPip(sub))
                                     {
@@ -183,7 +183,7 @@ else
                         @if (_fact.Stage is { Length: > 0 } stage)
                         {
                             <tr>
-                                <td>stage</td>
+                                <td>Stage</td>
                                 <td>
                                     @stage
                                     @if (_fact.EvolvesFrom is { Length: > 0 } from)
@@ -195,7 +195,7 @@ else
                                         {
                                             <span class="badge text-bg-warning ms-1"
                                                   title="You own none. Any printing of it will do — the game evolves on the printed name.">
-                                                you own none
+                                                You Own None
                                             </span>
                                         }
                                     }
@@ -208,15 +208,15 @@ else
                         }
                         @if (_fact.Weakness is { Length: > 0 } weak)
                         {
-                            <tr><td>weakness</td><td>@weak</td></tr>
+                            <tr><td>Weakness</td><td>@weak</td></tr>
                         }
                         @if (_fact.Retreat is int retreat)
                         {
-                            <tr><td>retreat</td><td>@retreat</td></tr>
+                            <tr><td>Retreat</td><td>@retreat</td></tr>
                         }
                         @if (_fact.Artist is { Length: > 0 } artist)
                         {
-                            <tr><td>illustrator</td><td>@artist</td></tr>
+                            <tr><td>Illustrator</td><td>@artist</td></tr>
                         }
                     </tbody>
                 </DataTable>
@@ -274,13 +274,13 @@ else
                                 <strong>@RouteName(option.Route)</strong>
                                 @if (option == _routes?.Cheapest)
                                 {
-                                    <span class="badge text-bg-primary ms-1">cheapest</span>
+                                    <span class="badge text-bg-primary ms-1">Cheapest</span>
                                 }
                             </td>
                             <td>
                                 @if (!option.Available)
                                 {
-                                    <span class="text-body-secondary">unavailable</span>
+                                    <span class="text-body-secondary">Unavailable</span>
                                 }
                                 else
                                 {
@@ -334,7 +334,7 @@ else
                                 <span class="small text-body-secondary">@packKey.Split(':')[0]</span>
                                 @if (Session.UnavailablePacks.Contains(packKey))
                                 {
-                                    <span class="badge text-bg-warning">not on sale</span>
+                                    <span class="badge text-bg-warning">Not on Sale</span>
                                 }
                             </span>
                         </span>
@@ -476,11 +476,11 @@ else
 
     private static string RouteName(AcquisitionRoute route) => route switch
     {
-        AcquisitionRoute.Pull => "open packs",
-        AcquisitionRoute.PackPoints => "pack points",
-        AcquisitionRoute.Trade => "trade",
-        AcquisitionRoute.Share => "share",
-        _ => "wonder pick"
+        AcquisitionRoute.Pull => "Open Packs",
+        AcquisitionRoute.PackPoints => "Pack Points",
+        AcquisitionRoute.Trade => "Trade",
+        AcquisitionRoute.Share => "Share",
+        _ => "Wonder Pick"
     };
 
     private static string Fmt(double packs) => Text.Fmt.Packs(packs);

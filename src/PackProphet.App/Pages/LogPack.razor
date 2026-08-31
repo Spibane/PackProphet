@@ -13,7 +13,7 @@ else if (_pack is null)
 {
     <div class="page-head">
         <h1 class="title">Log a pack</h1>
-        <span class="subtitle">which pack did you open?</span>
+        <span class="subtitle">Which pack did you open?</span>
     </div>
 
     @* Grouped by series, then by set. A flat list of every pack ever sold is already long and only
@@ -23,7 +23,7 @@ else if (_pack is null)
         <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Series" @onchange="OnSeries">
             @foreach (var series in Session.Sets.Series)
             {
-                <option value="@series" selected="@(_series == series)">series @series</option>
+                <option value="@series" selected="@(_series == series)">Series @series</option>
             }
         </select>
 
@@ -34,7 +34,7 @@ else if (_pack is null)
         @if (Session.LimitedPacks.Count > 0)
         {
             <span class="avail ms-auto">
-                <span class="ttl">limited-time</span>
+                <span class="ttl">Limited-time</span>
                 @foreach (var pack in Session.LimitedPacks)
                 {
                     var on = Session.IsLimitedPackAvailable(pack);
@@ -55,7 +55,7 @@ else if (_pack is null)
         <select class="form-select form-select-sm" style="max-width:7rem" aria-label="Columns in the grid" @onchange="OnCols">
             @foreach (var n in new[] { 2, 3, 4, 5, 6, 8 })
             {
-                <option value="@n" selected="@(n == Session.PackColumns)">@n cols</option>
+                <option value="@n" selected="@(n == Session.PackColumns)">@n Cols</option>
             }
         </select>
     </div>
@@ -89,7 +89,7 @@ else if (_pack is null)
                         @if (guess.PackKey is not null)
                         {
                             <button class="btn btn-primary" @onclick="() => AdoptShot(reading, guess.PackKey)">
-                                open @guess.PackKey.Split(':')[1] with these
+                                Open @guess.PackKey.Split(':')[1] with these
                                 @reading.RecognisedCount @Fmt.S(reading.RecognisedCount, "card")
                             </button>
                         }
@@ -150,7 +150,7 @@ else if (_pack is null)
                         <span class="st">@set</span>
                         @if (GameRules.IsLimitedTimePack(name))
                         {
-                            <span class="ltd">ltd</span>
+                            <span class="ltd">Ltd</span>
                         }
                     </button>
 
@@ -183,7 +183,7 @@ else
            ten pixels and "Mega Altaria" rendered as "M.". The arrow is still the same control and
            still the same size to tap -- the aria-label carries the wording the eye loses. *@
         <button class="btn btn-sm btn-outline-secondary" @onclick="Reset" aria-label="Change pack">
-            &larr; <span class="wide-only">change pack</span>
+            &larr; <span class="wide-only">Change Pack</span>
         </button>
         <h1 class="title">@_pack.Split(':')[1]</h1>
         @* The instruction has to match the view. In the tile grid a tap on a card picks it; in
@@ -196,9 +196,9 @@ else
         <span class="actions">
             @* Dropped on a phone rather than shortened: the button next to it already reads
                "add N to collection", so this is the one thing on the bar that is said twice. *@
-            <span class="small wide-only">picked @_picked.Count</span>
+            <span class="small wide-only">Picked @_picked.Count</span>
             <button class="btn btn-sm btn-success" disabled="@(_picked.Count == 0 || Busy.IsBusy)" @onclick="Commit">
-                add @_picked.Count to collection
+                Add @_picked.Count to collection
             </button>
         </span>
     </div>
@@ -215,7 +215,7 @@ else
             <Notice Severity="Notice.Level.Warning" Dense="true" Class="mb-0">
                 @warning
                 <button class="btn btn-sm btn-warning ms-2 py-0" @onclick="CommitAnyway">
-                    log @_picked.Count anyway
+                    Log @_picked.Count Anyway
                 </button>
             </Notice>
         </PageShell>
@@ -255,7 +255,7 @@ else
                 <div class="mt-1">
                     You just opened a limited-time pack that the ranking is leaving out.
                     <button class="btn btn-sm btn-outline-success py-0 ms-1"
-                            @onclick="MarkPackOnSale">mark @(_pack.Split(':')[1]) on sale</button>
+                            @onclick="MarkPackOnSale">Mark @(_pack.Split(':')[1]) on sale</button>
                 </div>
             }
         </Notice>
@@ -282,7 +282,7 @@ else
            already logged -- which is what makes it safe to type a name, tap, and type the next. *@
         <Search>
             <input class="form-control form-control-sm grid-search"
-                   placeholder="find a card in this pack" aria-label="Find a card in this pack"
+                   placeholder="Find a card in this pack" aria-label="Find a card in this pack"
                    value="@_find" @oninput="OnFind" />
         </Search>
 
@@ -290,7 +290,7 @@ else
             @if (_find is { Length: > 0 })
             {
                 <button class="chip-filter" @onclick="ClearFind"
-                        aria-label="Clear the name search">name: @_find &times;</button>
+                        aria-label="Clear the name search">Name: @_find &times;</button>
             }
         </FilterChips>
     </CardGrid>

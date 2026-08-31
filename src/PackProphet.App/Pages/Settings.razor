@@ -7,7 +7,7 @@
 
 <div class="page-head">
     <h1 class="title">Settings</h1>
-    <span class="subtitle">everything here is stored in this browser only</span>
+    <span class="subtitle">Everything here is stored in this browser only</span>
 </div>
 
 <PageShell Measure="PageShell.Width.Text" Class="sections">
@@ -86,7 +86,7 @@
                         <span class="ttl">@set</span>
                         <span class="small">@PlanSummary(set)</span>
                         <button class="chip-link" @onclick="() => ClearOverride(set)"
-                                title="Follow the default plan again">use default</button>
+                                title="Follow the default plan again">Use Default</button>
                     </span>
                 }
             </div>
@@ -113,7 +113,7 @@
     </p>
     <div class="d-flex gap-3 flex-wrap align-items-end mb-2">
         <label class="small">
-            packs opened
+            Packs Opened
             <input type="number" min="0" class="form-control form-control-sm"
                    style="width:8rem" value="@_packs" @onchange="OnPacks" />
         </label>
@@ -122,10 +122,10 @@
             <input type="number" min="0" class="form-control form-control-sm"
                    style="width:8rem" value="@_wonder" @onchange="OnWonder" />
         </label>
-        <button class="btn btn-sm btn-primary" @onclick="SaveLifetime">save totals</button>
+        <button class="btn btn-sm btn-primary" @onclick="SaveLifetime">Save Totals</button>
         @if (Session.Lifetime is not null)
         {
-            <button class="btn btn-sm btn-outline-secondary" @onclick="ClearLifetime">clear</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="ClearLifetime">Clear</button>
         }
     </div>
     @if (Session.Lifetime is { } lt)
@@ -163,12 +163,12 @@
     <DataTable Label="Your collections">
         <thead>
             <tr>
-                <th scope="col">collection</th>
+                <th scope="col">Collection</th>
                 @* The name people find you by in the game. A shared chase list is unusable without
                    it -- whoever reads the list knows what you want and has no way to send it. *@
-                <th scope="col" data-pri="2">in-game name</th>
-                <th scope="col" class="text-end">cards</th>
-                <th scope="col"><span class="visually-hidden">actions</span></th>
+                <th scope="col" data-pri="2">In-game Name</th>
+                <th scope="col" class="text-end">Cards</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
             </tr>
         </thead>
         <tbody>
@@ -183,7 +183,7 @@
                                 <input class="form-control" @bind="_rename" @bind:event="oninput"
                                        @onkeydown="e => RenameKey(e, profile.Id)" />
                                 <button class="btn btn-primary" @onclick="() => SaveRename(profile.Id)">
-                                    save
+                                    Save
                                 </button>
                             </div>
                         }
@@ -192,13 +192,13 @@
                             <span>@profile.Name</span>
                             @if (active)
                             {
-                                <span class="badge text-bg-primary ms-2">active</span>
+                                <span class="badge text-bg-primary ms-2">Active</span>
                             }
                         }
                     </td>
                     <td data-pri="2">
                         <input class="form-control form-control-sm" style="max-width:12rem"
-                               value="@profile.InGameName" placeholder="not set"
+                               value="@profile.InGameName" placeholder="Not set"
                                aria-label="In-game name for @profile.Name"
                                @onchange="e => SaveInGameName(profile.Id, e.Value?.ToString())" />
                     </td>
@@ -208,17 +208,17 @@
                             @if (!active)
                             {
                                 <button class="btn btn-sm btn-primary"
-                                        @onclick="() => Switch(profile.Id)">switch to</button>
+                                        @onclick="() => Switch(profile.Id)">Switch To</button>
                             }
                             <button class="btn btn-sm btn-outline-secondary"
-                                    @onclick="() => StartRename(profile)">rename</button>
+                                    @onclick="() => StartRename(profile)">Rename</button>
                             <button class="btn btn-sm btn-outline-secondary"
-                                    @onclick="() => Duplicate(profile)">duplicate</button>
+                                    @onclick="() => Duplicate(profile)">Duplicate</button>
                             @if (Session.MultipleProfiles)
                             {
                                 <button class="btn btn-sm btn-outline-danger"
                                         @onclick="() => Delete(profile)">
-                                    @(_deleting == profile.Id ? "really delete?" : "delete")
+                                    @(_deleting == profile.Id ? "Really delete?" : "Delete")
                                 </button>
                             }
                         </div>
@@ -237,11 +237,11 @@
 
     <div class="input-group input-group-sm mb-2" style="max-width:22rem">
         <label class="visually-hidden" for="new-profile">Name for the new collection</label>
-        <input class="form-control" id="new-profile" placeholder="name a new collection"
+        <input class="form-control" id="new-profile" placeholder="Name a new collection"
                @bind="_newProfile"
                @bind:event="oninput" @onkeydown="NewProfileKey" />
         <button class="btn btn-outline-primary" @onclick="AddProfile"
-                disabled="@string.IsNullOrWhiteSpace(_newProfile)">add</button>
+                disabled="@string.IsNullOrWhiteSpace(_newProfile)">Add</button>
     </div>
 
     @* Beside the buttons that caused it rather than in the page-wide message box further down: a
@@ -265,26 +265,26 @@
         page. The last @AppSession.UndoDepth changes are kept, for this session only.
     </p>
     <div class="d-flex gap-2 flex-wrap mb-4">
-        <button class="btn btn-sm btn-primary" @onclick="Export">export backup</button>
+        <button class="btn btn-sm btn-primary" @onclick="Export">Export Backup</button>
         <label class="btn btn-sm btn-outline-primary mb-0">
-            import backup
+            Import Backup
             <InputFile OnChange="Import" style="display:none" accept=".json" />
         </label>
         <a class="btn btn-sm btn-outline-primary" href="collection/screenshot">
-            import from a screenshot
+            Import from a screenshot
         </a>
         <a class="btn btn-sm btn-outline-primary" href="collection/import">
-            import from another tracker
+            Import from another tracker
         </a>
         <a class="btn btn-sm btn-outline-primary" href="collection/export">
-            export collection as CSV
+            Export collection as CSV
         </a>
         <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmReset" aria-live="polite">
             @* Names the collection once there is more than one: "erase collection" beside a list
                of three reads as all of them, and it only ever erases the active one. *@
             @(_confirmingReset
-                ? $"really erase {(Session.MultipleProfiles ? Session.Profile.Name : "everything")}?"
-                : Session.MultipleProfiles ? $"erase {Session.Profile.Name}" : "erase collection")
+                ? $"Really erase {(Session.MultipleProfiles ? Session.Profile.Name : "everything")}?"
+                : Session.MultipleProfiles ? $"Erase {Session.Profile.Name}" : "Erase Collection")
         </button>
     </div>
 
@@ -298,7 +298,7 @@
                 @if (_offerUndo && Session.CanUndo)
                 {
                     <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoLast">
-                        undo that
+                        Undo That
                     </button>
                 }
             </div>
@@ -310,13 +310,13 @@
         <h2>Card data</h2>
         <DataTable Label="Card data sources" Fit="true">
             <tbody>
-                <tr><td>source</td><td><strong>@SourceLabel</strong></td></tr>
-                <tr><td>cards</td><td>@Session.Index.All.Count entries</td></tr>
-                <tr><td>ownable cards</td><td>@Session.Index.DistinctOwnableCards</td></tr>
-                <tr><td>sets</td><td>@Session.Index.BySet.Count</td></tr>
-                <tr><td>packs we can price</td><td>@Session.Odds!.PriceablePacks.Count()</td></tr>
+                <tr><td>Source</td><td><strong>@SourceLabel</strong></td></tr>
+                <tr><td>Cards</td><td>@Session.Index.All.Count entries</td></tr>
+                <tr><td>Ownable Cards</td><td>@Session.Index.DistinctOwnableCards</td></tr>
+                <tr><td>Sets</td><td>@Session.Index.BySet.Count</td></tr>
+                <tr><td>Packs We Can Price</td><td>@Session.Odds!.PriceablePacks.Count()</td></tr>
                 <tr>
-                    <td>packs we cannot</td>
+                    <td>Packs We Cannot</td>
                     <td>
                         @Session.Odds!.UnpriceablePacks.Count()
                         <span class="text-body-secondary small">
@@ -330,7 +330,7 @@
                 @if (Session.SetsAwaitingRates.Count > 0)
                 {
                     <tr>
-                        <td>released, rates unknown</td>
+                        <td>Released, Rates Unknown</td>
                         <td>
                             @string.Join(", ", Session.SetsAwaitingRates)
                             <div class="text-body-secondary small">
@@ -344,14 +344,14 @@
                 @if (Session.AssumedRates.Count > 0)
                 {
                     <tr>
-                        <td>priced by assumption</td>
+                        <td>Priced by Assumption</td>
                         <td>
                             @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
                             {
                                 <div>
                                     <strong>@set</strong> using @donor's distributions
                                     <button class="btn btn-sm btn-link p-0 align-baseline"
-                                            @onclick="() => Session.SetAssumedRates(set, null)">stop</button>
+                                            @onclick="() => Session.SetAssumedRates(set, null)">Stop</button>
                                 </div>
                             }
                             <div class="text-body-secondary small">
@@ -522,7 +522,7 @@
                 ? $"{r.Symbol} x{plan.Copies(r.Index)}"
                 : r.Symbol);
 
-        return string.Join(" ", parts) is { Length: > 0 } summary ? summary : "nothing";
+        return string.Join(" ", parts) is { Length: > 0 } summary ? summary : "Nothing";
     }
 
     private void ClearOverride(string set) => Session.ClearPlanOverride(set);
@@ -552,7 +552,7 @@
 
     private static readonly (string Value, string Label)[] Themes =
     [
-        ("auto", "auto"), ("light", "light"), ("dark", "dark")
+        ("auto", "Auto"), ("light", "Light"), ("dark", "Dark")
     ];
 
     private string? _message;
@@ -575,8 +575,8 @@
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
     private string SourceLabel => Session.Data!.Source == DataSource.Cdn
-        ? "live community database"
-        : $"bundled snapshot{(Session.Data.Version is { } v ? $" (v{v})" : "")} — CDN unreachable";
+        ? "Live community database"
+        : $"Bundled snapshot{(Session.Data.Version is { } v ? $" (v{v})" : "")} — CDN unreachable";
 
     private async Task Export()
     {

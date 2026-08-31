@@ -12,7 +12,7 @@ else
 {
     <div class="page-head">
         <h1 class="title">History</h1>
-        <span class="subtitle">from the packs you have logged</span>
+        <span class="subtitle">From the packs you have logged</span>
     </div>
 
     <PageShell Measure="PageShell.Width.Wide" Class="sections">
@@ -52,7 +52,7 @@ else
                 @if (Session.Lifetime is { } baseline)
                 {
                     <div class="stat">
-                        <span class="label">packs, all time</span>
+                        <span class="label">Packs, All Time</span>
                         <span class="value">@Session.LifetimePacks</span>
                         <span class="sub">@baseline.PacksOpened imported</span>
                     </div>
@@ -63,17 +63,17 @@ else
                     </div>
                 }
                 <div class="stat">
-                    <span class="label">packs logged</span>
+                    <span class="label">Packs Logged</span>
                     <span class="value">@_log.Count</span>
                     <span class="sub">@_cards cards recorded</span>
                 </div>
                 <div class="stat">
-                    <span class="label">since</span>
+                    <span class="label">Since</span>
                     <span class="value">@_first.ToLocalTime().ToString("d MMM yyyy")</span>
                     <span class="sub">@Rate()</span>
                 </div>
                 <div class="stat">
-                    <span class="label">cards per pack</span>
+                    <span class="label">Cards per Pack</span>
                     <span class="value">@_perPack.ToString("0.0")</span>
                     @* A pack yields 4-6 cards, so a figure well below that means packs were logged
                        without all their pulls, and every number on this page derived from cards is
@@ -83,33 +83,33 @@ else
                     </span>
                 </div>
                 <div class="stat">
-                    <span class="label">duplicates</span>
+                    <span class="label">Duplicates</span>
                     <span class="value">@_duplicateShare.ToString("P0")</span>
                     <span class="sub">@_distinctPulled distinct card(s) pulled</span>
                 </div>
                 <div class="stat">
-                    <span class="label">streak</span>
+                    <span class="label">Streak</span>
                     <span class="value">@_streak</span>
                     <span class="sub">
                         day(s) in a row@(_bestStreak > _streak ? $" · best {_bestStreak}" : "")
                     </span>
                 </div>
                 <div class="stat">
-                    <span class="label">busiest day</span>
+                    <span class="label">Busiest Day</span>
                     <span class="value">@_busiest.Count</span>
                     <span class="sub">@_busiest.Date.ToString("d MMM yyyy")</span>
                 </div>
                 <div class="stat">
-                    <span class="label">most opened</span>
+                    <span class="label">Most Opened</span>
                     <span class="value fs-6">@_favouritePack</span>
                     <span class="sub">@_favouriteCount pack(s) · @_sets set(s) touched</span>
                 </div>
                 <div class="stat">
-                    <span class="label">points earned</span>
+                    <span class="label">Points Earned</span>
                     <span class="value">@((_log.Count * GameRules.PackPointsPerPack).ToString("N0"))</span>
                     @* Earned over all time, not held: the balance after spending lives on the
                        Which pack page, and conflating the two would misreport both. *@
-                    <span class="sub">across every set, all time</span>
+                    <span class="sub">Across every set, all time</span>
                 </div>
             </div>
 
@@ -122,7 +122,7 @@ else
                 @if (_showcase is null)
                 {
                     <div class="hits-empty">
-                        <span class="value">no hits yet</span>
+                        <span class="value">No Hits Yet</span>
                         <span class="sub">
                             @_log.Count pack(s) in. Adjust what counts below if this is too strict.
                         </span>
@@ -135,7 +135,7 @@ else
                        aria-label="Detail for @_showcase.Card.Name"></a>
 
                     <div class="hit-detail">
-                        <span class="label">hits</span>
+                        <span class="label">Hits</span>
                         <span class="value">@_hits</span>
                         <span class="sub">@HitNote()</span>
 
@@ -155,7 +155,7 @@ else
                                page under the reader, and re-rolling on every render would make it
                                flicker on unrelated updates. *@
                             <button class="btn btn-sm btn-outline-secondary align-self-start"
-                                    @onclick="Shuffle">show me another</button>
+                                    @onclick="Shuffle">Show Me Another</button>
                         }
                     </div>
 
@@ -186,7 +186,7 @@ else
                set of chips rather than an "N and above" slider, so "2-star and Crown but not
                shinies" is sayable. *@
             <details class="mb-3">
-                <summary class="small text-body-secondary">what counts as a hit?</summary>
+                <summary class="small text-body-secondary">What counts as a hit?</summary>
                 <div class="pt-2">
                     <div class="rarity-chips mb-1">
                         @foreach (var rung in Session.Index.Ladder.Rungs)
@@ -256,8 +256,8 @@ else
                     <DataTable Label="Packs opened per day" Fit="true">
                         <thead>
                             <tr>
-                                <th scope="col">day</th>
-                                <th scope="col" class="num">packs</th>
+                                <th scope="col">Day</th>
+                                <th scope="col" class="num">Packs</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -277,10 +277,10 @@ else
             <DataTable Label="Packs opened per set" Fit="true">
                 <thead>
                     <tr>
-                        <th scope="col">set</th>
-                        <th scope="col" class="num">packs</th>
-                        <th scope="col" class="num">points earned</th>
-                        <th scope="col"><span class="visually-hidden">share of total</span></th>
+                        <th scope="col">Set</th>
+                        <th scope="col" class="num">Packs</th>
+                        <th scope="col" class="num">Points Earned</th>
+                        <th scope="col"><span class="visually-hidden">Share of Total</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -315,16 +315,16 @@ else
                    published per set. *@
                 <select class="form-select form-select-sm ms-auto" style="max-width:12rem"
                         @onchange="OnScope" aria-label="Which sets to check">
-                    <option value="" selected="@(_scope.Length == 0)">every set</option>
-                    <optgroup label="series">
+                    <option value="" selected="@(_scope.Length == 0)">Every Set</option>
+                    <optgroup label="Series">
                         @foreach (var series in ScopedSeries())
                         {
                             <option value="series:@series" selected="@(_scope == $"series:{series}")">
-                                series @series
+                                Series @series
                             </option>
                         }
                     </optgroup>
-                    <optgroup label="set">
+                    <optgroup label="Set">
                         @foreach (var set in ScopedSets())
                         {
                             <option value="set:@set" selected="@(_scope == $"set:{set}")">@set</option>
@@ -337,12 +337,12 @@ else
                         <button class="btn @(_lifetime ? "btn-outline-secondary" : "btn-secondary")"
                                 @onclick="() => SetLifetimeCheck(false)" aria-pressed="@Aria.Flag(!_lifetime)"
                                 title="Only the packs logged here, where both sides are measured">
-                            logged packs
+                            Logged Packs
                         </button>
                         <button class="btn @(_lifetime ? "btn-secondary" : "btn-outline-secondary")"
                                 @onclick="() => SetLifetimeCheck(true)" aria-pressed="@Aria.Flag(_lifetime)"
                                 title="Scaled up to every pack the game says you have opened">
-                            all @Session.LifetimePacks packs
+                            All @Session.LifetimePacks Packs
                         </button>
                     </div>
                 }
@@ -423,10 +423,10 @@ else
                 <DataTable Label="Pulls against expected, by rarity" Fit="true">
                     <thead>
                         <tr>
-                            <th scope="col">rarity</th>
+                            <th scope="col">Rarity</th>
                             <th scope="col" class="num">@(_lifetimeActive ? "held" : "pulled")</th>
-                            <th scope="col" class="num">expected</th>
-                            <th scope="col" class="num">difference</th>
+                            <th scope="col" class="num">Expected</th>
+                            <th scope="col" class="num">Difference</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -450,7 +450,7 @@ else
                 <h3 class="mb-0 h6">Recent packs</h3>
                 <button class="btn btn-sm @(_clearingAll ? "btn-danger" : "btn-outline-danger") ms-auto"
                         @onclick="ClearAll">
-                    @(_clearingAll ? $"really delete all {_log.Count}?" : "delete all")
+                    @(_clearingAll ? $"Really delete all {_log.Count}?" : "Delete All")
                 </button>
             </div>
 
@@ -470,7 +470,7 @@ else
 
             <DataTable Label="Recent packs">
                 <thead>
-                    <tr><th scope="col">when</th><th scope="col">pack</th><th scope="col">cards</th><th scope="col"><span class="visually-hidden">actions</span></th></tr>
+                    <tr><th scope="col">When</th><th scope="col">Pack</th><th scope="col">Cards</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
                 </thead>
                 <tbody>
                     @foreach (var entry in _recent)
@@ -502,7 +502,7 @@ else
                                 <button class="btn btn-sm @(_confirming == entry ? "btn-danger" : "btn-outline-danger") py-0 px-2"
                                         @onclick="() => ConfirmDelete(entry)" aria-live="polite"
                                         title="@(_confirming == entry ? "Tap again to delete" : "Delete this logged pack")">
-                                    @(_confirming == entry ? "really?" : "delete")
+                                    @(_confirming == entry ? "Really?" : "Delete")
                                 </button>
                             </td>
                         </tr>
@@ -751,7 +751,7 @@ else
 
     private string HitNote()
     {
-        if (_hits == 0) return "none yet";
+        if (_hits == 0) return "None yet";
 
         // The rate is the part that stays interesting: it moves with every pack, up or down. What
         // counts as a hit is NOT repeated here — the chips just below spell it out, and saying it

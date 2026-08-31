@@ -279,7 +279,7 @@ public class ScreenshotImportPageTests : AppHost
 
         Assert.DoesNotContain("Ctrl", page.Markup);
 
-        page.Find("button:contains('undo that')").Click();
+        page.Find("button:contains('Undo That')").Click();
 
         Assert.Equal(0, Session.Owned.DistinctOwned);
         Assert.DoesNotContain("Recorded 13 cards", page.Markup);

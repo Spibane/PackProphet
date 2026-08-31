@@ -33,7 +33,7 @@
    reliably reapplied to the DOM's selectedIndex, so the visible choice can snap back to the first
    option even though the filter did change. *@
 <div class="search-grid mb-2">
-    <input class="form-control form-control-sm" placeholder="name, or words from the card text" aria-label="Search cards by name or rules text"
+    <input class="form-control form-control-sm" placeholder="Name, or words from the card text" aria-label="Search cards by name or rules text"
            @bind="_text" @bind:event="oninput" @bind:after="OnTyped" />
 
     <div class="btn-group btn-group-sm" role="group" aria-label="Card pool">
@@ -45,7 +45,7 @@
         <button class="btn @(_ownedOnly ? "btn-outline-secondary" : "btn-secondary")"
                 @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@Aria.Flag(!_ownedOnly)"
                 title="Every card in the game">
-            all
+            All
         </button>
     </div>
 
@@ -54,7 +54,7 @@
        nothing. *@
     <select class="form-select form-select-sm" @bind="_kind" @bind:after="OnKindChanged"
             aria-label="Card type">
-        <option value="">any card type</option>
+        <option value="">Any Card Type</option>
         <option value="Pokémon">Pokémon</option>
         <option value="Trainer">Trainer</option>
     </select>
@@ -91,10 +91,10 @@
        on a first visit. *@
     <select class="form-select form-select-sm" @bind="_set" @bind:after="OnFilterChanged"
             aria-label="Set">
-        <option value="">any set</option>
+        <option value="">Any Set</option>
         @foreach (var series in Session.Sets.Series)
         {
-            <optgroup label="series @series">
+            <optgroup label="Series @series">
                 @* Not named `code`: @code is a Razor directive, so a variable of that name is
                    parsed as one and the file stops compiling. *@
                 @foreach (var setCode in Session.Sets.SetsIn(series))
@@ -107,16 +107,16 @@
 
     <select class="form-select form-select-sm" @bind="_rarity" @bind:after="OnFilterChanged"
             aria-label="Rarity">
-        <option value="">any rarity</option>
+        <option value="">Any Rarity</option>
         @* Families first — "all diamonds" is four rungs — then the individual rungs for a precise
            pick. *@
-        <optgroup label="families">
+        <optgroup label="Families">
             @foreach (var family in Families)
             {
-                <option value="@("g:" + family)">all @family.ToLowerInvariant()</option>
+                <option value="@("g:" + family)">All @family</option>
             }
         </optgroup>
-        <optgroup label="exactly">
+        <optgroup label="Exactly">
             @foreach (var rung in Session.Index.Ladder.Rungs)
             {
                 <option value="@("r:" + rung.Index)">@rung.Symbol</option>
@@ -130,7 +130,7 @@
     {
         <select class="form-select form-select-sm" @bind="_stage" @bind:after="OnFilterChanged"
                 aria-label="Evolution stage">
-            <option value="">any stage</option>
+            <option value="">Any Stage</option>
             @foreach (var stage in Stages)
             {
                 <option value="@stage">@stage</option>
@@ -140,7 +140,7 @@
 
     @if (HasFilters)
     {
-        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearFilters">clear</button>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearFilters">Clear</button>
     }
 </div>
 
@@ -157,7 +157,7 @@
 @if (!Query.IsEmpty)
 {
     <p class="small text-body-secondary mb-1">
-        showing
+        Showing
         <strong>@(_ownedOnly ? "cards you own" : "all cards")</strong>
         @if (_set.Length > 0) { <span>&middot; @_set</span> }
         @if (_rarity.Length > 0) { <span>&middot; @RarityLabel</span> }
@@ -186,7 +186,7 @@ else if (_results.Count == 0)
             None of the cards <strong>you own</strong> match &mdash; but
             <strong>@_elsewhere</strong> card(s) in the game do.
             <button class="btn btn-sm btn-outline-primary ms-1 py-0"
-                    @onclick="() => SetPool(false)">search all cards</button>
+                    @onclick="() => SetPool(false)">Search All Cards</button>
         </Notice>
     }
     else
@@ -210,10 +210,10 @@ else
     {
         <div class="d-flex align-items-center gap-2 mb-2">
             <button class="btn btn-sm btn-primary" @onclick="PickAll">
-                add all @_matches.Count
+                Add All @_matches.Count
             </button>
             <span class="small text-body-secondary">
-                everything matching these filters, in one step
+                Everything matching these filters, in one step
             </span>
         </div>
     }
@@ -275,7 +275,7 @@ else
                        than its damage does. *@
                     @if (fact?.HasAbility == true)
                     {
-                        <span class="abl" data-tip="@AbilityTip(fact)">ability</span>
+                        <span class="abl" data-tip="@AbilityTip(fact)">Ability</span>
                     }
                     @foreach (var atk in fact?.AttackList ?? [])
                     {

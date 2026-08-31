@@ -12,7 +12,7 @@ else
 {
     <div class="page-head">
         <h1 class="title">Resources</h1>
-        <span class="subtitle">what regenerates, and what it is costing you to sit on</span>
+        <span class="subtitle">What regenerates, and what it is costing you to sit on</span>
     </div>
 
     <PageShell Measure="PageShell.Width.Wide" Class="sections">
@@ -34,11 +34,11 @@ else
                 <div class="pool-figures">
                     <div class="fig">
                         <span class="v">@_pack.FromHourglasses</span>
-                        <span class="l">packs your hourglasses cover</span>
+                        <span class="l">Packs your hourglasses cover</span>
                     </div>
                     <div class="fig">
-                        <span class="v">@(_pack.UntilNextFree is { } t ? Short(t) : "ready")</span>
-                        <span class="l">next free pack</span>
+                        <span class="v">@(_pack.UntilNextFree is { } t ? Short(t) : "Ready")</span>
+                        <span class="l">Next Free Pack</span>
                     </div>
                 </div>
 
@@ -47,7 +47,7 @@ else
                 <label class="form-check form-switch small mt-2">
                     <input class="form-check-input" type="checkbox" checked="@_premium"
                            @onchange="OnPremium" />
-                    premium membership
+                    Premium membership
                 </label>
                 <p class="small text-body-secondary mb-0">
                     @if (_premium)
@@ -62,16 +62,16 @@ else
 
                 <div class="pool-entry">
                     <label class="small">
-                        pack hourglasses
+                        Pack Hourglasses
                         <input type="number" min="0" class="form-control form-control-sm"
                                value="@_packHourglasses" @onchange="OnPackHourglasses" />
                     </label>
                     <label class="small">
-                        shinedust
+                        Shinedust
                         <input type="number" min="0" class="form-control form-control-sm"
                                value="@_dust" @onchange="OnDust" />
                     </label>
-                    <button class="btn btn-sm btn-primary" @onclick="SavePack">save</button>
+                    <button class="btn btn-sm btn-primary" @onclick="SavePack">Save</button>
                 </div>
             </div>
 
@@ -115,14 +115,14 @@ else
             <DataTable Label="Pack points per set" Fit="true">
                 <thead>
                     <tr>
-                        <th scope="col">set</th>
-                        <th scope="col" class="num">points</th>
-                        <th scope="col" class="num">packs until capped</th>
+                        <th scope="col">Set</th>
+                        <th scope="col" class="num">Points</th>
+                        <th scope="col" class="num">Packs Until Capped</th>
                         @* The goal per set: points are only spendable inside the set that earned
                            them, so "how far off" is a per-set question with a per-set answer. *@
-                        <th scope="col">rarest still wanted</th>
-                        <th scope="col" class="num" title="Packs of THIS set to open before that card is affordable — points cannot cross-fund">packs to afford it</th>
-                        <th scope="col" class="num" title="Cards from this set you still need that the balance already covers">can buy now</th>
+                        <th scope="col">Rarest Still Wanted</th>
+                        <th scope="col" class="num" title="Packs of THIS set to open before that card is affordable — points cannot cross-fund">Packs to afford it</th>
+                        <th scope="col" class="num" title="Cards from this set you still need that the balance already covers">Can Buy Now</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -139,7 +139,7 @@ else
                             <td class="num">
                                 @if (row.AtCap)
                                 {
-                                    <span class="text-warning-emphasis fw-semibold">capped</span>
+                                    <span class="text-warning-emphasis fw-semibold">Capped</span>
                                 }
                                 else
                                 {
@@ -156,7 +156,7 @@ else
                                 }
                                 else
                                 {
-                                    <span class="text-body-secondary">set complete</span>
+                                    <span class="text-body-secondary">Set Complete</span>
                                 }
                             </td>
                             <td class="num">
@@ -166,7 +166,7 @@ else
                                 }
                                 else if (row.PacksToAfford == 0)
                                 {
-                                    <span class="text-success-emphasis fw-semibold">buy it</span>
+                                    <span class="text-success-emphasis fw-semibold">Buy It</span>
                                 }
                                 else
                                 {
@@ -187,7 +187,7 @@ else
         @if (_pointsAddable.Count > 0)
         {
             <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                <span class="small text-body-secondary">add rows for</span>
+                <span class="small text-body-secondary">Add Rows For</span>
                 @foreach (var series in _pointsAddable
                     .GroupBy(Session.Sets.SeriesOf)
                     .OrderBy(g => g.Key, StringComparer.Ordinal))
@@ -195,13 +195,13 @@ else
                     <button class="btn btn-sm btn-outline-primary py-0"
                             @onclick="() => AddSeries(series.Key)"
                             title="Show every @series.Key set that earns points, so the whole series can be typed in one pass">
-                        all @series.Key (@series.Count())
+                        All @series.Key (@series.Count())
                     </button>
                 }
                 @if (_pointsAddable.Count > 1)
                 {
                     <button class="btn btn-sm btn-outline-secondary py-0" @onclick="AddEverySet">
-                        every set (@_pointsAddable.Count)
+                        Every Set (@_pointsAddable.Count)
                     </button>
                 }
             </div>
@@ -214,7 +214,7 @@ else
             <h2>Is shinedust actually the problem?</h2>
             <DataTable Label="Shinedust costs" Fit="true">
                 <thead>
-                    <tr><th scope="col">rarity</th><th scope="col" class="num">dust each</th><th scope="col" class="num">trades funded</th></tr>
+                    <tr><th scope="col">Rarity</th><th scope="col" class="num">Dust Each</th><th scope="col" class="num">Trades Funded</th></tr>
                 </thead>
                 <tbody>
                     @foreach (var (label, price) in TradePrices())

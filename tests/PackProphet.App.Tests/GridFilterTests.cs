@@ -67,9 +67,9 @@ public class GridFilterTests : AppHost
         var page = await PageAsync();
 
         Assert.DoesNotContain(page.FindAll(".grid-toolbar button"),
-                              b => b.TextContent.Contains("missing only"));
+                              b => b.TextContent.Contains("Missing Only"));
         Assert.Contains(page.FindAll(".toolbar-more-body option"),
-                        o => o.TextContent.Contains("missing only"));
+                        o => o.TextContent.Contains("Missing Only"));
 
         // A collection that owns nothing has nothing missing to hide, so the filter would pass this
         // test by doing nothing at all. Own one card first.
@@ -95,8 +95,8 @@ public class GridFilterTests : AppHost
         var page = await PageAsync();
 
         var bar = page.Find(".grid-toolbar");
-        Assert.Contains("grid", bar.TextContent);
-        Assert.Contains("list", bar.TextContent);
+        Assert.Contains("Grid", bar.TextContent);
+        Assert.Contains("List", bar.TextContent);
         Assert.NotNull(page.Find(".grid-toolbar .layout-switch"));
     }
 

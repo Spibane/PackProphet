@@ -30,25 +30,22 @@ jobs:
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
 
-      # Before the base href is rewritten, so the tests run against the tree as committed.
       # Both projects: the engine suite, and the render suite that covers the pages.
       - name: Test
         run: dotnet test --configuration Release
 
-      # The app is served from https://<user>.github.io/<repo>/, not the domain root — and the
-      # rewrite happens BEFORE publish, not after. Publishing first and patching index.html
-      # afterwards breaks two things at once: the service worker pins index.html by SHA-256 in
-      # service-worker-assets.js, so a later edit makes its install fail (silently — the app
-      # still works online, it just never caches anything), and the .gz/.br sidecars are
-      # compressed from the pre-edit file. Doing it first means the SDK hashes and compresses
-      # what actually ships.
-      - name: Set base href for project-page hosting
+      # The app is served from the root of packprophet.spibane.com, so the base href committed in
+      # index.html is already right and nothing rewrites it. It used to be rewritten to /<repo>/,
+      # which is what project-page hosting needs and what a custom domain must not have: every
+      # asset would be fetched from /PackProphet/_framework/ on a host that has no such path, and
+      # the site would come up blank.
+      #
+      # Checked rather than assumed. This is a one-character edit away from shipping a blank page
+      # on every route, and the deploy would report success either way.
+      - name: Base href is the domain root
         run: |
-          sed -i 's|<base href="/" />|<base href="/${{ github.event.repository.name }}/" />|' \
-            src/PackProphet.App/wwwroot/index.html
-          grep -q '<base href="/${{ github.event.repository.name }}/" />' \
-            src/PackProphet.App/wwwroot/index.html \
-            || { echo "::error::base href rewrite did not apply"; exit 1; }
+          grep -q '<base href="/" />' src/PackProphet.App/wwwroot/index.html \
+            || { echo "::error::index.html must carry <base href=\"/\" /> for custom-domain hosting"; exit 1; }
 
       - name: Publish
         run: dotnet publish src/PackProphet.App/PackProphet.App.csproj -c Release -o build
@@ -58,6 +55,13 @@ jobs:
       # deploy "succeeds" and serves a blank page with no useful error.
       - name: Disable Jekyll
         run: touch build/wwwroot/.nojekyll
+
+      # The custom domain, carried in the artifact so it travels with what is published rather
+      # than living only in the repository settings.
+      - name: Custom domain
+        run: |
+          test -f build/wwwroot/CNAME || { echo "::error::CNAME missing from the publish output"; exit 1; }
+          cat build/wwwroot/CNAME
 
       # Guards the ordering above. An integrity mismatch here means the service worker will
       # refuse to install and offline support is gone, which is invisible from the served

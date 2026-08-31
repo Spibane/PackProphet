@@ -5,17 +5,17 @@
 <div align="center">
 
 [![Version](https://img.shields.io/badge/version-0.5.1-black?style=flat-square)](./CHANGELOG.md)
-[![Status](https://img.shields.io/badge/status-Public_test-green?style=flat-square)](https://spibane.github.io/PackProphet/)
+[![Status](https://img.shields.io/badge/status-Public_test-green?style=flat-square)](https://packprophet.spibane.com/)
 [![Changelog](https://img.shields.io/badge/changelog-blue?style=flat-square)](./CHANGELOG.md)
 
 [![.NET](https://img.shields.io/badge/.NET-10.x-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
 [![Blazor](https://img.shields.io/badge/Blazor-WebAssembly-512BD4?style=flat-square&logo=blazor)](https://blazor.net/)
 [![Storage](https://img.shields.io/badge/localStorage-no_account_·_no_server-003B57?style=flat-square)](#privacy)
-[![Hosting](https://img.shields.io/badge/GitHub_Pages-static-222222?style=flat-square&logo=github)](https://spibane.github.io/PackProphet/)
+[![Hosting](https://img.shields.io/badge/GitHub_Pages-static-222222?style=flat-square&logo=github)](https://packprophet.spibane.com/)
 [![Licence](https://img.shields.io/badge/AGPL--3.0--or--later-A42E2B?style=flat-square&logo=gnu)](LICENSE)
 [![AI](https://img.shields.io/badge/AI-pair-blue?style=flat-square)](AI-DECLARATION.md)
 
-**[spibane.github.io/PackProphet](https://spibane.github.io/PackProphet/)**
+**[packprophet.spibane.com](https://packprophet.spibane.com/)**
 
 </div>
 
@@ -30,9 +30,9 @@ Blazor WebAssembly  (.NET 10 — static files, no account, no server, nothing up
    ├── /                        Collection (grid or list, counts, filters, undo)
    ├── /packs                   Which pack to open next, against any target
    ├── /log                     Log a pack; accrues pack points
-   ├── /wishlists               Wishlists, shared entirely inside a link
+   ├── /chase                   Chase lists, shared entirely inside a link
    ├── /decks                   Deck import, building, legality, QR share codes
-   ├── /trades  ·  /board       Trade ranking, and the in-game 20-slot trade board
+   ├── /trades  ·  /board       Trade ranking, and the in-game 20-slot wishlist
    ├── /wonder  ·  /resources   Wonder Pick verdicts; the three currency systems
    └── /collection/screenshot   Read cards off a screenshot of the game
    │
@@ -41,13 +41,13 @@ Blazor WebAssembly  (.NET 10 — static files, no account, no server, nothing up
    │       ├── Vision     fingerprint matching, screen classification, count reading
    │       ├── Deck       share-code codec, legality linter, QR render
    │       ├── Data       card index, pull rates, rarity ladder, set catalogue
-   │       └── State      profiles, undo history, wishlist codec, serialisation
+   │       └── State      profiles, undo history, chase-list codec, serialisation
    │
    ├── JS interop  (only what Blazor cannot reach)
    │       └── capped-concurrency image loading, touch drag-select, grid keys,
    │           theme before first paint, tooltips, jsQR, screenshot slotting
    │
-   ├── localStorage   collections, wishlists, decks, pack log, settings
+   ├── localStorage   collections, chase lists, decks, pack log, settings
    │
    └── Card data
            ├── cdn.jsdelivr.net    live card lists and card detail
@@ -56,7 +56,7 @@ Blazor WebAssembly  (.NET 10 — static files, no account, no server, nothing up
 ```
 
 One odds engine drives every screen. The same maths prices a set of rarities, a deck, a whole
-series, or a hand-picked wishlist.
+series, or a hand-picked chase list.
 
 ## Features
 
@@ -66,7 +66,7 @@ series, or a hand-picked wishlist.
   from the common pool — a collection that has finished the commons has all of its chance in the
   last two, and the same headline percentage means different things in two sets. Expected packs to
   finish converts into calendar time at your own pack rate ("≈2.6 years, or 1.7 with premium").
-  Scope it to everything, one set, a whole series, a deck, one wishlist, or all wishlists
+  Scope it to everything, one set, a whole series, a deck, one chase list, or all chase lists
 - **Target advisor and pack points** — every rarity priced side by side, at one copy and at two;
   per-set point balances, cap warnings, and a ranking of what points buy. Ranked by *packs saved per
   pack's worth of points*: a Crown returns about 2.5, an Immersive 0.3
@@ -78,7 +78,7 @@ series, or a hand-picked wishlist.
   wrapper rather than by name. Whatever is applied shows as a chip on the bar, because a count read
   without knowing it is filtered is a different answer to the one it appears to be
 - **A heart on every card** puts it on your **Want it** list in one tap — its own list, so a passing
-  heart never rewrites a wishlist you built deliberately. A sticky strip names which set you are
+  heart never rewrites a chase list you built deliberately. A sticky strip names which set you are
   scrolling through once the list spans more than one
 - **A tile shows the art and nothing over it** — the count, the card's name and the heart sit in a
   caption under the picture; on a phone the grid keeps the count as a badge and stays as dense as it
@@ -94,10 +94,10 @@ series, or a hand-picked wishlist.
   one by hand with live legality checking and a search covering rules text and card type as well as
   names ("what puts something to Sleep", "show me the Supporters"). Export back to a scannable code
   the game accepts. Saved decks are ranked closest-to-buildable first
-- **Wishlists** — any set of cards you want: chase cards, a binder page, the alternate arts of one
-  Pokémon, priced by the same engine as a rarity target. Wishlists want a particular **printing**,
+- **Chase lists** — any set of cards you want: chase cards, a binder page, the alternate arts of one
+  Pokémon, priced by the same engine as a rarity target. Chase lists want a particular **printing**,
   unlike decks: wanting the alternate art is not satisfied by owning the plain one
-- **Wishlists share as a link**, with nothing uploaded — the list travels entirely inside the link.
+- **Chase lists share as a link**, with nothing uploaded — the list travels entirely inside the link.
   It shows only what is wanted, never your own collection, and if the person opening it has their own
   PackProphet collection loaded it highlights which of it they already own. Or **copy it as a few
   lines of text** for the chat threads these trades actually happen in: what is still short, set and
@@ -120,7 +120,7 @@ series, or a hand-picked wishlist.
   while shinedust accumulates, so the ranking treats *trades* as the scarce resource rather than
   currency. A **share?** column marks cards to skip trading for: 1–4 diamond cards can be Shared,
   which costs no dust, no stamina and no card given back
-- **In-game wishlist** — the game's own 20-slot public trade board, filled with the eligible cards
+- **Wishlist** — the game's own 20-slot public trade board, filled with the eligible cards
   that cost the most to get any other way. A listing costs nothing but a slot and slots do not
   expire, so low-probability high-value requests are worth listing; a minority of slots is reserved
   for widely-held cards someone is likely to offer. Recommendations come as **swaps** against what is
@@ -214,7 +214,7 @@ PackProphet/
 │   │   ├── Domain/                # Cards, rarities, pack variants, game rules
 │   │   ├── Engine/                # Odds, targets, ranking, allocation, trades, wonder picks
 │   │   ├── Import/                # CSV/XLSX readers, tracker import and export
-│   │   ├── State/                 # Profiles, undo history, wishlist codec, serialisation
+│   │   ├── State/                 # Profiles, undo history, chase-list codec, serialisation
 │   │   └── Vision/                # Fingerprints, screen classification, count reading
 │   └── PackProphet.App/           # Blazor WebAssembly
 │       ├── Components/            # Card grid, tile, picker, palette, shared controls
@@ -261,12 +261,12 @@ differently in production. The cost is a native relink on every build.
 | `/packs` | Which pack to open next, with the target advisor and points panel |
 | `/log` | Log a pack |
 | `/history` | Packs over time, predicted against actual, and your best hits |
-| `/wishlists`, `/wishlists/{id}` | Wishlists, and one wishlist's own page |
-| `/share` | A wishlist opened from a share link (read-only) |
+| `/chase`, `/chase/{id}` | Chase lists, and one chase list's own page |
+| `/share` | A chase list opened from a share link (read-only) |
 | `/decks`, `/decks/new`, `/decks/{id}` | Saved decks, and the builder |
 | `/decks/import` | Import a deck from an in-game share code |
 | `/trades` | Which trade deserves your next stamina |
-| `/board` | The in-game 20-slot public trade board |
+| `/board` | The in-game 20-slot wishlist (the public trade board) |
 | `/wonder` | Wonder Pick take-or-skip verdicts |
 | `/resources` | Pack, Wonder and Trade currencies side by side |
 | `/compare` | Compare two collections; shares and swaps between them |
@@ -351,8 +351,8 @@ Phases 1 and 2 are complete. See [CHANGELOG.md](CHANGELOG.md).
 - **Phase 3** — localisation remains. Done: an accessibility pass (contrast measured in both themes,
   names on every control, a text alternative for the chart), importing a collection from another
   tracker and exporting it again (Settings &rarr; import/export, or `/collection/import`), budget
-  allocation across packs ("Which pack" &rarr; splitting a budget), and shareable read-only wishlist
-  links (a wishlist's own page &rarr; share this list) — the recipient sees what is wanted and, if
+  allocation across packs ("Which pack" &rarr; splitting a budget), and shareable read-only chase-list
+  links (a chase list's own page &rarr; share this list) — the recipient sees what is wanted and, if
   they have their own collection loaded, which of it they already own
 - **Phase 4** — under way ahead of Phase 3's remaining localisation, since it is the larger feature.
   Done: screenshot recognition of the card list, a pack's five cards and a Wonder Pick line-up

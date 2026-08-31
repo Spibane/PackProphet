@@ -43,3 +43,7 @@ read locally. **No image is ever uploaded anywhere.**
 
 Pokémon and Pokémon TCG Pocket are trademarks of Nintendo, Creatures Inc. and GAME FREAK inc.
 This project is an unofficial fan tool, unaffiliated with and unendorsed by any of them.
+
+The **Paper** palette is an homage drawn by eye, in colours picked for contrast rather than matched
+to a specification. No official logo, wordmark, typeface or other brand asset is bundled or
+reproduced, and the **Slate** palette carries none of it.

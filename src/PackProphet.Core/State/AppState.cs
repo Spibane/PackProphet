@@ -115,6 +115,21 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     public int PackColumns { get; init; }
 
     /// <summary>
+    /// Which palette the app draws itself in: "paper", warm neutral surfaces with a single accent
+    /// and the default, or "slate", the greys and blues the app shipped with.
+    ///
+    /// A separate axis from <see cref="Theme"/> rather than two more values on it. Each skin has a
+    /// light and a dark form, so folding them together would mean four settings that mostly repeat
+    /// each other, and picking a look would silently pick a brightness with it.
+    ///
+    /// Nullable, and null means never chosen: an unset skin is not written at all, so a save made
+    /// before this existed adopts whatever the current default is rather than being pinned to the
+    /// look it happened to be saved under. As with <see cref="PackColumns"/>, that is what let this
+    /// field be added without a schema bump.
+    /// </summary>
+    public string? Skin { get; init; }
+
+    /// <summary>
     /// Roomier list rows, which have space to show attack and ability text inline rather than only
     /// on hover. False is the compact original and the default, since it fits more cards on screen.
     /// </summary>

@@ -252,6 +252,7 @@
             new("Action", "New deck", "Build one by hand", "decks/new"),
             new("Action", "New chase list", null, null, () => Nav.NavigateTo($"chase/{Session.CreateChaseList()}")),
             new("Action", $"Theme: {ThemeName(Session.Theme)}", "Switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),
+            new("Action", $"Colours: {SkinName(Session.Skin)}", "Switch paper or slate", null, () => _ = Session.SetSkinAsync(NextSkin())),
         };
 
         // Switching collections belongs here: with two or three alts it is a frequent move, and
@@ -297,6 +298,10 @@
         "light" => "dark",
         _ => "auto"
     };
+
+    private static string SkinName(string skin) => skin == "slate" ? "Slate" : "Paper";
+
+    private string NextSkin() => Session.Skin == "slate" ? "paper" : "slate";
 
     private IEnumerable<Item> Sets(string q) =>
         Session.Index.BySet.Keys

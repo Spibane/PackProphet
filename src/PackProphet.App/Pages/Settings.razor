@@ -24,6 +24,22 @@
         }
     </div>
 
+    @* Two rows rather than one of six, because the settings are independent: every skin has a
+       light and a dark form, so the pairs are not alternatives to each other. Only here and in
+       the command palette -- the top bar's one cycling button is already the widest thing in a
+       row that has to survive a phone. *@
+    <p class="small text-body-secondary mb-2">
+        <strong>Colours.</strong> Paper is warm and neutral, with red marking what is chosen;
+        slate is the greys and blues the app shipped with. Either works in light or dark.
+    </p>
+    <div class="btn-group btn-group-sm mb-4" role="group" aria-label="Colours">
+        @foreach (var (value, label) in Skins)
+        {
+            <button class="btn @(Session.Skin == value ? "btn-secondary" : "btn-outline-secondary")"
+                    @onclick="() => Session.SetSkinAsync(value)">@label</button>
+        }
+    </div>
+
     @* Sits with Appearance rather than with the collection sections: it is about how much the
        page says rather than about what counts as complete. *@
     <div class="form-check mb-4">
@@ -553,6 +569,11 @@
     private static readonly (string Value, string Label)[] Themes =
     [
         ("auto", "Auto"), ("light", "Light"), ("dark", "Dark")
+    ];
+
+    private static readonly (string Value, string Label)[] Skins =
+    [
+        ("paper", "Paper"), ("slate", "Slate")
     ];
 
     private string? _message;

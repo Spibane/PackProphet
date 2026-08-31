@@ -41,8 +41,21 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-    <!-- Colours the browser chrome and the splash screen of an installed copy. -->
-    <meta name="theme-color" content="#4338ca" />
+    <!-- Colours the browser chrome around the page. The DEFAULT skin's light page colour, so a cold
+         start is already right for most people before any script runs; theme.js replaces it for the
+         other three skin-and-brightness combinations.
+
+         The manifest's theme_color matches this. Its background_color does not: it is #4338ca, the
+         indigo of the app icon's own tile, so the launch screen and the icon agree.
+
+         Worth recording what that value does NOT do, because it looks like it should. iOS insets the
+         icon inside a white tile in the Add to Home Screen PREVIEW sheet, and background_color has
+         no effect on it: a control served with these exact declarations and one served with the page
+         colour were added side by side on an iPhone and both previewed inset and both landed on the
+         home screen correctly, full-bleed. Declaring purpose:maskable icons did not change the
+         preview either. So the preview is iOS's own presentation, it is seen once, and neither of
+         these colours is load-bearing for the icon. -->
+    <meta name="theme-color" content="#fbfaf8" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="PackProphet" />
     <!-- No PackProphet.styles.css link. That bundle is Blazor's scoped-CSS output, and it is only
@@ -52,9 +65,9 @@
          a 404 on every page load, on every route. Add the link back alongside the first
          .razor.css file, not before. -->
     <script type="importmap"></script>
-    <!-- Loaded in the head, before anything paints: it reads the saved theme and stamps
-         data-bs-theme on the root element so a dark-mode user never sees a white flash on
-         cold start. -->
+    <!-- Loaded in the head, before anything paints: it reads the saved theme and skin and stamps
+         data-bs-theme and data-pp-skin on the root element, so a dark-mode user never sees a white
+         flash on cold start and nobody sees the wrong palette for a frame. -->
     <script src="js/theme.js"></script>
 </head>
 

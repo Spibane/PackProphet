@@ -116,10 +116,10 @@ public sealed class AppSession : IAsyncDisposable
         // choices as well as over the published data.
         RebuildEngine();
         RebuildCollection();
-        // theme.js already applied the saved theme from localStorage before Blazor booted, so
-        // this is only a re-assert — it matters when the state came from somewhere that script
+        // theme.js already applied the saved theme and skin from localStorage before Blazor booted,
+        // so this is only a re-assert — it matters when the state came from somewhere that script
         // could not read, e.g. a JSON import.
-        await ApplyThemeAsync();
+        await ApplyAppearanceAsync();
         Changed?.Invoke();
 
         // Card detail arrives afterwards: it is the biggest payload by an order of magnitude
@@ -871,6 +871,13 @@ public sealed class AppSession : IAsyncDisposable
     /// <summary>"auto" (follow the OS), "light", or "dark".</summary>
     public string Theme => State.Prefs.Theme is "light" or "dark" ? State.Prefs.Theme : "auto";
 
+    /// <summary>
+    /// The palette: "paper" (warm neutrals and one accent, and the default) or "slate" (the greys
+    /// and blues the app shipped with). Independent of <see cref="Theme"/> — each skin has a light
+    /// and a dark form.
+    /// </summary>
+    public string Skin => State.Prefs.Skin == "slate" ? "slate" : "paper";
+
     public async Task SetThemeAsync(string theme)
     {
         var next = theme is "light" or "dark" ? theme : "auto";
@@ -878,18 +885,32 @@ public sealed class AppSession : IAsyncDisposable
 
         State = State with { Prefs = State.Prefs with { Theme = next } };
         QueueSave();
-        await ApplyThemeAsync();
+        await ApplyAppearanceAsync();
+        Changed?.Invoke();
+    }
+
+    public async Task SetSkinAsync(string skin)
+    {
+        var next = skin == "slate" ? "slate" : "paper";
+        if (next == Skin) return;
+
+        State = State with { Prefs = State.Prefs with { Skin = next } };
+        QueueSave();
+        await ApplyAppearanceAsync();
         Changed?.Invoke();
     }
 
     /// <summary>
-    /// Hands the preference to theme.js, which owns resolving "auto" against the OS and
-    /// setting Bootstrap's data-bs-theme. Failures are swallowed: theming is cosmetic, and an
-    /// interop error during prerender or teardown must not take a page down with it.
+    /// Hands both preferences to theme.js, which owns resolving "auto" against the OS and stamping
+    /// the two root attributes app.css reads. Sent together in one call rather than one each: they
+    /// are applied to the same element in the same pass, and two calls would paint an intermediate
+    /// frame describing a combination the user never chose. Failures are swallowed: appearance is
+    /// cosmetic, and an interop error during prerender or teardown must not take a page down with
+    /// it.
     /// </summary>
-    private async Task ApplyThemeAsync()
+    private async Task ApplyAppearanceAsync()
     {
-        try { await _js.InvokeVoidAsync("ppTheme.set", Theme); }
+        try { await _js.InvokeVoidAsync("ppTheme.set", Theme, Skin); }
         catch { /* cosmetic only */ }
     }
 

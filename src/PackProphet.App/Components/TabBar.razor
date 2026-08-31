@@ -34,12 +34,15 @@
     </NavLink>
 
     @* Centred and larger: the only tab that writes something, and the one repeated many times a
-       day. The others are places; this is the action. *@
+       day. The others are places; this is the action.
+
+       The pack rather than a plus, and the same drawing as the wordmark's. A plus said "this one
+       writes something" without saying what, and the label under it already says Log; the pack says
+       what is being logged. It is white here because the filled circle sets `color: #fff` and the
+       mark paints in currentColor, so nothing about the glyph changes between its two homes. *@
     <NavLink class="tab tab-primary" href="log">
         <span class="ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="26" height="26" focusable="false">
-                <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
-            </svg>
+            <PackMark Size="26" />
         </span>
         <span class="lbl">Log</span>
     </NavLink>

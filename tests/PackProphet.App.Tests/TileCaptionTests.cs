@@ -262,7 +262,7 @@ public class TileCaptionTests : AppHost
         });
 
         var header = grid.Find(".card-line.head .c-want");
-        Assert.Equal("want", header.TextContent.Trim());
+        Assert.Equal("Want", header.TextContent.Trim());
         Assert.NotNull(header.QuerySelector(".visually-hidden"));
     }
 

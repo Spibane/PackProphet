@@ -12,14 +12,14 @@ else if (!Session.MultipleProfiles)
 {
     <div class="page-head">
         <h1 class="title">Compare collections</h1>
-        <span class="subtitle">trades you could make with yourself</span>
+        <span class="subtitle">Trades you could make with yourself</span>
     </div>
     <PageShell Measure="PageShell.Width.Wide">
         <p>
             Only one collection, so nothing to compare yet. You can trade with your own alt
             account, which is what this page is for.
         </p>
-        <a class="btn btn-sm btn-primary" href="settings">add a collection</a>
+        <a class="btn btn-sm btn-primary" href="settings">Add a Collection</a>
     </PageShell>
 }
 else
@@ -30,7 +30,7 @@ else
     </div>
 
     <div class="page-tools">
-        <label class="small text-body-secondary">compare with</label>
+        <label class="small text-body-secondary">Compare With</label>
         <select class="form-select form-select-sm" style="max-width:14rem" aria-label="Collection to compare with" @onchange="OnPick">
             @foreach (var profile in Others)
             {
@@ -85,7 +85,7 @@ else
                         <span class="call">
                             @ShareTotal @Card(ShareTotal) can just be sent
                         </span>
-                        <span class="cost">free &mdash; no card back, no dust, no stamina</span>
+                        <span class="cost">Free &mdash; no card back, no dust, no stamina</span>
                     </div>
                     <span class="why">
                         @if (_swaps.IncomingShares.Count > 0)
@@ -199,10 +199,10 @@ else
                         <tr>
                             <th scope="col">@_swaps.Mine.Name gets</th>
                             <th scope="col">@_swaps.Theirs.Name gets</th>
-                            <th scope="col">rarity</th>
-                            <th scope="col" class="num" title="Expected packs the receiving account would not have to open">packs saved</th>
-                            <th scope="col" class="num">dust each</th>
-                            <th scope="col">status</th>
+                            <th scope="col">Rarity</th>
+                            <th scope="col" class="num" title="Expected packs the receiving account would not have to open">Packs Saved</th>
+                            <th scope="col" class="num">Dust Each</th>
+                            <th scope="col">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -220,14 +220,14 @@ else
                                     {
                                         <span class="badge text-bg-success ms-2"
                                               title="Wanted on that side too, so the swap closes two gaps for one stamina each">
-                                            wanted
+                                            Wanted
                                         </span>
                                     }
                                     else
                                     {
                                         <span class="badge text-bg-secondary ms-2"
                                               title="Not wanted there — it is the payment, sent only because the game requires a card back">
-                                            payment
+                                            Payment
                                         </span>
                                     }
                                 </td>
@@ -243,7 +243,7 @@ else
                                 <td>
                                     @if (swap.Ready)
                                     {
-                                        <span class="text-success-emphasis">ready</span>
+                                        <span class="text-success-emphasis">Ready</span>
                                     }
                                     else
                                     {
@@ -277,7 +277,7 @@ else
                 </p>
                 <DataTable Label="Wanted, with nothing to pay with" Fit="true">
                     <thead>
-                        <tr><th scope="col">card</th><th scope="col">rarity</th><th scope="col" class="num">packs saved</th></tr>
+                        <tr><th scope="col">Card</th><th scope="col">Rarity</th><th scope="col" class="num">Packs Saved</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var gift in _swaps.Unpayable)

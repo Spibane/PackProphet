@@ -14,9 +14,9 @@
 <nav class="app-nav">
     <span class="brand">PackProphet</span>
     <NavLink class="nav-item" href="collection" Match="NavLinkMatch.All">Collection</NavLink>
-    <NavLink class="nav-item" href="packs">Which pack</NavLink>
-    <NavLink class="nav-item" href="log">Log a pack</NavLink>
-    <NavLink class="nav-item" href="chase">Chase lists</NavLink>
+    <NavLink class="nav-item" href="packs">Packs</NavLink>
+    <NavLink class="nav-item" href="log">Log</NavLink>
+    <NavLink class="nav-item" href="chase">Chases</NavLink>
     <button class="nav-item nav-more-btn" popovertarget="desk-more">
         More
         <span class="caret" aria-hidden="true">&#9662;</span>
@@ -32,7 +32,7 @@
                 <path d="M10.4 10.4L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
             </svg>
         </span>
-        <span class="hint">ctrl K</span>
+        <span class="hint">Ctrl K</span>
     </button>
 
     @* Switching collections is frequent enough to belong in the chrome; creating and deleting live
@@ -110,9 +110,9 @@
 
     private static string Label(string theme) => theme switch
     {
-        "light" => "light",
-        "dark" => "dark",
-        _ => "auto"
+        "light" => "Light",
+        "dark" => "Dark",
+        _ => "Auto"
     };
 
 }

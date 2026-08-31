@@ -19,14 +19,14 @@
        a target. A separate "chase list mode" would imply the ranking works differently for them. *@
     @if (Session.ChaseLists.Count > 0)
     {
-        <optgroup label="chase lists">
+        <optgroup label="Chase Lists">
             @* Every list at once, merged. Demands overlapping between lists count once, so two
                lists that both want the same card do not double its price. Pointless with one
                list, which is why it is not simply always offered. *@
             @if (Merged && Session.ChaseLists.Count > 1)
             {
                 <option value="chases" selected="@(Scope == "chases")">
-                    all chase lists together
+                    All chase lists together
                 </option>
             }
             @foreach (var list in Session.ChaseLists)
@@ -42,14 +42,14 @@
     {
         @foreach (var series in Session.Sets.Series)
         {
-            <optgroup label="series @series">
+            <optgroup label="Series @series">
                 @* A whole series is a scope people actually think in — "am I done with the A
                    sets" — and it sits above its own sets rather than in a separate list, so the
                    dropdown reads as one hierarchy. *@
                 @if (Merged)
                 {
                     <option value="series:@series" selected="@(Scope == $"series:{series}")">
-                        series @series
+                        Series @series
                     </option>
                 }
                 @foreach (var set in Session.SetsInSeries(series))
@@ -63,7 +63,7 @@
     }
     else
     {
-        <optgroup label="sets">
+        <optgroup label="Sets">
             @foreach (var set in Session.Index.OpenableSets.OrderBy(Session.Sets.SortKey, StringComparer.Ordinal))
             {
                 <option value="set:@set" selected="@(Scope == $"set:{set}")">@set</option>
@@ -80,7 +80,7 @@
     [Parameter, EditorRequired] public string Label { get; set; } = default!;
 
     /// <summary>The first option's wording, which reads differently depending on the page.</summary>
-    [Parameter] public string Everything { get; set; } = "everything I collect";
+    [Parameter] public string Everything { get; set; } = "Everything I collect";
 
     /// <summary>The scope currently chosen, in the grammar AppSession.TargetForScope reads.</summary>
     [Parameter, EditorRequired] public string Scope { get; set; } = default!;

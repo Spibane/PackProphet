@@ -17,7 +17,7 @@ else if (Id is null)
         <h1 class="title">Chase lists</h1>
         <span class="subtitle">@Session.ChaseLists.Count saved</span>
         <span class="actions">
-            <button class="btn btn-sm btn-primary" @onclick="NewList">new chase list</button>
+            <button class="btn btn-sm btn-primary" @onclick="NewList">New Chase List</button>
         </span>
     </div>
 
@@ -29,10 +29,10 @@ else if (Id is null)
             <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
                 <button class="btn @(Session.ChaseGrid ? "btn-outline-secondary" : "btn-secondary")"
                         @onclick="() => Session.SetChaseGrid(!Session.ChaseGrid)"
-                        aria-pressed="@Aria.Flag(!Session.ChaseGrid)" title="A table, for comparing">list</button>
+                        aria-pressed="@Aria.Flag(!Session.ChaseGrid)" title="A table, for comparing">List</button>
                 <button class="btn @(Session.ChaseGrid ? "btn-secondary" : "btn-outline-secondary")"
                         @onclick="() => Session.SetChaseGrid(!Session.ChaseGrid)"
-                        aria-pressed="@Aria.Flag(Session.ChaseGrid)" title="Cards, for recognising">grid</button>
+                        aria-pressed="@Aria.Flag(Session.ChaseGrid)" title="Cards, for recognising">Grid</button>
             </div>
         </div>
     }
@@ -65,7 +65,7 @@ else if (Id is null)
                            aria-label="Open @list.Name">
                             @if (list.Face is null)
                             {
-                                <span class="empty">nothing on this list</span>
+                                <span class="empty">Nothing on this list</span>
                             }
                         </a>
 
@@ -86,16 +86,16 @@ else if (Id is null)
                                 {
                                     <span class="badge text-bg-info"
                                           title="The heart on a card in the collection grid adds it to this list">
-                                        hearts
+                                        Hearts
                                     </span>
                                 }
                                 @if (list.Wanted == 0)
                                 {
-                                    <span class="badge text-bg-secondary">empty</span>
+                                    <span class="badge text-bg-secondary">Empty</span>
                                 }
                                 else if (list.Missing == 0)
                                 {
-                                    <span class="badge text-bg-success">complete</span>
+                                    <span class="badge text-bg-success">Complete</span>
                                 }
                                 else
                                 {
@@ -125,12 +125,12 @@ else if (Id is null)
                             }
 
                             <div class="actions">
-                                <a class="btn btn-sm btn-outline-secondary" href="chase/@list.Id">open</a>
-                                <a class="btn btn-sm btn-outline-primary" href="packs?chase=@list.Id">rank</a>
+                                <a class="btn btn-sm btn-outline-secondary" href="chase/@list.Id">Open</a>
+                                <a class="btn btn-sm btn-outline-primary" href="packs?chase=@list.Id">Rank</a>
                                 <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(list.Id)" aria-live="polite"
                                         title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this chase list")">
-                                    @(_confirming == list.Id ? "really?" : "delete")
+                                    @(_confirming == list.Id ? "Really?" : "Delete")
                                 </button>
                             </div>
                         </div>
@@ -143,11 +143,11 @@ else if (Id is null)
             <DataTable Label="Your chase lists">
                 <thead>
                     <tr>
-                        <th scope="col">chase list</th>
-                        <th scope="col" class="num">cards wanted</th>
-                        <th scope="col" class="num">still missing</th>
-                        <th scope="col">rarest still wanted</th>
-                        <th scope="col"><span class="visually-hidden">actions</span></th>
+                        <th scope="col">Chase List</th>
+                        <th scope="col" class="num">Cards Wanted</th>
+                        <th scope="col" class="num">Still Missing</th>
+                        <th scope="col">Rarest Still Wanted</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -160,7 +160,7 @@ else if (Id is null)
                                 {
                                     <span class="badge text-bg-info ms-1"
                                           title="The heart on a card in the collection grid adds it to this list">
-                                        hearts
+                                        Hearts
                                     </span>
                                 }
                             </td>
@@ -172,7 +172,7 @@ else if (Id is null)
                                 }
                                 else if (list.Missing == 0)
                                 {
-                                    <span class="text-success-emphasis fw-semibold">complete</span>
+                                    <span class="text-success-emphasis fw-semibold">Complete</span>
                                 }
                                 else
                                 {
@@ -196,14 +196,14 @@ else if (Id is null)
                                 }
                             </td>
                             <td class="text-end text-nowrap">
-                                <a class="btn btn-sm btn-outline-secondary" href="chase/@list.Id">open</a>
-                                <a class="btn btn-sm btn-outline-primary" href="packs?chase=@list.Id">rank</a>
+                                <a class="btn btn-sm btn-outline-secondary" href="chase/@list.Id">Open</a>
+                                <a class="btn btn-sm btn-outline-primary" href="packs?chase=@list.Id">Rank</a>
                                 @* Two taps, and the confirmation is scoped to this row: a shared
                                    flag would arm every delete button at once. *@
                                 <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(list.Id)" aria-live="polite"
                                         title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this chase list")">
-                                    @(_confirming == list.Id ? "really?" : "delete")
+                                    @(_confirming == list.Id ? "Really?" : "Delete")
                                 </button>
                             </td>
                         </tr>
@@ -233,23 +233,23 @@ else
 
         <span class="actions">
             <a class="btn btn-sm btn-outline-primary" href="packs?chase=@_list.Id">
-                rank packs for this list
+                Rank packs for this list
             </a>
             <button class="btn btn-sm btn-outline-secondary" @onclick="MakeShareLink">
-                share this list
+                Share This List
             </button>
             @* The link is the better artefact and the wrong shape for where these trades actually
                happen. A Discord thread or a subreddit comment takes a few lines of text: nobody
                opens a stranger's link, and a reader on a phone with the game open cannot follow
                one and come back. Same list, in the form the conversation is already in. *@
             <button class="btn btn-sm btn-outline-secondary" @onclick="MakeTradeText">
-                copy as text
+                Copy as Text
             </button>
             @* Two taps, like the deck editor's delete: the list took work to build and there
                is no undo prompt after the fact. *@
             <button class="btn btn-sm @(_confirming == _list.Id ? "btn-danger" : "btn-outline-danger")"
                     @onclick="() => ConfirmDelete(_list.Id)" aria-live="polite">
-                @(_confirming == _list.Id ? "really delete?" : "delete")
+                @(_confirming == _list.Id ? "Really delete?" : "Delete")
             </button>
         </span>
     </div>
@@ -312,15 +312,15 @@ else
     <PageShell>
     <div class="summary">
         <div class="stat">
-            <span class="label">cards wanted</span>
+            <span class="label">Cards Wanted</span>
             <span class="value">@Session.WantedTotal(_list)</span>
         </div>
         <div class="stat">
-            <span class="label">still missing</span>
+            <span class="label">Still Missing</span>
             <span class="value">@_missing</span>
         </div>
         <div class="stat">
-            <span class="label">expected packs</span>
+            <span class="label">Expected Packs</span>
             <span class="value">@Fmt(_packs)</span>
             @* As on the Packs page, an estimate never appears without saying what it covers, since
                a card no pack sells changes the scope. *@
@@ -328,13 +328,13 @@ else
                 @if (_unreachable > 0)
                 {
                     <span>
-                        covers @(_missing - _unreachable) of @_missing &mdash; @_unreachable
+                        Covers @(_missing - _unreachable) of @_missing &mdash; @_unreachable
                         cannot be pulled right now
                     </span>
                 }
                 else
                 {
-                    <span>opening the best pack each time</span>
+                    <span>Opening the best pack each time</span>
                 }
             </span>
         </div>
@@ -358,14 +358,14 @@ else
             <DataTable Label="Cards on this chase list" Class="chase-list mb-3">
                 <thead>
                     <tr>
-                        <th scope="col" colspan="2">card</th>
-                        <th scope="col" data-pri="3">type</th>
-                        <th scope="col" data-pri="2">rarity</th>
-                        <th scope="col" data-pri="3">set</th>
-                        <th scope="col" data-pri="3">what it costs</th>
-                        <th scope="col" class="num" data-pri="2">owned</th>
-                        <th scope="col" class="num">want</th>
-                        <th scope="col"><span class="visually-hidden">remove</span></th>
+                        <th scope="col" colspan="2">Card</th>
+                        <th scope="col" data-pri="3">Type</th>
+                        <th scope="col" data-pri="2">Rarity</th>
+                        <th scope="col" data-pri="3">Set</th>
+                        <th scope="col" data-pri="3">What It Costs</th>
+                        <th scope="col" class="num" data-pri="2">Owned</th>
+                        <th scope="col" class="num">Want</th>
+                        <th scope="col"><span class="visually-hidden">Remove</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -454,7 +454,7 @@ else
                 <Notice Severity="Notice.Level.Success">
                     Added @_added card(s) to <strong>@_list.Name</strong>.
                     <button class="btn btn-sm btn-link p-0 align-baseline"
-                            @onclick="UndoAdd">undo</button>
+                            @onclick="UndoAdd">Undo</button>
                 </Notice>
             }
             @* All cards by default here, the opposite of the deck builder: a chase list is mostly

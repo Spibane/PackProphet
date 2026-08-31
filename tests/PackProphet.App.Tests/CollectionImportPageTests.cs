@@ -197,7 +197,7 @@ public class CollectionImportPageTests : AppHost
 
         var markup = Text(page);
         Assert.Contains("Rows not recognised", markup);
-        Assert.Contains("line 3", markup);
+        Assert.Contains("Line 3", markup);
         Assert.Contains("Z9-999", markup);
 
         // The good row is still importable — one bad line does not refuse the file.
@@ -295,7 +295,7 @@ public class CollectionImportPageTests : AppHost
         Assert.Equal(2, Session.Profiles.Count);
 
         Pick(page, "set_id,card_id,quantity\nA1a,1,3\n");
-        Assert.Equal("merge in", page.Find(".btn-primary").TextContent.Trim());
+        Assert.Equal("Merge In", page.Find(".btn-primary").TextContent.Trim());
 
         page.Find(".btn-primary").Click();
 

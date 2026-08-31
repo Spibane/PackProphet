@@ -61,17 +61,17 @@ else
                     <span class="fail">&middot; @_artFailed art failed</span>
                 }
             </span>
-            <span class="fold-hint">change set</span>
+            <span class="fold-hint">Change Set</span>
         </summary>
 
         <div class="set-picker-body">
         @* A series at a time. One row of every set ever printed already wraps to three lines;
            grouping keeps it to one row per series indefinitely. *@
         <select class="form-select form-select-sm" style="max-width:9rem" aria-label="Series" @onchange="OnSeries">
-            <option value="@AllSets" selected="@(_series == AllSets)">every series</option>
+            <option value="@AllSets" selected="@(_series == AllSets)">Every Series</option>
             @foreach (var series in Session.Sets.Series)
             {
-                <option value="@series" selected="@(_series == series)">series @series</option>
+                <option value="@series" selected="@(_series == series)">Series @series</option>
             }
         </select>
 
@@ -156,7 +156,7 @@ else
                     @if (_own != "gaps")
                     {
                         <button class="btn btn-sm btn-outline-primary py-0 ms-1"
-                                @onclick="ShowGapFills">show them in the grid</button>
+                                @onclick="ShowGapFills">Show them in the grid</button>
                     }
                 </p>
 
@@ -168,7 +168,7 @@ else
                             {
                                 <a href="card/@easiest.Key">@gap.MissingName</a>
                                 <span class="rr">@RarityName(easiest)</span>
-                                <span class="text-body-secondary">from @easiest.Set</span>
+                                <span class="text-body-secondary">From @easiest.Set</span>
                             }
                             else
                             {
@@ -179,7 +179,7 @@ else
                             {
                                 <span class="badge text-bg-warning"
                                       title="No printing of it comes from a pack you can open, so opening will never produce one">
-                                    no pack has it
+                                    No pack has it
                                 </span>
                             }
 
@@ -224,7 +224,7 @@ else
            first card; sharing one bar halves that without hiding anything. *@
         <Search>
             <input class="form-control form-control-sm grid-search"
-                   placeholder="search name" aria-label="Search card names" value="@_search" @oninput="OnSearch" />
+                   placeholder="Search name" aria-label="Search card names" value="@_search" @oninput="OnSearch" />
         </Search>
 
         @* What is currently narrowing the list, said on the bar itself. The controls that set
@@ -235,7 +235,7 @@ else
             @if (_search is { Length: > 0 })
             {
                 <button class="chip-filter" @onclick="ClearSearch"
-                        aria-label="Clear the name search">name: @_search &times;</button>
+                        aria-label="Clear the name search">Name: @_search &times;</button>
             }
             @if (_own != "all")
             {
@@ -261,16 +261,16 @@ else
 
         <Filters>
             <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Filter by what you own" @onchange="OnOwnFilter">
-                <option value="all">all cards</option>
-                <option value="missing">missing only</option>
-                <option value="owned">owned only</option>
-                <option value="dupes">duplicates</option>
-                <option value="needed">short of target</option>
+                <option value="all">All Cards</option>
+                <option value="missing">Missing Only</option>
+                <option value="owned">Owned Only</option>
+                <option value="dupes">Duplicates</option>
+                <option value="needed">Short of Target</option>
                 @* Only offered when there is something to see: a permanently empty filter that
                    returns nothing reads as a broken control. *@
                 @if (Session.Gaps is { Complete: false })
                 {
-                    <option value="gaps">fills an evolution gap</option>
+                    <option value="gaps">Fills an evolution gap</option>
                 }
             </select>
 
@@ -283,7 +283,7 @@ else
                Symbols rather than an icon font: these are the glyphs the list view already draws,
                from the same rungs, so a chip and a card agree on what a rarity looks like. *@
             <div class="chip-group">
-                <span class="ttl" id="rarity-chips-label">rarity</span>
+                <span class="ttl" id="rarity-chips-label">Rarity</span>
                 <div class="chip-toolbar" role="group" aria-labelledby="rarity-chips-label">
                 @foreach (var rung in Session.Index.Ladder.Rungs)
                 {
@@ -304,7 +304,7 @@ else
                control says so rather than quietly returning nothing. Ten energies and four trainer
                kinds: too many for a dropdown to be worth reading, and each has a pip already. *@
             <div class="chip-group">
-                <span class="ttl" id="type-chips-label">type</span>
+                <span class="ttl" id="type-chips-label">Type</span>
                 <div class="chip-toolbar" role="group" aria-labelledby="type-chips-label">
                 @foreach (var type in FilterTypes)
                 {
@@ -337,7 +337,7 @@ else
             {
                 <span class="bar-sep" aria-hidden="true"></span>
                 <div class="chip-group">
-                    <span class="ttl" id="pack-picks-label">pack</span>
+                    <span class="ttl" id="pack-picks-label">Pack</span>
                     <div class="pack-picks" role="group" aria-labelledby="pack-picks-label">
                     @foreach (var p in PacksInSet)
                     {
@@ -362,7 +362,7 @@ else
                     hidden="@Session.ListView">
                 @foreach (var n in new[] { 3, 4, 5, 6, 8, 10 })
                 {
-                    <option value="@n" selected="@(n == Session.GridColumns)">@n cols</option>
+                    <option value="@n" selected="@(n == Session.GridColumns)">@n Cols</option>
                 }
             </select>
             @* Both act on one set. Across every set they would be indiscriminate, and "erase
@@ -372,12 +372,12 @@ else
                 <button class="btn btn-sm btn-outline-secondary" @onclick="MarkTargetOwned"
                         disabled="@Busy.IsBusy"
                         title="Mark every card this set's plan wants as owned">
-                    fill target
+                    Fill Target
                 </button>
                 <button class="btn btn-sm btn-outline-danger" @onclick="ClearSet"
                         disabled="@Busy.IsBusy" aria-live="polite"
                         title="Set every card in this set back to zero. Undo works.">
-                    @(_confirmClear ? "clear — sure?" : "clear set")
+                    @(_confirmClear ? "Clear — sure?" : "Clear Set")
                 </button>
             }
         </ToolbarExtras>

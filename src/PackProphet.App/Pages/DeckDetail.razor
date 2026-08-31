@@ -14,7 +14,7 @@ else if (_draft is null)
 {
     <PageShell Measure="PageShell.Width.Text">
         <p>That deck no longer exists.</p>
-        <a class="btn btn-sm btn-primary" href="decks">back to decks</a>
+        <a class="btn btn-sm btn-primary" href="decks">Back to Decks</a>
     </PageShell>
 }
 else
@@ -41,7 +41,7 @@ else
             }
             else
             {
-                <span class="badge text-bg-success">you own every card</span>
+                <span class="badge text-bg-success">You own every card</span>
             }
         }
 
@@ -52,23 +52,23 @@ else
             <span class="save-state @(Dirty ? "dirty" : "")">
                 @if (Dirty)
                 {
-                    <span class="small">unsaved changes</span>
+                    <span class="small">Unsaved Changes</span>
                 }
                 else if (_justSaved)
                 {
-                    <span class="small text-success-emphasis">saved</span>
+                    <span class="small text-success-emphasis">Saved</span>
                 }
             </span>
 
-            <button class="btn btn-sm btn-primary" @onclick="Save" disabled="@(!Dirty)">save</button>
+            <button class="btn btn-sm btn-primary" @onclick="Save" disabled="@(!Dirty)">Save</button>
             <button class="btn btn-sm btn-outline-secondary" @onclick="Discard" disabled="@(!Dirty)">
-                @(IsNew ? "start over" : "discard")
+                @(IsNew ? "Start Over" : "Discard")
             </button>
 
             @if (!IsNew)
             {
                 <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmDelete" aria-live="polite">
-                    @(_confirmingDelete ? "really delete?" : "delete")
+                    @(_confirmingDelete ? "Really delete?" : "Delete")
                 </button>
             }
         </span>
@@ -79,9 +79,9 @@ else
         <Notice Severity="Notice.Level.Warning" Class="m-3">
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <strong>This deck has unsaved changes.</strong>
-                <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">save and leave</button>
-                <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">discard and leave</button>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">stay here</button>
+                <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">Save and Leave</button>
+                <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">Discard and Leave</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">Stay Here</button>
             </div>
         </Notice>
     }
@@ -206,7 +206,7 @@ else
                         @* Newer game versions no longer offer text codes, so this is for older
                            clients rather than the normal route. *@
                         <details>
-                            <summary class="small text-body-secondary">show the code as text</summary>
+                            <summary class="small text-body-secondary">Show the code as text</summary>
                             <textarea class="form-control form-control-sm mt-1" rows="3" readonly>@_shareCode</textarea>
                         </details>
                     </div>
@@ -226,7 +226,7 @@ else
                 </p>
                 <DataTable Label="Cards this deck still needs">
                     <thead>
-                        <tr><th scope="col">card</th><th scope="col" class="num">need</th><th scope="col">cheapest route</th></tr>
+                        <tr><th scope="col">Card</th><th scope="col" class="num">Need</th><th scope="col">Cheapest Route</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var (entry, route) in _missing)
@@ -260,13 +260,13 @@ else
                                tonight. Both, because the percentage is what compares two rows and
                                the packs figure is what decides. *@
                             <tr>
-                                <th scope="col">pack</th>
-                                <th scope="col" class="num">chance of a hit</th>
+                                <th scope="col">Pack</th>
+                                <th scope="col" class="num">Chance of a hit</th>
                                 <th scope="col" class="num"
                                     title="1 / the chance of a hit — how many packs, on average, before this one gives you something for the deck">
-                                    packs per new card
+                                    Packs per new card
                                 </th>
-                                <th scope="col" class="num">cards it can give</th>
+                                <th scope="col" class="num">Cards it can give</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -280,7 +280,7 @@ else
                                         <span class="small text-body-secondary">@standing.Set</span>
                                         @if (standing == _ranked[0])
                                         {
-                                            <span class="badge text-bg-primary ms-1">best</span>
+                                            <span class="badge text-bg-primary ms-1">Best</span>
                                         }
                                     </td>
                                     <td class="num">@standing.ChanceUseful.ToString("P1")</td>

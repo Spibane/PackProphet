@@ -295,7 +295,7 @@ public class GridKeyboardTests : AppHost
         await ReadyAsync();
         var grid = Grid(Cards(6));
 
-        var button = grid.FindAll("button").Single(b => b.TextContent.Trim() == "keyboard");
+        var button = grid.FindAll("button").Single(b => b.TextContent.Trim() == "Keyboard");
 
         // The keys are on it, because a control that moves the cursor without saying what to press
         // next has moved the problem rather than solved it.

@@ -48,7 +48,7 @@ public static class Fmt
     public const string Never = "never";
 
     /// <summary>Where the point is that opening packs is not a route to this card at all.</summary>
-    public const string NoPackRoute = "no pack has it";
+    public const string NoPackRoute = "No pack has it";
 
     /// <summary>
     /// A duration, at the coarsest useful precision. Days past a day, since "2.4 days" is what a

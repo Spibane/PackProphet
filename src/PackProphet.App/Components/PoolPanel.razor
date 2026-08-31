@@ -42,15 +42,15 @@
     <div class="pool-figures">
         <div class="fig">
             <span class="v">@Outlook.Balance</span>
-            <span class="l">available now</span>
+            <span class="l">Available Now</span>
         </div>
         <div class="fig">
             <span class="v">@Outlook.FromHourglasses</span>
-            <span class="l">more from hourglasses</span>
+            <span class="l">More from Hourglasses</span>
         </div>
         <div class="fig">
             <span class="v">@Outlook.Reachable</span>
-            <span class="l">spendable if you cash them</span>
+            <span class="l">Spendable if you cash them</span>
         </div>
     </div>
 
@@ -72,7 +72,7 @@
 
     <div class="pool-entry">
         <label class="small">
-            balance
+            Balance
             <select class="form-select form-select-sm" @onchange="OnBalance">
                 @for (var n = 0; n <= Outlook.Cap; n++)
                 {
@@ -81,11 +81,11 @@
             </select>
         </label>
         <label class="small">
-            hourglasses
+            Hourglasses
             <input type="number" min="0" class="form-control form-control-sm"
                    value="@_hourglasses" @onchange="OnHourglasses" />
         </label>
-        <button class="btn btn-sm btn-primary" @onclick="Save">save</button>
+        <button class="btn btn-sm btn-primary" @onclick="Save">Save</button>
     </div>
 </div>
 

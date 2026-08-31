@@ -93,6 +93,6 @@ public class LogPackTests : AppHost
 
         var head = page.WaitForElement(".page-head.sticky-head");
         Assert.Contains("sticky-head", head.GetAttribute("class"));
-        Assert.Contains("add 0 to collection", head.TextContent);
+        Assert.Contains("Add 0 to collection", head.TextContent);
     }
 }

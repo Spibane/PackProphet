@@ -15,7 +15,7 @@ else
     <div class="page-head">
         <a class="btn btn-sm btn-outline-secondary" href="settings">&larr; settings</a>
         <h1 class="title">Import and export</h1>
-        <span class="subtitle">move a collection between trackers</span>
+        <span class="subtitle">Move a collection between trackers</span>
     </div>
 
     <PageShell Measure="PageShell.Width.Form">
@@ -31,7 +31,7 @@ else
         @if (_preview is null)
         {
             <InputFile class="form-control mb-2" OnChange="Read" accept=".csv,.txt,.xlsx,text/csv"
-                       disabled="@_reading" aria-label="collection export file" />
+                       disabled="@_reading" aria-label="Collection export file" />
 
             @if (_reading)
             {
@@ -126,7 +126,7 @@ else
                     <ul class="mb-0 ps-3">
                         @foreach (var problem in p.Problems.Take(ProblemsShown))
                         {
-                            <li>line @problem.Line: @Describe(problem)</li>
+                            <li>Line @problem.Line: @Describe(problem)</li>
                         }
                         @if (p.Problems.Count > ProblemsShown)
                         {
@@ -201,7 +201,7 @@ else
                         @ApplyLabel
                     </button>
                     <button class="btn btn-outline-secondary" @onclick="Discard">
-                        pick a different file
+                        Pick a different file
                     </button>
                 </div>
 
@@ -217,7 +217,7 @@ else
             else
             {
                 <button class="btn btn-outline-secondary" @onclick="Discard">
-                    pick a different file
+                    Pick a different file
                 </button>
             }
         }
@@ -242,7 +242,7 @@ else
 
         <button class="btn btn-outline-primary btn-sm" @onclick="Download"
                 disabled="@(!Session.Ready)">
-            download @Session.Profile.Name as CSV
+            Download @Session.Profile.Name as CSV
         </button>
 
         @if (_exported is not null)
@@ -258,11 +258,11 @@ else
                     @if (Session.CanUndo)
                     {
                         <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoImport">
-                            undo that
+                            Undo That
                         </button>
                     }
                     <a class="btn btn-sm btn-outline-primary py-0" href="collection">
-                        see the collection
+                        See the Collection
                     </a>
                 </div>
             </Notice>
@@ -320,9 +320,9 @@ else
 
     private string ApplyLabel => _destination switch
     {
-        Destination.Merge => "merge in",
-        Destination.Replace => $"replace {Session.Profile.Name}",
-        _ => "create the collection",
+        Destination.Merge => "Merge In",
+        Destination.Replace => $"Replace {Session.Profile.Name}",
+        _ => "Create the Collection",
     };
 
     private static string Describe(ImportProblem problem) => problem.Kind switch

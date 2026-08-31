@@ -15,8 +15,8 @@ else
         <span class="subtitle">@Session.Profile.Decks.Count saved</span>
 
         <span class="actions">
-            <a class="btn btn-sm btn-outline-primary" href="decks/import">import</a>
-            <a class="btn btn-sm btn-primary" href="decks/new">new deck</a>
+            <a class="btn btn-sm btn-outline-primary" href="decks/import">Import</a>
+            <a class="btn btn-sm btn-primary" href="decks/new">New Deck</a>
         </span>
     </div>
 
@@ -29,10 +29,10 @@ else
             <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
                 <button class="btn @(Session.DeckGrid ? "btn-outline-secondary" : "btn-secondary")"
                         @onclick="() => Session.SetDeckGrid(!Session.DeckGrid)"
-                        aria-pressed="@Aria.Flag(!Session.DeckGrid)" title="A table, for comparing">list</button>
+                        aria-pressed="@Aria.Flag(!Session.DeckGrid)" title="A table, for comparing">List</button>
                 <button class="btn @(Session.DeckGrid ? "btn-secondary" : "btn-outline-secondary")"
                         @onclick="() => Session.SetDeckGrid(!Session.DeckGrid)"
-                        aria-pressed="@Aria.Flag(Session.DeckGrid)" title="Cards, for recognising">grid</button>
+                        aria-pressed="@Aria.Flag(Session.DeckGrid)" title="Cards, for recognising">Grid</button>
             </div>
         </div>
     }
@@ -46,14 +46,14 @@ else
         {
             <EmptyState>
                 No decks yet. <a href="decks/import">Import one</a> from the game's share code,
-                or <a href="decks/new">build one from scratch</a>.
+                or <a href="decks/new">Build one from scratch</a>.
             </EmptyState>
         }
         else if (Session.DeckGrid)
         {
             <h2 class="h6">
                 Your decks
-                <span class="small text-body-secondary fw-normal">closest to buildable first</span>
+                <span class="small text-body-secondary fw-normal">Closest to buildable first</span>
             </h2>
 
             <div class="showcase-grid">
@@ -67,7 +67,7 @@ else
                            aria-label="Open @deck.Name">
                             @if (deck.Face is null)
                             {
-                                <span class="empty">empty deck</span>
+                                <span class="empty">Empty Deck</span>
                             }
                         </a>
 
@@ -85,11 +85,11 @@ else
                             <div class="badges">
                                 @if (deck.Cards == 0)
                                 {
-                                    <span class="badge text-bg-secondary">empty</span>
+                                    <span class="badge text-bg-secondary">Empty</span>
                                 }
                                 else if (deck.Missing == 0)
                                 {
-                                    <span class="badge text-bg-success">buildable</span>
+                                    <span class="badge text-bg-success">Buildable</span>
                                 }
                                 else
                                 {
@@ -106,7 +106,7 @@ else
                                 {
                                     <span class="badge text-bg-secondary"
                                           title="Some rules could not be checked — card detail is missing for this set">
-                                        unverified
+                                        Unverified
                                     </span>
                                 }
                             </div>
@@ -125,11 +125,11 @@ else
                             }
 
                             <div class="actions">
-                                <a class="btn btn-sm btn-outline-secondary" href="decks/@deck.Id">open</a>
+                                <a class="btn btn-sm btn-outline-secondary" href="decks/@deck.Id">Open</a>
                                 <button class="btn btn-sm @(_confirming == deck.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(deck.Id)" aria-live="polite"
                                         title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete this deck")">
-                                    @(_confirming == deck.Id ? "really?" : "delete")
+                                    @(_confirming == deck.Id ? "Really?" : "Delete")
                                 </button>
                             </div>
                         </div>
@@ -143,16 +143,16 @@ else
                finished lead. *@
             <h2 class="h6">
                 Your decks
-                <span class="small text-body-secondary fw-normal">closest to buildable first</span>
+                <span class="small text-body-secondary fw-normal">Closest to buildable first</span>
             </h2>
             <DataTable Label="Saved decks">
                 <thead>
                     <tr>
-                        <th scope="col">deck</th>
-                        <th scope="col" class="num">cards</th>
-                        <th scope="col" class="num">missing</th>
-                        <th scope="col">legality</th>
-                        <th scope="col"><span class="visually-hidden">actions</span></th>
+                        <th scope="col">Deck</th>
+                        <th scope="col" class="num">Cards</th>
+                        <th scope="col" class="num">Missing</th>
+                        <th scope="col">Legality</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -170,7 +170,7 @@ else
                                 }
                                 else if (deck.Missing == 0)
                                 {
-                                    <span class="text-success-emphasis fw-semibold">buildable</span>
+                                    <span class="text-success-emphasis fw-semibold">Buildable</span>
                                 }
                                 else
                                 {
@@ -192,22 +192,22 @@ else
                                 {
                                     <span class="badge text-bg-secondary"
                                           title="Some rules could not be checked — card detail is missing for this set">
-                                        unverified
+                                        Unverified
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="badge text-bg-success">legal</span>
+                                    <span class="badge text-bg-success">Legal</span>
                                 }
                             </td>
                             <td class="text-end text-nowrap">
-                                <a class="btn btn-sm btn-outline-secondary" href="decks/@deck.Id">open</a>
+                                <a class="btn btn-sm btn-outline-secondary" href="decks/@deck.Id">Open</a>
                                 @* Two taps, and the confirmation is scoped to this row: a shared
                                    flag would arm every delete button at once. *@
                                 <button class="btn btn-sm @(_confirming == deck.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(deck.Id)" aria-live="polite"
                                         title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete this deck")">
-                                    @(_confirming == deck.Id ? "really?" : "delete")
+                                    @(_confirming == deck.Id ? "Really?" : "Delete")
                                 </button>
                             </td>
                         </tr>

@@ -142,7 +142,7 @@ public class ShotImportHostingTests : AppHost
         // The failure names its own file, because "that file could not be read" beside two pictures
         // does not say which one to retake.
         Assert.Contains("one.png", page.Markup);
-        Assert.Equal("open Mewtwo with these 5 cards",
+        Assert.Equal("Open Mewtwo with these 5 cards",
                      Collapse(page.Find("button.btn-primary").TextContent));
     }
 
@@ -156,7 +156,7 @@ public class ShotImportHostingTests : AppHost
 
         var page = RenderComponent<LogPack>();
         Upload(page);
-        Assert.Contains("open Mewtwo with these", Collapse(page.Markup));
+        Assert.Contains("Open Mewtwo with these", Collapse(page.Markup));
 
         page.FindComponent<InputFile>().UploadFiles(
             Enumerable.Range(0, 21)
@@ -164,7 +164,7 @@ public class ShotImportHostingTests : AppHost
                       .ToArray());
 
         Assert.Contains("more than 20 pictures", page.Markup);
-        Assert.Contains("open Mewtwo with these", Collapse(page.Markup));
+        Assert.Contains("Open Mewtwo with these", Collapse(page.Markup));
     }
 
     [Fact]
@@ -199,7 +199,7 @@ public class ShotImportHostingTests : AppHost
         // Named, not asked. All five are Mewtwo-exclusive, so the picture settles it.
         // Whitespace collapsed: the label spans several lines in the markup.
         var label = Collapse(page.Find("button.btn-primary").TextContent);
-        Assert.Equal("open Mewtwo with these 5 cards", label);
+        Assert.Equal("Open Mewtwo with these 5 cards", label);
     }
 
     [Fact]

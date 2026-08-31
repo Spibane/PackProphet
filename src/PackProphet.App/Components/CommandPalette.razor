@@ -56,9 +56,9 @@
         }
 
         <div class="palette-foot">
-            <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> move</span>
-            <span><kbd>enter</kbd> go</span>
-            <span><kbd>esc</kbd> close</span>
+            <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> Move</span>
+            <span><kbd>enter</kbd> Go</span>
+            <span><kbd>esc</kbd> Close</span>
         </div>
     </dialog>
 }
@@ -216,54 +216,54 @@
 
     private static readonly (string Label, string Href, string Sub)[] PageList =
     [
-        ("Log a pack", "log", "record what you just opened"),
-        ("Collection", "collection", "browse and mark what you own"),
-        ("Which pack", "packs", "the ranking"),
-        ("Decks", "decks", "saved decks and the builder"),
-        ("Chase lists", "chase", "cards you want, for any reason"),
-        ("Wonder Pick", "wonder", "take it or skip it"),
-        ("Trades", "trades", "which trade deserves your next stamina"),
-        ("Wishlist", "board", "what to put in the game's 20 trade slots"),
-        ("Resources", "resources", "stamina, hourglasses and shinedust"),
-        ("History", "history", "what you have opened"),
-        ("Settings", "settings", "targets, backup, appearance"),
+        ("Log", "log", "Log a pack you just opened"),
+        ("Collection", "collection", "Browse and mark what you own"),
+        ("Packs", "packs", "Which pack to open next — the ranking"),
+        ("Decks", "decks", "Saved decks and the builder"),
+        ("Chases", "chase", "Your chase lists — cards you want, for any reason"),
+        ("Wonder Pick", "wonder", "Take it or skip it"),
+        ("Trades", "trades", "Which trade deserves your next stamina"),
+        ("Wishlist", "board", "What to put in the game's 20 trade slots"),
+        ("Resources", "resources", "Stamina, hourglasses and shinedust"),
+        ("History", "history", "What you have opened"),
+        ("Settings", "settings", "Targets, backup, appearance"),
     ];
 
     private IEnumerable<Item> Pages(string q) =>
         PageList.Where(p => Matches(p.Label, q) || Matches(p.Sub, q))
-                .Select(p => new Item("page", p.Label, p.Sub, p.Href));
+                .Select(p => new Item("Page", p.Label, p.Sub, p.Href));
 
     private IEnumerable<Item> Actions(string q)
     {
         var actions = new List<Item>
         {
-            new("action", "Import a deck from a screenshot", "scan the in-game code", "decks/import"),
+            new("Action", "Import a deck from a screenshot", "Scan the in-game code", "decks/import"),
             // Three imports in three places, because the same five cards mean different things
             // depending on where you are. Named by the in-game screen rather than by what the app
             // does with it, since the screen is what the user is looking at.
-            new("action", "Import cards from a My Cards screenshot", "read your card list off the game",
+            new("Action", "Import cards from a My Cards screenshot", "Read your card list off the game",
                 "collection/screenshot"),
-            new("action", "Log a pack from a screenshot", "reads the pack from the cards", "log"),
-            new("action", "Read a Wonder Pick from a screenshot", "appraise the offer", "wonder"),
-            new("action", "Import a collection from another tracker", "read a CSV export",
+            new("Action", "Log a pack from a screenshot", "Reads the pack from the cards", "log"),
+            new("Action", "Read a Wonder Pick from a screenshot", "Appraise the offer", "wonder"),
+            new("Action", "Import a collection from another tracker", "Read a CSV export",
                 "collection/import"),
-            new("action", "Export this collection as CSV", "for a spreadsheet or another tracker",
+            new("Action", "Export this collection as CSV", "For a spreadsheet or another tracker",
                 "collection/export"),
-            new("action", "New deck", "build one by hand", "decks/new"),
-            new("action", "New chase list", null, null, () => Nav.NavigateTo($"chase/{Session.CreateChaseList()}")),
-            new("action", $"Theme: {Session.Theme}", "switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),
+            new("Action", "New deck", "Build one by hand", "decks/new"),
+            new("Action", "New chase list", null, null, () => Nav.NavigateTo($"chase/{Session.CreateChaseList()}")),
+            new("Action", $"Theme: {ThemeName(Session.Theme)}", "Switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),
         };
 
         // Switching collections belongs here: with two or three alts it is a frequent move, and
         // the palette reaches it without the top bar growing a menu.
         if (Session.MultipleProfiles)
         {
-            actions.Add(new("action", "Compare collections", "trades you could make with yourself", "compare"));
+            actions.Add(new("Action", "Compare collections", "Trades you could make with yourself", "compare"));
 
             foreach (var profile in Session.Profiles.Where(x => x.Id != Session.ActiveProfileId))
             {
                 var id = profile.Id;
-                actions.Add(new("action", $"Switch to {profile.Name}",
+                actions.Add(new("Action", $"Switch to {profile.Name}",
                                 $"{profile.Collection.Values.Sum()} cards", null,
                                 () => Session.SwitchProfile(id)));
             }
@@ -273,16 +273,23 @@
         // the nav, so it is discoverable.
         if (Focus.Available)
         {
-            actions.Add(new("action", "Jump to the cards",
-                            "keyboard entry: arrows to move, digits to set a count", null,
+            actions.Add(new("Action", "Jump to the cards",
+                            "Keyboard entry: arrows to move, digits to set a count", null,
                             () => _ = Focus.FocusAsync()));
         }
 
-        if (Session.CanUndo) actions.Add(new("action", "Undo", "ctrl+z, anywhere", null, Session.Undo));
-        if (Session.CanRedo) actions.Add(new("action", "Redo", "ctrl+shift+z", null, Session.Redo));
+        if (Session.CanUndo) actions.Add(new("Action", "Undo", "Ctrl+Z, anywhere", null, Session.Undo));
+        if (Session.CanRedo) actions.Add(new("Action", "Redo", "Ctrl+Shift+Z", null, Session.Redo));
 
         return actions.Where(a => Matches(a.Label, q) || Matches(a.Sub ?? "", q));
     }
+
+    private static string ThemeName(string theme) => theme switch
+    {
+        "light" => "Light",
+        "dark" => "Dark",
+        _ => "Auto"
+    };
 
     private string NextTheme() => Session.Theme switch
     {
@@ -296,23 +303,23 @@
             .Where(set => Matches(set, q) || Matches(Session.Sets.DisplayName(set), q))
             .OrderBy(set => set, StringComparer.Ordinal)
             .Take(MaxPerGroup)
-            .Select(set => new Item("set", $"{set} — {Session.Sets.DisplayName(set)}",
+            .Select(set => new Item("Set", $"{set} — {Session.Sets.DisplayName(set)}",
                 $"{Session.Index.BySet[set].Count} cards", $"collection?set={set}"));
 
     private IEnumerable<Item> Decks(string q) =>
         Session.Profile.Decks
             .Where(d => Matches(d.Name, q))
             .Take(MaxPerGroup)
-            .Select(d => new Item("deck", d.Name, Sub(Session.MissingCount(d)), $"decks/{d.Id}"));
+            .Select(d => new Item("Deck", d.Name, Sub(Session.MissingCount(d)), $"decks/{d.Id}"));
 
     private static string Sub(int missing) =>
-        missing == 0 ? "buildable" : $"{missing} card(s) missing";
+        missing == 0 ? "Buildable" : $"{missing} card(s) missing";
 
     private IEnumerable<Item> ChaseListItems(string q) =>
         Session.ChaseLists
             .Where(w => Matches(w.Name, q))
             .Take(MaxPerGroup)
-            .Select(w => new Item("chase list", w.Name,
+            .Select(w => new Item("Chase list", w.Name,
                 $"{Session.MissingInChaseList(w)} of {Session.WantedTotal(w)} still missing",
                 $"chase/{w.Id}"));
 
@@ -328,13 +335,13 @@
             .OrderBy(c => c.Name.Length)           // an exact-ish match first
             .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
             .Take(8)
-            .Select(c => new Item("card", c.Name,
+            .Select(c => new Item("Card", c.Name,
                 $"{c.Set} {c.Number} · {Owned(c)}", $"card/{c.Key}", null, c.ArtUrl));
 
     private string Owned(PocketCard card)
     {
         var n = Session.CountOf(card);
-        return n == 0 ? "not owned" : $"you own {n}";
+        return n == 0 ? "Not owned" : $"You own {n}";
     }
 
     public async ValueTask DisposeAsync()

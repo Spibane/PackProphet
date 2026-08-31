@@ -13,7 +13,7 @@ else
 {
     <div class="page-head">
         <h1 class="title">Which pack</h1>
-        <span class="subtitle">ranked for @ScopeLabel</span>
+        <span class="subtitle">Ranked for @ScopeLabel</span>
     </div>
 
     <div class="page-tools">
@@ -21,7 +21,7 @@ else
            each changes what the ranking is of, so every figure below means something different
            afterwards. *@
         @* Grouped by series so this stays usable as sets accumulate. *@
-        <ScopePicker Label="What to rank packs against" Everything="everything"
+        <ScopePicker Label="What to rank packs against" Everything="Everything"
                      Grouped="true" Merged="true" Scope="@_scope" OnScope="OnScope" />
 
         @* No premium switch here. It is a subscription -- set once, changed almost never -- and a
@@ -44,11 +44,11 @@ else
             <summary>
                 @if (IsChaseScope)
                 {
-                    <span class="cur">a chase list decides what counts</span>
+                    <span class="cur">A chase list decides what counts</span>
                 }
                 else
                 {
-                    <span class="ttl">collecting</span>
+                    <span class="ttl">Collecting</span>
                     <span class="cur">@PlanSummary</span>
                     @* Only when it is not the default. "every set" is what a plan does unless told
                        otherwise, so saying it spends a line on a phone reporting the absence of a
@@ -67,10 +67,10 @@ else
                 @if (_pending)
                 {
                     <span class="chip-pending" title="Applying shortly — keep tapping to make more changes">
-                        updating&hellip;
+                        Updating&hellip;
                     </span>
                 }
-                <span class="fold-hint">change</span>
+                <span class="fold-hint">Change</span>
             </summary>
 
             @* The rarity chips edit the completion plan, which a chase list target does not consult,
@@ -91,14 +91,14 @@ else
                     {
                         <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
                         <button class="chip-link" @onclick="ClearOverride"
-                                title="Follow the default plan again">use the default here</button>
+                                title="Follow the default plan again">Use the default here</button>
                     }
                     else if (ScopedSet is not null)
                     {
                         <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
                         <button class="chip-link" @onclick="StartOverride"
                                 title="Give @ScopedSet its own plan, starting from the default">
-                            give @ScopedSet its own
+                            Give @ScopedSet its own
                         </button>
                     }
                     else
@@ -119,7 +119,7 @@ else
             @if (Session.LimitedPacks.Count > 0)
             {
                 <span class="avail">
-                    <span class="ttl">limited-time</span>
+                    <span class="ttl">Limited-time</span>
                     @foreach (var pack in Session.LimitedPacks)
                     {
                         var on = Session.IsLimitedPackAvailable(pack);
@@ -159,14 +159,14 @@ else
             @if (!IsChaseScope)
             {
                 <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@Aria.Flag(_advisorOpen)"
-                        @onclick="ToggleAdvisor">cost per rarity</button>
+                        @onclick="ToggleAdvisor">Cost per Rarity</button>
             }
             <button class="btn btn-sm @Toggled(_batchOpen)" aria-pressed="@Aria.Flag(_batchOpen)"
-                    @onclick="ToggleBatch">buying @GameRules.PacksPerBatch at once</button>
+                    @onclick="ToggleBatch">Buying @GameRules.PacksPerBatch at once</button>
             <button class="btn btn-sm @Toggled(_allocateOpen)" aria-pressed="@Aria.Flag(_allocateOpen)"
-                    @onclick="ToggleAllocate">splitting a budget</button>
+                    @onclick="ToggleAllocate">Splitting a Budget</button>
             <button class="btn btn-sm @Toggled(_pointsOpen)" aria-pressed="@Aria.Flag(_pointsOpen)"
-                    @onclick="TogglePoints">pack points</button>
+                    @onclick="TogglePoints">Pack Points</button>
         </div>
 
         @if (_advisorOpen && !IsChaseScope)
@@ -174,7 +174,7 @@ else
             <div class="mb-3">
                 <DataTable Label="Cost per rarity, at one copy and two" Fit="true">
                     <thead>
-                        <tr><th scope="col">rarity</th><th scope="col" class="num">1 copy</th><th scope="col" class="num">2 copies</th></tr>
+                        <tr><th scope="col">Rarity</th><th scope="col" class="num">1 copy</th><th scope="col" class="num">2 copies</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var (rung, one, two) in _advisor)
@@ -217,9 +217,9 @@ else
                         <thead>
                             <tr>
                                 <th scope="col">@GameRules.PacksPerBatch packs of</th>
-                                <th scope="col" class="num">new cards expected</th>
-                                <th scope="col" class="num">chance of nothing new</th>
-                                <th scope="col" class="num">against the best</th>
+                                <th scope="col" class="num">New Cards Expected</th>
+                                <th scope="col" class="num">Chance of nothing new</th>
+                                <th scope="col" class="num">Against the Best</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -242,7 +242,7 @@ else
                                     <td class="num">
                                         @if (b == _batches[0])
                                         {
-                                            <span class="fw-semibold">best</span>
+                                            <span class="fw-semibold">Best</span>
                                         }
                                         else
                                         {
@@ -272,7 +272,7 @@ else
                 </p>
 
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <label for="allocate-budget" class="small text-body-secondary">packs</label>
+                    <label for="allocate-budget" class="small text-body-secondary">Packs</label>
                     <input id="allocate-budget" type="number" min="1" max="1000"
                            class="form-control form-control-sm w-auto"
                            @bind="_allocateBudget" @bind:after="BuildAllocation" />
@@ -289,8 +289,8 @@ else
                     <DataTable Label="Packs to buy" Fit="true">
                         <thead>
                             <tr>
-                                <th scope="col">pack</th>
-                                <th scope="col" class="num">packs to buy</th>
+                                <th scope="col">Pack</th>
+                                <th scope="col" class="num">Packs to Buy</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -357,10 +357,10 @@ else
                 <DataTable Label="Pack point balances per set" Fit="true">
                     <thead>
                         <tr>
-                            <th scope="col">set</th>
-                            <th scope="col" class="num">balance</th>
-                            <th scope="col" class="num">packs to cap</th>
-                            <th scope="col">could buy now</th>
+                            <th scope="col">Set</th>
+                            <th scope="col" class="num">Balance</th>
+                            <th scope="col" class="num">Packs to Cap</th>
+                            <th scope="col">Could Buy Now</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -382,7 +382,7 @@ else
                                 <td class="small">
                                     @if (row.AffordableNow.Count == 0)
                                     {
-                                        <span class="text-body-tertiary">nothing you still need</span>
+                                        <span class="text-body-tertiary">Nothing you still need</span>
                                     }
                                     else
                                     {
@@ -414,10 +414,10 @@ else
                     <DataTable Label="Where points are worth spending" Fit="true">
                         <thead>
                             <tr>
-                                <th scope="col">card</th>
-                                <th scope="col" class="num">pull</th>
-                                <th scope="col" class="num">points</th>
-                                <th scope="col" class="num">packs saved per pack of points</th>
+                                <th scope="col">Card</th>
+                                <th scope="col" class="num">Pull</th>
+                                <th scope="col" class="num">Points</th>
+                                <th scope="col" class="num">Packs saved per pack of points</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -450,15 +450,15 @@ else
         <DataTable Label="Packs ranked for your target" Class="pack-table" Bleed="true">
             <thead>
                 <tr>
-                    <th scope="col" data-pri="1">pack</th>
-                    <th scope="col" class="num" data-pri="1">chance of a hit</th>
-                    <th scope="col" class="num" data-pri="2">packs per new card</th>
-                    <th scope="col" class="num" data-pri="3">to finish its share</th>
-                    <th scope="col" class="num" data-pri="3">cards it can give</th>
+                    <th scope="col" data-pri="1">Pack</th>
+                    <th scope="col" class="num" data-pri="1">Chance of a hit</th>
+                    <th scope="col" class="num" data-pri="2">Packs per new card</th>
+                    <th scope="col" class="num" data-pri="3">To finish its share</th>
+                    <th scope="col" class="num" data-pri="3">Cards it can give</th>
                     @* The action, in its own column rather than among the badges in the name cell:
                        it sits in the same place on every row, and the name cell already carries up
                        to four badges. *@
-                    <th scope="col"><span class="visually-hidden">actions</span></th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -490,7 +490,7 @@ else
                             @if (row.Best)
                             {
                                 <span class="badge text-bg-primary ms-1"
-                                      title="Best pack for @ScopeLabel right now">open this</span>
+                                      title="Best pack for @ScopeLabel right now">Open This</span>
                             }
                             @if (row.Mark is { Length: > 0 } mark)
                             {
@@ -502,7 +502,7 @@ else
                             {
                                 <span class="badge text-bg-secondary ms-1"
                                       title="@row.Set has no published pull rates, so these odds use @donor's distributions applied to @row.Set's own contents">
-                                    rates assumed from @donor
+                                    Rates assumed from @donor
                                 </span>
                             }
                             @* Offered where the problem is visible. A released set with no
@@ -515,14 +515,14 @@ else
                                         @onclick:stopPropagation="true"
                                         @onclick="() => Assume(row.Set, standard)"
                                         title="Price @row.Set using @standard's pull rates, applied to @row.Set's own card counts">
-                                    estimate with @standard's rates
+                                    Estimate with @standard's rates
                                 </button>
                             }
                             @if (row.Set == "A4b")
                             {
                                 <span class="badge text-bg-info ms-1"
                                       title="Every Deluxe pack yields a 4-diamond card">
-                                    guaranteed 4&#9670;
+                                    Guaranteed 4&#9670;
                                 </span>
                             }
                         </td>
@@ -541,7 +541,7 @@ else
                             <a class="btn btn-sm btn-outline-secondary py-0"
                                href="@LogHref(row.PackKey)"
                                @onclick:stopPropagation="true"
-                               title="Log a @row.PackName pack you just opened">log</a>
+                               title="Log a @row.PackName pack you just opened">Log</a>
                         </td>
                     </tr>
 
@@ -577,7 +577,7 @@ else
                                     @if (slots.Count > 1)
                                     {
                                         <div class="slot-odds">
-                                            <span class="ttl">where the chance is</span>
+                                            <span class="ttl">Where the chance is</span>
                                             @foreach (var slot in slots)
                                             {
                                                 <span class="slot @(slot.Chance <= 0 ? "none" : "")">
@@ -623,11 +623,11 @@ else
            control only reachable by scrolling past all of them may as well not exist. *@
         <div class="summary">
             <div class="stat">
-                <span class="label">cards still needed</span>
+                <span class="label">Cards Still Needed</span>
                 <span class="value">@_outstanding</span>
             </div>
             <div class="stat">
-                <span class="label">expected packs</span>
+                <span class="label">Expected Packs</span>
                 <span class="value">@Fmt(_bestCase)</span>
                 <span class="sub">
                     @* Always say what the number covers. When a pack is unavailable its exclusive
@@ -639,7 +639,7 @@ else
             @if (Session.AssumedRates.Count > 0)
             {
                 <div class="stat">
-                    <span class="label">assumed rates</span>
+                    <span class="label">Assumed Rates</span>
                     <span class="value">@Session.AssumedRates.Count set(s)</span>
                     <span class="sub">
                         @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
@@ -647,7 +647,7 @@ else
                             <span class="d-block">
                                 @set priced from @donor
                                 <button class="btn btn-sm btn-link p-0 align-baseline"
-                                        @onclick="() => StopAssuming(set)">stop</button>
+                                        @onclick="() => StopAssuming(set)">Stop</button>
                             </span>
                         }
                     </span>
@@ -655,7 +655,7 @@ else
             }
 
             <div class="stat">
-                <span class="label">time at your rate</span>
+                <span class="label">Time at your rate</span>
                 <span class="value">@Days(_bestCase, Premium)</span>
                 <span class="sub">@RateNote()</span>
             </div>
@@ -825,7 +825,7 @@ else
             {
                 parts.Add(Session.FoilCopies > 1 ? $"foils\u00d7{Session.FoilCopies}" : "foils");
             }
-            return parts.Count == 0 ? "nothing" : string.Join(" ", parts);
+            return parts.Count == 0 ? "Nothing" : string.Join(" ", parts);
         }
     }
 
@@ -1153,7 +1153,7 @@ else
 
             // Off sale: real numbers, because we know its rates — it just cannot be bought today.
             .. all.Where(s => unavailable.Contains(s.PackKey))
-                  .Select(s => new PackRow(s.PackKey, s, false, "off sale",
+                  .Select(s => new PackRow(s.PackKey, s, false, "Off Sale",
                       $"{s.PackName} is limited-time and you have marked it unavailable, so it is left out of the estimate", 0)),
 
             // No published rates — but WHY matters, so the badge distinguishes a set that is out
@@ -1162,7 +1162,7 @@ else
             // unpriced.
             .. UnratedPacksServing(outstanding).Select(x => new PackRow(
                 x.PackKey, null, false,
-                x.Released ? "rates unknown" : "not out yet",
+                x.Released ? "Rates Unknown" : "Not Out Yet",
                 x.Released
                     ? $"{x.PackKey.Split(':')[0]} is out, but nobody has published its pull rates yet — the cards drop, the odds are simply unknown, so it cannot be counted in the estimate"
                     : $"{x.PackKey.Split(':')[0]} has not been released{(x.ReleasesOn is { } d ? $" — due {d:d MMM yyyy}" : "")}, so nothing in it can be pulled yet",

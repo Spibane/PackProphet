@@ -16,11 +16,11 @@ else
            whether spending one of a capped, slowly-refilling stamina on THIS offer beats holding
            it for the next one -- which depends on the offers you have been seeing, not on this
            one. That is the whole of what this page adds, so it is what the page says it does. *@
-        <span class="subtitle">is this offer worth a stamina, or is a better one coming?</span>
+        <span class="subtitle">Is this offer worth a stamina, or is a better one coming?</span>
         <span class="actions">
             @* The pool the whole decision turns on, entered here rather than on a settings page:
                the threshold changes with it, and at the cap the advice inverts. *@
-            <label class="small text-body-secondary" for="stamina">stamina</label>
+            <label class="small text-body-secondary" for="stamina">Stamina</label>
             <select id="stamina" class="form-select form-select-sm" style="width:5rem"
                     @onchange="OnStamina">
                 @for (var n = 0; n <= GameRules.StaminaCap; n++)
@@ -32,7 +32,7 @@ else
     </div>
 
     <div class="page-tools">
-        <ScopePicker Label="What counts as wanted" Everything="valued against everything I collect"
+        <ScopePicker Label="What counts as wanted" Everything="Valued against everything I collect"
                      Grouped="true" Scope="@_scope" OnScope="OnScope" />
 
         <span class="bar-sep" aria-hidden="true"></span>
@@ -41,7 +41,7 @@ else
             @if (_history.Count >= MinSamplesForThreshold)
             {
                 <span>
-                    holding out for <strong>@Fmt(_threshold)</strong> packs per stamina,
+                    Holding out for <strong>@Fmt(_threshold)</strong> packs per stamina,
                     from @_history.Count logged offer(s)
                     @if (Session.WonderStamina >= GameRules.StaminaCap)
                     {
@@ -120,7 +120,7 @@ else
                             @a.StaminaCost of @GameRules.StaminaCap stamina
                             @if (a.StaminaCost > Session.WonderStamina)
                             {
-                                <span class="badge text-bg-danger ms-1">you have @Session.WonderStamina</span>
+                                <span class="badge text-bg-danger ms-1">You have @Session.WonderStamina</span>
                             }
                         </span>
                     </div>
@@ -129,21 +129,21 @@ else
 
                 <div class="summary">
                     <div class="stat">
-                        <span class="label">expected value</span>
+                        <span class="label">Expected Value</span>
                         <span class="value">@Fmt(a.ExpectedValue) packs</span>
                         @* Averaged over the 1-in-5 rather than the best card in the offer. *@
-                        <span class="sub">averaged over the 1-in-@GameRules.WonderPickCardsShown</span>
+                        <span class="sub">Averaged over the 1-in-@GameRules.WonderPickCardsShown</span>
                     </div>
                     <div class="stat">
-                        <span class="label">per stamina</span>
+                        <span class="label">Per Stamina</span>
                         <span class="value">@Fmt(a.ValuePerStamina)</span>
                         @* Never called a price. Wonder Stamina and Pack Hourglasses are separate
                            currencies with no exchange rate, so packs-per-stamina only ranks one
                            offer against another. *@
-                        <span class="sub">for comparing offers, not a price</span>
+                        <span class="sub">For comparing offers, not a price</span>
                     </div>
                     <div class="stat">
-                        <span class="label">the price is set by</span>
+                        <span class="label">The price is set by</span>
                         <span class="value">@(a.CostDriver.Length > 0 ? a.CostDriver : "—")</span>
                         <span class="sub">
                             @(a.CostDriverWanted ? "which you still want" : "which you do not need")
@@ -158,10 +158,10 @@ else
                 <DataTable Label="What each card in the offer contributes to its value">
                     <thead>
                         <tr>
-                            <th scope="col">card</th>
-                            <th scope="col" class="num" data-pri="3">you hold</th>
-                            <th scope="col" class="num" data-pri="3">still want</th>
-                            <th scope="col" class="num">worth to you</th>
+                            <th scope="col">Card</th>
+                            <th scope="col" class="num" data-pri="3">You Hold</th>
+                            <th scope="col" class="num" data-pri="3">Still Want</th>
+                            <th scope="col" class="num">Worth to You</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -188,7 +188,7 @@ else
                                     }
                                     else
                                     {
-                                        <span>nothing</span>
+                                        <span>Nothing</span>
                                     }
                                 </td>
                             </tr>
@@ -199,12 +199,12 @@ else
                 @* Logging is what makes the threshold work, so it is offered on every offer —
                    including the ones skipped. *@
                 <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="Clear">clear</button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="Clear">Clear</button>
 
                     <span class="ms-auto d-flex flex-wrap gap-2 align-items-center">
-                        <span class="small text-body-secondary">log it as</span>
+                        <span class="small text-body-secondary">Log It As</span>
                         <button class="btn btn-sm btn-outline-secondary" @onclick="LogSkipped">
-                            skipped
+                            Skipped
                         </button>
                         <select class="form-select form-select-sm" style="max-width:14rem"
                                 @bind="_received">
@@ -216,7 +216,7 @@ else
                         </select>
                         <button class="btn btn-sm btn-success" disabled="@(_received.Length == 0)"
                                 @onclick="LogTaken">
-                            took it
+                            Took It
                         </button>
                     </span>
                 </div>
@@ -245,7 +245,7 @@ else
                         </Intro>
                         <Actions Context="reading">
                             <button class="btn btn-primary" @onclick="() => AdoptShot(reading)">
-                                appraise these @reading.RecognisedCount
+                                Appraise these @reading.RecognisedCount
                                 @Text.Fmt.S(reading.RecognisedCount, "card")
                             </button>
                             @if (reading.RecognisedCount > GameRules.WonderPickCardsShown)

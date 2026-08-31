@@ -42,12 +42,12 @@
             <button class="btn @(Removing ? "btn-outline-secondary" : "btn-success")"
                     @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(!Removing)"
                     title="@(Removing ? $"Switch back to adding a copy per {Gesture}" : $"{GestureVerb} adds a copy")">
-                add
+                Add
             </button>
             <button class="btn @(Removing ? "btn-danger" : "btn-outline-secondary")"
                     @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
                     title="@(Removing ? $"{GestureVerb} removes a copy" : $"Switch to removing a copy per {Gesture}")">
-                remove
+                Remove
             </button>
         </div>
     }
@@ -66,7 +66,7 @@
         <span class="ms-auto small text-body-secondary grid-count">
             @if (saysDetail)
             {
-                <span class="text-body-tertiary">loading card detail&hellip;@(ShowCount || saysMode ? " · " : "")</span>
+                <span class="text-body-tertiary">Loading card detail&hellip;@(ShowCount || saysMode ? " · " : "")</span>
             }
             @if (saysMode)
             {
@@ -106,17 +106,17 @@
     <div class="btn-group btn-group-sm layout-switch" role="group" aria-label="Layout">
         <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
                 @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
-                title="Card images in a grid">grid</button>
+                title="Card images in a grid">Grid</button>
         <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
                 @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
                 title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
-            list
+            List
         </button>
     </div>
 </div>
 
 <details class="toolbar-more">
-    <summary>filters and layout</summary>
+    <summary>Filters and Layout</summary>
     <div class="toolbar-more-body">
     @if (Filters is not null)
     {
@@ -131,10 +131,10 @@
         <div class="btn-group btn-group-sm" role="group" aria-label="Row height">
             <button class="btn @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
                     @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
-                    title="Short rows — most cards per screen">compact</button>
+                    title="Short rows — most cards per screen">Compact</button>
             <button class="btn @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
                     @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
-                    title="Taller rows with attack and ability text shown in full">roomy</button>
+                    title="Taller rows with attack and ability text shown in full">Roomy</button>
         </div>
     }
 
@@ -147,7 +147,7 @@
        start typing counts. *@
     <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
             title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
-        keyboard
+        Keyboard
     </button>
 
     @if (ShowSweepToggle)
@@ -155,7 +155,7 @@
         <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
                 @onclick="ToggleSweep"
                 title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
-            sweep @(Sweeping ? "on" : "off")
+            Sweep @(Sweeping ? "On" : "Off")
         </button>
     }
     @ToolbarExtras
@@ -247,9 +247,9 @@
                column of hearts would be the only header in the row explaining an icon that already
                says it, but a column header with no accessible name at all is announced as nothing.
                The column does not sort, so it is not a button. *@
-            <span class="c-want" role="columnheader"><span class="visually-hidden">want</span></span>
-            <button class="c-nm" role="columnheader" @onclick="() => SortBy(ListSort.Name)">name @Caret(ListSort.Name)</button>
-            <button class="c-id" role="columnheader" @onclick="() => SortBy(ListSort.Number)">set @Caret(ListSort.Number)</button>
+            <span class="c-want" role="columnheader"><span class="visually-hidden">Want</span></span>
+            <button class="c-nm" role="columnheader" @onclick="() => SortBy(ListSort.Name)">Name @Caret(ListSort.Name)</button>
+            <button class="c-id" role="columnheader" @onclick="() => SortBy(ListSort.Number)">Set @Caret(ListSort.Number)</button>
             @* The column is a row of pips, so its heading is one too — a three-wedge key rather
                than a named type, which would read as a filter. The word joins it when there is
                room, and the accessible name is always "type" regardless of which are showing. *@
@@ -261,17 +261,17 @@
                         <path d="M8 8 L1.94 11.5 A7 7 0 0 1 8 1 Z" fill="#4d90d5" />
                     </svg>
                 </span>
-                <span class="ty-name" aria-hidden="true">type</span>
-                <span class="visually-hidden">type</span>@Caret(ListSort.Type)
+                <span class="ty-name" aria-hidden="true">Type</span>
+                <span class="visually-hidden">Type</span>@Caret(ListSort.Type)
             </button>
-            <button class="c-st" role="columnheader" @onclick="() => SortBy(ListSort.Stage)">stage @Caret(ListSort.Stage)</button>
-            <button class="c-rr" role="columnheader" @onclick="() => SortBy(ListSort.Rarity)">rarity @Caret(ListSort.Rarity)</button>
-            <button class="c-hp" role="columnheader" @onclick="() => SortBy(ListSort.Health)">hp @Caret(ListSort.Health)</button>
-            <span class="c-a1" role="columnheader">attack 1</span>
-            <span class="c-a2" role="columnheader">attack 2</span>
-            <span class="c-ab" role="columnheader">ability</span>
+            <button class="c-st" role="columnheader" @onclick="() => SortBy(ListSort.Stage)">Stage @Caret(ListSort.Stage)</button>
+            <button class="c-rr" role="columnheader" @onclick="() => SortBy(ListSort.Rarity)">Rarity @Caret(ListSort.Rarity)</button>
+            <button class="c-hp" role="columnheader" @onclick="() => SortBy(ListSort.Health)">HP @Caret(ListSort.Health)</button>
+            <span class="c-a1" role="columnheader">Attack 1</span>
+            <span class="c-a2" role="columnheader">Attack 2</span>
+            <span class="c-ab" role="columnheader">Ability</span>
             <span class="c-pick" role="columnheader"></span>
-            <button class="c-ct" role="columnheader" @onclick="() => SortBy(ListSort.Count)">have @Caret(ListSort.Count)</button>
+            <button class="c-ct" role="columnheader" @onclick="() => SortBy(ListSort.Count)">Have @Caret(ListSort.Count)</button>
             <span class="c-acts" role="columnheader"></span>
         </div>
 

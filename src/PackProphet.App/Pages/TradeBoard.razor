@@ -3,7 +3,7 @@
 @inject AppSession Session
 @inject UiBusy Busy
 
-<PageTitle>In-game wishlist · PackProphet</PageTitle>
+<PageTitle>Wishlist · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -12,12 +12,12 @@
 else
 {
     <div class="page-head">
-        <h1 class="title">In-game wishlist</h1>
+        <h1 class="title">Wishlist</h1>
         <span class="subtitle">@GameRules.TradeBoardSlots slots, seen by anyone looking to trade</span>
     </div>
 
     <div class="page-tools">
-        <ScopePicker Label="What the board should chase" Scope="@_scope" OnScope="OnScope" />
+        <ScopePicker Label="What the slots should work toward" Scope="@_scope" OnScope="OnScope" />
 
         @* Three knobs, each with its own visible label, wrapped this bar to three rows at 375px.
            The labels go into the options — a dropdown reading "4 slots kept for likely offers"

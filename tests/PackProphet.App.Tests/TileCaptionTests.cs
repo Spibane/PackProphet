@@ -160,11 +160,11 @@ public class TileCaptionTests : AppHost
     public async Task The_card_page_can_start_the_want_list_when_there_is_not_one()
     {
         // On a phone the tile hearts are gone, so this is the only route to wanting a card. "No
-        // wishlists yet" must not be the reason there is no way to say so.
+        // chase lists yet" must not be the reason there is no way to say so.
         await ReadyAsync();
         var card = Session.Index.All.First(c => !c.IsPromo);
 
-        Assert.Empty(Session.Wishlists);
+        Assert.Empty(Session.ChaseLists);
 
         var page = RenderComponent<CardDetail>(p => p.Add(c => c.Key, card.Key));
         var heart = page.Find(".want-heart");
@@ -172,7 +172,7 @@ public class TileCaptionTests : AppHost
 
         page.Find(".want-heart").Click();
 
-        var list = Assert.Single(Session.Wishlists);
+        var list = Assert.Single(Session.ChaseLists);
         Assert.Equal(AppSession.WantListName, list.Name);
         Assert.Equal(list.Id, Session.Profile.WantListId);
         page.WaitForAssertion(() => Assert.Equal("true", page.Find(".want-heart").GetAttribute("aria-pressed")));
@@ -187,7 +187,7 @@ public class TileCaptionTests : AppHost
         var card = Session.Index.All.First(c => !c.IsPromo);
 
         Session.ToggleWanted(card.OwnershipKey);
-        Session.CreateWishlist("Deck cards");
+        Session.CreateChaseList("Deck cards");
 
         var page = RenderComponent<CardDetail>(p => p.Add(c => c.Key, card.Key));
         var buttons = page.FindAll(".want-row .want-pair button").Select(b => b.TextContent.Trim()).ToArray();
@@ -219,19 +219,19 @@ public class TileCaptionTests : AppHost
 
         await grid.InvokeAsync(() => grid.Instance.KeyWant(1));
 
-        var list = Assert.Single(Session.Wishlists);
+        var list = Assert.Single(Session.ChaseLists);
         Assert.True(list.Wanted.ContainsKey(cards[1].OwnershipKey));
 
         // And back off again, like the button.
         await grid.InvokeAsync(() => grid.Instance.KeyWant(1));
-        Assert.Empty(Session.Wishlists[0].Wanted);
+        Assert.Empty(Session.ChaseLists[0].Wanted);
     }
 
     [Fact]
     public async Task The_want_key_does_nothing_where_there_is_no_list_to_write_to()
     {
         // The log screen passes no handler. A key that threw there would take the render loop with
-        // it, and one that silently created a wishlist would be worse.
+        // it, and one that silently created a chase list would be worse.
         await ReadyAsync();
 
         var grid = RenderComponent<CardGrid>(p =>
@@ -242,7 +242,7 @@ public class TileCaptionTests : AppHost
 
         await grid.InvokeAsync(() => grid.Instance.KeyWant(0));
 
-        Assert.Empty(Session.Wishlists);
+        Assert.Empty(Session.ChaseLists);
         Assert.DoesNotContain("want it", grid.Find(".kb-hint").TextContent);
     }
 

@@ -80,8 +80,8 @@
                 @oncontextmenu:stopPropagation="true"
                 tabindex="-1"
                 aria-pressed="@Aria.Flag(Wanted > 0)"
-                aria-label="@(Wanted > 0 ? $"On your wishlist: {Card.Name}" : $"Add {Card.Name} to your wishlist")"
-                title="@(Wanted > 0 ? "On your wishlist" : "Add to your wishlist")">
+                aria-label="@(Wanted > 0 ? $"On your chase list: {Card.Name}" : $"Add {Card.Name} to your chase list")"
+                title="@(Wanted > 0 ? "On your chase list" : "Add to your chase list")">
             @* Drawn, not typed: the heart characters that carry a filled and an outlined form are
                not in every system font, and the pair that are do not match each other's weight. *@
             <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">
@@ -164,11 +164,11 @@
     /// <summary>Raised on a long press. The page navigates; the tile only detects.</summary>
     [Parameter] public EventCallback<PocketCard> OnHold { get; set; }
 
-    /// <summary>Copies wanted on the wishlist the page is pointing at. Zero draws an empty heart.</summary>
+    /// <summary>Copies wanted on the chase list the page is pointing at. Zero draws an empty heart.</summary>
     [Parameter] public int Wanted { get; set; }
 
     /// <summary>
-    /// Toggle the card on that wishlist. Absent where the page has no wishlist to write to, which
+    /// Toggle the card on that chase list. Absent where the page has no chase list to write to, which
     /// is what hides the heart — the log-a-pack grid, for one, where a tap means something else
     /// entirely.
     /// </summary>

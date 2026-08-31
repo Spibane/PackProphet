@@ -525,13 +525,13 @@
     [Parameter] public Func<PocketCard, string>? GroupOf { get; set; }
 
     /// <summary>
-    /// Copies of a card wanted on the wishlist the page is currently pointing at. Optional: where
+    /// Copies of a card wanted on the chase list the page is currently pointing at. Optional: where
     /// it is absent no heart is drawn, which is right on a grid whose taps mean something other
     /// than owning — logging a pack.
     /// </summary>
     [Parameter] public Func<PocketCard, int>? WantedOf { get; set; }
 
-    /// <summary>Toggle a card on that wishlist. The page owns which list "that" is.</summary>
+    /// <summary>Toggle a card on that chase list. The page owns which list "that" is.</summary>
     [Parameter] public EventCallback<PocketCard> OnWant { get; set; }
 
     /// <summary>

@@ -33,8 +33,8 @@ else
            same fact — a rarity you want zero of is one you ignore — so a single control says
            both, and "two of each diamond, one of the stars" is a few taps. Tap to cycle
            none / 1 / 2. *@
-        @* The rarity chips edit the completion plan, which a wishlist target does not consult, so
-           under a wishlist scope they are hidden rather than shown doing nothing. *@
+        @* The rarity chips edit the completion plan, which a chase list target does not consult, so
+           under a chase list scope they are hidden rather than shown doing nothing. *@
         @* One panel for everything that sets what the ranking is OF, rather than a row of chips
            and a row of availability toggles above the ranking they configure. Eleven chips alone
            wrapped to three lines at 375px. The summary carries the settings themselves, so folding
@@ -42,9 +42,9 @@ else
            folds away. *@
         <details class="rarity-plan">
             <summary>
-                @if (IsWishScope)
+                @if (IsChaseScope)
                 {
-                    <span class="cur">a wishlist decides what counts</span>
+                    <span class="cur">a chase list decides what counts</span>
                 }
                 else
                 {
@@ -73,9 +73,9 @@ else
                 <span class="fold-hint">change</span>
             </summary>
 
-            @* The rarity chips edit the completion plan, which a wishlist target does not consult,
-               so under a wishlist scope they are hidden rather than shown doing nothing. *@
-            @if (!IsWishScope)
+            @* The rarity chips edit the completion plan, which a chase list target does not consult,
+               so under a chase list scope they are hidden rather than shown doing nothing. *@
+            @if (!IsChaseScope)
             {
                 <span class="rarity-chips">
                     <RarityChips Plan="Draft" OnCycle="CycleTier"
@@ -156,7 +156,7 @@ else
            one of them, and a button that says "hide" when the panel is shut and "show" when it is
            open has to be read to work out which state you are in. The pressed state says that. *@
         <div class="panel-toggles mb-3">
-            @if (!IsWishScope)
+            @if (!IsChaseScope)
             {
                 <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@Aria.Flag(_advisorOpen)"
                         @onclick="ToggleAdvisor">cost per rarity</button>
@@ -169,7 +169,7 @@ else
                     @onclick="TogglePoints">pack points</button>
         </div>
 
-        @if (_advisorOpen && !IsWishScope)
+        @if (_advisorOpen && !IsChaseScope)
         {
             <div class="mb-3">
                 <DataTable Label="Cost per rarity, at one copy and two" Fit="true">
@@ -700,10 +700,10 @@ else
     private string[] _sets = [];
 
     /// <summary>
-    /// Arriving from a wishlist's "rank packs for this list" button. A query parameter rather
+    /// Arriving from a chase list's "rank packs for this list" button. A query parameter rather
     /// than page state so the link is shareable and survives a reload.
     /// </summary>
-    [SupplyParameterFromQuery(Name = "wish")] public string? Wish { get; set; }
+    [SupplyParameterFromQuery(Name = "chase")] public string? Chase { get; set; }
 
     private IReadOnlyList<PackStanding> _ranked = [];
 
@@ -754,11 +754,11 @@ else
     private IReadOnlyList<RouteCost.PointsValue> _pointsShop = [];
 
     /// <summary>
-    /// Any wishlist scope, one list or all of them. The rarity chips and the rarity advisor are
+    /// Any chase list scope, one list or all of them. The rarity chips and the rarity advisor are
     /// hidden under it: both talk about rungs, which a hand-picked list of cards does not.
     /// </summary>
-    private bool IsWishScope =>
-        _scope == "wishes" || _scope.StartsWith("wish:", StringComparison.Ordinal);
+    private bool IsChaseScope =>
+        _scope == "chases" || _scope.StartsWith("chase:", StringComparison.Ordinal);
 
     /// <summary>
     /// What the header says the page is ranking for. The scope control moved down to the tools
@@ -766,9 +766,9 @@ else
     /// be legible from a dropdown further down.
     /// </summary>
     private string ScopeLabel =>
-        _scope == "wishes" ? "all wishlists"
-        : _scope.StartsWith("wish:", StringComparison.Ordinal)
-            ? Session.WishlistById(_scope[5..])?.Name ?? "a wishlist"
+        _scope == "chases" ? "all chase lists"
+        : _scope.StartsWith("chase:", StringComparison.Ordinal)
+            ? Session.ChaseListById(_scope[5..])?.Name ?? "a chase list"
         : _scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {_scope[7..]}"
         : _scope == "everything" ? "everything you collect"
         : $"{_scope} — {Session.Sets.DisplayName(_scope)}";
@@ -778,8 +778,8 @@ else
     /// gets its own once the user asks for one, so scoping to a set does not by itself create
     /// an override — that would fork every set the moment it was looked at.
     /// </summary>
-    /// <summary>The scoped set, if the scope is one at all. Null for "everything" and wishlists.</summary>
-    private string? ScopedSet => !IsWishScope && _sets.Contains(_scope) ? _scope : null;
+    /// <summary>The scoped set, if the scope is one at all. Null for "everything" and chase lists.</summary>
+    private string? ScopedSet => !IsChaseScope && _sets.Contains(_scope) ? _scope : null;
 
     private string? PlanScope =>
         ScopedSet is { } set && Session.HasPlanOverride(set) ? set : null;
@@ -844,7 +844,7 @@ else
         if (!Session.Ready) return;
 
         _sets = Session.Index.OpenableSets.ToArray();
-        if (Wish is { Length: > 0 } id && Session.WishlistById(id) is not null) _scope = $"wish:{id}";
+        if (Chase is { Length: > 0 } id && Session.ChaseListById(id) is not null) _scope = $"chase:{id}";
 
         // Arriving from another page still costs a full ranking, so it needs the same
         // indicator as changing a filter does — otherwise navigation looks like a hang.
@@ -1022,7 +1022,7 @@ else
     /// appear in, so they are the one thing that still has to be called out separately; a trade
     /// is the only route and no amount of opening changes that.
     ///
-    /// Only wishlists reach this: a rarity target is built from pack-obtainable cards only.
+    /// Only chase lists reach this: a rarity target is built from pack-obtainable cards only.
     /// </summary>
     private IReadOnlyList<(PocketCard Card, int Remaining)> NeverInAPack()
     {
@@ -1104,7 +1104,7 @@ else
 
     /// <summary>
     /// The sets the current scope covers. Used by the rarity advisor, which prices rungs and so
-    /// only means anything over sets — a wishlist scope has no sets of its own and falls back to
+    /// only means anything over sets — a chase list scope has no sets of its own and falls back to
     /// all of them.
     /// </summary>
     private string[] ScopeSets() =>
@@ -1219,8 +1219,8 @@ else
 
         _advisorFor = Signature();
         // The advisor prices rarity rungs, which only means something over sets — so a series
-        // scope prices that series, and a wishlist scope falls back to everything rather than
-        // inventing a "wish:xyz" set.
+        // scope prices that series, and a chase list scope falls back to everything rather than
+        // inventing a "chase:xyz" set.
         var sets = ScopeSets();
 
         _advisor = Session.Index.Ladder.Rungs.Select(rung =>
@@ -1338,7 +1338,7 @@ else
             var foilSets = Session.FoilSets;
             if (foilSets.Count == 0) return false;
 
-            if (IsWishScope) return false;
+            if (IsChaseScope) return false;
             if (_scope == "everything") return true;
             if (ScopedSet is { } set) return foilSets.Contains(set);
 
@@ -1352,7 +1352,7 @@ else
     /// </summary>
     private Task CycleFoils()
     {
-        var next = Session.FoilCopies >= AppSession.MaxFoilCopies ? 0 : Session.FoilCopies + 1;
+        var next = Session.NextFoilCopies;
         var label = next == 0 ? "Excluding parallel foils\u2026" : $"Counting {next} of each parallel foil\u2026";
 
         return Busy.RunAsync(label, () =>
@@ -1366,7 +1366,7 @@ else
 
     private Task StartOverride()
     {
-        if (IsWishScope || !_sets.Contains(_scope)) return Task.CompletedTask;
+        if (IsChaseScope || !_sets.Contains(_scope)) return Task.CompletedTask;
 
         var seed = Session.Plan();
         return Busy.RunAsync($"Giving {_scope} its own plan\u2026", () =>
@@ -1380,7 +1380,7 @@ else
 
     private Task ClearOverride()
     {
-        if (IsWishScope || !_sets.Contains(_scope)) return Task.CompletedTask;
+        if (IsChaseScope || !_sets.Contains(_scope)) return Task.CompletedTask;
 
         var set = _scope;
         return Busy.RunAsync($"Returning {set} to the default plan\u2026", () =>

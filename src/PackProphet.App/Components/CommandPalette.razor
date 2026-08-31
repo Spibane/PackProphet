@@ -202,7 +202,7 @@
         {
             items.AddRange(Sets(q));
             items.AddRange(Decks(q));
-            items.AddRange(WishlistItems(q));
+            items.AddRange(ChaseListItems(q));
             // Cards last and only once there is something to match: 3,700 rows would bury
             // every other kind of result.
             if (q.Length >= 2) items.AddRange(Cards(q));
@@ -220,10 +220,10 @@
         ("Collection", "collection", "browse and mark what you own"),
         ("Which pack", "packs", "the ranking"),
         ("Decks", "decks", "saved decks and the builder"),
-        ("Wishlists", "wishlists", "cards you want, for any reason"),
+        ("Chase lists", "chase", "cards you want, for any reason"),
         ("Wonder Pick", "wonder", "take it or skip it"),
         ("Trades", "trades", "which trade deserves your next stamina"),
-        ("In-game wishlist", "board", "what to put in the game's 20 trade slots"),
+        ("Wishlist", "board", "what to put in the game's 20 trade slots"),
         ("Resources", "resources", "stamina, hourglasses and shinedust"),
         ("History", "history", "what you have opened"),
         ("Settings", "settings", "targets, backup, appearance"),
@@ -250,7 +250,7 @@
             new("action", "Export this collection as CSV", "for a spreadsheet or another tracker",
                 "collection/export"),
             new("action", "New deck", "build one by hand", "decks/new"),
-            new("action", "New wishlist", null, null, () => Nav.NavigateTo($"wishlists/{Session.CreateWishlist()}")),
+            new("action", "New chase list", null, null, () => Nav.NavigateTo($"chase/{Session.CreateChaseList()}")),
             new("action", $"Theme: {Session.Theme}", "switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),
         };
 
@@ -308,13 +308,13 @@
     private static string Sub(int missing) =>
         missing == 0 ? "buildable" : $"{missing} card(s) missing";
 
-    private IEnumerable<Item> WishlistItems(string q) =>
-        Session.Wishlists
+    private IEnumerable<Item> ChaseListItems(string q) =>
+        Session.ChaseLists
             .Where(w => Matches(w.Name, q))
             .Take(MaxPerGroup)
-            .Select(w => new Item("wishlist", w.Name,
-                $"{Session.MissingInWishlist(w)} of {Session.WantedTotal(w)} still missing",
-                $"wishlists/{w.Id}"));
+            .Select(w => new Item("chase list", w.Name,
+                $"{Session.MissingInChaseList(w)} of {Session.WantedTotal(w)} still missing",
+                $"chase/{w.Id}"));
 
     /// <summary>
     /// Cards by name only. The deck builder is where rules text is searched; here the job is

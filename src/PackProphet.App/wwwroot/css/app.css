@@ -61,10 +61,10 @@
 
    Undersized tracks were ellipsising those cards to "◆◆…", which is worse than a cosmetic clip: it
    silently displays one rarity as a different, lower one. card-line was 3.6rem below 560px,
-   wish-row and pick-row 3.2rem, supplied-row 3.5rem — the last of which cleared its own content by
+   chase-row and pick-row 3.2rem, supplied-row 3.5rem — the last of which cleared its own content by
    0.7px, which is not a margin.
 
-   One value for all three row types that show a rarity — wish-row, pick-row and supplied-row —
+   One value for all three row types that show a rarity — chase-row, pick-row and supplied-row —
    because they show the same thing and there is no reason for them to disagree about how much room
    it needs. Two of them also restate the track inside media queries, which is how the first fix
    here missed them: the width was declared in five places and corrected in one. */
@@ -1931,7 +1931,7 @@ tr.row-best {
 
 @container (width < 680px) {
     /* Element-qualified on purpose. A bare [data-pri="3"] has the same specificity as any
-       component rule that sets display on one of its own cells -- .wish-row .ty { display:
+       component rule that sets display on one of its own cells -- .chase-row .ty { display:
        inline-flex } is one -- and loses to it on source order, so the column hid in the header and
        stayed in the body, putting every row one cell out of step with its headings. Adding the
        element name outranks those without reaching for !important. */
@@ -1940,7 +1940,7 @@ tr.row-best {
 
     /* The wishlist's flexible column is one of the ones just hidden, so the name takes it over
        rather than leaving the slack to the remove column at the far edge. */
-    .wish-list .nm { width: 100%; }
+    .chase-list .nm { width: 100%; }
 
 }
 
@@ -2323,7 +2323,7 @@ tr.row-best {
    that the container query on the table drops the detail columns instead.
 
    After .edit-cols, not before: same specificity, so source order decides. */
-.wish-edit { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.chase-edit { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
 
 @media (width <= 1000px) {
     .edit-cols { grid-template-columns: minmax(0, 1fr); }
@@ -2627,20 +2627,20 @@ tr.row-best {
    The FLEXIBLE column is the route note, not the name. With the name flexible, a wide screen
    gave it a huge cell and pushed everything else to the far right with nothing in between —
    which is what made the row read as empty. Text that can use the space goes in the space. */
-.wish-list { border: 1px solid var(--bs-border-color); border-radius: .3rem; overflow: hidden; }
+.chase-list { border: 1px solid var(--bs-border-color); border-radius: .3rem; overflow: hidden; }
 /* Was a nine-track CSS grid, restated in full at two breakpoints -- which is how a rarity column
    that could not fit four diamonds survived being fixed twice. A table sizes each column to its
    own content, so none of those numbers has to be guessed or kept in step. What is left here is
    appearance; which columns survive a phone is data-pri, like every other table. */
-.wish-row > * { vertical-align: middle; }
+.chase-row > * { vertical-align: middle; }
 /* No column claims the slack while all eight are showing. A table with eight columns in 737px
    distributes it better than any one of them can: forcing the cost column to 100% squeezed a
    neighbour and put a row back onto two lines. (The cell comment in the page still describes the
    nine-track grid this table replaced.) The only case needing a rule is the narrow one, where the
    cost column is hidden and the slack would otherwise fall to the remove column at the far edge --
    that rule is with the container query. */
-.wish-row:hover { background: var(--bs-secondary-bg); }
-.wish-row .nm { font-size: .98rem; font-weight: 600; }
+.chase-row:hover { background: var(--bs-secondary-bg); }
+.chase-row .nm { font-size: .98rem; font-weight: 600; }
 /* NOT display on the cell. A <td> set to inline-flex stops being a table cell, so it drops out of
    the row's height calculation: these two came out 25.8px and 34.6px in a 46.6px row, and since a
    cell draws its own bottom border, the row line sat 16px and 12px high in those two columns while
@@ -2648,18 +2648,18 @@ tr.row-best {
 
    The cell stays a cell. What needs to be a flex row is the content inside it, which for the type
    column is a single pip that needs no layout at all. */
-.wish-row .ty > * { display: inline-flex; align-items: center; vertical-align: middle; }
-.wish-row .id, .wish-row .rt { color: var(--bs-secondary-color); }
-.wish-row .id { font-variant-numeric: tabular-nums; font-size: .86rem; }
-.wish-row .rt { font-size: .88rem; }
-.wish-row .own { text-align: right; font-variant-numeric: tabular-nums; }
-.wish-row .own .done { color: var(--bs-success); font-weight: 600; }
-.wish-row .thumb { width: 1px; }
-.wish-row .pack-thumb { display: block; }
+.chase-row .ty > * { display: inline-flex; align-items: center; vertical-align: middle; }
+.chase-row .id, .chase-row .rt { color: var(--bs-secondary-color); }
+.chase-row .id { font-variant-numeric: tabular-nums; font-size: .86rem; }
+.chase-row .rt { font-size: .88rem; }
+.chase-row .own { text-align: right; font-variant-numeric: tabular-nums; }
+.chase-row .own .done { color: var(--bs-success); font-weight: 600; }
+.chase-row .thumb { width: 1px; }
+.chase-row .pack-thumb { display: block; }
 /* A card you already have enough of is tinted rather than removed: it is still on the list,
    and seeing it fill in is how the list reads as progress. */
-.wish-row.got { background: color-mix(in srgb, var(--bs-success) 7%, transparent); }
-.wish-row.got:hover { background: color-mix(in srgb, var(--bs-success) 12%, transparent); }
+.chase-row.got { background: color-mix(in srgb, var(--bs-success) 7%, transparent); }
+.chase-row.got:hover { background: color-mix(in srgb, var(--bs-success) 12%, transparent); }
 
 /* The wishlist takes the shared stepper at its default size. The reason that default is small
    enough for this row: the art beside it is 2.2rem, and a control taller than the art would set
@@ -2669,9 +2669,9 @@ tr.row-best {
    9 to 10 would otherwise move the + button out from under the finger about to tap it.
    The flex box is an inner wrapper for the same reason as the type column above: a <td> given a
    flex display leaves the row and its border stops lining up with its neighbours'. */
-.wish-row .want-n { white-space: nowrap; }
-.wish-row .want-n > .stepper { display: inline-flex; align-items: center; gap: .15rem; vertical-align: middle; }
-.wish-row .want-n .n {
+.chase-row .want-n { white-space: nowrap; }
+.chase-row .want-n > .stepper { display: inline-flex; align-items: center; gap: .15rem; vertical-align: middle; }
+.chase-row .want-n .n {
     min-width: 1.5rem; text-align: center;
     font-weight: 600; font-variant-numeric: tabular-nums;
 }
@@ -2841,7 +2841,7 @@ tr.row-best {
 
        Only the wishlist. The deck builder's left column opens with energy selection and the
        deck's own card list, which is what you came to that page to see. */
-    .wish-edit .picker-col { order: -1; }
+    .chase-edit .picker-col { order: -1; }
 }
 
 /* A pack that is listed but excluded from the estimate: off sale, or with no published rates.

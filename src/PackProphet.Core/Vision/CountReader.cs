@@ -98,9 +98,6 @@ public static class CountReader
         ('9', "028effa416effff94cffbdfd6ff946ff8ff513ef8fe513ef6efc79fe28fffffb03affff80038eff40016efa2002bfe50004ffb20003bb400", 0.69),
     ];
 
-    /// <summary>The number of exemplars, so a test can assert the table did not lose any.</summary>
-    public static int ExemplarCount => Exemplars.Length;
-
     /// <summary>Digits with at least one exemplar. Expected to be all ten.</summary>
     public static IReadOnlySet<char> Covered { get; } = Exemplars.Select(e => e.Digit).ToHashSet();
 

@@ -115,7 +115,7 @@ first renders on a phone. That timing is suggestive, not established.
 
 | Hypothesis | Killed by |
 |---|---|
-| The app's own share feature | Fires on `/`, not on a wishlist. That code is C# with no JavaScript in it. |
+| The app's own share feature | Fires on `/`, not on a chase list. That code is C# with no JavaScript in it. |
 | The iOS share sheet raising it over the page | The report says the page has never been backgrounded. iOS backgrounds a page while the sheet is open. |
 | A browser extension or content blocker injecting a script | Reproduces in a Private tab. |
 | A foreign `<script>` element on the page | None — and the check now covers dynamically imported ES modules and fetches too, which `document.scripts` misses. |

@@ -1,11 +1,11 @@
-@page "/wishlists"
-@page "/wishlists/{Id}"
+@page "/chase"
+@page "/chase/{Id}"
 @implements IDisposable
 @inject AppSession Session
 @inject UiBusy Busy
 @inject NavigationManager Nav
 
-<PageTitle>@(_list?.Name ?? "Wishlists") · PackProphet</PageTitle>
+<PageTitle>@(_list?.Name ?? "Chase lists") · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -14,53 +14,53 @@
 else if (Id is null)
 {
     <div class="page-head">
-        <h1 class="title">Wishlists</h1>
-        <span class="subtitle">@Session.Wishlists.Count saved</span>
+        <h1 class="title">Chase lists</h1>
+        <span class="subtitle">@Session.ChaseLists.Count saved</span>
         <span class="actions">
-            <button class="btn btn-sm btn-primary" @onclick="NewList">new wishlist</button>
+            <button class="btn btn-sm btn-primary" @onclick="NewList">new chase list</button>
         </span>
     </div>
 
     @* Same pair of views as the decks page: the table compares lists against each other, the grid
        is how you recognise one. *@
-    @if (Session.Wishlists.Count > 0)
+    @if (Session.ChaseLists.Count > 0)
     {
         <div class="grid-toolbar">
             <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
-                <button class="btn @(Session.WishGrid ? "btn-outline-secondary" : "btn-secondary")"
-                        @onclick="() => Session.SetWishGrid(!Session.WishGrid)"
-                        aria-pressed="@Aria.Flag(!Session.WishGrid)" title="A table, for comparing">list</button>
-                <button class="btn @(Session.WishGrid ? "btn-secondary" : "btn-outline-secondary")"
-                        @onclick="() => Session.SetWishGrid(!Session.WishGrid)"
-                        aria-pressed="@Aria.Flag(Session.WishGrid)" title="Cards, for recognising">grid</button>
+                <button class="btn @(Session.ChaseGrid ? "btn-outline-secondary" : "btn-secondary")"
+                        @onclick="() => Session.SetChaseGrid(!Session.ChaseGrid)"
+                        aria-pressed="@Aria.Flag(!Session.ChaseGrid)" title="A table, for comparing">list</button>
+                <button class="btn @(Session.ChaseGrid ? "btn-secondary" : "btn-outline-secondary")"
+                        @onclick="() => Session.SetChaseGrid(!Session.ChaseGrid)"
+                        aria-pressed="@Aria.Flag(Session.ChaseGrid)" title="Cards, for recognising">grid</button>
             </div>
         </div>
     }
 
     <PageShell Measure="PageShell.Width.Wide">
-        @* A wishlist is the one target the app cannot derive, so the empty state says what it is
+        @* A chase list is the one target the app cannot derive, so the empty state says what it is
            for rather than only that there is nothing here. *@
         <p class="text-body-secondary small mb-3">
-            Any set of cards you want, for any reason. The pack ranking prices a wishlist exactly
-            as it prices a rarity target. Unlike a deck, a wishlist wants a particular
+            Any set of cards you want, for any reason. The pack ranking prices a chase list exactly
+            as it prices a rarity target. Unlike a deck, a chase list wants a particular
             <strong>printing</strong> &mdash; the alternate art is not satisfied by the plain
             one.
         </p>
 
         @if (_lists.Count == 0)
         {
-            <p class="text-body-secondary">No wishlists yet.</p>
+            <p class="text-body-secondary">No chase lists yet.</p>
         }
-        else if (Session.WishGrid)
+        else if (Session.ChaseGrid)
         {
             <div class="showcase-grid">
                 @foreach (var list in _lists)
                 {
                     <div class="showcase @(list.Missing == 0 && list.Wanted > 0 ? "ready" : "")">
-                        @* The face is the rarest card still missing — a wishlist is a chase, so the
+                        @* The face is the rarest card still missing — a chase list is a chase, so the
                            card you have not got yet represents it. A finished list falls back to
                            its rarest card. *@
-                        <a class="face" href="wishlists/@list.Id"
+                        <a class="face" href="chase/@list.Id"
                            style="background-image:url('@(list.Face?.ArtUrl)')"
                            aria-label="Open @list.Name">
                             @if (list.Face is null)
@@ -70,7 +70,7 @@ else if (Id is null)
                         </a>
 
                         <div class="body">
-                            <a class="nm" href="wishlists/@list.Id">@list.Name</a>
+                            <a class="nm" href="chase/@list.Id">@list.Name</a>
 
                             <div class="meta">
                                 <span class="small text-body-secondary">
@@ -125,11 +125,11 @@ else if (Id is null)
                             }
 
                             <div class="actions">
-                                <a class="btn btn-sm btn-outline-secondary" href="wishlists/@list.Id">open</a>
-                                <a class="btn btn-sm btn-outline-primary" href="packs?wish=@list.Id">rank</a>
+                                <a class="btn btn-sm btn-outline-secondary" href="chase/@list.Id">open</a>
+                                <a class="btn btn-sm btn-outline-primary" href="packs?chase=@list.Id">rank</a>
                                 <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(list.Id)" aria-live="polite"
-                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this wishlist")">
+                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this chase list")">
                                     @(_confirming == list.Id ? "really?" : "delete")
                                 </button>
                             </div>
@@ -140,10 +140,10 @@ else if (Id is null)
         }
         else
         {
-            <DataTable Label="Your wishlists">
+            <DataTable Label="Your chase lists">
                 <thead>
                     <tr>
-                        <th scope="col">wishlist</th>
+                        <th scope="col">chase list</th>
                         <th scope="col" class="num">cards wanted</th>
                         <th scope="col" class="num">still missing</th>
                         <th scope="col">rarest still wanted</th>
@@ -155,7 +155,7 @@ else if (Id is null)
                     {
                         <tr>
                             <td>
-                                <a href="wishlists/@list.Id"><strong>@list.Name</strong></a>
+                                <a href="chase/@list.Id"><strong>@list.Name</strong></a>
                                 @if (list.Id == Session.Profile.WantListId)
                                 {
                                     <span class="badge text-bg-info ms-1"
@@ -196,13 +196,13 @@ else if (Id is null)
                                 }
                             </td>
                             <td class="text-end text-nowrap">
-                                <a class="btn btn-sm btn-outline-secondary" href="wishlists/@list.Id">open</a>
-                                <a class="btn btn-sm btn-outline-primary" href="packs?wish=@list.Id">rank</a>
+                                <a class="btn btn-sm btn-outline-secondary" href="chase/@list.Id">open</a>
+                                <a class="btn btn-sm btn-outline-primary" href="packs?chase=@list.Id">rank</a>
                                 @* Two taps, and the confirmation is scoped to this row: a shared
                                    flag would arm every delete button at once. *@
                                 <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(list.Id)" aria-live="polite"
-                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this wishlist")">
+                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this chase list")">
                                     @(_confirming == list.Id ? "really?" : "delete")
                                 </button>
                             </td>
@@ -216,23 +216,23 @@ else if (Id is null)
 else if (_list is null)
 {
     <PageShell Measure="PageShell.Width.Text">
-        <p>That wishlist no longer exists.</p>
-        <a class="btn btn-sm btn-outline-secondary" href="wishlists">&larr; all wishlists</a>
+        <p>That chase list no longer exists.</p>
+        <a class="btn btn-sm btn-outline-secondary" href="chase">&larr; all chase lists</a>
     </PageShell>
 }
 else
 {
     <div class="page-head">
-        <a class="btn btn-sm btn-outline-secondary" href="wishlists">&larr; wishlists</a>
+        <a class="btn btn-sm btn-outline-secondary" href="chase">&larr; chase lists</a>
 
         @* Renaming in place, saved on blur rather than per keystroke: the name is persisted state,
            and a save per character would serialise the whole profile as you type. The input is this
            page's title, so it sits where every other page's title is. *@
         <input class="form-control form-control-sm" style="max-width:16rem"
-               value="@_list.Name" @onchange="Rename" aria-label="Wishlist name" />
+               value="@_list.Name" @onchange="Rename" aria-label="Chase list name" />
 
         <span class="actions">
-            <a class="btn btn-sm btn-outline-primary" href="packs?wish=@_list.Id">
+            <a class="btn btn-sm btn-outline-primary" href="packs?chase=@_list.Id">
                 rank packs for this list
             </a>
             <button class="btn btn-sm btn-outline-secondary" @onclick="MakeShareLink">
@@ -258,7 +258,7 @@ else
     {
         <PageShell>
             <input class="form-control form-control-sm" readonly value="@_shareLink"
-                   onfocus="this.select()" aria-label="Shareable read-only link for this wishlist" />
+                   onfocus="this.select()" aria-label="Shareable read-only link for this chase list" />
             <p class="small text-body-secondary mt-1 mb-0">
                 Tap the field to select it, then copy. Shows only what is wanted, not what you
                 already own &mdash; nothing is uploaded, the whole list travels inside the link.
@@ -343,7 +343,7 @@ else
     @* Two columns on desktop, list left and search right — the same shape as the deck builder.
        With the search below the list, adding a card grew the list and pushed the search down, so
        adding a second copy meant hunting for the row that had just moved. *@
-    <div class="edit-cols wish-edit">
+    <div class="edit-cols chase-edit">
         <div class="list-col">
         @if (_cards.Count == 0)
         {
@@ -355,7 +355,7 @@ else
                bare "×2" next to a stepper had to be guessed at, and nothing told a screen
                reader what any cell was. As a table each column is named once and the browser
                carries that to every cell under it. *@
-            <DataTable Label="Cards on this wishlist" Class="wish-list mb-3">
+            <DataTable Label="Cards on this chase list" Class="chase-list mb-3">
                 <thead>
                     <tr>
                         <th scope="col" colspan="2">card</th>
@@ -373,7 +373,7 @@ else
                 {
                     var rung = Session.Index.Rung(card);
                     var fact = Session.FactFor(card);
-                    <tr class="wish-row @(owned >= wanted ? "got" : "")">
+                    <tr class="chase-row @(owned >= wanted ? "got" : "")">
                         <td class="thumb"><a class="pack-thumb deck-thumb @(Session.HasGoldFlair(card) ? "gold-flair" : "")"
                            href="card/@card.Key"
                            data-tip-img="@card.ArtUrl" data-tip="@card.Name"
@@ -400,7 +400,7 @@ else
 
                         <td class="id" data-pri="3">@card.Set&thinsp;@card.Number</td>
 
-                        @* What it will cost, which is the reason to keep a wishlist in a tracker
+                        @* What it will cost, which is the reason to keep a chase list in a tracker
                            rather than in a notes app, so it is on the row itself and carries the
                            flexible column — a flexible name column left a hole across the middle
                            of a wide screen. *@
@@ -430,7 +430,7 @@ else
                                         aria-label="Want one fewer @card.Name">&minus;</button>
                                 <span class="n">@wanted</span>
                                 <button class="step" @onclick="() => Bump(card, 1)"
-                                        disabled="@(wanted >= WishlistEdit.MaxCopies)"
+                                        disabled="@(wanted >= ChaseListEdit.MaxCopies)"
                                         aria-label="Want one more @card.Name">+</button>
                             </span>
                         </td>
@@ -457,7 +457,7 @@ else
                             @onclick="UndoAdd">undo</button>
                 </Notice>
             }
-            @* All cards by default here, the opposite of the deck builder: a wishlist is mostly
+            @* All cards by default here, the opposite of the deck builder: a chase list is mostly
                made of things you do not have yet. *@
             <CardPicker Level="2" ByPrinting="true" AllCardsDefault="true"
                         Heading="Add cards to this list" PickedLabel="wanted"
@@ -473,7 +473,7 @@ else
     private const int StripSize = 5;
 
     /// <summary>
-    /// One wishlist as the list page needs it. Built once per change rather than per render:
+    /// One chase list as the list page needs it. Built once per change rather than per render:
     /// both views walk every card on every list, and the grid reads each figure twice.
     /// </summary>
     private sealed record Row(
@@ -485,7 +485,7 @@ else
     /// <summary>Which list's delete button is armed, if any.</summary>
     private string? _confirming;
 
-    private Wishlist? _list;
+    private ChaseList? _list;
     private IReadOnlyList<(PocketCard Card, int Wanted, int Owned)> _cards = [];
     private int _missing;
     private int _unreachable;
@@ -498,7 +498,7 @@ else
     {
         if (_list is null) return;
 
-        var code = WishlistCodec.Encode(Session.Profile.Name, _list, Session.Profile.InGameName);
+        var code = ChaseListCodec.Encode(Session.Profile.Name, _list, Session.Profile.InGameName);
         // After a `#`, not in the query string, on the same reasoning as everywhere else a
         // payload travels inside a link: a fragment is never sent to a server, so it cannot 414
         // no matter how the list grows.
@@ -508,7 +508,7 @@ else
     /// <summary>
     /// The list as a few lines anyone can paste into a chat.
     ///
-    /// Only what is still short: a wishlist keeps its rows once you own them, and asking for a card
+    /// Only what is still short: a chase list keeps its rows once you own them, and asking for a card
     /// you already have wastes the reader's time and your own credibility. The rarity is on every
     /// line because the game's trade rules turn on it -- a reader can see at a glance which of
     /// these they are even allowed to send.
@@ -567,15 +567,15 @@ else
 
         BuildRows();
 
-        _list = Id is null ? null : Session.WishlistById(Id);
+        _list = Id is null ? null : Session.ChaseListById(Id);
         if (_list is null) { _cards = []; return; }
 
         // A stale link for a list you have navigated away from is worse than none: it would go
         // on showing the previous list's name and contents if left in place.
         if (_shareLinkFor != _list.Id) { _shareLink = null; _tradeText = null; _shareLinkFor = _list.Id; }
 
-        _cards = Session.WishlistCards(_list);
-        _missing = Session.MissingInWishlist(_list);
+        _cards = Session.ChaseListCards(_list);
+        _missing = Session.MissingInChaseList(_list);
         BuildRoutes();
 
         // Only about the list in front of you: switching lists must not carry the notice across.
@@ -638,7 +638,7 @@ else
     {
         if (_list is null || Session.Ranker is null) { _packs = 0; _unreachable = 0; return; }
 
-        var target = Session.TargetForWishlist(_list);
+        var target = Session.TargetForChaseList(_list);
         var unavailable = Session.UnavailablePacks;
 
         _unreachable = Session.Ranker.Unreachable(target, Session.Owned, unavailable).Sum(d => d.Remaining);
@@ -652,12 +652,12 @@ else
         // few hundred times over.
         var rates = Session.Odds?.BestRatesByCard(Session.UnavailablePacks);
 
-        _lists = Session.Wishlists.Select(list =>
+        _lists = Session.ChaseLists.Select(list =>
         {
-            var cards = Session.WishlistCards(list);        // already rarest-first
+            var cards = Session.ChaseListCards(list);        // already rarest-first
 
             // Still short of what is wanted. The face and the strip are drawn from these
-            // because a wishlist is a chase: the card you have not got is the one that
+            // because a chase list is a chase: the card you have not got is the one that
             // represents it, and a card you already own is not what you are looking at it for.
             var outstanding = cards.Where(c => c.Owned < c.Wanted).Select(c => c.Card).ToArray();
 
@@ -669,7 +669,7 @@ else
             return new Row(
                 list.Id, list.Name,
                 Session.WantedTotal(list),
-                Session.MissingInWishlist(list),
+                Session.MissingInChaseList(list),
                 // Named separately from "missing" because it is a different problem: no amount
                 // of opening packs will move it.
                 outstanding.Count(c => !Priceable(c, rates)),
@@ -704,18 +704,18 @@ else
         Delete(id);
     }
 
-    private void NewList() => Nav.NavigateTo($"wishlists/{Session.CreateWishlist()}");
+    private void NewList() => Nav.NavigateTo($"chase/{Session.CreateChaseList()}");
 
     private void Delete(string id)
     {
-        Session.DeleteWishlist(id);
-        if (Id == id) Nav.NavigateTo("wishlists");
+        Session.DeleteChaseList(id);
+        if (Id == id) Nav.NavigateTo("chase");
     }
 
     private void Rename(ChangeEventArgs e)
     {
         if (_list is null) return;
-        Session.RenameWishlist(_list.Id, e.Value?.ToString() ?? "");
+        Session.RenameChaseList(_list.Id, e.Value?.ToString() ?? "");
     }
 
     private int WantedOf(PocketCard card) => _list?.Wanted.GetValueOrDefault(card.OwnershipKey) ?? 0;
@@ -735,7 +735,7 @@ else
     {
         if (_list is null || cards.Count == 0) return;
 
-        Session.AddToWishlist(_list.Id, cards.Select(c => c.OwnershipKey));
+        Session.AddToChaseList(_list.Id, cards.Select(c => c.OwnershipKey));
         _added = cards.Count;
     }
 

@@ -56,6 +56,7 @@ public static class StateSerializer
         if (state.SchemaVersion > AppState.CurrentSchemaVersion) return null;
 
         if (state.SchemaVersion < 3) state = ToV3(state);
+        if (state.SchemaVersion < 4) state = ToV4(state);
 
         state = Normalise(state);
         if (state.Profiles.Count == 0) return null;
@@ -131,7 +132,7 @@ public static class StateSerializer
             .Select(d => d with { DeckBuilderNrs = d.DeckBuilderNrs ?? [], Energies = d.Energies ?? [] })
             .ToList(),
 
-        Wishlists = (p.Wishlists ?? []).Where(w => w is not null && !string.IsNullOrWhiteSpace(w.Id))
+        ChaseLists = (p.ChaseLists ?? []).Where(w => w is not null && !string.IsNullOrWhiteSpace(w.Id))
             .Select(w => w with { Wanted = w.Wanted ?? new Dictionary<string, int>() })
             .ToList(),
 
@@ -194,6 +195,41 @@ public static class StateSerializer
     private static AppState ToV3(AppState state) => state with
     {
         Profiles = state.Profiles.Select(p => p with { Targets = ToPlan(p.Targets) }).ToList()
+    };
+
+    /// <summary>
+    /// v4 renamed the site's own lists from "wishlist" to "chase list", freeing the word for the
+    /// game's own 20-slot board, which is what the game itself calls a wishlist. The stored shape
+    /// changed with the name, so a v3 save carries <c>wishlists</c> where a v4 one carries
+    /// <c>chaseLists</c>. Which list the grid's hearts write to is untouched: it was already
+    /// <c>wantListId</c>, and "want list" collided with nothing worth renaming it for.
+    ///
+    /// Moved rather than left to default. These are the lists someone built by hand, and the only
+    /// copy is in their browser: reading a v3 save as "no chase lists" would not look like a
+    /// migration that was skipped, it would look like the app lost their work.
+    ///
+    /// The legacy fields are cleared as they are read, and the serializer drops nulls, so a save
+    /// written after this carries only the new spelling.
+    /// </summary>
+    /// <remarks>
+    /// Runs before <see cref="Normalise"/>, so it meets the payload exactly as written: a null
+    /// profile in the list, or no prefs object at all, are both things a hand-edited backup really
+    /// carries. Nulls are passed through rather than dropped here — deciding which profiles survive
+    /// is Normalise's job, and doing it in two places would mean two answers.
+    /// </remarks>
+    private static AppState ToV4(AppState state) => state with
+    {
+        Profiles = state.Profiles.Select(p => p is null ? null! : p with
+        {
+            ChaseLists = p.ChaseLists is { Count: > 0 } ? p.ChaseLists : p.Wishlists ?? [],
+            Wishlists = null,
+        }).ToList(),
+
+        Prefs = (state.Prefs ?? new Prefs()) with
+        {
+            ChaseGrid = (state.Prefs?.ChaseGrid ?? false) || state.Prefs?.WishGrid == true,
+            WishGrid = null,
+        },
     };
 
     private static TargetSettings ToPlan(TargetSettings? old)

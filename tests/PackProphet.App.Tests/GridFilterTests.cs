@@ -179,7 +179,7 @@ public class GridFilterTests : AppHost
         // page, so recording it meant leaving the set you were looking at.
         var page = await PageAsync();
 
-        Assert.Empty(Session.Wishlists);
+        Assert.Empty(Session.ChaseLists);
 
         // Narrowed to a couple of cards first: the grid is virtualised, and with no browser to
         // report a viewport height it renders a window of nothing until the list is small.
@@ -192,7 +192,7 @@ public class GridFilterTests : AppHost
         await ClickAsync(page, ".card-tile .want");
 
         // A list of its own, named and pointed at, without asking for anything.
-        var list = Assert.Single(Session.Wishlists);
+        var list = Assert.Single(Session.ChaseLists);
         Assert.Equal(AppSession.WantListName, list.Name);
         Assert.Equal(list.Id, Session.Profile.WantListId);
         Assert.Single(list.Wanted);
@@ -203,29 +203,29 @@ public class GridFilterTests : AppHost
 
         // And off again: one tap is the whole control, in both directions.
         await ClickAsync(page, ".card-tile .want");
-        page.WaitForAssertion(() => Assert.Empty(Session.Wishlists[0].Wanted));
+        page.WaitForAssertion(() => Assert.Empty(Session.ChaseLists[0].Wanted));
 
         // The list stays. Emptying it is not the same as deleting it, and a heart that destroyed
         // its own list would take the "hearts" mark with it every time you changed your mind.
-        Assert.Single(Session.Wishlists);
+        Assert.Single(Session.ChaseLists);
     }
 
     [Fact]
     public async Task The_hearts_never_write_into_a_list_you_curated()
     {
-        // The reason the hearts have a list of their own. Filling whichever wishlist happened to be
+        // The reason the hearts have a list of their own. Filling whichever chase list happened to be
         // first would quietly rewrite the one thing on that page you built deliberately.
         var page = await PageAsync();
 
-        var mine = Session.CreateWishlist("Deck cards");
+        var mine = Session.CreateChaseList("Deck cards");
         page.Render();
 
         page.Find(".grid-search").Input("wurmple");
         await ClickAsync(page, ".card-tile .want");
 
-        Assert.Empty(Session.Wishlists.First(w => w.Id == mine).Wanted);
+        Assert.Empty(Session.ChaseLists.First(w => w.Id == mine).Wanted);
 
-        var hearts = Session.Wishlists.First(w => w.Id == Session.Profile.WantListId);
+        var hearts = Session.ChaseLists.First(w => w.Id == Session.Profile.WantListId);
         Assert.NotEqual(mine, hearts.Id);
         Assert.NotEmpty(hearts.Wanted);
     }
@@ -234,7 +234,7 @@ public class GridFilterTests : AppHost
     public async Task Deleting_the_want_list_lets_the_next_heart_make_another()
     {
         // A stored id whose list has gone reads as "no list yet" rather than as a broken pointer,
-        // which is what makes the list safe to delete from the wishlists page.
+        // which is what makes the list safe to delete from the chase lists page.
         var page = await PageAsync();
 
         page.Find(".grid-search").Input("wurmple");
@@ -243,8 +243,8 @@ public class GridFilterTests : AppHost
         var first = Session.Profile.WantListId;
         Assert.NotNull(first);
 
-        Session.DeleteWishlist(first!);
-        Assert.Empty(Session.Wishlists);
+        Session.DeleteChaseList(first!);
+        Assert.Empty(Session.ChaseLists);
 
         page.Render();
         page.Find(".grid-search").Input("wurmple");
@@ -253,7 +253,7 @@ public class GridFilterTests : AppHost
         var second = Session.Profile.WantListId;
         Assert.NotNull(second);
         Assert.NotEqual(first, second);
-        Assert.NotEmpty(Session.Wishlists.Single().Wanted);
+        Assert.NotEmpty(Session.ChaseLists.Single().Wanted);
     }
 
     [Fact]

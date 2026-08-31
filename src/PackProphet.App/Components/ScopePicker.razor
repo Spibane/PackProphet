@@ -1,7 +1,7 @@
-@* What a page ranks against: everything you collect, one wishlist, or one set.
+@* What a page ranks against: everything you collect, one chase list, or one set.
 
    Four pages ask this question — Packs, Trades, the trade board and Wonder Pick — and each had
-   written the control out longhand. The wishlist half was byte-identical in all four, so a wishlist
+   written the control out longhand. The chase list half was byte-identical in all four, so a chase list
    renamed or a list of one behaving differently from a list of many had to be fixed four times, and
    twice it had been fixed in only some of them.
 
@@ -15,23 +15,23 @@
         aria-label="@Label" @onchange="OnScope">
     <option value="everything" selected="@(Scope == "everything")">@Everything</option>
 
-    @* Wishlists sit in the same control as sets because they are the same thing to the engine:
-       a target. A separate "wishlist mode" would imply the ranking works differently for them. *@
-    @if (Session.Wishlists.Count > 0)
+    @* Chase lists sit in the same control as sets because they are the same thing to the engine:
+       a target. A separate "chase list mode" would imply the ranking works differently for them. *@
+    @if (Session.ChaseLists.Count > 0)
     {
-        <optgroup label="wishlists">
+        <optgroup label="chase lists">
             @* Every list at once, merged. Demands overlapping between lists count once, so two
                lists that both want the same card do not double its price. Pointless with one
                list, which is why it is not simply always offered. *@
-            @if (Merged && Session.Wishlists.Count > 1)
+            @if (Merged && Session.ChaseLists.Count > 1)
             {
-                <option value="wishes" selected="@(Scope == "wishes")">
-                    all wishlists together
+                <option value="chases" selected="@(Scope == "chases")">
+                    all chase lists together
                 </option>
             }
-            @foreach (var list in Session.Wishlists)
+            @foreach (var list in Session.ChaseLists)
             {
-                <option value="wish:@list.Id" selected="@(Scope == $"wish:{list.Id}")">
+                <option value="chase:@list.Id" selected="@(Scope == $"chase:{list.Id}")">
                     @list.Name
                 </option>
             }
@@ -94,7 +94,7 @@
     [Parameter] public bool Grouped { get; set; }
 
     /// <summary>
-    /// Also offer the combined scopes: every wishlist at once, and a whole series. Only the Packs
+    /// Also offer the combined scopes: every chase list at once, and a whole series. Only the Packs
     /// page can act on them — the others rank one target at a time.
     /// </summary>
     [Parameter] public bool Merged { get; set; }

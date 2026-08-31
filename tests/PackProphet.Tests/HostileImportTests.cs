@@ -33,7 +33,7 @@ public class HostileImportTests
         var p = state.Active;
         Assert.Empty(p.Collection);
         Assert.Empty(p.Decks);
-        Assert.Empty(p.Wishlists);
+        Assert.Empty(p.ChaseLists);
         Assert.Empty(p.PackLog);
         Assert.Empty(p.WonderLog);
         Assert.Empty(p.TradeBoard);
@@ -111,7 +111,7 @@ public class HostileImportTests
     }
 
     [Fact]
-    public void Decks_and_wishlists_missing_their_contents_are_repaired()
+    public void Decks_and_chase_lists_missing_their_contents_are_repaired()
     {
         var state = Load("""
         {"schemaVersion":3,"activeProfileId":"a","profiles":[{"id":"a","name":"A","collection":{},
@@ -130,7 +130,7 @@ public class HostileImportTests
         Assert.Empty(deck.DeckBuilderNrs);
         Assert.Empty(deck.Energies);
 
-        Assert.Empty(Assert.Single(p.Wishlists).Wanted);
+        Assert.Empty(Assert.Single(p.ChaseLists).Wanted);
         Assert.Empty(Assert.Single(p.PackLog).OwnershipKeys);
     }
 

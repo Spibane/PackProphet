@@ -85,7 +85,7 @@ public class PackRankerTests
         var promos = Snapshot.Index().BySet["PROMO-A"]
             .Where(c => !c.IsPackObtainable)
             .ToDictionary(c => c.OwnershipKey, _ => 1);
-        var target = new WishlistTarget("promos", promos);
+        var target = new ChaseListTarget("promos", promos);
 
         Assert.NotEmpty(target.Outstanding(Snapshot.Index(), new Collection()));
         Assert.Empty(Ranker.Rank(target, new Collection()));

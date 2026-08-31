@@ -68,7 +68,7 @@
     {
         <div class="rarity-chips mb-2">
             <RarityChips Plan="Session.Plan()" OnCycle="CyclePlan"
-                         ShowFoils="Session.FoilSets.Count > 0" OnCycleFoils="CycleFoils" />
+                         ShowFoils="Session.FoilSets.Count > 0" OnCycleFoils="Session.CycleFoilCopies" />
         </div>
 
         @* Overrides are made on the Packs page, one set at a time, and were previously findable
@@ -164,7 +164,7 @@
         <thead>
             <tr>
                 <th scope="col">collection</th>
-                @* The name people find you by in the game. A shared wishlist is unusable without
+                @* The name people find you by in the game. A shared chase list is unusable without
                    it -- whoever reads the list knows what you want and has no way to send it. *@
                 <th scope="col" data-pri="2">in-game name</th>
                 <th scope="col" class="text-end">cards</th>
@@ -506,11 +506,6 @@
     {
         if (e.Key == "Enter") AddProfile();
     }
-
-    private void CycleFoils() =>
-        Session.SetFoilCopies(Session.FoilCopies >= AppSession.MaxFoilCopies
-            ? 0
-            : Session.FoilCopies + 1);
 
     private IReadOnlyList<string> Overrides() =>
         Session.Profile.Targets.PlanBySet.Keys

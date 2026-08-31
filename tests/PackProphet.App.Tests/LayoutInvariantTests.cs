@@ -62,7 +62,7 @@ public class LayoutInvariantTests
     // rarity gets, and an undersized track does not overflow — the row's own ellipsis rule
     // truncates it, so a 4-diamond card silently renders as a 2-diamond one.
     //
-    // wish-row is deliberately absent: it is a real table now, and a table column sizes itself to
+    // chase-row is deliberately absent: it is a real table now, and a table column sizes itself to
     // its content, so there is no track to get wrong.
     [InlineData(".card-line", ".c-rr")]
     [InlineData(".supplied-row", ".rt")]
@@ -170,7 +170,7 @@ public class LayoutInvariantTests
     {
         // A <td> set to flex or inline-flex stops being a table cell, so it drops out of the row's
         // height calculation -- and because a cell draws its own bottom border, the row line then
-        // sits high in that column and level in every other. On the wishlist two cells came out at
+        // sits high in that column and level in every other. On the chase list two cells came out at
         // 25.8px and 34.6px in a 46.6px row, which read as a table with ragged rules.
         //
         // The fix is always the same: leave the cell a cell and put the flex on a wrapper inside

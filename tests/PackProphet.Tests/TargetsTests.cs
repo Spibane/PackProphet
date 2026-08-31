@@ -151,12 +151,12 @@ public class TargetsTests
     }
 
     [Fact]
-    public void WishlistTarget_PricesArbitraryCards()
+    public void ChaseListTarget_PricesArbitraryCards()
     {
         var keys = Ix.All.Take(3).Select(c => c.OwnershipKey).ToList();
-        var wishlist = new WishlistTarget("cool", keys.ToDictionary(k => k, _ => 2));
+        var list = new ChaseListTarget("cool", keys.ToDictionary(k => k, _ => 2));
 
-        var outstanding = wishlist.Outstanding(Ix, new Collection());
+        var outstanding = list.Outstanding(Ix, new Collection());
         Assert.Equal(3, outstanding.Count);
         Assert.All(outstanding, d => Assert.Equal(2, d.Remaining));
     }

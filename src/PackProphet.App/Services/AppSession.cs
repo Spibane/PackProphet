@@ -438,45 +438,45 @@ public sealed class AppSession : IAsyncDisposable
     public void DeleteDeck(string id) =>
         Mutate(p => p with { Decks = p.Decks.Where(d => d.Id != id).ToList() });
 
-    // ---- wishlists --------------------------------------------------------------------
+    // ---- chase lists --------------------------------------------------------------------
 
     /// <summary>
-    /// Saved wishlists, priced by the same odds engine that prices a rarity target.
+    /// Saved chase lists, priced by the same odds engine that prices a rarity target.
     /// </summary>
-    public IReadOnlyList<Wishlist> Wishlists => Profile.Wishlists;
+    public IReadOnlyList<ChaseList> ChaseLists => Profile.ChaseLists;
 
-    public Wishlist? WishlistById(string id) => Profile.Wishlists.FirstOrDefault(w => w.Id == id);
+    public ChaseList? ChaseListById(string id) => Profile.ChaseLists.FirstOrDefault(w => w.Id == id);
 
     /// <summary>Creates an empty list and returns its id, so the caller can navigate to it.</summary>
-    public string CreateWishlist(string? name = null)
+    public string CreateChaseList(string? name = null)
     {
         var id = Guid.NewGuid().ToString("n")[..8];
         var chosen = string.IsNullOrWhiteSpace(name)
-            ? WishlistEdit.FreshName(Profile.Wishlists)
+            ? ChaseListEdit.FreshName(Profile.ChaseLists)
             : name.Trim();
 
-        Mutate(p => p with { Wishlists = [.. p.Wishlists, new Wishlist(id, chosen, new())] });
+        Mutate(p => p with { ChaseLists = [.. p.ChaseLists, new ChaseList(id, chosen, new())] });
         return id;
     }
 
     /// <summary>
-    /// The name a fresh hearts list gets. Not "Wishlist 1": the point of the separate list is that
-    /// it is recognisable as the one the hearts fill, and it reads as a sentence on the wishlists
+    /// The name a fresh hearts list gets. Not "Chase list 2": the point of the separate list is that
+    /// it is recognisable as the one the hearts fill, and it reads as a sentence on the chase lists
     /// page beside lists you named yourself.
     /// </summary>
     public const string WantListName = "Want it";
 
     /// <summary>
-    /// The wishlist the grid's hearts write to, or null if there is not one yet.
+    /// The chase list the grid's hearts write to, or null if there is not one yet.
     ///
     /// Resolved through the stored id every time rather than cached: the list can be renamed,
-    /// deleted from the wishlists page, or arrive from an import, and a cached reference would
+    /// deleted from the chase lists page, or arrive from an import, and a cached reference would
     /// outlive all three. A stored id whose list has gone reads as "no list", which is what makes
     /// deleting it safe.
     /// </summary>
-    public Wishlist? WantList =>
+    public ChaseList? WantList =>
         Profile.WantListId is { Length: > 0 } id
-            ? Profile.Wishlists.FirstOrDefault(w => w.Id == id)
+            ? Profile.ChaseLists.FirstOrDefault(w => w.Id == id)
             : null;
 
     /// <summary>
@@ -493,7 +493,7 @@ public sealed class AppSession : IAsyncDisposable
         var id = Guid.NewGuid().ToString("n")[..8];
         Mutate(p => p with
         {
-            Wishlists = [.. p.Wishlists, new Wishlist(id, WantListName, new())],
+            ChaseLists = [.. p.ChaseLists, new ChaseList(id, WantListName, new())],
             WantListId = id,
         });
         return id;
@@ -505,7 +505,7 @@ public sealed class AppSession : IAsyncDisposable
 
     /// <summary>
     /// Toggle a card on the hearts list: one copy, on or off. Wanting four of something is a
-    /// wishlist-page question, and a heart that cycled through counts would give no way to see
+    /// chase list-page question, and a heart that cycled through counts would give no way to see
     /// what it landed on.
     /// </summary>
     public void ToggleWanted(string ownershipKey)
@@ -514,26 +514,26 @@ public sealed class AppSession : IAsyncDisposable
         SetWanted(id, ownershipKey, WantedOnHeartList(ownershipKey) > 0 ? 0 : 1);
     }
 
-    public void RenameWishlist(string id, string name)
+    public void RenameChaseList(string id, string name)
     {
         var trimmed = name.Trim();
         if (trimmed.Length == 0) return;
 
-        UpdateWishlist(id, w => w with { Name = trimmed });
+        UpdateChaseList(id, w => w with { Name = trimmed });
     }
 
-    public void DeleteWishlist(string id) =>
-        Mutate(p => p with { Wishlists = p.Wishlists.Where(w => w.Id != id).ToList() });
+    public void DeleteChaseList(string id) =>
+        Mutate(p => p with { ChaseLists = p.ChaseLists.Where(w => w.Id != id).ToList() });
 
     /// <summary>Add or subtract wanted copies. Zero removes the card from the list.</summary>
     public void BumpWanted(string id, string ownershipKey, int delta) =>
-        UpdateWishlist(id, w => WishlistEdit.Bump(w, ownershipKey, delta));
+        UpdateChaseList(id, w => ChaseListEdit.Bump(w, ownershipKey, delta));
 
     public void SetWanted(string id, string ownershipKey, int copies) =>
-        UpdateWishlist(id, w => WishlistEdit.SetWanted(w, ownershipKey, copies));
+        UpdateChaseList(id, w => ChaseListEdit.SetWanted(w, ownershipKey, copies));
 
     /// <summary>
-    /// Add many cards to a wishlist in ONE change: one undo step, one save, one re-render.
+    /// Add many cards to a chase list in ONE change: one undo step, one save, one re-render.
     /// Adding "all diamonds in A1" a card at a time would be 226 mutations, 226 undo entries and
     /// 226 debounced saves — and undoing it would take 226 presses.
     /// </summary>
@@ -541,42 +541,42 @@ public sealed class AppSession : IAsyncDisposable
     /// Applied as a floor, never a clobber: a card already wanted three times stays at three, so
     /// a bulk sweep cannot quietly undo a deliberate choice.
     /// </param>
-    public void AddToWishlist(string id, IEnumerable<string> ownershipKeys, int copies = 1)
+    public void AddToChaseList(string id, IEnumerable<string> ownershipKeys, int copies = 1)
     {
         var keys = ownershipKeys.Distinct(StringComparer.Ordinal).ToArray();
         if (keys.Length == 0) return;
 
-        UpdateWishlist(id, list =>
+        UpdateChaseList(id, list =>
         {
             var wanted = new Dictionary<string, int>(list.Wanted);
             foreach (var key in keys)
                 wanted[key] = Math.Clamp(
-                    Math.Max(wanted.GetValueOrDefault(key), copies), 1, WishlistEdit.MaxCopies);
+                    Math.Max(wanted.GetValueOrDefault(key), copies), 1, ChaseListEdit.MaxCopies);
 
             return list with { Wanted = wanted };
         });
     }
 
-    private void UpdateWishlist(string id, Func<Wishlist, Wishlist> change) =>
+    private void UpdateChaseList(string id, Func<ChaseList, ChaseList> change) =>
         Mutate(p => p with
         {
-            Wishlists = p.Wishlists.Select(w => w.Id == id ? change(w) : w).ToList()
+            ChaseLists = p.ChaseLists.Select(w => w.Id == id ? change(w) : w).ToList()
         });
 
     /// <summary>
-    /// Copies still needed across a whole wishlist. Counted per printing, matching how the
+    /// Copies still needed across a whole chase list. Counted per printing, matching how the
     /// list itself is keyed.
     /// </summary>
-    public int MissingInWishlist(Wishlist list) =>
+    public int MissingInChaseList(ChaseList list) =>
         list.Wanted.Sum(kv => Math.Max(0, kv.Value - Owned[kv.Key]));
 
-    public int WantedTotal(Wishlist list) => list.Wanted.Values.Sum();
+    public int WantedTotal(ChaseList list) => list.Wanted.Values.Sum();
 
-    public ICompletionTarget TargetForWishlist(Wishlist list) =>
-        new WishlistTarget(list.Name, list.Wanted);
+    public ICompletionTarget TargetForChaseList(ChaseList list) =>
+        new ChaseListTarget(list.Name, list.Wanted);
 
-    /// <summary>Cards on a wishlist, rarest first — how a wishlist is usually read.</summary>
-    public IReadOnlyList<(PocketCard Card, int Wanted, int Owned)> WishlistCards(Wishlist list)
+    /// <summary>Cards on a chase list, rarest first — how a chase list is usually read.</summary>
+    public IReadOnlyList<(PocketCard Card, int Wanted, int Owned)> ChaseListCards(ChaseList list)
     {
         if (Data is null) return [];
 
@@ -729,7 +729,7 @@ public sealed class AppSession : IAsyncDisposable
     /// </summary>
     /// <param name="foils">
     /// with / without / only. Filtered here rather than in the advisor, because it is a question
-    /// about the game's interface — whether a foil printing can be wishlisted at all — rather than
+    /// about the game's interface — whether a foil printing can be wishlisted in the game at all — rather than
     /// about what a slot is worth. Filtering the demands before ranking also keeps the twenty slots
     /// full: excluding foils afterwards would leave gaps.
     /// </param>
@@ -1040,12 +1040,12 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
-    public bool WishGrid => State.Prefs.WishGrid;
+    public bool ChaseGrid => State.Prefs.ChaseGrid;
 
-    public void SetWishGrid(bool on)
+    public void SetChaseGrid(bool on)
     {
-        if (on == State.Prefs.WishGrid) return;
-        State = State with { Prefs = State.Prefs with { WishGrid = on } };
+        if (on == State.Prefs.ChaseGrid) return;
+        State = State with { Prefs = State.Prefs with { ChaseGrid = on } };
         QueueSave();
         Changed?.Invoke();
     }
@@ -1107,9 +1107,18 @@ public sealed class AppSession : IAsyncDisposable
     /// </summary>
     public const int MaxFoilCopies = 2;
 
+    /// <summary>
+    /// Where the next tap lands: none → 1 → 2 → none, exactly as a rarity chip cycles.
+    ///
+    /// Exposed rather than kept inside <see cref="CycleFoilCopies"/> because a caller that names
+    /// the change before making it — the pack ranker says "Counting 2 of each parallel foil…"
+    /// while it re-ranks — needs the answer up front, and computing it there is how this rule came
+    /// to be written out in three places that could disagree.
+    /// </summary>
+    public int NextFoilCopies => FoilCopies >= MaxFoilCopies ? 0 : FoilCopies + 1;
+
     /// <summary>none → 1 → 2 → none, exactly as a rarity chip cycles.</summary>
-    public void CycleFoilCopies() =>
-        SetFoilCopies(FoilCopies >= MaxFoilCopies ? 0 : FoilCopies + 1);
+    public void CycleFoilCopies() => SetFoilCopies(NextFoilCopies);
 
     /// <summary>Sets that have foils at all, so the choice is only offered where it applies.</summary>
     public IReadOnlyList<string> FoilSets =>
@@ -1238,26 +1247,26 @@ public sealed class AppSession : IAsyncDisposable
     ///
     /// Four pages let you pick what to rank against, and four pages had written their own version
     /// of this. They had drifted: two spelled a set "set:A1" and two spelled it "A1", only one
-    /// knew about "wishes" and "series:", and a scope one page could produce was a scope another
+    /// knew about "chases" and "series:", and a scope one page could produce was a scope another
     /// read as "everything". The grammars do not collide, so one reader accepts all of them.
     ///
-    /// Anything unresolvable — a wishlist since deleted, a series with no openable sets left —
+    /// Anything unresolvable — a chase list since deleted, a series with no openable sets left —
     /// falls back to everything rather than to an empty target, which would read as "nothing left
     /// to collect". Callers that also need the dropdown to stop showing the dead option run
     /// <see cref="NormalizeScope"/> over the string first.
     /// </summary>
     public ICompletionTarget TargetForScope(string scope)
     {
-        if (scope.StartsWith("wish:", StringComparison.Ordinal))
-            return WishlistById(scope[5..]) is { } list
-                ? TargetForWishlist(list)
+        if (scope.StartsWith("chase:", StringComparison.Ordinal))
+            return ChaseListById(scope[5..]) is { } list
+                ? TargetForChaseList(list)
                 : TargetForEverything();
 
         // Merged, not summed: CompositeTarget takes the LARGEST requirement per card, so a card
         // on two lists is still one card.
-        if (scope == "wishes")
-            return Wishlists.Count > 0
-                ? new CompositeTarget(Wishlists.Select(TargetForWishlist).ToArray(), "all wishlists")
+        if (scope == "chases")
+            return ChaseLists.Count > 0
+                ? new CompositeTarget(ChaseLists.Select(TargetForChaseList).ToArray(), "all chase lists")
                 : TargetForEverything();
 
         if (scope.StartsWith("series:", StringComparison.Ordinal))
@@ -1274,12 +1283,12 @@ public sealed class AppSession : IAsyncDisposable
 
     /// <summary>
     /// The same scope, or "everything" when what it named is gone. A picker showing a deleted
-    /// wishlist keeps offering it; resolving to a fallback alone would leave the control and the
+    /// chase list keeps offering it; resolving to a fallback alone would leave the control and the
     /// results disagreeing about what is being ranked.
     /// </summary>
     public string NormalizeScope(string scope) =>
-        scope.StartsWith("wish:", StringComparison.Ordinal) && WishlistById(scope[5..]) is null ? "everything"
-        : scope == "wishes" && Wishlists.Count == 0 ? "everything"
+        scope.StartsWith("chase:", StringComparison.Ordinal) && ChaseListById(scope[5..]) is null ? "everything"
+        : scope == "chases" && ChaseLists.Count == 0 ? "everything"
         : scope.StartsWith("series:", StringComparison.Ordinal) && SetsInSeries(scope[7..]).Length == 0 ? "everything"
         : scope;
 
@@ -1495,7 +1504,7 @@ public sealed class AppSession : IAsyncDisposable
             Name = Clean(name, $"{source.Name} copy"),
             Collection = new Dictionary<string, int>(source.Collection),
             Decks = [.. source.Decks],
-            Wishlists = [.. source.Wishlists],
+            ChaseLists = [.. source.ChaseLists],
             PackLog = [.. source.PackLog],
             WonderLog = [.. source.WonderLog],
             TradeBoard = [.. source.TradeBoard],

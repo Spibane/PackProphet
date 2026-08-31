@@ -19,7 +19,7 @@ public sealed record SavedDeck(
     int? FaceNr = null);
 
 /// <summary>An arbitrary set of wanted cards, keyed by ownership key.</summary>
-public sealed record Wishlist(string Id, string Name, Dictionary<string, int> Wanted);
+public sealed record ChaseList(string Id, string Name, Dictionary<string, int> Wanted);
 
 /// <summary>One logged pack opening. The basis of the points ledger and the history view.</summary>
 public sealed record PackOpenEvent(
@@ -138,11 +138,14 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     public bool DeckGrid { get; init; }
 
     /// <summary>
-    /// Show wishlists as showcase cards instead of a table. Kept separate from
-    /// <see cref="DeckGrid"/>: someone with three wishlists and forty decks wants a different
+    /// Show chase lists as showcase cards instead of a table. Kept separate from
+    /// <see cref="DeckGrid"/>: someone with three chase lists and forty decks wants a different
     /// answer for each.
     /// </summary>
-    public bool WishGrid { get; init; }
+    public bool ChaseGrid { get; init; }
+
+    /// <summary>The v3 spelling of <see cref="ChaseGrid"/>. Read and cleared, as on the profile.</summary>
+    public bool? WishGrid { get; init; }
 
     /// <summary>
     /// Copies wanted of each parallel foil — the Deluxe set's second printings of its 1-3 diamond
@@ -268,7 +271,7 @@ public sealed record Profile(
     Dictionary<string, int> Collection,
     TargetSettings Targets,
     List<SavedDeck> Decks,
-    List<Wishlist> Wishlists,
+    List<ChaseList> ChaseLists,
     List<PackOpenEvent> PackLog,
     List<WonderOfferEvent> WonderLog,
     Resources Resources)
@@ -289,7 +292,7 @@ public sealed record Profile(
     public LifetimeTotals? Lifetime { get; init; }
 
     /// <summary>
-    /// The player's name in the game, so a shared wishlist can be acted on. A want-list is
+    /// The player's name in the game, so a shared chase list can be acted on. A want-list is
     /// useless to the person reading it unless they can find you to send the card, and nothing
     /// else in the app carries that: the profile name is whatever you called this collection.
     ///
@@ -301,18 +304,25 @@ public sealed record Profile(
     public string? InGameName { get; init; }
 
     /// <summary>
-    /// The wishlist the grid's hearts write to, or null until the first heart makes one.
+    /// The chase list the grid's hearts write to, or null until the first heart makes one.
     ///
-    /// Its own list rather than "whichever wishlist happens to be first". A heart is a one-tap
-    /// note that you want a card; a wishlist is something you curate and price packs against, and
+    /// Its own list rather than "whichever chase list happens to be first". A heart is a one-tap
+    /// note that you want a card; a chase list is something you curate and price packs against, and
     /// dropping every passing heart into the first curated list quietly rewrites the thing you
-    /// built on purpose. Named separately, so the two can be told apart on the wishlists page.
+    /// built on purpose. Named separately, so the two can be told apart on the chase lists page.
     ///
     /// An id rather than a name, so renaming the list keeps the hearts pointed at it, and nullable
     /// so existing saves deserialize unchanged. A stale id -- the list was deleted -- reads as
     /// "no list yet", and the next heart makes a new one.
     /// </summary>
     public string? WantListId { get; init; }
+
+    /// <summary>
+    /// The v3 spelling of <see cref="ChaseLists"/>, read so that saves written before the rename
+    /// still open. <see cref="StateSerializer"/> moves it across and clears it, and the global
+    /// serializer options drop nulls, so it is read once and never written again.
+    /// </summary>
+    public List<ChaseList>? Wishlists { get; init; }
 
     public static Profile NewDefault(string id = "default", string name = "My collection") =>
         new(id, name, new(), TargetSettings.Default, [], [], [], [], Resources.Empty);
@@ -328,7 +338,7 @@ public sealed record AppState(
     string ActiveProfileId,
     Prefs Prefs)
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
 
     public static AppState Fresh()
     {

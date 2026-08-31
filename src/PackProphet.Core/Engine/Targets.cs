@@ -182,19 +182,19 @@ public sealed class DeckTarget : ICompletionTarget
 /// <summary>
 /// An arbitrary list of wanted cards, priced by the same engine as every other target.
 /// </summary>
-public sealed class WishlistTarget : ICompletionTarget
+public sealed class ChaseListTarget : ICompletionTarget
 {
     private readonly string _name;
     private readonly IReadOnlyDictionary<string, int> _wanted;
 
     /// <param name="wanted">Ownership key to desired copies.</param>
-    public WishlistTarget(string name, IReadOnlyDictionary<string, int> wanted)
+    public ChaseListTarget(string name, IReadOnlyDictionary<string, int> wanted)
     {
         _name = name;
         _wanted = wanted;
     }
 
-    public string Describe() => $"wishlist \"{_name}\"";
+    public string Describe() => $"chase list \"{_name}\"";
 
     public IReadOnlyList<Demand> Outstanding(CardIndex index, Collection owned)
     {

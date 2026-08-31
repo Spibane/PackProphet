@@ -3,7 +3,7 @@
 @inject AppSession Session
 @inject NavigationManager Nav
 
-<PageTitle>Shared wishlist · PackProphet</PageTitle>
+<PageTitle>Shared chase list · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -12,7 +12,7 @@
 else if (_shared is null)
 {
     <div class="page-head">
-        <h1 class="title">Shared wishlist</h1>
+        <h1 class="title">Shared chase list</h1>
     </div>
     <PageShell Measure="PageShell.Width.Wide">
         <p>
@@ -74,7 +74,7 @@ else
             </div>
         </div>
 
-        <DataTable Label="Cards on this wishlist">
+        <DataTable Label="Cards on this chase list">
             <thead>
                 <tr>
                     <th scope="col">card</th>
@@ -115,7 +115,7 @@ else
 }
 
 @code {
-    private PackProphet.State.SharedWishlist? _shared;
+    private PackProphet.State.SharedChaseList? _shared;
     private sealed record Row(PocketCard Card, int Wanted, int YouOwn);
     private List<Row> _rows = [];
     private int _canHelpWith;
@@ -152,7 +152,7 @@ else
 
     private void Decode()
     {
-        _shared = WishlistCodec.TryDecode(CodeFromFragment());
+        _shared = ChaseListCodec.TryDecode(CodeFromFragment());
         _rows = [];
         _canHelpWith = 0;
         if (_shared is null || !Session.Ready) return;

@@ -236,7 +236,7 @@ public class WonderPickEvalTests
         var offer = new List<PocketCard> { promo };
         offer.AddRange(OfRarity("C", 4));
 
-        var appraisal = Eval.Appraise(offer, new WishlistTarget(
+        var appraisal = Eval.Appraise(offer, new ChaseListTarget(
             "promo", new Dictionary<string, int> { [promo.OwnershipKey] = 1 }), new Collection());
 
         Assert.Equal(0, appraisal.ExpectedValue);

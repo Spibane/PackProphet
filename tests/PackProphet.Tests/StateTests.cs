@@ -12,7 +12,7 @@ public class StateTests
         {
             Collection = new() { ["a.webp"] = 2, ["b.webp"] = 1 },
             Decks = [new SavedDeck("d1", "Charizard", [1, 1, 36], [EnergyType.Fire], FaceNr: 36)],
-            Wishlists = [new Wishlist("w1", "cool", new() { ["c.webp"] = 1 })],
+            ChaseLists = [new ChaseList("w1", "cool", new() { ["c.webp"] = 1 })],
             PackLog = [new PackOpenEvent(DateTimeOffset.Parse("2026-08-22T10:00:00Z"),
                                          "A1", "Mewtwo", "Regular Pack", ["a.webp"])],
             Resources = Resources.Empty with { Premium = true, Shinedust = 4200 }
@@ -131,6 +131,63 @@ public class StateTests
         Assert.Equal(2, settings.PlanFor("A2").Copies(1));
         Assert.True(settings.HasOverride("A1"));
         Assert.False(settings.HasOverride("A2"));
+    }
+
+    [Fact]
+    public void V3Wishlists_BecomeChaseListsWithoutLosingAny()
+    {
+        // v4 renamed the site's own lists to "chase list", freeing "wishlist" for the game's own
+        // 20-slot board. These are lists someone built by hand and the only copy is in their
+        // browser, so reading a v3 save must move them across rather than start empty — which
+        // would not look like a skipped migration, it would look like the app lost their work.
+        var v3 = """
+        {
+          "schemaVersion": 3,
+          "activeProfileId": "default",
+          "prefs": { "theme": "auto", "wishGrid": true },
+          "profiles": [{
+            "id": "default", "name": "Mine", "collection": {},
+            "targets": { "defaultPlan": {"0":1}, "planBySet": {} },
+            "decks": [],
+            "wishlists": [{ "id": "w1", "name": "Chase cards", "wanted": { "a.webp": 2 } },
+                          { "id": "w2", "name": "Binder page", "wanted": { "b.webp": 1 } }],
+            "wantListId": "w2",
+            "packLog": [], "wonderLog": [], "resources": null
+          }]
+        }
+        """;
+
+        var migrated = StateSerializer.Deserialize(v3);
+
+        Assert.NotNull(migrated);
+        Assert.Equal(AppState.CurrentSchemaVersion, migrated.SchemaVersion);
+        Assert.Equal(["Chase cards", "Binder page"], migrated.Active.ChaseLists.Select(w => w.Name));
+        Assert.Equal(2, migrated.Active.ChaseLists[0].Wanted["a.webp"]);
+
+        // Untouched by the migration and still pointing at the right list: "want list" was never
+        // one of the names that collided, so the hearts keep writing where they were.
+        Assert.Equal("w2", migrated.Active.WantListId);
+        Assert.True(migrated.Prefs.ChaseGrid);
+    }
+
+    [Fact]
+    public void AMigratedSaveIsRewrittenWithOnlyTheNewSpelling()
+    {
+        // The legacy fields are read once and cleared, so a save written after the migration does
+        // not carry both spellings — two places to look is how they drift apart.
+        var v3 = """
+        {"schemaVersion":3,"activeProfileId":"d","prefs":{"wishGrid":true},
+         "profiles":[{"id":"d","name":"M","collection":{},"targets":null,"decks":[],
+          "wishlists":[{"id":"w","name":"W","wanted":{}}],"wantListId":"w",
+          "packLog":[],"wonderLog":[],"resources":null}]}
+        """;
+
+        var json = StateSerializer.Serialize(StateSerializer.Deserialize(v3)!);
+
+        Assert.DoesNotContain("wishlists", json);
+        Assert.DoesNotContain("wishGrid", json);
+        Assert.Contains("chaseLists", json);
+        Assert.Contains("wantListId", json);
     }
 
     [Fact]

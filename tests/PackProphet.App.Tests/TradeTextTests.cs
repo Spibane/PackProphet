@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components;
 using PackProphet.Pages;
 
 /// <summary>
-/// A wishlist as a few lines of text.
+/// A chase list as a few lines of text.
 ///
 /// The share link is the better artefact and the wrong shape for where these trades happen: a
 /// Discord thread takes text, nobody opens a stranger's link, and a reader with the game open on
@@ -12,16 +12,16 @@ using PackProphet.Pages;
 /// </summary>
 public class TradeTextTests : AppHost
 {
-    private async Task<IRenderedComponent<Wishlists>> ListPageAsync(string listId)
+    private async Task<IRenderedComponent<ChaseLists>> ListPageAsync(string listId)
     {
         await ReadyAsync();
-        return RenderComponent<Wishlists>(p => p.Add(w => w.Id, listId));
+        return RenderComponent<ChaseLists>(p => p.Add(w => w.Id, listId));
     }
 
     /// <summary>A list wanting two of one card and one of another, neither owned.</summary>
     private (string Id, string FirstName) Seed()
     {
-        var id = Session.CreateWishlist("Chase");
+        var id = Session.CreateChaseList("Chase");
         var cards = Session.Index.All.Where(c => c.Set == "A1").Take(2).ToArray();
 
         Session.SetWanted(id, cards[0].OwnershipKey, 2);
@@ -30,7 +30,7 @@ public class TradeTextTests : AppHost
         return (id, cards[0].Name);
     }
 
-    private static string TextOf(IRenderedComponent<Wishlists> page)
+    private static string TextOf(IRenderedComponent<ChaseLists> page)
     {
         page.FindAll("button").First(b => b.TextContent.Contains("copy as text")).Click();
         return page.Find(".trade-text").TextContent;
@@ -60,7 +60,7 @@ public class TradeTextTests : AppHost
     [Fact]
     public async Task Cards_you_already_own_are_left_out()
     {
-        // A wishlist keeps its rows once you own them, and asking a stranger for a card you have
+        // A chase list keeps its rows once you own them, and asking a stranger for a card you have
         // wastes their time and your credibility.
         await ReadyAsync();
         var (id, firstName) = Seed();
@@ -78,7 +78,7 @@ public class TradeTextTests : AppHost
     public async Task A_finished_list_says_so_rather_than_producing_an_empty_message()
     {
         await ReadyAsync();
-        var id = Session.CreateWishlist("Done");
+        var id = Session.CreateChaseList("Done");
         var page = await ListPageAsync(id);
 
         var text = TextOf(page);

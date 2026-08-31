@@ -68,7 +68,7 @@ public sealed record BoardPlan(
 ///
 /// The board is an advertisement rather than a tracking list: listing a card only makes other
 /// people offer it. So this is a selection problem over a hard budget of twenty slots, separate
-/// from the app's own wishlists, which are quantified completion targets and are not capped,
+/// from the app's own chase lists, which are quantified completion targets and are not capped,
 /// public, or restricted to tradeable rarities.
 ///
 /// Ranking is by what a card costs to get normally, descending. Multiplying that by the chance

@@ -13,7 +13,7 @@
    hand over a copy of the deck on every edit. *@
 
 @* The level is the caller's to set, because this component appears at three different depths:
-   directly under the page title on Wonder Pick and Wishlists, and inside a section on a deck. It
+   directly under the page title on Wonder Pick and Chase lists, and inside a section on a deck. It
    was a hard-coded h6, which meant Wonder Pick's outline went h1 straight to h6 and a screen
    reader navigating by heading skipped four levels on the way in. Size is set by .h6 either way,
    so the two decisions are now separate. *@
@@ -375,7 +375,7 @@ else
     /// chosen card is handed back whole.
     ///
     /// The two modes exist because the two consumers mean different things by "a card". A deck
-    /// slot is filled by any printing, so rows collapse to one per identity. A wishlist is a
+    /// slot is filled by any printing, so rows collapse to one per identity. A chase list is a
     /// statement about artwork, so collapsing them would make the alternate art unpickable.
     /// </summary>
     [Parameter] public bool ByPrinting { get; set; }
@@ -400,13 +400,13 @@ else
 
     /// <summary>
     /// Add every match at once. Optional: the deck builder does not offer it, because a 20-card
-    /// deck has no use for "add all 226", while a wishlist is exactly where that is wanted.
+    /// deck has no use for "add all 226", while a chase list is exactly where that is wanted.
     /// </summary>
     [Parameter] public EventCallback<IReadOnlyList<PocketCard>> OnPickAll { get; set; }
 
     /// <summary>
     /// Start the pool at every card rather than only owned ones. A deck is usually built from
-    /// what you have; a wishlist is by definition mostly what you have not.
+    /// what you have; a chase list is by definition mostly what you have not.
     /// </summary>
     [Parameter] public bool AllCardsDefault { get; set; }
 

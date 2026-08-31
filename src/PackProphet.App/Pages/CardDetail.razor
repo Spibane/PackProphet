@@ -80,7 +80,7 @@ else
             </div>
 
             @* Wanting a card is a separate fact from owning it, and this is the screen that has
-               the card in hand, so the wishlists live here rather than requiring another search
+               the card in hand, so the chase lists live here rather than requiring another search
                from the list side. *@
             <div class="want-row">
                 <span class="label">want it</span>
@@ -88,7 +88,7 @@ else
                 @* The same heart the collection grid has, on the same list, doing the same one
                    thing. It comes first and it is always here, whether or not that list exists yet
                    -- on a phone the tile hearts are hidden, so this is the only route to wanting a
-                   card, and "no wishlists yet" must not be the reason there is no way to say so.
+                   card, and "no chase lists yet" must not be the reason there is no way to say so.
                    The curated lists follow it, where they can carry counts. *@
                 @{ var hearted = Session.WantedOnHeartList(_card.OwnershipKey) > 0; }
                 <button class="btn btn-sm want-heart @(hearted ? "on" : "")"
@@ -107,7 +107,7 @@ else
                     // The hearts' own list is the button above, not one of the rows below: two
                     // controls for one list, disagreeing about whether a tap means "on" or "one
                     // more", is how you get a heart that appears to do nothing.
-                    var curated = Session.Wishlists.Where(w => w.Id != Session.Profile.WantListId).ToArray();
+                    var curated = Session.ChaseLists.Where(w => w.Id != Session.Profile.WantListId).ToArray();
                 }
                 @if (curated.Length > 0)
                 {

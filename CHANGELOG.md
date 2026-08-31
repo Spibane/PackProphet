@@ -6,6 +6,28 @@ until then the minor number tracks the roadmap phase.
 
 ### Unreleased
 
+- **The site's own lists are now "chase lists", and "wishlist" means the game's 20-slot board.**
+  The app had a Wishlists page and an "In-game wishlist" page, which is one word doing two jobs —
+  and the more-menu called the second one "In-game list", which named nothing at all. The game
+  calls its own board a wishlist, so that is the word it keeps; the app's own hand-built lists are
+  chase lists, which is what the README already called the cards on them. `/wishlists` is now
+  `/chase`, and the board page is simply **Wishlist**
+- **Saved chase lists survive the rename.** The stored spelling changed with the name, so a save
+  written before this carries `wishlists` where one written after carries `chaseLists`. Schema v4
+  moves them across on read, along with the list/grid layout toggle. These are lists built by hand
+  whose only copy is in the browser: reading an older save as "no chase lists" would not look like
+  a migration that was skipped, it would look like the app had lost the lot. The old field is
+  cleared as it is read, so a save never carries both spellings at once
+- **Share links are unaffected.** Only the C# type behind a shared list was renamed, not the fields
+  it writes, so a link made before the rename decodes exactly as it did
+- **Housekeeping found while reviewing the above.** A tap that chose no readable pictures — a
+  cancelled picker, or a mis-tap on a whole camera roll — cleared the results already on screen
+  before it worked out there was nothing to read, so a mis-tap cost someone their place in a batch
+  of eight. The progress notice opened on "picture 0 of 3", because the first render happens at the
+  handler's first await and the counter had not moved yet. The rule for cycling parallel-foil copies
+  was written out in three places that could disagree; there is now one, and the helper that always
+  existed for it is the one being called. `ShotImport.Clear()` and `CountReader.ExemplarCount` were
+  public, documented, and called from nowhere
 - **The screenshot import takes several pictures at once.** A sitting is several pictures: packs
   get opened in a run, Wonder Picks come in a batch, and the My Cards list runs past one screenful
   so shooting it in a few goes is the normal case rather than the exception. Up to twenty per go,

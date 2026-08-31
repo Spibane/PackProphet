@@ -73,6 +73,11 @@ const GLYPH_H = 14;
 /// into the right number of pieces — the font is fixed pitch, so equal pieces is exactly right.
 const DIGIT_PITCH = 0.69;
 
+/// How much of the badge's height a digit fills, at the least. Measured at 0.57 to 0.60 on the
+/// reference screenshots; the corner and slanted-edge artefacts that share the ribbon with it come
+/// in at 0.11 to 0.15, so there is a wide gap to sit in.
+const MIN_DIGIT_HEIGHT = 0.4;
+
 /// How far the card box is nudged when offering the matcher alternative crops, in pixels at the
 /// working scale. The detector lands within a few pixels of a card's true edge and the fingerprint
 /// is unforgiving about the difference — three pixels out is worth ten bits or more — so the cell
@@ -570,7 +575,14 @@ function digitRuns({ w, g }, badge, { ink }) {
     const inside = spans.filter(([, to]) => to < inked.length - 2);
     if (inside.length === 0) return [];
 
-    const measured = inside.map(span => ({ span, ...verticalExtent({ w, g }, badge, span, ink) }));
+    // Two filters, because either alone leaves a hole. The relative one separates digits from the
+    // shorter marks beside them, and cannot help when the only span found is a mark. The absolute
+    // one knows what a digit is: it fills well over half the ribbon's height, and the corner and
+    // edge artefacts fill a seventh of it.
+    const measured = inside.map(span => ({ span, ...verticalExtent({ w, g }, badge, span, ink) }))
+                           .filter(m => m.h >= badge.h * MIN_DIGIT_HEIGHT);
+    if (measured.length === 0) return [];
+
     const tallest = Math.max(...measured.map(m => m.h));
     const digits = measured.filter(m => m.h >= tallest * 0.75);
 
@@ -590,16 +602,30 @@ function digitRuns({ w, g }, badge, { ink }) {
     return out;
 }
 
+/// A span's tallest unbroken stack of inked rows, rather than the distance between its topmost and
+/// bottommost ink.
+///
+/// The difference is the whole of a bug that lost three counts in a row. The badge has bright
+/// artwork at both ends — a slanted right edge and a rounded bottom-left corner — and the corner
+/// puts a few pixels in the same columns that a stray bright pixel on the badge's top row can also
+/// land in. Measured end to end, those two specks 27 rows apart make a span as tall as the badge
+/// itself. Nothing is there, but it becomes the tallest span, and the relative filter below then
+/// throws away every real digit for being shorter than a thing that is not a digit.
+///
+/// Every digit from 0 to 9 has ink in every row of its own box, so the longest run is the right
+/// measure of one and is exactly what a pair of specks cannot fake.
 function verticalExtent({ w, g }, badge, [from, to], ink) {
-    let top = badge.y + badge.h, bottom = badge.y - 1;
-    for (let x = badge.x + from; x <= badge.x + to; x++) {
-        for (let y = badge.y; y < badge.y + badge.h; y++) {
-            if (g[y * w + x] < ink) continue;
-            if (y < top) top = y;
-            if (y > bottom) bottom = y;
-        }
+    let best = 0, bestTop = badge.y, run = 0;
+
+    for (let y = badge.y; y < badge.y + badge.h; y++) {
+        let lit = false;
+        for (let x = badge.x + from; x <= badge.x + to && !lit; x++) lit = g[y * w + x] >= ink;
+
+        run = lit ? run + 1 : 0;
+        if (run > best) { best = run; bestTop = y - run + 1; }
     }
-    return { top, h: bottom - top + 1 };
+
+    return { top: bestTop, h: best };
 }
 
 /// One digit, as ink coverage on a fixed grid plus its aspect. Grey rather than black and white

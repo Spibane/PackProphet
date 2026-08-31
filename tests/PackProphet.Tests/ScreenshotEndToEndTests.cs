@@ -76,9 +76,11 @@ public class ScreenshotEndToEndTests
     /// badges reading 3, 3, 6, 4, 3, 9, 1, 5, 4 by eye. Verbatim <c>scan()</c> output again, and this
     /// is the fixture that made all ten digits available — it is where the 3 and the 6 came from.
     ///
-    /// Copies is null for the last two. The badge segmentation returns a sliver rather than a digit
-    /// on those two cards, so the count is reported as unknown — which is the required outcome, and
-    /// the reason a partly-read count is never used: dropping a digit turns 14 into 4.
+    /// All nine counts read. Two of them did not, once: the badge segmentation returned a sliver
+    /// rather than a digit on the last two cards, and the count came back unknown. That was the same
+    /// defect IMG_1188 shows at its worst — a span measured from its topmost ink to its bottommost,
+    /// with nothing in between — and re-recording this fixture after the fix is what showed the two
+    /// were never a property of these cards. See <see cref="Scrolled"/>.
     /// </summary>
     private static readonly (string Key, string Hash, string Grey, double Aspect, int? Copies)[] Counted =
     [
@@ -89,8 +91,8 @@ public class ScreenshotEndToEndTests
         ("A1-20", "8e32a4d679da7b43c23800571cde21e7", "0137863115cfffc34dfffff88ffefffb6cc66ffc1113affb0006fff90008fffa0004effc45413cffdff52cffeffcaffd9ffffffb27beedb4", 0.59, 3),
         ("A1-21", "0ea2b63c7560f173c2fa050030788187", "04cffd611affffe44efdcff77ff74cfa8ff31afb9ff31afb6ffa7df92cfffff505dfffd3014bff71002bfd30004df910018ff500015b7100", 0.75, 9),
         ("A1-22", "0eb6b6b869c4e7c308f20f0800fe03c0", "fffffff8fffffffbccfffffb229ffffb006ffffb006ffffb006ffffb006ffffb006ffffb006ffffb006ffffb006ffffb006ffffb003bccb6", 0.38, 1),
-        ("A1-23", "1e96268d2e95c97308f27f0032d46807", "8888888800000000000000000000000000000000000000000000000000000000000000000000000000000000000000001111000099993333", 0.07, null),
-        ("A1-24", "1ea6b6b0010f8fc208b20d00c0bfffff", "88887777111100001111000011110000111100001111000011110000111100001111000011110000111100002222000077771111eeee9999", 0.07, null),
+        ("A1-23", "1e96268d2e95c97308f27f0032d46807", "02affffb04fffffc06fffff918ff63312aff95303dffffa33cdcfff913215ffe00002cff22102cff89526ffeffeafffcfffffff95acedb82", 0.63, 5),
+        ("A1-24", "1ea6b6b0010f8fc208b20d00c0bfffff", "0002cfc10005ffe2001affe2003dffe2017fffe202dfffe205fedfe21afcbfe23dfaafe27ffadff5cffffffadffffffb8cccfff811129fd2", 0.80, 4),
     ];
 
     private static ShotScan CountedScan() => new()
@@ -127,7 +129,7 @@ public class ScreenshotEndToEndTests
         var reading = new ScreenshotReader(Ix, Table).Read(CountedScan(), CardScreen.CopiesGrid);
 
         Assert.Equal(Counted.Select(c => c.Copies), reading.Matches.Select(m => m.Copies));
-        Assert.Equal(7, reading.Matches.Count(m => m.Copies is not null));
+        Assert.Equal(9, reading.Matches.Count(m => m.Copies is not null));
     }
 
     [Fact]
@@ -135,7 +137,15 @@ public class ScreenshotEndToEndTests
     {
         // Null means "the screen did not say", never "none". And the reading says how many cards it
         // happened to, because a reading that named every card and read no counts looks complete.
-        var reading = new ScreenshotReader(Ix, Table).Read(CountedScan(), CardScreen.CopiesGrid);
+        //
+        // The unreadable badges are made rather than found, now that every badge in every fixture
+        // reads. A sliver is exactly what the segmentation used to hand back on a badge it could not
+        // cut — see the note on Counted — so that is what two of these cards carry.
+        var scan = CountedScan();
+        foreach (var cell in scan.Cells.TakeLast(2))
+            cell.Digits = [new DigitGlyph { Grey = new string('0', 112), Aspect = 0.07 }];
+
+        var reading = new ScreenshotReader(Ix, Table).Read(scan, CardScreen.CopiesGrid);
 
         Assert.Equal(2, reading.Matches.Count(m => m.Copies is null));
         Assert.Contains(reading.Notes, n => n.Contains("could not be read for 2 of 9 cards"));
@@ -150,6 +160,179 @@ public class ScreenshotEndToEndTests
 
         foreach (var (match, expected) in reading.Matches.Zip(Counted))
             if (match.Copies is not null) Assert.Equal(expected.Copies, match.Copies);
+    }
+
+    /// <summary>
+    /// IMG_1188: the same three-across list as IMG_1152, scrolled so that all nine of A1-1 to A1-9
+    /// are whole, with badges reading 9, 11, 1, 8, 14, 20, 2, 6, 6 by eye. Verbatim <c>scan()</c>
+    /// output again.
+    ///
+    /// This is the regression fixture for the badge bug that lost a whole row of counts. The top row
+    /// of this screenshot has a stray bright pixel on the badge's own top row, in the same columns as
+    /// the ribbon's rounded bottom-left corner. Nothing is between them, but the two specks sat 27
+    /// rows apart in one column span, and the vertical extent was measured end to end — so an empty
+    /// span measured as tall as the badge, became the tallest span on the card, and the relative
+    /// filter then discarded every real digit for being shorter than it. Three cards in a row came
+    /// back with one nonsense glyph each and no count at all.
+    ///
+    /// The other two rows of the same picture read correctly throughout, which is what made it look
+    /// like a property of those three cards rather than of that one pixel.
+    /// </summary>
+    private static readonly (string Key, string Hash, string[] Nearby, (string Grey, double Aspect)[] Digits, int? Copies)[] Scrolled =
+    [
+        ("A1-1", "8e32a6d8b6a8dae3c2ff057f833c7387",
+         [
+          "8e36acdcb6b9f2c702ffcf5f81087781",
+          "8e36a4d8b6b8d2e7c2ff057f833c53a7",
+          "0ea6a4f896acd3e6c6fb05ff833c51af",
+          "8e32a4dcb6a8fac302ffc75f81287381",
+          "8ea2b6d886acdae3c6fb05ff833c51b7",
+          "8eb2965cb6aaead382ffc74f812c7381",
+          "8eb2b65ca6a8eaf3c2ff457f833c7b95",
+          "8ea2b6d88fa8daf3c2bb05ff033c5ab7"
+         ],
+         [("016aa83016efffb25efffff7bffa8dfaefc218fcffb106fdefd429fc9fffeffa3afffff603affff2002aff81002dfd30006ffa00009fd300", 0.69)], 9),
+        ("A1-2", "8632ae0d2d31b1f2c2ff01041130fc7f",
+         [
+          "8634ae1d2531b1f602ff81043310fe7f",
+          "8636ae0d2533b1f2c6ff010c3330fc7f",
+          "0eb6240d7d33b1a2c6fe018c0130c8ff",
+          "8636ae0d2d31b1d202ff01043110fe7f",
+          "8eb2a60d2d33b1b2c2fb058c0130ccff",
+          "8e32ae0c3531b1d282ff01043110fe7f",
+          "8eb2ae0c3531b1d1c2ff01841130fc7f",
+          "8eb2a68c2d33b1f1c2fb05841130ccff"
+         ],
+         [("44788873aafffff8aafffffa66cffffa114dfffa002cfffa002cfffa002cfffa002cfffa002cfffa002cfffa002cfffa002cfffa002afff9", 0.38),
+          ("66888885fffffffcfffffffe99ffffff11aaffff0099ffff0099fffe0099fffe0099fffe0099fffe0099fffe0099fffe0099fffe0077effc", 0.31)], 11),
+        ("A1-3", "0ea2a6efc9b0d3c3c0ff0700e8bfff2c",
+         [
+          "84b6a4cfdbb5d3c300ffc700f8beff0f",
+          "1ca4a4eecbb1d3c3c0ff0f00c8beff28",
+          "1ca4a4eecbb1d7c3c0f41f00c0bef7f8",
+          "8eb2b6efc9b0c3c380ffc500f8bfff0e",
+          "0ea6b6eec9b1d7e3c0fa1d00c0bff7f8",
+          "8eb2966fc9b2e3e380ff4500f81fff06",
+          "8ea2b66fc9b2e3e3c0ff4500e81fff04",
+          "0ea2b66fcdb0e3e3c0fa1d00c03ffff0"
+         ],
+         [("338bbb7277fffff688fffff844dffff8003cfff8001afff8001afff8001afff8001afff8001afff8001afff8001afff8001afff80019fff6", 0.44)], 1),
+        ("A1-4", "8ea64a7a38595173c3ff00039cc7f01b",
+         [
+          "8ca64a7639593173c2ff00139cf7f147",
+          "8ca64a763819717383ff00039cc7f15a",
+          "8ca64a5e3a19557381ff0803bcc7f03a",
+          "8ea64a3a385971f3c2ff00139cf7f117",
+          "8ea66ace3a19557181bf0803bcc5f01b",
+          "cea24e3a385951f142ff00139cf7f013",
+          "cea24e1b385d59f1c3ff00039cc5f01b",
+          "ceaa6a8b381d557101bf00019cc5f23f"
+         ],
+         [("015bcb8216dffff63bfecffb5ffb4bfd6ff828fd5efb5bfc28ffeff839fffff97ffc8cfdaff826ffbff715ffaffa49ff6ffecffd16befec6", 0.63)], 8),
+        ("A1-5", "1e16a6af3994b91500f73d003cf70943",
+         [
+          "1c16aeaf71b5b91500f72d007ef709c3",
+          "1c1624af3195b91500f72d003cf60943",
+          "1c1624af3194b9111e00ff001cfe0943",
+          "1e16aeaf3894b51500f72d007ef70943",
+          "1c16a6af3994b9151e01ff001cff0941",
+          "1e16ae0f3894b51500f72d007ee71043",
+          "0e16a60f3894b41500f33d003ef70843",
+          "0e16b62f38d4bc158e01ff001cff8841"
+         ],
+         [("4488887488efffe777dffff8337cfff80029fff80029fff80029fff80029fff80029fff80029fff80029fff80029fff80029fff80016ccb6", 0.38),
+          ("000028a200015ef40003aff40007dff4002bfff4005edff402ae8df416e93cf44bf73cf67efa8ef9affffffd9ccccffc34555df7000009c3", 0.69)], 14),
+        ("A1-6", "86b2a62929375357c3fb04000013e8ff",
+         [
+          "8e32ae692937d3f7c3fe01000013e8ff",
+          "0ea6a4a92937d3d7c7fa05000017e8ff",
+          "1ea624a92937f3d79ef11c000117f8ff",
+          "86b2ae292d375157c3ff01000013e8ff",
+          "0ea6b629293573578fb11c000017f8ff",
+          "86b2a63925336155c3ff01000013e8ff",
+          "86b2b63925716155c3fb04000013e8ff",
+          "8ea2b629217573558fb00c000013f8ff"
+         ],
+         [("027aa83027effe825cfddfd48fe76df78da21af947511af900004df800039fb50017ee63004cfb21018ff71114cfe75338fffdc75acdccc7", 0.69),
+          ("015aa93004cfffa228fedff55cf96bf87ed317fb9fc204fcbfa103ddbfa103deafa103ed9fc204fc7ed317fb5ce85bf938fecef5129dec71", 0.69)], 20),
+        ("A1-7", "963216f89adccd9b02b8007f8bc0701b",
+         [
+          "963292f89a9c85939238007f81c0f113",
+          "963252f89a9c859312f8007f8bc0f03b",
+          "963252fc9a9c9d930038007f8fc0f03b",
+          "963294f89adcc5cbd238007f8160711b",
+          "863212fc9a9ccdb90038007f8fc0f03b",
+          "863284fa9eccc5cbd238007f8160300b",
+          "863294fa9acecde902bc007f8340701b",
+          "863294fe9acecce90038007f8fc0703b"
+         ],
+         [("039fffc33bfffffa7fffdffdbffa39ffaff515ff344116ff00005dfe0003eff90007fff4002cff91017ffc5215effda84cffffff6bcccccc", 0.63)], 2),
+        ("A1-8", "1eb6a60c382c2d321eb00d0009b7b9da",
+         [
+          "14b6241d396c2a32d6fa01000ff7bbd2",
+          "1cb6240d396c2c321ef00d000b7fbbd2",
+          "1cb6649d1b6c2c320c306f00007fbbba",
+          "16b6a60c282c2d32d6fa05000fb7b9d0",
+          "1eb6268c192c2c320e306f00003fb9da",
+          "86b2b68c2c243533d2fa05000fb7b950",
+          "0eb2b68c2c2435320eb00d000db7b9da",
+          "0eb2b68c0d2c35320e302f0000b799db"
+         ],
+         [("0004e810000afc20003df910018ff40003efc30007fff9302cffffd45ff85efa8ff31bfb8fd20afb7ff41bfb5ff97ef92cfffff504bddc61", 0.75)], 6),
+        ("A1-9", "0ea6b693227265530eb01dc03a4ea5cb",
+         [
+          "0ea6a49322646553c6fa05803a4481cb",
+          "1ea62693226665531eb01d803a4ea1cb",
+          "1ea62693226265730e207f80324e25cb",
+          "86b2b69322627553c2fa05803a4681cb",
+          "0ea6b693b37264330e303fc0384e25c1",
+          "86b2b693b2723553c2fa05c03a4681cf",
+          "0ea2b693b37274538eb01dc03a4e85c9",
+          "0ea6b693b37274310c303fc0386e04c1"
+         ],
+         [("0002ad400017ff71003efe40007ffb1002bff81005effc724cfffff98ffa5bfebfe515ffbfd304ffafe516ff7ffb7cfd4cfffffb03adeda3", 0.69)], 6),
+    ];
+
+    private static ShotScan ScrolledScan() => new()
+    {
+        Ok = true, Width = 1320, Height = 2868,
+        Lattice = new ShotLattice
+        {
+            Rows = 3, Cols = 3, CellWidth = 192, CellHeight = 268,
+            Confidence = 1.0, RelativeCellWidth = 0.2981366459627329,
+        },
+        Cells = Scrolled.Select((c, i) => new ShotCell
+        {
+            Row = i / 3, Col = i % 3, Hash = c.Hash, Nearby = [.. c.Nearby],
+            Luma = 0.64, Saturation = 0.49, Detail = 0.08,
+            Digits = c.Digits.Select(d => new DigitGlyph { Grey = d.Grey, Aspect = d.Aspect }).ToList(),
+        }).ToList(),
+    };
+
+    [Fact]
+    public void EveryCountOnAFullPageIsRead()
+    {
+        // Nine cards, nine counts, none of them null. The row that used to come back empty is the
+        // first one — 9, 11 and 1.
+        var reading = new ScreenshotReader(Ix, Table).Read(ScrolledScan(), CardScreen.CopiesGrid);
+
+        Assert.Equal(Scrolled.Select(c => c.Key), reading.Matches.Select(m => m.Card.Key));
+        Assert.Equal(Scrolled.Select(c => c.Copies), reading.Matches.Select(m => m.Copies));
+        Assert.DoesNotContain(reading.Notes, n => n.Contains("could not be read"));
+    }
+
+    [Fact]
+    public void ATwoDigitCountIsNotReadAsOneDigit()
+    {
+        // The specific way this failure is dangerous. 11 and 14 and 20 all begin with a digit that is
+        // a valid count on its own, so dropping the second one is silently plausible — and a card
+        // recorded as holding 1 when it holds 11 is indistinguishable afterwards from a typo.
+        var reading = new ScreenshotReader(Ix, Table).Read(ScrolledScan(), CardScreen.CopiesGrid);
+        var byKey = reading.Matches.ToDictionary(m => m.Card.Key, m => m.Copies);
+
+        Assert.Equal(11, byKey["A1-2"]);
+        Assert.Equal(14, byKey["A1-5"]);
+        Assert.Equal(20, byKey["A1-6"]);
     }
 
     /// <summary>

@@ -6,6 +6,13 @@ until then the minor number tracks the roadmap phase.
 
 ### Unreleased
 
+- **The app has its own domain: [packprophet.spibane.com](https://packprophet.spibane.com/).** The
+  deploy used to rewrite the base href to `/PackProphet/`, which is what project-page hosting needs
+  and what a custom domain must not have — every asset would be fetched from a path the host does
+  not have, and the site would come up blank on every route while the deploy reported success. The
+  href committed in `index.html` is already the domain root, so nothing rewrites it now and the
+  workflow fails if that ever stops being true. The domain travels in the published output as a
+  `CNAME` file rather than living only in the repository settings
 - **The site's own lists are now "chase lists", and "wishlist" means the game's 20-slot board.**
   The app had a Wishlists page and an "In-game wishlist" page, which is one word doing two jobs —
   and the more-menu called the second one "In-game list", which named nothing at all. The game

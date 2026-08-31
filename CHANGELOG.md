@@ -4,6 +4,22 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
+### Unreleased
+
+- **A whole row of copy counts could go unread, and the reason was one pixel.** The count badge is
+  a dark ribbon with bright artwork at both ends — a slanted right edge and a rounded bottom-left
+  corner. A column span's height was measured from its topmost ink to its bottommost, so when a
+  stray bright pixel on the badge's top row happened to land in the same columns as that bottom
+  corner, an empty span measured as tall as the badge itself. It then became the tallest thing on
+  the card, and the filter that separates digits from the marks beside them threw away every real
+  digit for being shorter than it. Three cards in a row came back with no count at all while the
+  rest of the same screenshot read perfectly, which is what made it look like a property of those
+  cards. A span is now measured by its tallest unbroken stack of inked rows — every digit has ink
+  in every row of its own box, and two specks 27 rows apart cannot fake that — and a digit must
+  fill at least 40% of the ribbon's height, which the corner and edge artefacts never do. Two cards
+  on an older fixture whose counts had always been reported as unreadable turn out to read as 5 and
+  4
+
 ### v0.5.1 - 2026-08-28
 
 - **Housekeeping before the first public test** — a lighter first visit, a smaller repository, and

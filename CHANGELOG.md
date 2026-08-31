@@ -6,6 +6,23 @@ until then the minor number tracks the roadmap phase.
 
 ### Unreleased
 
+- **The screenshot import takes several pictures at once.** A sitting is several pictures: packs
+  get opened in a run, Wonder Picks come in a batch, and the My Cards list runs past one screenful
+  so shooting it in a few goes is the normal case rather than the exception. Up to twenty per go,
+  each read on its own and reported under its own filename, with a failure naming the file it came
+  from rather than saying "that file" beside four others. Choosing a different card layout still
+  re-reads the whole batch for free, because the pixels were measured once and only their meaning
+  changes
+- **What the pages do with a batch differs, because the pictures mean different things.** A pack
+  and a Wonder Pick are separate events, so those two screens offer each reading its own button and
+  are worked through one at a time. The collection is one thing, so its import merges the readings
+  and applies them as a single edit with a single undo step — not one apply and one undo per
+  picture
+- **Merging is also the only way to get overlapping screenshots right.** Two shots of the same card
+  list overlap, and a card can be a blank slot in the screenful taken before you scrolled and a
+  recognised card in the one taken after. Read on its own, that first picture says to delete it.
+  Marking cards as not owned is the one destructive half of this import, so a card found in any
+  picture is never marked missing on the strength of another
 - **A whole row of copy counts could go unread, and the reason was one pixel.** The count badge is
   a dark ribbon with bright artwork at both ends — a slanted right edge and a rounded bottom-left
   corner. A column span's height was measured from its topmost ink to its bottommost, so when a

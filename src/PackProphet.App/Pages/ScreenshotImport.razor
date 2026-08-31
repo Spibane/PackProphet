@@ -23,18 +23,32 @@ else
            Pick screen, where it is an offer to weigh up rather than anything to record. *@
         <ShotImport Group="cards" Choices="@Layouts" ChoiceLegend="Which card list">
             <Intro>
-                In the game: the <strong>My Cards</strong> screen, in either layout.
+                In the game: the <strong>My Cards</strong> screen, in either layout. The list runs
+                past one screenful, so scroll and shoot it in several goes &mdash; they are read
+                separately and applied as one.
             </Intro>
-            <Actions Context="reading">
-                @if (Found(reading).Count > 0)
+            @* Together rather than Actions: the collection is one thing, not one thing per picture.
+               Applying picture by picture would make several undo steps out of a single import, and
+               would get overlapping shots wrong — a card blank on the screenful before you scrolled
+               and recognised on the one after must not come out as not owned. *@
+            <Together Context="readings">
+                @* Worked out once for the whole block. Both sides walk every match in every
+                   picture and Missing walks them twice, so calling them inline where each count is
+                   printed meant ten passes over a batch that can be twenty screenshots — on every
+                   tick of a checkbox. *@
+                @{
+                    var found = Found(readings);
+                    var missing = Missing(readings);
+                }
+
+                @if (found.Count > 0)
                 {
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="checkbox" id="apply-found"
                                checked="@_applyFound" @onchange="@(e => _applyFound = Checked(e))" />
                         <label class="form-check-label" for="apply-found">
                             <strong>
-                                Record @Found(reading).Count.ToString("N0")
-                                @Fmt.S(Found(reading).Count, "card") as owned
+                                Record @found.Count.ToString("N0") @Fmt.S(found.Count, "card") as owned
                             </strong>
                             <span class="d-block small text-body-secondary">
                                 Never lowers a count you already have.
@@ -43,15 +57,14 @@ else
                     </div>
                 }
 
-                @if (Missing(reading).Count > 0)
+                @if (missing.Count > 0)
                 {
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="apply-missing"
                                checked="@_applyMissing" @onchange="@(e => _applyMissing = Checked(e))" />
                         <label class="form-check-label" for="apply-missing">
                             <strong>
-                                Mark @Missing(reading).Count.ToString("N0")
-                                @Fmt.S(Missing(reading).Count, "card") as not owned
+                                Mark @missing.Count.ToString("N0") @Fmt.S(missing.Count, "card") as not owned
                             </strong>
                             @* Off unless asked for. This is the only half of the reading that can
                                destroy something: every other outcome adds a card, and this one
@@ -64,11 +77,15 @@ else
                     </div>
                 }
 
-                <button class="btn btn-primary" @onclick="@(() => Apply(reading))"
-                        disabled="@(!_applyFound && !_applyMissing)">
+                @* Disabled on what is actually there, not just on the boxes. Both halves can be
+                   ticked and still have nothing behind them — a reading where every card is
+                   already owned offers no removals — and a live button that does nothing when
+                   pressed reads as a broken button rather than an empty result. *@
+                <button class="btn btn-primary" @onclick="@(() => Apply(found, missing))"
+                        disabled="@(!(_applyFound && found.Count > 0) && !(_applyMissing && missing.Count > 0))">
                     apply to @Session.Profile.Name
                 </button>
-            </Actions>
+            </Together>
         </ShotImport>
 
         @* Clear of the apply button above it: the two were flush, so the confirmation read as part
@@ -142,20 +159,47 @@ else
 
     private static bool Checked(ChangeEventArgs e) => e.Value is true;
 
-    private static IReadOnlyList<ShotMatch> Found(ShotReading reading) =>
-        reading.Matches.Where(m => m.Owned).ToArray();
-
-    private static IReadOnlyList<ShotMatch> Missing(ShotReading reading) =>
-        reading.Matches.Where(m => !m.Owned).ToArray();
+    /// <summary>
+    /// Every card the pictures between them say is held, once each. Overlapping screenshots repeat
+    /// cards, so the same card read twice is one card here; where a copy count was read the largest
+    /// wins, on the same reasoning the apply itself uses — a screenshot is evidence of at least that
+    /// many, never of fewer.
+    /// </summary>
+    private static IReadOnlyList<ShotMatch> Found(IReadOnlyList<ShotReading> readings) =>
+        readings.SelectMany(r => r.Matches)
+                .Where(m => m.Owned)
+                .GroupBy(m => m.Card.OwnershipKey)
+                .Select(g => g.MaxBy(m => m.Copies ?? 1)!)
+                .ToArray();
 
     /// <summary>
-    /// One mutation for the whole reading, so the undo history holds "imported a screenshot" rather
-    /// than forty separate card edits.
+    /// Cards the pictures say are not held &mdash; minus anything any other picture found.
+    ///
+    /// The subtraction is the whole reason this is computed across the batch rather than per
+    /// picture. Two shots of the same list overlap, and a card can be a blank slot in the screenful
+    /// taken before you scrolled and a recognised card in the one taken after. Read on its own that
+    /// first picture says "delete it". Read beside the second it says nothing of the kind, and this
+    /// is the destructive half of the import, so the benefit of the doubt goes to keeping the card.
     /// </summary>
-    private void Apply(ShotReading reading)
+    private static IReadOnlyList<ShotMatch> Missing(IReadOnlyList<ShotReading> readings)
     {
-        var add = _applyFound ? Found(reading) : [];
-        var remove = _applyMissing ? Missing(reading) : [];
+        var found = Found(readings).Select(m => m.Card.OwnershipKey).ToHashSet();
+
+        return readings.SelectMany(r => r.Matches)
+                       .Where(m => !m.Owned && !found.Contains(m.Card.OwnershipKey))
+                       .DistinctBy(m => m.Card.OwnershipKey)
+                       .ToArray();
+    }
+
+    /// <summary>
+    /// One mutation for the whole batch, so the undo history holds "imported a screenshot" rather
+    /// than forty separate card edits — or, now that a batch can be eight pictures, rather than
+    /// eight separate imports to undo one at a time.
+    /// </summary>
+    private void Apply(IReadOnlyList<ShotMatch> found, IReadOnlyList<ShotMatch> missing)
+    {
+        var add = _applyFound ? found : [];
+        var remove = _applyMissing ? missing : [];
         if (add.Count == 0 && remove.Count == 0) return;
 
         Session.Mutate(p =>

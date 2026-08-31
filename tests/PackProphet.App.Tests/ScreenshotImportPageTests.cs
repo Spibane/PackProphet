@@ -1,6 +1,7 @@
 namespace PackProphet.App.Tests;
 
 using Microsoft.AspNetCore.Components.Forms;
+using Bunit.JSInterop.InvocationHandlers;
 using PackProphet.Pages;
 using PackProphet.Vision;
 
@@ -87,9 +88,9 @@ public class ScreenshotImportPageTests : AppHost
     /// A page of the five-across list: sixteen slots of A1 in order, with slots 5, 9 and 12 left
     /// blank as the game draws a card you do not own.
     /// </summary>
-    private static ShotScan MeasuredScan()
+    private static ShotScan MeasuredScan(params int[] blanks)
     {
-        var blank = new[] { 5, 9, 12 };
+        var blank = blanks.Length > 0 ? blanks : [5, 9, 12];
 
         return new ShotScan
         {
@@ -125,6 +126,111 @@ public class ScreenshotImportPageTests : AppHost
             .UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "cards.png"));
 
         return page;
+    }
+
+    /// <summary>
+    /// Two screenfuls of the same list, stubbed to their own scans. The scan is chosen by matching
+    /// the data URL the component builds, so the file bytes differ &mdash; the only handle a test
+    /// has on "this call is for that file".
+    /// </summary>
+    private async Task<IRenderedComponent<ScreenshotImport>> ReadingTwoAsync(
+        ShotScan first, ShotScan second)
+    {
+        var module = JSInterop.SetupModule("./js/cardshot.js");
+        module.Setup<ShotScan>("scan", i => Sent(i, [1, 2, 3])).SetResult(first);
+        module.Setup<ShotScan>("scan", i => Sent(i, [4, 5, 6])).SetResult(second);
+
+        var page = await PageAsync();
+        page.FindComponent<InputFile>().UploadFiles(
+            InputFileContent.CreateFromBinary([1, 2, 3], "before-scrolling.png"),
+            InputFileContent.CreateFromBinary([4, 5, 6], "after-scrolling.png"));
+
+        return page;
+    }
+
+    private static bool Sent(JSRuntimeInvocation invocation, byte[] bytes) =>
+        invocation.Arguments[0] is string url && url.EndsWith(Convert.ToBase64String(bytes));
+
+    [Fact]
+    public async Task A_picture_that_names_nothing_offers_nothing_to_apply()
+    {
+        // Regression: the actions moved from per-picture to once-for-all-pictures when the import
+        // learned to take several, and the new block rendered for any picture that merely read
+        // cleanly. A shot of a set too new for this build reads cleanly and names nothing, so the
+        // page showed "none could be named" and a live apply button that did nothing when pressed.
+        var scan = MeasuredScan();
+        foreach (var cell in scan.Cells) cell.Hash = new string('0', 32);
+
+        JSInterop.SetupModule("./js/cardshot.js").Setup<ShotScan>("scan", _ => true).SetResult(scan);
+        var page = await PageAsync();
+        page.FindComponent<InputFile>()
+            .UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "nothing.png"));
+
+        Assert.Contains("none could be named", page.Markup);
+        Assert.Empty(page.FindAll("button.btn-primary"));
+    }
+
+    [Fact]
+    public async Task Apply_is_dead_when_the_ticked_half_has_nothing_behind_it()
+    {
+        // A tick outlives the reading that justified it. Mark-missing is armed against the
+        // five-across list, where blanks are cards you do not own; saying the same picture is
+        // actually the three-across list removes every removal, because an unowned card is absent
+        // from that screen rather than blank on it. The tick stays set, and the button used to go
+        // by the ticks alone — so it stayed live over a pair of halves that between them had
+        // nothing to do.
+        var page = await ReadingAsync();
+        page.Find("#apply-missing").Change(true);
+
+        page.Find("#cards-CopiesGrid").Change(true);
+        Assert.Empty(page.FindAll("#apply-missing"));      // nothing is missing on this screen
+
+        page.Find("#apply-found").Change(false);
+        Assert.True(page.Find("button.btn-primary").HasAttribute("disabled"));
+
+        page.Find("#apply-found").Change(true);
+        Assert.False(page.Find("button.btn-primary").HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public async Task Several_screenfuls_are_applied_as_one_import()
+    {
+        // The My Cards list runs past one screenful, so several shots of it are the normal case.
+        // They describe one collection between them, so they get one apply and one undo step —
+        // not one of each per picture.
+        var page = await ReadingTwoAsync(MeasuredScan(5, 9, 12), MeasuredScan(9, 12));
+
+        Assert.Equal(2, page.FindAll("h2").Count);          // one table per picture
+        Assert.Single(page.FindAll("button.btn-primary"));  // one apply for the batch
+
+        page.Find("button.btn-primary").Click();
+
+        // Fourteen distinct cards, not twenty-seven: the two pictures overlap almost entirely, and
+        // a card read twice is one card.
+        Assert.Contains("Recorded 14 cards as owned", page.Markup);
+        Assert.Equal(14, Session.Owned.DistinctOwned);
+        Assert.True(Session.CanUndo);
+    }
+
+    [Fact]
+    public async Task A_card_found_in_one_picture_is_not_deleted_by_another()
+    {
+        // The rule that makes the merge worth doing at all. Card 5 is a blank slot in the screenful
+        // taken before you scrolled and a recognised card in the one taken after. Read on its own
+        // the first picture says "delete it"; read beside the second it says nothing of the kind.
+        // This is the destructive half of the import, so the doubt goes to keeping the card.
+        var page = await ReadingTwoAsync(MeasuredScan(5, 9, 12), MeasuredScan(9, 12));
+
+        foreach (var key in new[] { "A1-5", "A1-9", "A1-12" })
+            Session.SetCount(Session.Index.ByKey[key], 1);
+
+        page.Find("#apply-missing").Change(true);
+        page.Find("button.btn-primary").Click();
+
+        Assert.Equal(1, Session.CountOf(Session.Index.ByKey["A1-5"]));
+        Assert.Equal(0, Session.CountOf(Session.Index.ByKey["A1-9"]));
+        Assert.Equal(0, Session.CountOf(Session.Index.ByKey["A1-12"]));
+        Assert.Contains("Marked 2 cards as not owned", page.Markup);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 namespace PackProphet.App.Tests;
 
 using Microsoft.AspNetCore.Components.Forms;
+using Bunit.JSInterop.InvocationHandlers;
 using PackProphet.Pages;
 using PackProphet.Vision;
 
@@ -69,6 +70,120 @@ public class ShotImportHostingTests : AppHost
     private static void Upload(IRenderedFragment page) =>
         page.FindComponent<InputFile>()
             .UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "shot.png"));
+
+    /// <summary>
+    /// Two pictures in one go, each stubbed to its own scan. The scan is chosen by matching the data
+    /// URL the component builds, so the file bytes differ — which is the only handle the test has on
+    /// "this call is for that file".
+    /// </summary>
+    private void StubTwo(ShotScan first, ShotScan second)
+    {
+        var module = JSInterop.SetupModule("./js/cardshot.js");
+        module.Setup<ShotScan>("scan", i => Sent(i, [1, 2, 3])).SetResult(first);
+        module.Setup<ShotScan>("scan", i => Sent(i, [4, 5, 6])).SetResult(second);
+    }
+
+    private static bool Sent(JSRuntimeInvocation invocation, byte[] bytes) =>
+        invocation.Arguments[0] is string url && url.EndsWith(Convert.ToBase64String(bytes));
+
+    private static void UploadTwo(IRenderedFragment page) =>
+        page.FindComponent<InputFile>().UploadFiles(
+            InputFileContent.CreateFromBinary([1, 2, 3], "one.png"),
+            InputFileContent.CreateFromBinary([4, 5, 6], "two.png"));
+
+    // ------------------------------------------------------------------ several at once
+
+    [Fact]
+    public async Task A_run_of_packs_is_read_as_a_run_of_packs()
+    {
+        // The reason multiple pictures exist at all on this page: packs get opened in a sitting, and
+        // each one is its own event to log. Two shots are two offers to open a pack, not one merged
+        // hand of ten cards.
+        StubTwo(HandScan(), HandScan(["A2-1", "A2-2", "A2-3", "A2-4", "A2-5"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        Assert.Equal(2, page.FindAll("h2").Count);
+        Assert.Contains("one.png", page.Markup);
+        Assert.Contains("two.png", page.Markup);
+    }
+
+    [Fact]
+    public async Task Each_picture_in_a_run_can_be_adopted_on_its_own()
+    {
+        // Adopting the second must load the second, not the first. The workspace holds one pack at a
+        // time, so the pictures stay on screen to be worked through in turn.
+        StubTwo(HandScan(["A1-1", "A1-2", "A1-3"]), HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        // ElementAt rather than the indexer: the pinned AngleSharp does not expose the one bUnit's
+        // element collection reaches for.
+        var adopt = page.FindAll("button.btn-primary");
+        Assert.Equal(2, adopt.Count);
+        adopt.ElementAt(1).Click();
+
+        Assert.Contains("picked 5 of 5", page.Markup);
+    }
+
+    [Fact]
+    public async Task One_unreadable_picture_does_not_lose_the_others()
+    {
+        StubTwo(ShotScan.Failed("No cards were found in that image."), HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        // The failure names its own file, because "that file could not be read" beside two pictures
+        // does not say which one to retake.
+        Assert.Contains("one.png", page.Markup);
+        Assert.Equal("open Mewtwo with these 5 cards",
+                     Collapse(page.Find("button.btn-primary").TextContent));
+    }
+
+    [Fact]
+    public async Task A_mistap_on_the_camera_roll_does_not_lose_the_pictures_already_read()
+    {
+        // The refusal must not cost the batch behind it. Someone part-way through eight pack shots
+        // who fat-fingers the whole roll should get a warning over their results, not an empty page.
+        StubScan(HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        Upload(page);
+        Assert.Contains("open Mewtwo with these", Collapse(page.Markup));
+
+        page.FindComponent<InputFile>().UploadFiles(
+            Enumerable.Range(0, 21)
+                      .Select(i => InputFileContent.CreateFromBinary([1, 2, 3], $"{i}.png"))
+                      .ToArray());
+
+        Assert.Contains("more than 20 pictures", page.Markup);
+        Assert.Contains("open Mewtwo with these", Collapse(page.Markup));
+    }
+
+    [Fact]
+    public async Task A_whole_camera_roll_is_refused_rather_than_read()
+    {
+        StubScan(HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        page.FindComponent<InputFile>().UploadFiles(
+            Enumerable.Range(0, 21)
+                      .Select(i => InputFileContent.CreateFromBinary([1, 2, 3], $"{i}.png"))
+                      .ToArray());
+
+        // Said, not silently truncated: reading the first twenty of twenty-one would log nineteen
+        // packs and lose one without ever mentioning it.
+        Assert.Contains("more than 20 pictures", page.Markup);
+        Assert.Empty(page.FindAll("button.btn-primary"));
+    }
 
     // ------------------------------------------------------------------ the log screen
 

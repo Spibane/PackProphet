@@ -45,7 +45,7 @@ Blazor WebAssembly  (.NET 10 — static files, no account, no server, nothing up
    │
    ├── JS interop  (only what Blazor cannot reach)
    │       └── capped-concurrency image loading, touch drag-select, grid keys,
-   │           theme before first paint, tooltips, jsQR, screenshot slotting
+   │           theme and palette before first paint, tooltips, jsQR, screenshot slotting
    │
    ├── localStorage   collections, chase lists, decks, pack log, settings
    │
@@ -132,7 +132,10 @@ series, or a hand-picked chase list.
 - **Evolution gaps** — evolutions you own but cannot play, because you do not own what they evolve
   from. Reported per missing card, with the cheapest printing that would fill it. It walks the whole
   chain, so a Stage 2 with neither lower stage reports two missing cards
-- **Accessibility** — contrast measured live in both themes, names on every control, keyboard
+- **Appearance** — two independent settings. Light, dark or follow-the-OS, and a palette: **Paper**,
+  warm neutral surfaces with one accent, or **Slate**, the greys and blues the app shipped with.
+  Every skin has a light and a dark form, so choosing one is not also choosing the other
+- **Accessibility** — contrast measured live in every skin and theme, names on every control, keyboard
   operation throughout, and a text alternative for the history chart
 
 ### Reading a screenshot

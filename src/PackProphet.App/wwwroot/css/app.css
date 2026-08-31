@@ -240,7 +240,7 @@ main > * { flex-shrink: 0; }
    together than that, so the division has to be drawn rather than left to the space between
    words. The whole bar now reads as one row of buttons instead of two kinds of thing. */
 .app-nav .nav-item {
-    padding: .35rem .7rem; border-radius: .3rem; text-decoration: none;
+    padding: .35rem .7rem; border-radius: var(--pp-r-sm); text-decoration: none;
     border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
     color: var(--bs-body-color); font-size: 1rem; line-height: 1.2;
 }
@@ -265,7 +265,7 @@ main > * { flex-shrink: 0; }
    screens so the glyph alone survives beside the nav links. */
 .app-nav .theme-btn {
     display: inline-flex; align-items: center; gap: .3rem;
-    padding: .35rem .55rem; border-radius: .3rem;
+    padding: .35rem .55rem; border-radius: var(--pp-r-sm);
     border: 1px solid var(--bs-border-color);
     background: var(--bs-body-bg); color: var(--bs-body-color);
     font-size: .95rem; line-height: 1.2; cursor: pointer;
@@ -279,7 +279,7 @@ main > * { flex-shrink: 0; }
    are the same height and weight. It is capped in width because a collection name can be long
    and the nav has to survive a phone. */
 .app-nav .profile-switch {
-    max-width: 9rem; padding: .35rem .5rem; border-radius: .3rem;
+    max-width: 9rem; padding: .35rem .5rem; border-radius: var(--pp-r-sm);
     border: 1px solid var(--bs-border-color);
     background: var(--bs-body-bg); color: var(--bs-body-color);
     font-size: .95rem; line-height: 1.2; cursor: pointer;
@@ -325,7 +325,7 @@ main:focus { outline: none; }
    is the whole collection. */
 .storage-alarm {
     display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap;
-    margin: .5rem .75rem; padding: .5rem .7rem; border-radius: .4rem;
+    margin: .5rem .75rem; padding: .5rem .7rem; border-radius: var(--pp-r);
     border: 1px solid var(--bs-danger);
     background: color-mix(in srgb, var(--bs-danger) 12%, var(--bs-body-bg));
     font-size: .93rem;
@@ -350,7 +350,7 @@ main:focus { outline: none; }
     padding: .35rem 2rem .35rem .6rem;
     border: 1px solid var(--bs-border-color);
     background: color-mix(in srgb, var(--bs-body-color) 4%, transparent);
-    border-radius: .4rem;
+    border-radius: var(--pp-r);
     font-size: .92rem;
 }
 .gap-strip > .hd {
@@ -370,7 +370,7 @@ main:focus { outline: none; }
 /* The rarity sits between the name and the set, so it needs to read as a label rather than as
    part of either. */
 .gap-list .rr {
-    padding: 0 .3rem; border-radius: .2rem;
+    padding: 0 .3rem; border-radius: var(--pp-r-xs);
     background: color-mix(in srgb, var(--bs-body-color) 10%, transparent);
     font-size: .85rem;
 }
@@ -499,6 +499,448 @@ main:focus { outline: none; }
     --bs-btn-border-color: #599cfe;
 }
 
+/* ================================================================= skins
+
+   A SECOND appearance axis, independent of light/dark.
+
+   Everything above this point is one palette in two brightnesses. A skin changes the HUE of that
+   palette while leaving the brightness alone, so the two settings multiply rather than compete:
+   picking a look is not also picking light or dark, and a user whose OS flips at sunset keeps the
+   skin they chose.
+
+   Two skins, and the attribute is always stamped explicitly by theme.js before first paint:
+
+   paper — warm neutral surfaces and ONE accent, and the default. The discipline is the point:
+           three stacked warm greys carry the depth, nothing decorative carries a hue -- the brand
+           mark in the top bar is greyscaled for exactly that reason -- and the accent appears only
+           where something is chosen or wants care. Card art is then the only saturated thing on a
+           page of cards, which is the right way round for this app.
+   slate — the greys and blues the app shipped with. It is the ABSENCE of these rules rather than
+           a set of its own, so nothing below has to be written twice.
+
+   The one accent is Pokeball red, and it does two jobs rather than one: --bs-primary is
+   "chosen" (selection, active, focus, and the 6-22% tints that mark an owned card or a card
+   already in a deck), --bs-danger is "careful". They are the same hue at values two-to-one apart
+   in luminance, not two different colours. That is deliberate. A second saturated hue is exactly
+   what made the first attempt at this skin look like a logo painted onto a layout, and the two
+   roles are already separated by shape, position and label everywhere they meet -- a filled
+   primary next to an outlined destructive, each with a word on it. The cost is honest: this skin
+   distinguishes "save" from "delete" by weight where the slate skin had blue against red.
+
+   Specificity, since these have to beat the theme rules above: `[data-pp-skin][data-bs-theme]`
+   is 0,2,0 against the 0,1,0 of a bare `[data-bs-theme="light"]`, and 0,3,0 against 0,2,0 for the
+   button variants. It ties with `:root:not([data-bs-theme="dark"])` and wins on source order,
+   which is why this section is at the END of the palette rather than the start.
+
+   Why so many --bs-* variables for what is nominally two colours: Bootstrap derives its
+   translucent text tints from *-color-rgb triples rather than from the colour itself, so setting
+   --bs-body-color without --bs-body-color-rgb leaves every muted line in the app still tinted
+   from the old palette. The rgb forms are the same colours, not extra ones. */
+
+[data-pp-skin="paper"][data-bs-theme="light"],
+[data-pp-skin="paper"]:root:not([data-bs-theme="dark"]) {
+    /* Page and ink. Warm rather than white: #fbfaf8 against a true #fff is the difference between
+       a sheet of paper and a lightbox, and it is the ground the card art sits best on. The ink is
+       a near-black at 16.5:1, not the navy this skin replaced -- a tinted ink makes every neutral
+       on the page look like a failed attempt at the same tint. */
+    --bs-body-bg: #fbfaf8;
+    --bs-body-bg-rgb: 251, 250, 248;
+    --bs-body-color: #1c1b1a;
+    --bs-body-color-rgb: 28, 27, 26;
+    --bs-emphasis-color: #0d0c0c;
+    --bs-emphasis-color-rgb: 13, 12, 12;
+    --bs-secondary-color: rgba(28, 27, 26, .75);
+    --bs-secondary-color-rgb: 28, 27, 26;
+    --bs-tertiary-color: rgba(28, 27, 26, .7);
+    --bs-tertiary-color-rgb: 28, 27, 26;
+
+    /* The two raised surfaces. This is where the depth comes from -- body, raised, sunk, each a
+       step warmer and darker -- which is what lets the lines below get quieter. */
+    --bs-tertiary-bg: #f4f2ee;
+    --bs-tertiary-bg-rgb: 244, 242, 238;
+    --bs-secondary-bg: #ebe8e2;
+    --bs-secondary-bg-rgb: 235, 232, 226;
+
+    /* Two line weights, and the split matters more in this skin than in the last one.
+       --bs-border-color is the boundary of an AREA and stays at 3.4:1, because this app draws card
+       outlines, list rows and control borders with it and the project has already had to fix once
+       what happens when those go faint. --bs-table-border-color is a row divider inside a table,
+       where the fill either side already says which row is which, so it drops to a hairline.
+
+       --pp-hairline is a third weight, for the two places separation genuinely comes from
+       somewhere else: the top bar and the tab bar have a fill AND a shadow, so a hard line under
+       them is a third redundant signal and the loudest of the three. */
+    --bs-border-color: #8d877f;
+    --bs-border-color-translucent: rgba(28, 27, 26, .22);
+    --bs-table-border-color: #e2ded6;
+    --pp-hairline: #e2ded6;
+
+    /* Chosen. 5.6:1 under white as a fill and 5.0:1 as ink on the raised surface, so it is safe
+       both ways round -- which it has to be, since the token is a fill in nine places and a
+       colour in six. */
+    --bs-primary: #c62630;
+    --bs-primary-rgb: 198, 38, 48;
+
+    /* Careful. The same hue two-to-one darker, which is what separates a filled destructive button
+       from a filled primary one when both are red. Deep enough to be ink as well: the storage
+       alarm draws its border with this token. */
+    --bs-danger: #6f171c;
+    --bs-danger-rgb: 111, 23, 28;
+
+    /* The accent at ink strength, for the handful of rules that use --bs-primary as a COLOUR
+       rather than as a fill. Identical to the primary here; in dark it cannot be. */
+    --pp-accent-ink: #c62630;
+
+    --bs-link-color: #a81d26;
+    --bs-link-color-rgb: 168, 29, 38;
+    --bs-link-hover-color: #8a161e;
+    --bs-link-hover-color-rgb: 138, 22, 30;
+
+    --pp-want-ink: #c62630;
+
+    /* Depth, for the two bars whose line was given up above. Two layers rather than one: a tight
+       shadow draws the edge, a wide faint one lifts the bar off the page. */
+    --pp-lift: 0 1px 2px rgba(28, 27, 26, .05), 0 2px 10px rgba(28, 27, 26, .04);
+}
+
+[data-pp-skin="paper"][data-bs-theme="dark"] {
+    /* Warm charcoal, not black and not navy: the same warmth as the light form, inverted. */
+    --bs-body-bg: #17161a;
+    --bs-body-bg-rgb: 23, 22, 26;
+    --bs-body-color: #eeecea;
+    --bs-body-color-rgb: 238, 236, 234;
+    --bs-emphasis-color: #ffffff;
+    --bs-emphasis-color-rgb: 255, 255, 255;
+    --bs-secondary-color: rgba(238, 236, 234, .75);
+    --bs-secondary-color-rgb: 238, 236, 234;
+    --bs-tertiary-color: rgba(238, 236, 234, .7);
+    --bs-tertiary-color-rgb: 238, 236, 234;
+
+    --bs-tertiary-bg: #201f24;
+    --bs-tertiary-bg-rgb: 32, 31, 36;
+    --bs-secondary-bg: #2a292f;
+    --bs-secondary-bg-rgb: 42, 41, 47;
+
+    /* 3.3:1 against the body, where Bootstrap's own dark border manages 1.9:1. The dark skin is
+       the one place this project draws a HARDER line than the framework, because a near-black page
+       flattens a low-contrast edge more than a light one does. */
+    --bs-border-color: #6b6972;
+    --bs-border-color-translucent: rgba(238, 236, 234, .16);
+    --bs-table-border-color: #2c2b31;
+    --pp-hairline: #2c2b31;
+
+    /* Still fill-first: 4.8:1 under white, which the nine fills need. */
+    --bs-primary: #cf3b44;
+    --bs-primary-rgb: 207, 59, 68;
+
+    /* Careful, and here the ROLES INVERT. In light, "deeper" was both the distinguishable fill and
+       a legible ink; on a near-black page a deep burgundy is invisible, and the storage alarm --
+       deliberately the loudest thing in the app -- draws its border with this token. So the token
+       goes light, and the filled destructive button gets its own deep value below instead. */
+    --bs-danger: #f08a90;
+    --bs-danger-rgb: 240, 138, 144;
+
+    /* The primary is a fill colour here, and at 3.4:1 on the raised surface it is under the floor
+       for the six rules that use it as text. Those rules point at this instead. */
+    --pp-accent-ink: #f2646c;
+
+    --bs-link-color: #f2646c;
+    --bs-link-color-rgb: 242, 100, 108;
+    --bs-link-hover-color: #f5878d;
+    --bs-link-hover-color-rgb: 245, 135, 141;
+
+    --pp-want-ink: #f0777f;
+
+    /* Heavier than the light form's, because a shadow on a near-black ground barely registers at
+       the alphas that work on paper. */
+    --pp-lift: 0 1px 2px rgba(0, 0, 0, .5), 0 2px 10px rgba(0, 0, 0, .35);
+}
+
+/* ---------------------------------------------------------------- softer corners
+
+   Part of what dated the app was geometry rather than colour: .2-.4rem is the radius of a 2013
+   control. The three tokens carry the app's own values and this skin raises them together, which
+   is the only way a radius change reads as intentional -- a page where the panels moved and the
+   chips did not looks broken rather than rounder.
+
+   Bootstrap's own family is raised alongside them, since .btn, .form-control, .card and .modal
+   all take their corners from those and would otherwise stay square next to everything that did
+   move. Both sets stay untouched under the slate skin.
+
+   `:root[...]` rather than the bare attribute selector every other rule in this section uses. The
+   app's own three tokens are declared on `:root` further down the file, and a bare
+   `[data-pp-skin]` ties with it on specificity and LOSES on source order -- so the skin's radii
+   were being discarded by the defaults they were meant to replace. Qualifying with :root makes it
+   0,2,0 and settles it on specificity rather than on which block happens to be lower. */
+:root[data-pp-skin="paper"] {
+    --pp-r-xs: .3rem;
+    --pp-r-sm: .5rem;
+    --pp-r: .625rem;
+
+    --bs-border-radius: .5rem;
+    --bs-border-radius-sm: .375rem;
+    --bs-border-radius-lg: .75rem;
+    --bs-border-radius-xl: 1.25rem;
+}
+
+/* ---------------------------------------------------------------- skinned buttons
+
+   Bootstrap compiles the filled variants to literal hex -- .btn-primary sets --bs-btn-bg to
+   #0d6efd, not to var(--bs-primary) -- so a skin that only moved the tokens would leave every
+   solid button in the app the old blue. These are the four variants the app uses; success, warning
+   and info are status colours and keep theirs.
+
+   Hover and active step DARKER in both brightnesses, which is not what Bootstrap does in dark. It
+   has to here: every one of these carries a white label, and lightening a red fill under white
+   text walks it straight under the contrast floor -- the first pass at the dark hover measured
+   4.00:1. Darker is also the direction that reads as "pressed" regardless of the surroundings. */
+[data-pp-skin="paper"][data-bs-theme="light"] .btn-primary,
+[data-pp-skin="paper"]:root:not([data-bs-theme="dark"]) .btn-primary {
+    --bs-btn-bg: #c62630;
+    --bs-btn-border-color: #c62630;
+    --bs-btn-hover-bg: #b3212a;
+    --bs-btn-hover-border-color: #b3212a;
+    --bs-btn-active-bg: #a01d25;
+    --bs-btn-active-border-color: #a01d25;
+    --bs-btn-disabled-bg: #c62630;
+    --bs-btn-disabled-border-color: #c62630;
+    --bs-btn-focus-shadow-rgb: 198, 38, 48;
+}
+
+/* The deepest value in the skin, and the gap is the whole point: 2.05:1 in luminance against the
+   filled primary, which is what tells two red buttons apart at a glance. */
+[data-pp-skin="paper"][data-bs-theme="light"] .btn-danger,
+[data-pp-skin="paper"]:root:not([data-bs-theme="dark"]) .btn-danger {
+    --bs-btn-bg: #6f171c;
+    --bs-btn-border-color: #6f171c;
+    --bs-btn-hover-bg: #5c1317;
+    --bs-btn-hover-border-color: #5c1317;
+    --bs-btn-active-bg: #4d1013;
+    --bs-btn-active-border-color: #4d1013;
+    --bs-btn-disabled-bg: #6f171c;
+    --bs-btn-disabled-border-color: #6f171c;
+    --bs-btn-focus-shadow-rgb: 111, 23, 28;
+}
+
+/* The quiet workhorse -- 54 outline-secondary buttons and 17 filled ones -- and the one place the
+   skin's discipline is load-bearing rather than cosmetic: a warm near-black here is what keeps the
+   accent meaning something. A red secondary button would put the accent on two thirds of the
+   controls in the app and it would stop marking anything. */
+[data-pp-skin="paper"][data-bs-theme="light"] .btn-secondary,
+[data-pp-skin="paper"]:root:not([data-bs-theme="dark"]) .btn-secondary {
+    --bs-btn-bg: #45413b;
+    --bs-btn-border-color: #45413b;
+    --bs-btn-hover-bg: #363330;
+    --bs-btn-hover-border-color: #363330;
+    --bs-btn-active-bg: #2b2926;
+    --bs-btn-active-border-color: #2b2926;
+    --bs-btn-disabled-bg: #45413b;
+    --bs-btn-disabled-border-color: #45413b;
+    --bs-btn-focus-shadow-rgb: 69, 65, 59;
+}
+
+[data-pp-skin="paper"][data-bs-theme="dark"] .btn-primary {
+    --bs-btn-bg: #cf3b44;
+    --bs-btn-border-color: #cf3b44;
+    --bs-btn-hover-bg: #bb3138;
+    --bs-btn-hover-border-color: #bb3138;
+    --bs-btn-active-bg: #a82a32;
+    --bs-btn-active-border-color: #a82a32;
+    --bs-btn-disabled-bg: #cf3b44;
+    --bs-btn-disabled-border-color: #cf3b44;
+    --bs-btn-focus-shadow-rgb: 207, 59, 68;
+}
+
+[data-pp-skin="paper"][data-bs-theme="dark"] .btn-danger {
+    --bs-btn-bg: #7d2429;
+    --bs-btn-border-color: #7d2429;
+    --bs-btn-hover-bg: #6c1f23;
+    --bs-btn-hover-border-color: #6c1f23;
+    --bs-btn-active-bg: #5c1a1e;
+    --bs-btn-active-border-color: #5c1a1e;
+    --bs-btn-disabled-bg: #7d2429;
+    --bs-btn-disabled-border-color: #7d2429;
+    --bs-btn-focus-shadow-rgb: 125, 36, 41;
+}
+
+[data-pp-skin="paper"][data-bs-theme="dark"] .btn-secondary {
+    --bs-btn-bg: #454249;
+    --bs-btn-border-color: #454249;
+    --bs-btn-hover-bg: #524f58;
+    --bs-btn-hover-border-color: #524f58;
+    --bs-btn-active-bg: #3a383f;
+    --bs-btn-active-border-color: #3a383f;
+    --bs-btn-disabled-bg: #454249;
+    --bs-btn-disabled-border-color: #454249;
+    --bs-btn-focus-shadow-rgb: 69, 66, 73;
+}
+
+/* The outline variants, re-measured for this skin's surfaces exactly as the slate ones above were:
+   mixed toward the raised surface until they clear 4.8:1 on it, which leaves them 5.5:1 or better
+   on the body. Border as well as text, since the outline IS the control's boundary.
+
+   Outlined primary against outlined destructive is the pairing this skin has to work hardest at,
+   and it is the same answer as the filled one: bright red against the deepest red in light, and a
+   saturated coral against a pale dull rose in dark. */
+[data-pp-skin="paper"][data-bs-theme="light"] .btn-outline-primary,
+[data-pp-skin="paper"]:root:not([data-bs-theme="dark"]) .btn-outline-primary {
+    --bs-btn-color: #b0272f;
+    --bs-btn-border-color: #b0272f;
+    --bs-btn-hover-bg: #c62630;
+    --bs-btn-hover-border-color: #c62630;
+    --bs-btn-active-bg: #b3212a;
+    --bs-btn-active-border-color: #b3212a;
+    --bs-btn-disabled-color: #b0272f;
+    --bs-btn-disabled-border-color: #b0272f;
+}
+
+[data-pp-skin="paper"][data-bs-theme="light"] .btn-outline-secondary,
+[data-pp-skin="paper"]:root:not([data-bs-theme="dark"]) .btn-outline-secondary {
+    --bs-btn-color: #5f5a52;
+    --bs-btn-border-color: #5f5a52;
+    --bs-btn-hover-bg: #45413b;
+    --bs-btn-hover-border-color: #45413b;
+    --bs-btn-active-bg: #363330;
+    --bs-btn-active-border-color: #363330;
+    --bs-btn-disabled-color: #5f5a52;
+    --bs-btn-disabled-border-color: #5f5a52;
+}
+
+[data-pp-skin="paper"][data-bs-theme="light"] .btn-outline-danger,
+[data-pp-skin="paper"]:root:not([data-bs-theme="dark"]) .btn-outline-danger {
+    --bs-btn-color: #6f171c;
+    --bs-btn-border-color: #6f171c;
+    --bs-btn-hover-bg: #6f171c;
+    --bs-btn-hover-border-color: #6f171c;
+    --bs-btn-active-bg: #5c1317;
+    --bs-btn-active-border-color: #5c1317;
+    --bs-btn-disabled-color: #6f171c;
+    --bs-btn-disabled-border-color: #6f171c;
+}
+
+[data-pp-skin="paper"][data-bs-theme="dark"] .btn-outline-primary {
+    --bs-btn-color: #f2646c;
+    --bs-btn-border-color: #f2646c;
+    --bs-btn-hover-bg: #cf3b44;
+    --bs-btn-hover-border-color: #cf3b44;
+    --bs-btn-active-bg: #bb3138;
+    --bs-btn-active-border-color: #bb3138;
+    --bs-btn-disabled-color: #f2646c;
+    --bs-btn-disabled-border-color: #f2646c;
+}
+
+[data-pp-skin="paper"][data-bs-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: #a8a3ab;
+    --bs-btn-border-color: #a8a3ab;
+    --bs-btn-hover-bg: #454249;
+    --bs-btn-hover-border-color: #454249;
+    --bs-btn-active-bg: #3a383f;
+    --bs-btn-active-border-color: #3a383f;
+    --bs-btn-disabled-color: #a8a3ab;
+    --bs-btn-disabled-border-color: #a8a3ab;
+}
+
+[data-pp-skin="paper"][data-bs-theme="dark"] .btn-outline-danger {
+    --bs-btn-color: #f0a5aa;
+    --bs-btn-border-color: #f0a5aa;
+    --bs-btn-hover-bg: #7d2429;
+    --bs-btn-hover-border-color: #7d2429;
+    --bs-btn-active-bg: #6c1f23;
+    --bs-btn-active-border-color: #6c1f23;
+    --bs-btn-disabled-color: #f0a5aa;
+    --bs-btn-disabled-border-color: #f0a5aa;
+}
+
+/* ---------------------------------------------------------------- skinned form focus
+
+   The focus ring and the checked box are the last two hardcoded blues in Bootstrap's compiled
+   output that the app actually shows. Left alone they put #0d6efd rings and #0d6efd checkboxes on
+   a page that has no other #0d6efd in it, which reads as a control from a different app.
+
+   Not a colour-only change: the ring keeps its 4px spread, so focus is still marked by something
+   other than hue for anyone who cannot tell the two apart. */
+[data-pp-skin="paper"] .form-control:focus,
+[data-pp-skin="paper"] .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .25);
+}
+
+[data-pp-skin="paper"] .form-check-input:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+[data-pp-skin="paper"] .form-check-input:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .25);
+}
+
+/* ---------------------------------------------------------------- the accent as ink
+
+   --bs-primary is a fill in nine rules and a text or icon colour in six, and one value cannot be
+   both in the dark form: fill-safe under white means 3.4:1 as text on the raised surface, which is
+   under the floor. These six are the text ones, pointed at a value chosen for that job. In the
+   light form the two are the same colour and this rule changes nothing -- it is written for both
+   anyway, so that "which uses are ink" is recorded in one place rather than inferred. */
+[data-pp-skin="paper"] .tab-bar .tab.active,
+[data-pp-skin="paper"] .chip-link,
+[data-pp-skin="paper"] .pin-pack.on,
+[data-pp-skin="paper"] .card-tile .info:hover,
+[data-pp-skin="paper"] .step:hover:not(:disabled),
+[data-pp-skin="paper"] .to-top:hover { color: var(--pp-accent-ink); }
+
+/* ---------------------------------------------------------------- depth instead of lines
+
+   The top bar and the tab bar are the two places the app's separation was doing three jobs at
+   once: a fill DIFFERENT from the body, a hard 3.4:1 line, and (on the tab bar) a fixed position
+   over the content. The line is the redundant one and the loudest, so here it drops to a hairline
+   and a two-layer shadow does the lifting.
+
+   The border stays 1px and only changes colour. That is not fussiness: the tab bar's height is
+   reserved by `main` as `--tab-bar-h + 1px`, and the desktop More menu positions itself under the
+   top bar, so a border that changed WIDTH would hide a strip of the last row of content behind
+   the bar on every phone. A shadow paints outside the box and moves no geometry at all. */
+[data-pp-skin="paper"] .app-nav {
+    border-bottom-color: var(--pp-hairline);
+    box-shadow: var(--pp-lift);
+}
+
+[data-pp-skin="paper"] .tab-bar {
+    border-top-color: var(--pp-hairline);
+    box-shadow: var(--pp-lift);
+}
+
+/* The wordmark: the pack mark beside the name in the app's own ink, tightened. No chip, no outline,
+   no second hue -- the mark is drawn in currentColor in NavMenu.razor, so it IS the ink colour and
+   inverts with the theme without this file saying anything about it.
+
+   That is the whole reason it moved from a background-image to markup. The mark used to be
+   favicon.svg put through `filter: grayscale(1)`, which needed a second rule inverting it in dark,
+   because greyscale maps the icon's indigo tile to #454545 -- 8.6:1 on the light bar and 1.7:1 on
+   the dark one, where it all but vanished. currentColor has no such failure mode: there is one
+   colour, it is the body colour, and it is already the most contrasted thing on either bar.
+
+   Hidden under slate, which is the app exactly as it shipped and shipped without a mark. */
+.app-nav .brand .pack-mark { display: none; }
+
+[data-pp-skin="paper"] .app-nav .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    letter-spacing: -.02em;
+}
+
+/* Sized here rather than by the component's width/height attributes, which are only a default:
+   1.3rem against the wordmark's 1rem, so the mark reads as slightly the larger of the two without
+   outgrowing a bar whose controls are 2rem. In rem rather than px so it tracks the type scale if the
+   reader has scaled it. */
+[data-pp-skin="paper"] .app-nav .brand .pack-mark {
+    display: block;
+    flex: none;
+    inline-size: 1.3rem;
+    block-size: 1.3rem;
+}
+
 /* ================================================================= page chrome
 
    One contract, because the headers had drifted into ten different shapes: some pages opened
@@ -540,6 +982,22 @@ main:focus { outline: none; }
 
    Buttons need the flex centring as well as the height. Bootstrap's .btn is inline-block with
    padding, so a min-height alone would leave the label sitting at the top of a taller box. */
+/* Corner radius, as three tokens rather than as sixty numbers.
+   ==========================================================================================
+   These carry exactly the values the file already used -- .2rem on the small marks, .3rem on
+   controls, .4rem on panels -- so declaring them changed nothing. They exist so a skin can raise
+   all three together: a page where the panels got rounder and the chips did not looks broken
+   rather than rounder, and that is only avoidable if the values move as a set.
+
+   Not every radius in the file: 50% circles, pill shapes, the one-off .75rem sheet corner and the
+   handful of pixel values are shapes rather than a scale, and folding them in would flatten
+   distinctions that are deliberate. */
+:root {
+    --pp-r-xs: .2rem;
+    --pp-r-sm: .3rem;
+    --pp-r: .4rem;
+}
+
 :root { --ctl-h: 2.25rem; }
 @media (pointer: coarse) { :root { --ctl-h: 2.75rem; } }
 
@@ -737,7 +1195,7 @@ main:focus { outline: none; }
 .set-tab {
     border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
     color: var(--bs-body-color);
-    border-radius: .3rem; padding: .2rem .5rem; font-size: .9rem; white-space: nowrap;
+    border-radius: var(--pp-r-sm); padding: .2rem .5rem; font-size: .9rem; white-space: nowrap;
     display: flex; flex-direction: column; line-height: 1.15;
 }
 .set-tab.active { background: var(--bs-primary); color: #fff; border-color: var(--bs-primary); }
@@ -816,7 +1274,7 @@ main:focus { outline: none; }
     gap: .1rem;
     padding: .55rem .65rem;
     border: 1px solid var(--bs-border-color);
-    border-radius: .4rem;
+    border-radius: var(--pp-r);
     background: var(--bs-tertiary-bg);
     min-width: 0;
 }
@@ -882,7 +1340,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
     border: 1px solid var(--bs-border-color);
     background: var(--bs-body-bg);
     color: var(--bs-secondary-color);
-    border-radius: .3rem; padding: .15rem .4rem;
+    border-radius: var(--pp-r-sm); padding: .15rem .4rem;
     font-size: .9rem; line-height: 1.2; white-space: nowrap;
 }
 .rarity-chip.on { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; font-weight: 600; }
@@ -934,7 +1392,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
     font-size: .86rem; align-self: center;
     color: var(--bs-warning-text-emphasis);
     background: var(--bs-warning-bg-subtle);
-    border-radius: .3rem; padding: .15rem .4rem;
+    border-radius: var(--pp-r-sm); padding: .15rem .4rem;
 }
 
 /* ================================================================= steppers
@@ -960,7 +1418,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .step {
     width: var(--step-size); height: var(--step-size); flex: none;
     display: inline-flex; align-items: center; justify-content: center;
-    border: 1px solid var(--bs-border-color); border-radius: .2rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r-xs);
     background: var(--bs-body-bg); color: var(--bs-body-color);
     font-size: .95rem; line-height: 1; padding: 0; cursor: pointer;
 }
@@ -1118,7 +1576,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .kb-hint kbd {
     padding: 0 .25rem; font-size: .78rem;
     background: var(--bs-body-bg); color: var(--bs-body-color);
-    border: 1px solid var(--bs-border-color); border-radius: .2rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r-xs);
 }
 
 /* The grid owns a single tab stop for however many thousand cards are in it, so arriving there
@@ -1259,7 +1717,7 @@ img[data-state="loading"] ~ .art-wait {
     display: inline-flex; align-items: center; justify-content: center;
     width: clamp(1.15rem, 11cqw, 1.8rem); aspect-ratio: 1;
     padding: 0;
-    border: 0; border-radius: .3rem;
+    border: 0; border-radius: var(--pp-r-sm);
     background: none; color: var(--bs-secondary-color);
     opacity: .85;
     transition: color .08s linear, opacity .08s linear;
@@ -1300,7 +1758,7 @@ img[data-state="loading"] ~ .art-wait {
     padding: 0 .25rem;
     font-size: clamp(.7rem, 7cqw, 1rem);
     font-weight: 700; line-height: 1;
-    background: var(--bs-primary); color: #fff; border-radius: .3rem;
+    background: var(--bs-primary); color: #fff; border-radius: var(--pp-r-sm);
 }
 /* Nothing owned: the slot stays, so the row above and below it line up, and the caption is the
    same height on every tile in the grid. */
@@ -1315,7 +1773,7 @@ img[data-state="loading"] ~ .art-wait {
     padding: 0 .25rem;
     font-size: clamp(.7rem, 7cqw, 1rem);
     font-weight: 700; line-height: 1;
-    background: var(--bs-success); color: #fff; border-radius: .3rem;
+    background: var(--bs-success); color: #fff; border-radius: var(--pp-r-sm);
 }
 
 /* On a phone the caption would be a strip holding one number.
@@ -1422,7 +1880,7 @@ img[data-state="loading"] ~ .art-wait {
     display: inline-flex; align-items: center; justify-content: center;
     width: 1.6rem; height: 1.6rem;
     padding: 0;
-    border: 0; border-radius: .3rem;
+    border: 0; border-radius: var(--pp-r-sm);
     background: none; color: var(--bs-secondary-color);
     opacity: .75;
 }
@@ -1746,7 +2204,7 @@ img[data-state="loading"] ~ .art-wait {
     display: flex; flex-direction: column; align-items: center; gap: .2rem;
     border: 1px solid var(--bs-border-color);
     background: var(--bs-body-bg); color: var(--bs-body-color);
-    border-radius: .4rem; padding: .4rem .35rem .45rem;
+    border-radius: var(--pp-r); padding: .4rem .35rem .45rem;
     text-align: center;
 }
 .pack-choice:hover:not(:disabled) { border-color: var(--bs-primary); }
@@ -1814,7 +2272,7 @@ img[data-state="loading"] ~ .art-wait {
 }
 .pack-choice .ltd {
     position: absolute; top: .2rem; right: .2rem;
-    font-size: .74rem; padding: 0 .25rem; border-radius: .2rem;
+    font-size: .74rem; padding: 0 .25rem; border-radius: var(--pp-r-xs);
     background: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis);
 }
 
@@ -2065,7 +2523,7 @@ tr.row-best {
     display: block;
     width: 9rem;
     aspect-ratio: 367 / 512;
-    border-radius: .4rem;
+    border-radius: var(--pp-r);
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center; background-repeat: no-repeat;
     box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
@@ -2091,7 +2549,7 @@ tr.row-best {
 .hits-panel .hit-strip .thumb {
     flex: none;
     width: 2.3rem; aspect-ratio: 367 / 512;
-    border-radius: .2rem;
+    border-radius: var(--pp-r-xs);
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center;
     opacity: .6;
@@ -2155,8 +2613,8 @@ tr.row-best {
 
 /* The empty part of the track has to be visible, or a set with little progress looks like no
    bar at all rather than a nearly empty one. */
-.row-bar { background: var(--bs-secondary-bg); border-radius: .2rem; height: .55rem; }
-.row-bar span { display: block; height: 100%; border-radius: .2rem; background: var(--bs-primary); }
+.row-bar { background: var(--bs-secondary-bg); border-radius: var(--pp-r-xs); height: .55rem; }
+.row-bar span { display: block; height: 100%; border-radius: var(--pp-r-xs); background: var(--bs-primary); }
 
 .logged-card:not(:last-child)::after { content: " · "; color: var(--bs-secondary-color); }
 
@@ -2275,7 +2733,7 @@ tr.row-best {
     width: auto;
     aspect-ratio: 367 / 512;
     min-height: 7.5rem;
-    border-radius: .3rem;
+    border-radius: var(--pp-r-sm);
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center; background-repeat: no-repeat;
     box-shadow: 0 1px 5px rgba(0, 0, 0, .25);
@@ -2390,7 +2848,7 @@ tr.row-best {
 .save-state { min-width: 7rem; text-align: right; color: var(--bs-secondary-color); }
 .save-state.dirty { color: var(--bs-warning-text-emphasis); font-weight: 600; }
 
-.pick-list { max-height: 22rem; overflow-y: auto; border: 1px solid var(--bs-border-color); border-radius: .3rem; }
+.pick-list { max-height: 22rem; overflow-y: auto; border: 1px solid var(--bs-border-color); border-radius: var(--pp-r-sm); }
 /* A grid, not flex. With flex every cell sized from its own content, so the columns wandered
    from row to row — the same drift the collection list had before it moved to a grid. Every
    cell is always rendered, even when empty, or the columns after it shift.
@@ -2446,7 +2904,7 @@ tr.row-best {
 .pick-row .own .arts {
     font-size: .68rem;
     padding: 0 .3rem;
-    border-radius: .2rem;
+    border-radius: var(--pp-r-xs);
     color: var(--bs-secondary-color);
     background: var(--bs-secondary-bg);
     border: 1px solid var(--bs-border-color);
@@ -2475,7 +2933,7 @@ tr.row-best {
 .pick-row .abl {
     flex: none;
     font-size: .74rem; text-transform: uppercase; letter-spacing: .02em;
-    padding: 0 .25rem; border-radius: .2rem;
+    padding: 0 .25rem; border-radius: var(--pp-r-xs);
     background: var(--bs-info-bg-subtle); color: var(--bs-info-text-emphasis);
     border-bottom: 1px dotted currentColor;
 }
@@ -2611,7 +3069,7 @@ tr.row-best {
     background: var(--bs-body-bg);
     color: var(--bs-body-color);
     border: 1px solid var(--bs-border-color);
-    border-radius: .4rem;
+    border-radius: var(--pp-r);
     box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .3);
     font-size: .9rem;
     pointer-events: none;          /* never steals the hover that opened it */
@@ -2649,7 +3107,7 @@ tr.row-best {
    The FLEXIBLE column is the route note, not the name. With the name flexible, a wide screen
    gave it a huge cell and pushed everything else to the far right with nothing in between —
    which is what made the row read as empty. Text that can use the space goes in the space. */
-.chase-list { border: 1px solid var(--bs-border-color); border-radius: .3rem; overflow: hidden; }
+.chase-list { border: 1px solid var(--bs-border-color); border-radius: var(--pp-r-sm); overflow: hidden; }
 /* Was a nine-track CSS grid, restated in full at two breakpoints -- which is how a rarity column
    that could not fit four diamonds survived being fixed twice. A table sizes each column to its
    own content, so none of those numbers has to be guessed or kept in step. What is left here is
@@ -2701,7 +3159,7 @@ tr.row-best {
 /* ---- command palette ------------------------------------------------------------------- */
 .app-nav .palette-btn {
     display: inline-flex; align-items: center; gap: .35rem;
-    padding: .35rem .55rem; border-radius: .3rem;
+    padding: .35rem .55rem; border-radius: var(--pp-r-sm);
     border: 1px solid var(--bs-border-color);
     background: var(--bs-body-bg); color: var(--bs-secondary-color);
     font-size: .95rem; line-height: 1.2; cursor: pointer;
@@ -2790,7 +3248,19 @@ tr.row-best {
 /* Highlight follows the keyboard selection, and hover moves that selection rather than adding a
    second highlight — two visible "current" rows is worse than none. */
 .palette-item.sel { background: var(--bs-primary); color: #fff; }
-.palette-item.sel .sub, .palette-item.sel .kind { color: rgba(255, 255, 255, .8); }
+/* Full white, not the .8 this used to carry. The two quiet columns are still quiet -- .74rem
+   uppercase for the kind, .88rem right-aligned for the sub, against a 600-weight label at .95rem --
+   so the hierarchy is carried by size, case and position, and dimming was only ever reinforcing it.
+   It could not stay: composited on the selected row's fill, .8 alpha measured 3.42:1 on the slate
+   skin's primary and 3.60:1 on the paper skin's dark one, and no alpha below 1 clears 4.5:1 on any
+   of the three primaries this row is drawn on -- Bootstrap's own #0d6efd only reaches 4.50:1 at
+   full opacity. So the alpha had to go rather than move.
+
+   The colour is restated rather than left to inherit from .palette-item.sel, which sets the same
+   #fff: .kind and .sub declare a colour of their own further down, so inheritance never reaches
+   them and the rule has to say something. Saying it literally also gives the contrast test a value
+   to parse, which `inherit` would not. */
+.palette-item.sel .sub, .palette-item.sel .kind { color: #fff; }
 .palette-item .kind {
     font-size: .74rem; text-transform: uppercase; letter-spacing: .03em;
     color: var(--bs-secondary-color);
@@ -2807,7 +3277,7 @@ tr.row-best {
 }
 .palette-foot kbd {
     background: var(--bs-body-bg); color: inherit;
-    border: 1px solid var(--bs-border-color); border-radius: .2rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r-xs);
     padding: 0 .25rem; margin-right: .15rem; font-size: .78rem;
 }
 @media (width < 600px) {
@@ -2888,7 +3358,7 @@ tr.row-best {
     padding: .7rem 2.2rem .7rem .8rem;
     border: 1px solid var(--bs-border-color);
     border-inline-start: 3px solid var(--bs-primary);
-    border-radius: .4rem;
+    border-radius: var(--pp-r);
     background: var(--bs-tertiary-bg);
 }
 /* Same dismiss as the gap strip, in the same place, so the two read as one kind of thing. */
@@ -2907,7 +3377,7 @@ tr.row-best {
 .offer-card {
     position: relative;
     width: 4.6rem; aspect-ratio: 367 / 512; flex: none;
-    padding: 0; border: 1px solid var(--bs-border-color); border-radius: .3rem;
+    padding: 0; border: 1px solid var(--bs-border-color); border-radius: var(--pp-r-sm);
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center;
     cursor: pointer;
@@ -3048,7 +3518,7 @@ tr.row-best {
     width: 100%;
     padding: 0 .15rem;
     border: 1px solid transparent;
-    border-radius: .2rem;
+    border-radius: var(--pp-r-xs);
     background: none;
     color: inherit;
     font: inherit;
@@ -3075,7 +3545,7 @@ tr.row-best {
 
 .pool {
     border: 1px solid var(--bs-border-color);
-    border-radius: .4rem;
+    border-radius: var(--pp-r);
     padding: .7rem .8rem;
     background: var(--bs-tertiary-bg);
 }
@@ -3265,7 +3735,7 @@ tr.row-best {
 .nav-more nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .25rem; }
 .nav-more-item {
     padding: .7rem .75rem;
-    border-radius: .4rem;
+    border-radius: var(--pp-r);
     color: var(--bs-body-color); text-decoration: none;
     background: var(--bs-secondary-bg);
 }
@@ -3295,7 +3765,7 @@ tr.row-best {
     display: flex; align-items: center; gap: .5rem;
     width: 100%; margin-bottom: .6rem;
     padding: .7rem .75rem;
-    border: 1px solid var(--bs-border-color); border-radius: .4rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r);
     background: var(--bs-tertiary-bg); color: var(--bs-secondary-color);
     text-align: left; font-size: .92rem;
 }
@@ -3310,7 +3780,7 @@ tr.row-best {
 .nav-more-close {
     display: block; width: 100%; margin-top: .6rem;
     padding: .7rem .75rem;
-    border: 1px solid var(--bs-border-color); border-radius: .4rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r);
     background: var(--bs-body-bg); color: var(--bs-body-color);
     font-size: .95rem;
 }
@@ -3622,7 +4092,7 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 .slot-odds .slot {
     display: inline-flex; align-items: baseline; gap: .3rem;
     padding: .1rem .45rem;
-    border: 1px solid var(--bs-border-color); border-radius: .3rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r-sm);
     background: var(--bs-body-bg);
     font-size: .82rem;
 }

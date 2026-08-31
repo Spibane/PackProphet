@@ -22,6 +22,70 @@ public class LayoutInvariantTests
     private static string WithoutComments(string css) =>
         Regex.Replace(css, @"/\*.*?\*/", "", RegexOptions.Singleline);
 
+    private static readonly string Bootstrap = File.ReadAllText(Path.Combine(
+        AppContext.BaseDirectory, "lib", "bootstrap", "dist", "css", "bootstrap.min.css"));
+
+    /// <summary>
+    /// True when Bootstrap's own stylesheet has a rule whose selector list contains exactly this
+    /// class, on its own — `.mark` in `.mark,mark`, but not `.mark-something` and not `.x .mark`.
+    /// A bare single-class selector is the dangerous kind: it applies to the app's element on class
+    /// name alone, with nothing in the markup hinting that it would.
+    /// </summary>
+    private static bool BootstrapStylesBareClass(string className)
+    {
+        foreach (Match rule in Regex.Matches(Bootstrap, @"(?<sel>[^{}]+)\{(?<body>[^{}]*)\}"))
+            foreach (var selector in rule.Groups["sel"].Value.Split(','))
+                if (selector.Trim() == $".{className}")
+                    return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// The classes this app invents for its OWN components must not be classes Bootstrap already
+    /// styles on the class alone.
+    ///
+    /// This is a real bug that shipped into a working tree: the brand mark in the top bar was given
+    /// `class="mark"`, and Bootstrap ships `.mark, mark` for the highlight element — padding, a
+    /// colour, and a background of --bs-highlight-bg. The glyph rendered in a pale yellow box in
+    /// light and an olive one in dark, padded and recoloured, and it read as a broken image rather
+    /// than as a name collision. The stylesheet already carries one comment arrived at the same way,
+    /// on why .fold-hint is not called .hint.
+    ///
+    /// Deliberately a NAMED list rather than every class in the markup. The app uses Bootstrap's
+    /// classes on purpose all over the place and overrides plenty of them in app.css, so "collides
+    /// with Bootstrap" is only a defect for names the app coined for itself, and which of those is
+    /// which is not something a scanner can tell. New component classes go here.
+    /// </summary>
+    [Theory]
+    [InlineData("pack-mark")]
+    [InlineData("brand")]
+    [InlineData("fold-hint")]
+    [InlineData("app-nav")]
+    [InlineData("tab-bar")]
+    [InlineData("page-head")]
+    [InlineData("grid-toolbar")]
+    [InlineData("card-tile")]
+    [InlineData("palette-item")]
+    public void AnInventedClass_IsNotOneBootstrapAlreadyStyles(string className)
+    {
+        Assert.False(BootstrapStylesBareClass(className),
+            $"Bootstrap has a bare `.{className}` rule, so that class carries its styling wherever "
+            + "this app uses the name — pick a name Bootstrap does not own");
+    }
+
+    /// <summary>A guard on the guard: the check has to fire on a name Bootstrap really does own.</summary>
+    [Theory]
+    [InlineData("mark")]
+    [InlineData("badge")]
+    [InlineData("btn")]
+    public void TheCollisionCheck_WouldActuallyNotice(string className)
+    {
+        Assert.True(BootstrapStylesBareClass(className),
+            $"expected Bootstrap to style a bare `.{className}`; if it no longer does, the check "
+            + "above may be looking at the wrong thing");
+    }
+
     /// <summary>
     /// Every grid-template-columns in the file, as (selector, declaration). Media conditions are
     /// folded away: what matters is that a selector's variants agree, not which width each covers.

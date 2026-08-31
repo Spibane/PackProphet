@@ -1,0 +1,43 @@
+@* The booster pack from the app icon, as a one-colour outline.
+
+   Drawn once here because two places show it now — the wordmark in the top bar and the centre tab
+   on a phone — and path data copied into two files is path data that disagrees with itself after the
+   first tweak.
+
+   currentColor throughout, no literal colours: that is what lets the same drawing sit in near-black
+   ink on a light bar, near-white on a dark one, and white inside the filled action tab, without any
+   of the three saying anything about colour. The previous version of this mark was the app icon put
+   through `filter: grayscale(1)`, which needed a second rule inverting it in dark because greyscale
+   put the icon's indigo tile at 1.7:1 against the dark bar.
+
+   Redrawn rather than scaled down from icon.svg, on the grounds favicon.svg gives for being its own
+   drawing: the icon's pack is a FILLED white shape on an indigo tile, and a white pack is invisible
+   on a light bar. At this size its tear-strip dashes and the diamond's outline also turn to mush, so
+   the strip is one line and the diamond a solid. The 8-degree tilt is kept — it is what stops the
+   shape reading as a plain rectangle.
+
+   A 24 viewBox with a 1.8 stroke, matching the other tab-bar glyphs exactly, so the mark carries the
+   same weight as its neighbours at the same rendered size. Callers size it in CSS where they want it
+   to track a type scale, and with Size where they want pixels like the icons beside it. *@
+<svg class="@Class" viewBox="0 0 24 24" width="@Size" height="@Size" focusable="false"
+     aria-hidden="true">
+    <g transform="rotate(-8 12 12)">
+        <rect x="7.05" y="3.45" width="9.9" height="17.1" rx="2.25"
+              fill="none" stroke="currentColor" stroke-width="1.8" />
+        @* A fifth of the way down the pack, where the icon puts it: lower reads as a window rather
+           than a sealed pack. *@
+        <path d="M7.05 7.65h9.9" stroke="currentColor" stroke-width="1.8" />
+        <path d="M12 12.45L14.63 15.08L12 17.7L9.37 15.08z" fill="currentColor" />
+    </g>
+</svg>
+
+@code {
+    /// <summary>Class on the svg, so a caller can size or hide it from the stylesheet.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Rendered size in px. Only a default — a CSS rule on <see cref="Class"/> outranks the
+    /// attribute, which is how the top bar sizes this in rem instead.
+    /// </summary>
+    [Parameter] public int Size { get; set; } = 24;
+}

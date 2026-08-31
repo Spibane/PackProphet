@@ -12,7 +12,18 @@
    the daily ones does not change with the width of the screen, and a nav whose contents reshuffle
    between a laptop and a phone is one you have to re-learn. *@
 <nav class="app-nav">
-    <span class="brand">PackProphet</span>
+    @* The pack from the app icon beside the name. Drawn in PackMark so the centre tab on a phone
+       shows the same mark from the same path data.
+
+       NOT called .mark, which is what it was called first. Bootstrap ships `.mark, mark` for the
+       highlight element -- `padding: .1875em`, a colour, and a background of --bs-highlight-bg --
+       so the class dressed this glyph in a pale yellow box in light and an olive one in dark, padded
+       it, and overrode its ink. It looked like a broken asset rather than a class collision, which
+       is exactly how .fold-hint's own name was arrived at further down the stylesheet. *@
+    <span class="brand">
+        <PackMark Class="pack-mark" />
+        PackProphet
+    </span>
     <NavLink class="nav-item" href="collection" Match="NavLinkMatch.All">Collection</NavLink>
     <NavLink class="nav-item" href="packs">Packs</NavLink>
     <NavLink class="nav-item" href="log">Log</NavLink>

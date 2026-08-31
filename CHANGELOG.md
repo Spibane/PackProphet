@@ -6,6 +6,106 @@ until then the minor number tracks the roadmap phase.
 
 ### Unreleased
 
+- **The app has a palette of its own, and it is the default.** *Paper* is warm neutral surfaces
+  and ONE accent. Three stacked warm greys carry the depth, the ink is a near-black rather than a
+  tinted one, no trim or divider carries a hue, and Pokéball red appears only where something is
+  chosen or wants care — which leaves card art as the only saturated thing on a page of cards.
+  *Slate* is the greys and blues the app shipped with, unchanged, for anyone who preferred them
+- **The pack from the app icon sits beside the wordmark in the top bar**, redrawn rather than
+  scaled. The icon's version is a filled shape — a white pack on an indigo tile — and neither half
+  of that survives at this size: on a light bar a white pack is invisible, and a mark carrying its
+  own two colours was the one thing on the page the palette had not chosen. It is an outline in
+  `currentColor` instead, so it is the ink colour in both themes and inverts with them for free,
+  which is what every other glyph in that bar already does. Redrawn also means simplified, on the
+  grounds `favicon.svg` gives for being a different drawing from `icon.svg`: at 18px the tear
+  strip's dashes and the diamond's outline turn to mush, so the strip is one line and the diamond a
+  solid. The 8-degree tilt is kept — it is what stops the shape reading as a plain rectangle
+- **The same pack replaces the `+` on the phone's centre tab.** A plus said "this one writes
+  something" without saying what, and the label under it already reads Log; the pack says what is
+  being logged. It is one component drawn once — a 24 viewBox and a 1.8 stroke, matching the other
+  tab glyphs exactly — because path data copied into two files is path data that disagrees with
+  itself after the first tweak, and a test asserts both homes use it rather than their own copy. The
+  glyph needs nothing said about colour in either place: it is near-black ink on a light bar,
+  near-white on a dark one, and white inside the filled red tab, all from `currentColor`
+- **That replaced a greyscale filter over `favicon.svg`, which had a failure mode `currentColor`
+  does not.** Greyscale mapped the icon's indigo tile to `#454545`: 8.6:1 against the light bar and
+  1.7:1 against the dark one, so it needed a second rule inverting it in dark to stay visible at
+  all. One colour that is already the body colour cannot be under-contrasted against a surface the
+  body text is readable on. The test that guarded the filter is replaced by the invariant with teeth
+  — the mark names no colour of its own — asserted over the markup, since a hardcoded fill is a
+  property of how the SVG is written. Hidden under slate, which shipped without a mark, and the
+  browser tab keeps the icon in full colour
+- **The mark was called `.mark`, and Bootstrap owns that name.** `.mark, mark` is the highlight
+  element: `padding: .1875em`, a colour, and a background of `--bs-highlight-bg`. So the glyph came
+  out in a pale yellow box in light and an olive one in dark, padded, with its ink overridden — and
+  it read as a broken asset rather than as a name collision, which is how the stylesheet's existing
+  note on why `.fold-hint` is not called `.hint` was arrived at as well. Renamed to `.pack-mark`,
+  and there is now a test that takes the classes this app coined for its own components and fails
+  any that Bootstrap styles on the bare class. It is a named list rather than a scan of the markup:
+  the app uses Bootstrap's classes on purpose everywhere and overrides plenty of them, so colliding
+  is only a defect for names the app invented, and no scanner can tell which those are. It has its
+  own guard — the check must fire on `mark`, `badge` and `btn`
+- **The mark is 1.3rem against the wordmark's 1rem**, so it reads as slightly the larger of the two
+  without outgrowing a bar whose controls are 2rem, and in rem so it tracks a reader's type scale
+- **It is a SECOND setting rather than two more values on light/dark**, because every palette has a
+  light and a dark form: picking a look does not pick a brightness with it, and someone whose phone
+  flips at sunset keeps the palette they chose. Chosen on **Settings › Appearance** or from the
+  command palette; the top bar keeps its one cycling button for light and dark, since it is already
+  the widest thing in a row that has to survive a phone
+- **The accent does two jobs, and they are separated by value rather than by hue.**
+  `--bs-primary` is "chosen" — selection, active, focus, and the 6–22% tints that mark an owned card
+  or one already in a deck — and `--bs-danger` is "careful". Both are red, two-to-one apart in
+  luminance. That is deliberate: a second saturated hue is what made the first attempt at this skin
+  read as a logo painted onto a layout. The cost is honest — this skin tells "save" from "delete"
+  by weight where slate had blue against red — so a test now pins the gap at 1.8:1 and asserts
+  which of the two is the deeper one, in both brightnesses, because the roles invert between them:
+  on a near-black page a deep burgundy cannot also be the border of the storage alarm
+- **Corners moved too, since geometry dates a layout as much as colour does.** The file's radii were
+  sixty scattered numbers; the three that mattered are now tokens carrying exactly the old values,
+  which is what lets a skin raise them as a set — a page where the panels got rounder and the chips
+  did not looks broken rather than rounder. Bootstrap's own radius family is raised alongside them
+- **Depth instead of lines, in the two places lines were doing a third job.** The top bar and the
+  tab bar already separate themselves with a fill, so their hard 3.4:1 rule drops to a hairline and
+  a two-layer shadow does the lifting. The border stays 1px and only changes colour: the tab bar's
+  height is reserved by `main` as `--tab-bar-h + 1px` and the desktop More menu positions itself
+  under the top bar, so a border that changed WIDTH would hide a strip of the last row of content
+  behind the bar on every phone
+- **Both palettes are measured, not eyeballed.** The contrast test covers the new skin the same way
+  it covers the old one, and reads the surfaces out of the stylesheet rather than remembering them:
+  every outline button, every filled button's white label, the quietest copy, the want heart, the
+  count badge, the structural border, and the accent in its ink form. Twenty-two new cases. Two are
+  worth naming — the paper dark border is a deliberate 3.3:1 where Bootstrap's own dark border
+  manages 1.9:1, because a near-black page flattens a faint edge more than a light one does; and
+  the dark accent needs a second value for its six text uses, since fill-safe under white text
+  measures 3.4:1 as text on the raised surface
+- **The skin is stamped on the root element before the first paint**, by the same script that
+  stamps the theme, so a cold start never shows the wrong palette for a frame — and the browser
+  chrome and the install splash follow it too
+- **An older save adopts the new default.** The skin is unset until someone chooses one, and an
+  unset field is not written at all, so nothing needed a schema bump and nobody is pinned to the
+  look their browser happened to save
+- **`background_color` is the icon's indigo rather than the page colour**, so the launch screen and
+  the app icon agree. `theme_color` still tracks the palette, since that one colours the chrome
+  around the page.
+
+  Recorded next to it, because it looks like a stale value and is not: iOS insets the app icon
+  inside a white tile in the Add to Home Screen PREVIEW sheet, and none of this affects it. A
+  control carrying the icon declarations from before any of these changes and a candidate declaring
+  `purpose: "maskable"` icons were added side by side on an iPhone: both previewed inset, and both
+  landed on the home screen correctly and full-bleed. So the preview is iOS's own presentation, it
+  is seen once, and there was no regression to fix. No icon file changed
+- **The command palette's selected row is legible in every skin.** Its two quiet columns — the
+  kind on the left, the subtitle on the right — were white at 80% alpha on the highlight fill,
+  which composited to 3.42:1 against the slate skin's primary and 3.60:1 against the paper skin's
+  dark one, both under the 4.5:1 floor for text that size. This predated the skins and nothing
+  covered it. Raising the alpha was not an option: no value below full opacity clears the floor on
+  any of the three fills that row is drawn on, since Bootstrap's own #0d6efd only reaches 4.50:1
+  under solid white. So the alpha is gone, and the hierarchy rests on what was already carrying it
+  — .74rem uppercase against a 600-weight label, with the subtitle right-aligned. The check reads
+  the colour out of the stylesheet and composites it onto each skin's primary, so a reintroduced
+  alpha fails it; two gaps in the test's own plumbing came out with it, a property match that would
+  read `background-color` when asked for `color`, and a hex parser that threw on `#fff`
+
 - **The app has its own domain: [packprophet.spibane.com](https://packprophet.spibane.com/).** The
   deploy used to rewrite the base href to `/PackProphet/`, which is what project-page hosting needs
   and what a custom domain must not have — every asset would be fetched from a path the host does

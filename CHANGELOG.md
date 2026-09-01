@@ -4,6 +4,94 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
+### v0.7.0 - 2026-09-01
+
+- **Cloud sync, with no account and nothing readable on the server.** One device makes a
+  twelve-character pairing code, the other types it, and that is the entire sign-up. The code is
+  stretched with PBKDF2 into a master secret, and three independent HKDF expansions of it do three
+  jobs: a document id and a proof token, both of which the host sees, and an AES-256-GCM key, which
+  never leaves the browser. Supabase stores a blob it cannot open. The trade is stated wherever the
+  code is shown — there is no account to recover it from, so losing the code loses the stored copy,
+  though never the collection on any paired device
+- **Two devices are merged against what they last agreed on, not ranked by who wrote last.**
+  Last-writer-wins is not sync: log a pack on a phone, tick two cards on a laptop, and whichever
+  pushed second erases the other's afternoon. Sync keeps the last state both devices shared and does
+  a three-way merge against it, so "changed here" is distinguishable from "changed there". Card
+  counts go to whoever moved them, and to the higher figure when both did — a tracker that forgets a
+  card you own is worse than one showing a card you sold, because the second is visible and the
+  first is not. The pack and Wonder logs are append-only, so a row one side lacks is a row it has
+  not seen rather than a deletion, and they union. Decks and chase lists resolve per id
+- **A first pair lets an unset field yield instead of win.** With no common ancestor there is no
+  way to tell which device changed a single-value field, and the rule was to keep this device's --
+  which on the device doing the joining is the empty one. A blank private window adopting a real
+  collection was therefore discarding its trade board, its shinedust, its hourglasses, its rarity
+  plan and its name, and the established device then pulled those blanks back on its next sync. With
+  no ancestor there is still no way to tell who *changed* a field, but there is a way to tell who
+  never set one, and an absence now yields to a figure. Two devices that have both set something
+  differently is still a conflict, and still reported
+- **Pressing Join with a bad code no longer looks like a dead button.** The join reported failure
+  by returning a sentence, and the settings page rendered failures from `Sync.Message` -- two error
+  channels, and three of the exits only wrote to the one nothing was reading. A mistyped code, an
+  empty field and a code for a document that does not exist each produced a perfectly good
+  explanation that was computed and dropped, so the click did nothing observable whatsoever. Every
+  exit now reports through the one channel the page renders, an empty field is told to type the code
+  rather than that what it typed was invalid, and the field stays up afterwards so the code can be
+  corrected instead of retyped
+- **The code field updates as it is typed rather than when it loses focus.** With `onchange` the
+  value reached the app only on blur, so submitting by pointer depended on the blur firing before
+  the click
+- **A conflict cannot be counted without being described.** The count and the notes were a `ref int`
+  and a separate list, and nine of the resolution sites bumped the first without writing to the
+  second, so a merge that resolved a changed rarity plan or a changed trade board reported conflicts
+  it had nothing to say about -- and the settings page rendered "Both devices had changed the same
+  things:" above an empty list. Recording a conflict now requires the sentence describing it, so the
+  two cannot come apart, and every field names itself rather than being totalled anonymously
+- **Appearance and the active profile deliberately do not sync.** A phone and a desktop want
+  different column counts, and a theme belongs to the screen being looked at. A difference in those
+  is not a conflict and is not reported as one
+- **A push is conditional on the version it was based on.** Two devices that pull at the same moment
+  both try to push; the database refuses the stale one, and that device pulls again, merges what it
+  now knows, and retries. Without the check the second push would overwrite a merge the first had
+  already completed — the ordinary case, not a rare race. The token is a counter rather than a
+  timestamp, because two writes inside one clock tick would read the same time and slip through
+- **Every failure leaves the local collection exactly as it was.** Offline, an unreadable blob, a
+  wrong code, a swept document: each is reported and none of them clears, empties or replaces
+  anything. A merge that does arrive comes through the same path as any other change, so
+  <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes it
+- **A stored copy written by a newer build is refused rather than read.** Deserialisation already
+  rejected a schema it does not understand, which matters far more with sync than without: reading
+  it would drop the fields this build has never heard of, and the next push would store that loss
+  for every device. It now says so specifically, since after a release that is the likely reading
+- **Every client-supplied column is bounded, not just the payload.** `sync_push` capped the blob at
+  two megabytes and left `id`, `auth`, `nonce` and `writer` as unbounded `text`. The anon key is
+  published in the app by design, so anyone could have called the function with a half-gigabyte
+  writer string and filled the database, with the payload check giving a false impression that
+  inserts were bounded. Each column is now pinned to the shape it actually has -- hex of a known
+  length, base64 of a known length -- as re-runnable constraints and as a stated refusal inside the
+  function, so a malformed client gets an error it can classify rather than an opaque failure
+- **Untrusted state cannot reach a throw on a render path.** `DeckCodec.Create` refuses a
+  non-positive card identity or more than three energy types, correctly, since neither can be
+  encoded -- and it runs during render to build a deck's share code. Deserialisation null-guarded
+  those lists without clamping their contents, so a payload holding `"deckBuilderNrs": [0]` opened
+  as a deck page that threw. That was a narrow concern when state came only from this browser or a
+  file the user chose; sync makes a remote document an ordinary input on every launch, so the parse
+  now clamps rather than merely null-guards. Both are dropped, and the rest of the collection loads
+- **`security definer` functions pin `search_path` to `pg_catalog, public`** rather than `public`
+- **The project's own URL and key come from repository variables rather than the tree.** Variables
+  and not secrets, on purpose: the browser sends the anon key to Supabase on every request, so it is
+  public from the moment the site deploys, and filing it as a secret would dress that up as
+  something it is not. Keeping it out of the tree buys a rotation that costs a settings change
+  instead of a commit, and a history that never carried it. The deploy substitutes both files and
+  refuses to ship if only one of them landed -- a half-substituted deploy would report success and
+  serve an app whose sync silently never works, since the key is useless while the CSP still names
+  the placeholder host
+- **Sync is off unless the build names a Supabase project.** A clone of this repository is the
+  local-only app it always was, rather than one with a settings section that cannot work. Turning it
+  on means running `db/sync.sql`, filling in `appsettings.json`, and naming the same host in the
+  CSP — one host, not `*.supabase.co`, so a tampered card dataset still has nowhere to post to
+- **The settings page stops claiming nothing is uploaded once something is.** The line was true for
+  every previous build and is not true of a device that is syncing
+
 ### v0.6.0 - 2026-09-01
 
 - **A pack reveal whose cards are all white-bodied is found at last, though not yet framed

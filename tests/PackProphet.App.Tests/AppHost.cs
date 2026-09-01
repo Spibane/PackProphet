@@ -113,7 +113,23 @@ public abstract class AppHost : TestContext
         Services.AddSingleton<GridFocus>();
         Services.AddSingleton<ArtHashSource>();
         Services.AddSingleton<ShotScanner>();
+
+        Services.AddSingleton<BrowserStore>();
+        Services.AddSingleton(_ => SyncSettings());
+        Services.AddSingleton<SyncCrypto>();
+        Services.AddSingleton(sp => new SyncTransport(sp.GetRequiredService<SyncOptions>(), SyncHandler()));
+        Services.AddSingleton<SyncService>();
     }
+
+    /// <summary>
+    /// Whether this test's app has somewhere to sync to. Unconfigured by default, which is both the
+    /// state a fork of the repo builds in and the state that keeps every existing page test from
+    /// growing a section it was not written for.
+    /// </summary>
+    protected virtual SyncOptions SyncSettings() => new();
+
+    /// <summary>What the sync transport talks to. Null means a real client, which no test wants.</summary>
+    protected virtual HttpMessageHandler? SyncHandler() => new SnapshotHandler();
 
     /// <summary>
     /// The store the session persists through. Overridden by the tests that need a store which

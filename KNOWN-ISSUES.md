@@ -5,6 +5,55 @@ first one stopped rather than repeating it.
 
 ---
 
+## Cloud sync: the crypto module has no automated coverage
+
+**Status:** open, and structural rather than a bug.
+
+`wwwroot/js/sync.js` is the security-critical half of sync — PBKDF2 stretching, the three HKDF
+expansions, AES-GCM sealing — and nothing in `dotnet test` reaches it. The C# side is covered
+(`StateMergeTests`, `PairingCodeTests`, `SyncTransportTests`, `SyncSettingsTests`, 1085 tests), and
+the merge rules and the SQLSTATE mapping are the parts most likely to be got wrong. But the module
+itself runs only in a browser, and this project has no JavaScript test runner.
+
+### What has been checked, and how
+
+By hand, in the dev server's browser console. Every property held:
+
+| Property | Result |
+| --- | --- |
+| Derivation is deterministic for one code | same `id` and `auth` every time |
+| A different code derives different everything | `id`, `auth` both differ |
+| Round trip | plaintext recovered exactly |
+| A fresh nonce per write | two seals of one plaintext differ |
+| Plaintext is not in the blob | no ownership key found in the base64 |
+| A wrong code cannot open a blob | `null` |
+| A tampered blob is rejected | `null` (this is what GCM is for) |
+| `forget()` leaves nothing usable | decrypt `null`, encrypt throws |
+| A 194 KB collection | seals to 259 KB in 19 ms |
+| 300,000 PBKDF2 iterations | 61 ms on a desktop |
+
+Re-run that by hand after touching the file. Better would be a headless-browser test project, which
+is a larger decision than this feature: nothing else in `wwwroot/js/` is covered either.
+
+---
+
+## Cloud sync: two devices in use at once do not see each other live
+
+**Status:** open, and by design for now.
+
+Sync runs when the app opens and about six seconds after an edit. A device left open does not poll,
+so two people — or one person with a phone and a laptop both awake — will not see each other's edits
+until one reloads or presses **Sync Now**.
+
+Ruled out for this pass: polling costs a request per device per interval for a case most users never
+hit, and Supabase Realtime would mean a websocket held open, a second CSP host, and a subscription
+whose reconnect behaviour is its own feature. The merge is already correct under concurrent edits —
+the version check makes a lost update impossible rather than unlikely — so this is a latency
+limitation, not a correctness one. It is stated on the settings page rather than left to be
+discovered.
+
+---
+
 ## Screenshot import: one screenshot reads its cards four pixels small
 
 **Status:** open, and narrowly, for one fixture of nine. Every screen the import targets now reads

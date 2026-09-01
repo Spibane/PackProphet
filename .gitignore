@@ -21,3 +21,8 @@ obj/
 # particular because it appears next to whichever script was run.
 __pycache__/
 *.pyc
+
+# Local sync credentials. Blazor layers appsettings.Development.json over appsettings.json, so this
+# is how `dotnet run` reaches a real Supabase project while the committed file stays the placeholder
+# a fork builds against. The deployed values come from repository variables — see deploy-pages.yml.
+src/PackProphet.App/wwwroot/appsettings.Development.json

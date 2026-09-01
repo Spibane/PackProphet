@@ -1,0 +1,19 @@
+{
+  "imports": {
+    "./_framework/blazor.webassembly.js": "./_framework/blazor.webassembly.958z1vx7fr.js",
+    "./_framework/dotnet.js": "./_framework/dotnet.acqw0yq7ri.js",
+    "./_framework/dotnet.native.js": "./_framework/dotnet.native.4dgj19pvhe.js",
+    "./_framework/dotnet.runtime.js": "./_framework/dotnet.runtime.zbexyp8zrs.js"
+  },
+  "scopes": {},
+  "integrity": {
+    "./_framework/blazor.webassembly.958z1vx7fr.js": "sha256-A59Tr9HqEhHMu8kU7kruLI9ayw5MRS6Lvc6z7jCbghk=",
+    "./_framework/blazor.webassembly.js": "sha256-A59Tr9HqEhHMu8kU7kruLI9ayw5MRS6Lvc6z7jCbghk=",
+    "./_framework/dotnet.acqw0yq7ri.js": "sha256-poogMg2ivbrkuWEnJndFmw48IvnJKpGbZe1hVPMXA3I=",
+    "./_framework/dotnet.js": "sha256-poogMg2ivbrkuWEnJndFmw48IvnJKpGbZe1hVPMXA3I=",
+    "./_framework/dotnet.native.4dgj19pvhe.js": "sha256-aHENZxOAI8rMIup6SwomlwMn7BtQkfcMc09rO8kzdeE=",
+    "./_framework/dotnet.native.js": "sha256-aHENZxOAI8rMIup6SwomlwMn7BtQkfcMc09rO8kzdeE=",
+    "./_framework/dotnet.runtime.js": "sha256-MZMguyke9CroSQl+L/SHIGFkPTD+LtYGXkXjAvwWx40=",
+    "./_framework/dotnet.runtime.zbexyp8zrs.js": "sha256-MZMguyke9CroSQl+L/SHIGFkPTD+LtYGXkXjAvwWx40="
+  }
+}

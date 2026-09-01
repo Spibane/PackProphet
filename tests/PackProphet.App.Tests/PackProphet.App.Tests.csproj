@@ -51,6 +51,18 @@
              Link="service-worker.published.js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The app's own JavaScript, so the error surface's coverage of it can be asserted. diag.js
+       wraps every asynchronous entry point these files use, because Safari strips the message,
+       file and line off anything that reaches window.onerror from a cross-origin script; a new
+       kind of callback that escapes the wrappers is invisible until a report arrives with nothing
+       in it. The vendored QR decoder is excluded: 10,000 lines of third-party code that nothing
+       here asserts on. -->
+  <ItemGroup>
+    <Content Include="..\..\src\PackProphet.App\wwwroot\js\*.js"
+             Exclude="..\..\src\PackProphet.App\wwwroot\js\vendor-jsQR.js"
+             Link="js\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- The stylesheet and the grid, read as text so the layout invariants that span the two of them
        can be asserted. Neither is compiled here; they are evidence, not code under test. -->
   <ItemGroup>

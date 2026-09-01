@@ -6,6 +6,81 @@ until then the minor number tracks the roadmap phase.
 
 ### Unreleased
 
+- **A muted error that is provably not this page's is counted rather than shown.** Cross-origin
+  throw, no wrapper caught anything, no cross-origin subresource on the page: that is the signature
+  of a script the browser injected, and every third-party iOS browser injects one. A red panel on a
+  visitor's phone for another program's bug is noise. Nothing is lost — a genuine throw from this
+  app's own code now arrives through a wrapper with a full stack, .NET exceptions still come through
+  `console.error`, and if anything real does fire, the suppressed count and the last full report are
+  shown as the row above it, so the context of a real error is never hidden. `window.diagMuted()`
+  returns them on demand
+- **The opaque iOS "Script error" is not this app's bug, and the reports now say so.** It is a
+  third-party iOS browser injecting a script that throws. Safari on the same phone, on the same URL,
+  is clean; Chrome, Firefox, Edge, Brave and DuckDuckGo all show it. Every browser on iOS is WebKit,
+  which is why "only on iOS" read for four rounds as a WebKit problem — but the third-party ones are
+  WebKit inside an app that injects its own code into every page, and that code is not a page
+  subresource (so `document.scripts` and resource timing never see it), is not same-origin (so the
+  message, file and line are stripped), and runs at document start (so it throws at `+0.0s`). The
+  clinching measurement was a probe page whose entire script content is the error surface itself,
+  with no import map, no runtime, no CDN and no app code: it still threw. `KNOWN-ISSUES.md` keeps
+  the eleven hypotheses that were eliminated to get there, including the two that were mine and
+  wrong, and the one row of the original table that had killed the right hypothesis with the wrong
+  evidence — a Safari private tab suppresses *extensions*, never the code the browser app itself
+  injects
+- **Every report names the browser, and whether it is one that injects scripts.** Checked against
+  the real user-agent strings of Chrome, Firefox, Edge, Brave and DuckDuckGo on iOS, and of Safari,
+  which it correctly reports as carrying no wrapper. That one line is what turns this error from
+  unexplained into not-ours, so it is the first thing any future report should be read for
+- **Every error report names the version of `diag.js` that produced it.** A phone reading a cached
+  copy produces an old report that looks like a current one, and two readings taken from different
+  versions of the file were compared without anyone realising. The stamp makes that unmistakable
+- **`tools/DiagProbe/probe.py` settles the import-map question in three page loads.** Three pages,
+  identical except for the import map — the real one, the same one without its `integrity` key, and
+  none at all — with no runtime, no CDN and no app code on any of them, so whichever shows the
+  error names the cause. It serves `diag.js` out of `wwwroot` rather than keeping a copy, because a
+  probe testing its own stale duplicate of the error surface is worse than no probe
+- **The copy button on the error box works on a phone, which is the only place it was needed.**
+  `navigator.clipboard` does not exist outside a secure context, and the case that box exists for is
+  a phone reading a LAN address over plain HTTP. Written as `navigator.clipboard?.writeText(...)` it
+  was optional chaining onto `undefined`: the button did nothing at all, silently, which is worse
+  than having no button. The real API where there is one, and otherwise the report goes into a field
+  with its contents selected, so the OS copy menu can finish the job
+- **Failed subresources are reported instead of vanishing.** `window.addEventListener('error', …)`
+  without `capture` never receives a resource failure — those fire at the element and do not bubble
+  — so the `e.target.tagName === 'IMG'` guard sitting inside that listener, which reads as though it
+  did, had never fired once. Every blocked or failed script, stylesheet and icon on the page was
+  silently unreported. Now listened for in the capture phase and named, with the `integrity` and
+  `crossorigin` attributes when it carries them, since those are what make a same-origin file fail
+- **The muted report says where the HTML parser had got to, and what the import map is.** The
+  instrumented report from an iPhone put the throw at `+0.0s` with no cross-origin code loaded at
+  all — so it happens while the page's own scripts are still being parsed, not when the grid
+  renders, which is what `KNOWN-ISSUES.md` had assumed for four rounds. `readyState` plus the count
+  of script elements reached places it among them, and the import map is printed because a map the
+  browser objects to is reported with no script behind it, which is that report's exact shape
+- **The error box can now read a cross-origin throw, which Safari refuses to describe.** The
+  opaque `Script error` on iOS in `KNOWN-ISSUES.md` had one line under it saying no in-page
+  instrumentation could ever produce the message, file and line, and that was wrong. Safari mutes
+  the *report* it hands `window.onerror`, not the `Error` itself: a `try`/`catch` inside a
+  same-origin script sees the whole thing, whatever origin the code came from. So `diag.js` wraps
+  every asynchronous entry point the app's own JavaScript uses — `setTimeout`, `setInterval`,
+  `requestAnimationFrame`, the three observers, and every event listener — and reports what it
+  catches with the stack and the kind of callback it came from. Checked against a script served
+  from a second origin: routed through a wrapped timer it reported its real message, file and line;
+  raised synchronously, bypassing every wrapper, it still arrived bare. Wrapping listeners means
+  the function the browser holds is no longer the one the caller added, so `removeEventListener`
+  translates through a weak map of wrappers — without that every `dispose()` in the app would
+  silently stop removing anything. Identical throws collapse onto one row with a count, because a
+  callback that throws on every animation frame would otherwise fill the screen in a second
+- **The muted report says the two things that are left to say.** How many of the app's own
+  callbacks have thrown — zero, alongside a muted error, means the throw came from no timer, frame,
+  observer or listener this app registered — and whether the origin is a secure context, since a
+  worker is a separate script origin whose unhandled errors also reach the page muted, and over
+  plain HTTP to a LAN address no worker can be registered at all. Between them the next report from
+  a phone answers the question either way instead of restating it
+- **A test keeps the net complete in both directions.** Every entry point the app's JavaScript uses
+  is wrapped, and a *new* kind of callback — a `requestIdleCallback`, a `PerformanceObserver` —
+  fails the build rather than quietly escaping the wrappers and costing another round of this
+  months later, when the only symptom would be one more report with nothing in it
 - **The app has a palette of its own, and it is the default.** *Paper* is warm neutral surfaces
   and ONE accent. Three stacked warm greys carry the depth, the ink is a near-black rather than a
   tinted one, no trim or divider carries a hue, and Pokéball red appears only where something is

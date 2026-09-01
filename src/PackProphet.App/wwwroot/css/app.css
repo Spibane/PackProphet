@@ -3019,6 +3019,18 @@ tr.row-best {
 #diag .diag-bar button { font: inherit; padding: 0 .4rem; }
 #diag .diag-row { padding: .35rem .5rem; border-bottom: 1px solid #521; white-space: pre-wrap; }
 
+/* The report, in a field, for a browser with no clipboard API -- which is any browser on a
+   non-secure origin, and so every phone this box is actually read on. Tall enough to show that
+   something happened and to be worth a select-all, not tall enough to bury the rows above it. */
+#diag .diag-copy {
+    width: 100%;
+    min-height: 6rem;
+    background: #000;
+    color: inherit;
+    font: inherit;
+    border: 1px solid #521;
+}
+
 /* ================================================================= narrow screens
    Hiding a cell in a grid requires restating the template, or the remaining cells keep the
    old track sizes. Attacks, ability and HP go first: they are reference detail, not what you

@@ -18,13 +18,21 @@
          community CDN over which this project has no control, and default-src plus connect-src
          mean that even a tampered dataset cannot reach any other host: no beacon, no exfiltration,
          no third-party script. img-src needs data: because a screenshot is handed to the QR
-         decoder as a data URL, and blob: because a backup is downloaded as one. -->
+         decoder as a data URL, and blob: because a backup is downloaded as one.
+
+         The supabase.co host in connect-src is cloud sync, and it is deliberately ONE host rather
+         than a wildcard: the whole point of this header is that a tampered card dataset cannot
+         reach anywhere it should not, and https://*.supabase.co would hand it every project on
+         that platform to post a collection to. It has to name the same project as the Sync
+         section of appsettings.json -- change one and change the other, or sync is blocked here
+         before a request is ever made. Left as the placeholder, sync is off, which is the right
+         state for a fork of this repo. -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline';
         style-src 'self' 'unsafe-inline';
         img-src 'self' data: blob: https://cdn.jsdelivr.net;
-        connect-src 'self' https://cdn.jsdelivr.net;
+        connect-src 'self' https://cdn.jsdelivr.net https://YOUR-PROJECT.supabase.co;
         font-src 'self';
         manifest-src 'self';
         worker-src 'self';

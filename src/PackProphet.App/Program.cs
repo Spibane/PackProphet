@@ -20,6 +20,16 @@ builder.Services.AddScoped<IStateStore>(sp => sp.GetRequiredService<LocalStorage
 builder.Services.AddScoped<AppSession>();
 builder.Services.AddScoped<UiBusy>();
 
+// Cloud sync. Off unless wwwroot/appsettings.json names a Supabase project, so a fork of this repo
+// gets a working local-only app rather than a setting that cannot work. The services are registered
+// either way: SyncService reports Unavailable and the settings page shows nothing.
+builder.Services.AddScoped<BrowserStore>();
+builder.Services.AddScoped(sp =>
+    builder.Configuration.GetSection("Sync").Get<SyncOptions>() ?? new SyncOptions());
+builder.Services.AddScoped<SyncCrypto>();
+builder.Services.AddScoped<SyncTransport>();
+builder.Services.AddScoped<SyncService>();
+
 // Constructed by MainLayout rather than only where it is consumed: it works by observing
 // navigation, so it has to exist from the first page load.
 builder.Services.AddScoped<NavHistory>();

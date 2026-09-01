@@ -4,6 +4,7 @@
 @inject NavHistory History
 @inject AppSession Session
 @inject GridFocus Focus
+@inject SyncService Sync
 @implements IDisposable
 
     @* Twelve nav links sit above every page, and Blazor does not move focus on navigation, so a
@@ -80,6 +81,21 @@
     protected override void OnInitialized()
     {
         Session.Changed += OnChanged;
+    }
+
+    /// <summary>
+    /// Start cloud sync here rather than on the settings page, because that is the one page nobody
+    /// opens: a user pairs their devices once and then expects the app to keep itself current
+    /// wherever they happen to be looking.
+    ///
+    /// Deliberately not awaited into the render path. It waits for the collection to load, then
+    /// makes a network round trip, and blocking first paint on either would trade a working
+    /// offline-first app for a spinner.
+    /// </summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        _ = Sync.InitAsync();
     }
 
     public void Dispose()

@@ -10,7 +10,8 @@
 
 [![.NET](https://img.shields.io/badge/.NET-10.x-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
 [![Blazor](https://img.shields.io/badge/Blazor-WebAssembly-512BD4?style=flat-square&logo=blazor)](https://blazor.net/)
-[![Storage](https://img.shields.io/badge/localStorage-no_account_·_no_server-003B57?style=flat-square)](#privacy)
+[![Storage](https://img.shields.io/badge/localStorage-no_account-003B57?style=flat-square)](#privacy)
+[![Sync](https://img.shields.io/badge/sync-end--to--end_encrypted-003B57?style=flat-square)](#cloud-sync)
 [![Hosting](https://img.shields.io/badge/GitHub_Pages-static-222222?style=flat-square&logo=github)](https://packprophet.spibane.com/)
 [![Licence](https://img.shields.io/badge/AGPL--3.0--or--later-A42E2B?style=flat-square&logo=gnu)](LICENSE)
 [![AI](https://img.shields.io/badge/AI-pair-blue?style=flat-square)](AI-DECLARATION.md)
@@ -25,7 +26,7 @@
 Browser
    │
    ▼
-Blazor WebAssembly  (.NET 10 — static files, no account, no server, nothing uploaded)
+Blazor WebAssembly  (.NET 10 — static files, no account, no sign-in)
    │
    ├── /                        Collection (grid or list, counts, filters, undo)
    ├── /packs                   Which pack to open next, against any target
@@ -48,6 +49,10 @@ Blazor WebAssembly  (.NET 10 — static files, no account, no server, nothing up
    │           theme and palette before first paint, tooltips, jsQR, screenshot slotting
    │
    ├── localStorage   collections, chase lists, decks, pack log, settings
+   │
+   ├── Cloud sync     optional. A 12-character pairing code derives the document id and the
+   │       │          AES-GCM key; only the id and a proof token ever leave the browser
+   │       └── Supabase   one table, no policies, reachable only through three functions
    │
    └── Card data
            ├── cdn.jsdelivr.net    live card lists and card detail
@@ -205,6 +210,72 @@ one place that then asks what you meant:
   the app never boots empty
 - Screenshot import is decoded locally. **No image is ever uploaded**
 - The app does not connect to in-game accounts and has no support for doing so
+- Cloud sync is **off until you turn it on**, and encrypted on this device when you do. See below
+
+## Cloud Sync
+
+Optional, and off by default. There is no account and no sign-in: one device makes a twelve-character
+pairing code, the other types it, and that code is the whole credential.
+
+The code never leaves the browser. It is stretched with PBKDF2 (300,000 iterations, SHA-256) into a
+master secret, and three independent HKDF expansions of that master do three different jobs:
+
+| Derived value | Job | Leaves the device? |
+| --- | --- | --- |
+| `id` | Names the stored document | **Yes** |
+| `auth` | Proves you know the code, so an id-guesser cannot overwrite you | **Yes** |
+| `key` | AES-256-GCM, encrypts the collection | **Never** |
+
+The host stores ciphertext it has no way to read. That is also the trade: **lose the code and the
+stored copy is unrecoverable.** The collection on each paired device is untouched either way, and a
+JSON export is still the backup that survives everything.
+
+### Merging, not overwriting
+
+Two devices edited apart have to be reconciled, not ranked. Sync keeps the last state both devices
+agreed on and does a three-way merge against it, so "changed here" is distinguishable from "changed
+there" — logging packs on a phone and ticking cards on a laptop loses neither.
+
+| | Rule |
+| --- | --- |
+| Card counts | Whoever changed it wins. Both changed it → the higher count |
+| Pack and Wonder logs | Union. Append-only, so an absence is never a deletion |
+| Decks, chase lists | Per id. Both edited → this device wins, and says so |
+| Resource pools | The more recently read balance, by its own timestamp |
+| Everything else | Whoever changed it wins. Both changed it → this device, and it says which |
+| Theme, columns, active profile | Never synced — they belong to the device you are holding |
+
+On a **first pair** there is no ancestor, so nothing can be read as a deletion and nothing a device
+has never set can outvote a device that has: a blank window joining an established collection adopts
+its settings rather than blanking them.
+
+Conflicts are reported in Settings rather than resolved silently, and a merge arrives through the
+same path as any other change, so <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes one.
+
+### Turning it on for your own fork
+
+Sync is disabled unless the build names a Supabase project, which is why a clone of this repository
+is local-only out of the box. To enable it:
+
+1. Create a Supabase project and run [`db/sync.sql`](db/sync.sql) in its SQL editor. It creates one
+   table with row-level security and **no policies** — PostgREST cannot touch it — plus the three
+   `security definer` functions that are the entire API.
+2. Set two **repository variables** (Settings → Secrets and variables → Actions → Variables):
+   `PACKPROPHET_SYNC_URL` and `PACKPROPHET_SYNC_KEY`. The deploy workflow substitutes both into
+   `appsettings.json` and into the `connect-src` in `index.html`, and fails the build if only one of
+   them lands. Leave them unset and the deploy ships with sync off.
+3. For local `dotnet run`, put the same two values in
+   `src/PackProphet.App/wwwroot/appsettings.Development.json`, which is gitignored. Blazor layers it
+   over `appsettings.json`.
+
+Variables rather than secrets, deliberately. The browser has to send the anon key to Supabase on
+every request, so it is public the moment the site is deployed — it identifies the project and
+grants nothing without a pairing code. Filing it as a secret would dress that up as something it is
+not. What keeping it out of the tree does buy is a rotation that costs a settings change rather than
+a commit, and a git history that never carried it.
+
+The CSP names one exact host rather than `*.supabase.co`, so a tampered card dataset has nowhere to
+post to.
 
 ## Package Structure
 
@@ -218,11 +289,12 @@ PackProphet/
 │   │   ├── Engine/                # Odds, targets, ranking, allocation, trades, wonder picks
 │   │   ├── Import/                # CSV/XLSX readers, tracker import and export
 │   │   ├── State/                 # Profiles, undo history, chase-list codec, serialisation
+│   │   ├── Sync/                  # Pairing code, three-way state merge
 │   │   └── Vision/                # Fingerprints, screen classification, count reading
 │   └── PackProphet.App/           # Blazor WebAssembly
 │       ├── Components/            # Card grid, tile, picker, palette, shared controls
 │       ├── Pages/                 # One per route (see URLs below)
-│       ├── Services/              # Session, data loader, storage, scanning, focus
+│       ├── Services/              # Session, data loader, storage, sync, scanning, focus
 │       └── wwwroot/
 │           ├── js/                # Only what Blazor cannot reach (see Architecture)
 │           └── data/              # Vendored snapshot + card-hashes.txt fingerprint table

@@ -3,6 +3,8 @@ namespace PackProphet.State;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using PackProphet.Deck;
+
 /// <summary>
 /// Reads and writes the persisted state, and owns migration. Also the export/import format, so a
 /// user can always get their data out of a local-only app.
@@ -128,8 +130,21 @@ public static class StateSerializer
             ? TargetSettings.Default
             : p.Targets,
 
+        // Card identities and energies are clamped, not merely null-guarded. DeckCodec.Create
+        // REFUSES a non-positive identity or more than three energies -- correctly, since neither
+        // can be encoded -- and it is called during render to build a deck's share code. So a
+        // payload carrying "deckBuilderNrs": [0] throws on the deck page rather than showing a
+        // deck with an unresolvable card, which is what the null-guarding here was for.
+        //
+        // This mattered less when a payload could only come from this browser or a file the user
+        // chose. Cloud sync makes remote state an ordinary input, so the parse has to be the place
+        // that makes it safe -- and it already is the one funnel that boot, import and sync share.
         Decks = (p.Decks ?? []).Where(d => d is not null && !string.IsNullOrWhiteSpace(d.Id))
-            .Select(d => d with { DeckBuilderNrs = d.DeckBuilderNrs ?? [], Energies = d.Energies ?? [] })
+            .Select(d => d with
+            {
+                DeckBuilderNrs = (d.DeckBuilderNrs ?? []).Where(n => n > 0).ToList(),
+                Energies = (d.Energies ?? []).Distinct().Take(DeckCodec.MaxEnergyTypes).ToList(),
+            })
             .ToList(),
 
         ChaseLists = (p.ChaseLists ?? []).Where(w => w is not null && !string.IsNullOrWhiteSpace(w.Id))

@@ -47,6 +47,56 @@ jobs:
           grep -q '<base href="/" />' src/PackProphet.App/wwwroot/index.html \
             || { echo "::error::index.html must carry <base href=\"/\" /> for custom-domain hosting"; exit 1; }
 
+      # Cloud sync points at a Supabase project, and the two files that name it ship with
+      # placeholders so a clone of this repository builds the local-only app rather than one wired
+      # to somebody else's database. The real values live in repository VARIABLES, not secrets: the
+      # browser has to send the anon key to Supabase on every request, so it is public the moment
+      # the site is deployed, and filing it as a secret would only dress that up. What keeping it
+      # out of the tree does buy is a rotation that costs a settings change rather than a commit,
+      # and a git history that never carried it.
+      #
+      # Both files, or neither. The key alone is useless while index.html's connect-src still names
+      # the placeholder host, because the browser blocks the request before it is ever made.
+      #
+      # Unset variables are a supported state rather than a failure: the deploy ships with sync
+      # switched off, which is what a fork wants.
+      - name: Point sync at the project
+        env:
+          SYNC_URL: ${{ vars.PACKPROPHET_SYNC_URL }}
+          SYNC_KEY: ${{ vars.PACKPROPHET_SYNC_KEY }}
+          SETTINGS: src/PackProphet.App/wwwroot/appsettings.json
+          INDEX: src/PackProphet.App/wwwroot/index.html
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SYNC_URL}" ] || [ -z "${SYNC_KEY}" ]; then
+            echo "::notice::PACKPROPHET_SYNC_URL/KEY not set - deploying with cloud sync off"
+            exit 0
+          fi
+
+          host=${SYNC_URL#https://}
+          host=${host%/}
+          export HOST="${host}"
+
+          # Python rather than sed for both: the key is arbitrary text that would otherwise need
+          # escaping for the shell and the replacement both, and `sed -i` takes a mandatory
+          # argument on BSD and none on GNU, so a one-liner that works on the runner cannot be
+          # tried on a Mac first.
+          python3 -c "import json, os; p = os.environ['SETTINGS']; d = json.load(open(p)); d['Sync']['Url'] = os.environ['SYNC_URL']; d['Sync']['AnonKey'] = os.environ['SYNC_KEY']; open(p, 'w').write(json.dumps(d, indent=2) + '\n')"
+
+          python3 -c "import os; p = os.environ['INDEX']; t = open(p).read(); open(p, 'w').write(t.replace('YOUR-PROJECT.supabase.co', os.environ['HOST']))"
+
+          # Verified rather than assumed, for the same reason the base href above is: a deploy that
+          # substituted only one of the two would report success and serve an app whose sync
+          # silently never works.
+          if grep -q 'YOUR-PROJECT' "${SETTINGS}" "${INDEX}"; then
+            echo "::error::sync placeholders survived substitution"
+            exit 1
+          fi
+
+          grep -q "${host}" "${INDEX}" || { echo "::error::connect-src does not name ${host}"; exit 1; }
+          echo "sync configured for ${host}"
+
       - name: Publish
         run: dotnet publish src/PackProphet.App/PackProphet.App.csproj -c Release -o build
 

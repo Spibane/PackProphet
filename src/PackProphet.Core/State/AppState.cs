@@ -339,7 +339,14 @@ public sealed record Profile(
     /// </summary>
     public List<ChaseList>? Wishlists { get; init; }
 
-    public static Profile NewDefault(string id = "default", string name = "My collection") =>
+    /// <summary>
+    /// What a collection is called before anyone renames it. Named rather than inlined because the
+    /// merge has to recognise it: a device still carrying the default name has not chosen anything,
+    /// so it yields to a device that has, and that check cannot be allowed to drift from this.
+    /// </summary>
+    public const string DefaultName = "My collection";
+
+    public static Profile NewDefault(string id = "default", string name = DefaultName) =>
         new(id, name, new(), TargetSettings.Default, [], [], [], [], Resources.Empty);
 }
 

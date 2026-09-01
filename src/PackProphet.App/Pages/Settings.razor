@@ -1,13 +1,21 @@
 @page "/settings"
+@using PackProphet.Sync
 @implements IDisposable
 @inject AppSession Session
 @inject LocalStorageStateStore Store
+@inject SyncService Sync
 
 <PageTitle>Settings · PackProphet</PageTitle>
 
 <div class="page-head">
     <h1 class="title">Settings</h1>
-    <span class="subtitle">Everything here is stored in this browser only</span>
+    @* The claim has to follow the truth. Sync is the one thing in this app that puts anything
+       anywhere else, so the moment it is on, this line stops being accurate. *@
+    <span class="subtitle">
+        @(Sync.Paired
+            ? "Stored in this browser, and encrypted on the sync server"
+            : "Everything here is stored in this browser only")
+    </span>
 </div>
 
 <PageShell Measure="PageShell.Width.Text" Class="sections">
@@ -271,11 +279,147 @@
         <div class="mb-4"></div>
     }
 
+    @* Before "Your data" because it is the answer to the worry that section raises: clearing
+       site data erases everything. A backup is the old answer and still the reliable one; this is
+       the answer for someone who owns two devices. *@
+    @if (Sync.Available)
+    {
+        <h2>Sync Across Devices</h2>
+
+        @if (!Sync.Paired)
+        {
+            <p class="small text-body-secondary">
+                No account. One device makes a code, the other types it. That code is the
+                encryption key, applied before anything leaves this browser &mdash; the server
+                stores what it cannot read.
+            </p>
+            <p class="small text-body-secondary">
+                Which is why the code cannot be recovered. Write it down.
+            </p>
+
+            <div class="d-flex gap-2 flex-wrap mb-3">
+                <button class="btn btn-sm btn-primary" disabled="@Busy" @onclick="StartSync">
+                    Set Up Sync
+                </button>
+                <button class="btn btn-sm btn-outline-primary" disabled="@Busy"
+                        @onclick="() => _joining = !_joining">
+                    I Have A Code
+                </button>
+            </div>
+
+            @if (_joining)
+            {
+                <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+                    <label class="small">
+                        Code From Your Other Device
+                        <input class="form-control form-control-sm" style="width:12rem"
+                               autocomplete="off" autocapitalize="characters" spellcheck="false"
+                               placeholder="XXXX-XXXX-XXXX"
+                               value="@_typed" @oninput="OnCodeTyped" />
+                    </label>
+                    <button class="btn btn-sm btn-primary align-self-end" disabled="@Busy"
+                            @onclick="Join">Join</button>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="small text-body-secondary">
+                Type this code on any other device to add it.
+            </p>
+            <p class="mb-2">
+                <code class="fs-5 user-select-all">@PairingCode.Format(Sync.Code!)</code>
+            </p>
+            <p class="small text-body-secondary">
+                Treat it like a password &mdash; anyone with it can read and change your
+                collection. Losing it costs you the stored copy, not this device's.
+            </p>
+
+            <div class="d-flex gap-2 flex-wrap mb-3">
+                <button class="btn btn-sm btn-primary" disabled="@Busy" @onclick="SyncNow">
+                    @(Busy ? "Syncing…" : "Sync Now")
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" disabled="@Busy"
+                        @onclick="() => _unpairing = !_unpairing">
+                    Stop Syncing
+                </button>
+            </div>
+
+            @if (_unpairing)
+            {
+                @* Two buttons because they are genuinely different acts. Stopping affects this
+                   device; deleting affects every device on the code, and cannot be undone. *@
+                <Notice Severity="Notice.Level.Warning" Class="mb-3">
+                    <p class="mb-2">Either way, your collection here is untouched.</p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-outline-secondary"
+                                @onclick="() => Unpair(false)">
+                            Stop On This Device
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger"
+                                @onclick="() => Unpair(true)">
+                            Stop And Delete The Stored Copy
+                        </button>
+                        <button class="btn btn-sm btn-link" @onclick="() => _unpairing = false">
+                            Cancel
+                        </button>
+                    </div>
+                </Notice>
+            }
+        }
+
+        @if (Sync.Status == SyncStatus.Failed && Sync.Message is not null)
+        {
+            <Notice Severity="Notice.Level.Problem" Class="mb-3">@Sync.Message</Notice>
+        }
+        else if (_syncNote is not null)
+        {
+            <Notice Severity="Notice.Level.Success" Class="mb-3">@_syncNote</Notice>
+        }
+
+        @* Conflicts are not errors -- every one of them was resolved -- but they are the only
+           moments a rule had to choose on the user's behalf, so they are the only ones said out
+           loud.
+
+           Conditioned on the notes rather than on the count, which is the honest question: this
+           block exists to say what happened, and it has nothing to show for a count it cannot
+           describe. The merge now guarantees the two agree, and this makes a heading over an empty
+           list impossible even if that ever slips again. *@
+        @if (Sync.LastMerge.Notes.Count > 0)
+        {
+            <Notice Severity="Notice.Level.Info" Class="mb-3">
+                <p class="mb-1">Both devices had changed these, so one had to be picked:</p>
+                <ul class="mb-0 small">
+                    @foreach (var note in Sync.LastMerge.Notes)
+                    {
+                        <li>@note</li>
+                    }
+                </ul>
+            </Notice>
+        }
+
+        <p class="small text-body-secondary mb-4">
+            Syncs on open, and a few seconds after any change. Press <strong>Sync Now</strong> to
+            pull in a device someone is using right now.
+        </p>
+    }
+
     <h2>Your data</h2>
-    <p class="small text-body-secondary">
-        Everything is stored in this browser only &mdash; nothing is uploaded and no account
-        exists. That also means clearing site data erases it, so export a backup.
-    </p>
+    @if (Sync.Paired)
+    {
+        <p class="small text-body-secondary">
+            This browser holds your collection, and sync keeps an encrypted copy on the server.
+            There is still no account, and the server still cannot read it &mdash; so an export is
+            the only backup that survives losing the code.
+        </p>
+    }
+    else
+    {
+        <p class="small text-body-secondary">
+            Everything is stored in this browser only &mdash; nothing is uploaded and no account
+            exists. That also means clearing site data erases it, so export a backup.
+        </p>
+    }
     <p class="small text-body-secondary">
         <kbd>Ctrl</kbd>+<kbd>Z</kbd> (or <kbd>&#8984;</kbd>+<kbd>Z</kbd>) undoes anything, on any
         page. The last @AppSession.UndoDepth changes are kept, for this session only.
@@ -421,6 +565,57 @@
 </PageShell>
 
 @code {
+    // ---- Sync -----------------------------------------------------------------------
+
+    private bool _joining;
+    private bool _unpairing;
+    private string _typed = "";
+
+    private void OnCodeTyped(ChangeEventArgs e) => _typed = e.Value?.ToString() ?? "";
+    private string? _syncNote;
+
+    private bool Busy => Sync.Status == SyncStatus.Working;
+
+    private async Task StartSync()
+    {
+        _joining = false;
+        var code = await Sync.PairNewAsync();
+        _syncNote = code is null
+            ? null
+            : $"Sync is on. Type {PairingCode.Format(code)} on your other device.";
+    }
+
+    private async Task Join()
+    {
+        _syncNote = null;
+
+        // Failure reports itself through Sync.Message, which the Notice below already renders, so
+        // there is nothing to do here but leave the field up so the code can be corrected.
+        if (!await Sync.JoinAsync(_typed)) return;
+
+        _joining = false;
+        _typed = "";
+        _syncNote = "Joined. Both devices now hold everything either of them had.";
+    }
+
+    private async Task SyncNow()
+    {
+        _syncNote = null;
+        await Sync.SyncAsync();
+
+        if (Sync.Status != SyncStatus.Synced) return;
+        _syncNote = Sync.LastCameFromElsewhere
+            ? "Synced, and brought in changes from another device."
+            : "Synced. Everything was already up to date.";
+    }
+
+    private async Task Unpair(bool deleteRemote)
+    {
+        _unpairing = false;
+        await Sync.UnpairAsync(deleteRemote);
+        _syncNote = Sync.Message;
+    }
+
     // Held as strings so a half-typed field is not rounded to zero mid-keystroke, and so an
     // empty box stays empty rather than showing a 0 the user did not enter.
     private string _packs = "";
@@ -582,6 +777,7 @@
     protected override async Task OnInitializedAsync()
     {
         Session.Changed += OnChanged;
+        Sync.Changed += OnChanged;
         await Session.InitAsync();
 
         // Prefilled from what was saved, so editing the figure means correcting it rather than
@@ -659,5 +855,9 @@
         _message = "Restored.";
     }
 
-    public void Dispose() => Session.Changed -= OnChanged;
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Sync.Changed -= OnChanged;
+    }
 }

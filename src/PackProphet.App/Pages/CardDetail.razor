@@ -50,7 +50,7 @@ else
             @* Background rather than <img>: a failed load leaves the placeholder instead of a
                broken-image gap, with no error handling needed. *@
             <div class="big-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
-                 style="background-image:url('@_card.ArtUrl')"
+                 style="--art:url('@_card.ArtUrl')"
                  role="img" aria-label="@_card.Name"></div>
 
             @* Said in words as well as drawn: the ring alone does not explain itself, and being
@@ -328,7 +328,7 @@ else
                     {
                         <span class="pack-link">
                             <span class="pack-thumb"
-                                  style="background-image:url('@Session.PackArtUrl(packKey)')"></span>
+                                  style="--art:url('@Session.PackArtUrl(packKey)')"></span>
                             <span>
                                 @packKey.Split(':')[1]
                                 <span class="small text-body-secondary">@packKey.Split(':')[0]</span>

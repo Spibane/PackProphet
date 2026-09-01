@@ -229,7 +229,7 @@ else
                                 <tr class="@(b == _batches[0] ? "row-best" : "")">
                                     <td>
                                         <span class="pack-thumb"
-                                              style="background-image:url('@Session.PackArtUrl(b.PackKey)')"></span>
+                                              style="--art:url('@Session.PackArtUrl(b.PackKey)')"></span>
                                         <strong>@b.PackKey.Split(':')[1]</strong>
                                         <span class="text-body-secondary small">@b.PackKey.Split(':')[0]</span>
                                     </td>
@@ -299,7 +299,7 @@ else
                                 <tr>
                                     <td>
                                         <span class="pack-thumb"
-                                              style="background-image:url('@Session.PackArtUrl(row.PackKey)')"></span>
+                                              style="--art:url('@Session.PackArtUrl(row.PackKey)')"></span>
                                         <strong>@row.PackName</strong>
                                         <span class="text-body-secondary small">@row.Set</span>
                                     </td>
@@ -427,7 +427,7 @@ else
                                     <td>
                                         <span class="pack-thumb deck-thumb"
                                               data-tip-img="@row.Card.ArtUrl" data-tip="@row.Card.Name"
-                                              style="background-image:url('@row.Card.ArtUrl')"></span>
+                                              style="--art:url('@row.Card.ArtUrl')"></span>
                                         <strong>@row.Card.Name</strong>
                                         <span class="small text-body-secondary ms-1">@row.Card.Set&thinsp;@row.Card.Number</span>
                                     </td>
@@ -481,7 +481,7 @@ else
                             @* Background, not <img>: a failed load reveals the placeholder
                                instead of leaving a broken-image gap, with no error handling. *@
                             <span class="pack-thumb"
-                                  style="background-image:url('@Session.PackArtUrl(row.PackKey)')"></span>
+                                  style="--art:url('@Session.PackArtUrl(row.PackKey)')"></span>
                             <strong>@row.PackName</strong>
                             <span class="text-body-secondary small">@row.Set</span>
                             @* The top row is tinted, and a tint with nothing to explain it reads

@@ -1618,6 +1618,16 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-line .thumb[data-state="queued"],
 .card-line .thumb[data-state="loading"] { visibility: hidden; }
 
+/* The weave is on the art box, not on the overlay drawn in it.
+   ==========================================================================================
+   It marks out the whole area the picture would have occupied, so it belongs to the box that IS
+   that area rather than to an absolutely-positioned child of it, which only covers the same
+   ground as long as nothing rounds differently. Keeping it here also leaves the overlay a
+   single-layer background: its layer list changes with the tile's width, and a list of sizes and
+   repeats positioned against a list of images is a thing that breaks quietly when one of them is
+   dropped. */
+.card-tile .art:has(img.img-failed) { background-image: var(--pp-art-weave); }
+
 /* Art that failed.
    ==========================================================================================
    This used to be left at opacity .25, on the reasoning that the broken marker plus the alt text
@@ -1629,27 +1639,58 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
    than as new — and the marker is the same either way, so it tells you nothing you did not already
    know from the wall of them.
 
-   So the marker goes, and on the tile the card's set and number take its place. In the list layout
-   nothing takes its place: that row already prints the same id in its own .c-id cell a few pixels
-   to the right, and the thumbnail is 32px, which is not a size anything legible fits in. */
+   So the marker goes, and the tile draws the stand-in instead: the outline of a card, and over it
+   the set and number the game prints in the card's own corner — the pair you match against when
+   the picture is the thing you have not got.
+
+   The list thumbnail is 32px, which is not a size the id fits in, so it takes the outline alone.
+   It was left blank before, on the reasoning that the row prints the same id in its own .c-id cell
+   a few pixels to the right. It does, but a blank 32px well beside every row still read as the
+   layout having lost something, and the outline costs nothing to say it did not. */
 .card-tile img.img-failed,
 .card-line .thumb.img-failed { visibility: hidden; }
 
+/* :has, rather than a class the loader writes: the well is the wrapper, the state is on the image
+   inside it, and the loader already maintains that state for the CSS above. Scoped to the failed
+   state alone — a pending image is hidden too, and the spinner is what belongs behind that one. */
+.card-line .c-thumb:has(.img-failed) {
+    background-color: var(--bs-secondary-bg);
+    background-image: var(--pp-art-mark-sm), var(--pp-art-weave);
+    background-position: center, center;
+    background-repeat: no-repeat, repeat;
+    background-size: 78% auto, auto;
+    border-radius: .15rem;
+}
+
 .art-none { display: none; }
 img[data-state="error"] ~ .art-none {
-    display: grid; place-content: center; justify-items: center;
+    /* The id sits in the lower third, under the drawn card, rather than in the middle of it.
+       One full-width column rather than a shrink-wrapped one: `justify-content: center` sizes the
+       track to its widest item, which is the number, and the name's max-width then resolved
+       against THAT and clipped every name to about six characters. */
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    align-content: end; justify-items: center;
     position: absolute; inset: 0;
+    padding-bottom: 8%;
     pointer-events: none;
     line-height: 1.15;
     color: rgba(255, 255, 255, .55);
+
+    /* The same outline the background-image sites fall back to, so a card with no art looks the
+       same whether the grid drew it or a thumbnail did. Positioned above the id and sized to
+       leave room for it; the weave under it is the art box's, above. */
+    background-image: var(--pp-art-mark);
+    background-position: center 30%;
+    background-repeat: no-repeat;
+    background-size: 44% auto;
     /* The art box is not a text container and the tile runs from three columns to ten, so both
        lines are sized off the tile like the spinner ring above them. */
     font-variant-numeric: tabular-nums;
 }
-/* Both lines are pseudo-elements reading the tile's own attributes, rather than two spans. The
-   grid renders a couple of hundred tiles at a time and this element is on every one of them, so
-   the span version was 699 extra nodes of a 3,324-node page for two short strings. .art already
-   spends both of its pseudo-elements on gold flair; this element has its own two free. */
+/* The set and the number are pseudo-elements reading the tile's own attributes, rather than two
+   spans. The grid renders a couple of hundred tiles at a time and this element is on every one of
+   them, so the span version was 699 extra nodes of a 3,324-node page for two short strings. .art
+   already spends both of its pseudo-elements on gold flair; this element has its own two free. */
 .art-none::before {
     content: attr(data-set);
     font-size: clamp(.56rem, 8.5cqw, .8rem); opacity: .72;
@@ -1659,6 +1700,46 @@ img[data-state="error"] ~ .art-none {
     font-size: clamp(.7rem, 15cqw, 1.5rem); font-weight: 600;
 }
 
+/* The name, on the tiles wide enough to read one on.
+   ------------------------------------------------------------------------------------------
+   The id says WHICH card; the name says which card it IS, and on a set whose art has not been
+   scanned yet that is the difference between a numbered grey box and a card you recognise. The
+   caption under the tile carries the name too, but it is one clipped line — and on a phone the
+   caption is absolute and the name is not drawn at all.
+
+   The one element this file adds per tile, against the pseudo-elements everything else here is
+   made of. A name is one to four words that has to stop at two lines, and a box you can clamp is
+   the only thing that stops it: the pseudo-elements are spent on the id, and a bare text node in
+   the grid cannot be given a width to wrap in or a height to clip at. `order` puts it above the
+   pair, since a ::before is drawn before any child whatever the source says.
+
+   Hidden by default and switched on by the container query below, so the cost of it on the tiles
+   that cannot show it is one empty span. */
+.art-none .nm { display: none; order: -1; }
+
+/* 130px is the width where a name is still read rather than deciphered. Measured against the
+   longest ones the game prints — "Team Rocket's Moltres ex", "Bloodmoon Ursaluna ex" — which wrap
+   to two lines of about a dozen characters at the .62rem floor and still clear the drawn card
+   above them. Below it the id has the box to itself; the tile is a thumbnail by then and the
+   caption or the list is where you read a name. */
+@container (min-width: 130px) {
+    img[data-state="error"] ~ .art-none .nm {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        max-width: 86%;
+        margin-bottom: .3em;
+        font-size: clamp(.62rem, 7.2cqw, .95rem);
+        line-height: 1.2;
+        text-align: center;
+        text-wrap: balance;
+        opacity: .82;
+    }
+    /* Three lines of text under it rather than two, so the drawn card moves up out of their way. */
+    img[data-state="error"] ~ .art-none { background-position: center 24%; }
+}
+
 /* Past ten columns the set line would be drawn at six or seven pixels, which is not small text
    but a grey smudge. It is also the line you can most afford to lose: the grid is filtered to one
    set most of the time, so every tile on screen repeats it, while the number is what tells one
@@ -1666,6 +1747,15 @@ img[data-state="error"] ~ .art-none {
    rendered below the size that floor was chosen as legible at. */
 @container (max-width: 104px) {
     .art-none::before { content: none; }
+    /* And the outline with it: at ten columns the tile is under 104px, where the card drawn inside
+       a card is two nested smudges. The number is what tells one tile from the next, so it keeps
+       the whole box and the weave keeps the box from reading as empty. */
+    img[data-state="error"] ~ .art-none {
+        align-content: center;
+        padding-bottom: 0;
+        /* Nothing left to draw here: the weave is the art box's and stays. */
+        background-image: none;
+    }
 }
 
 .art-wait { display: none; }
@@ -1826,8 +1916,15 @@ img[data-state="loading"] ~ .art-wait {
     .card-tile .cnt.none { display: none; }
     .card-tile .want, .card-tile .info { display: none; }
     /* Nothing below the art to divide it from, so the rule under it would be a stray line along the
-       bottom edge of every card. */
-    .card-tile .art { border-bottom: 0; }
+       bottom edge of every card.
+
+       And it grows: the caption is absolute in this layout, so the art box is the whole tile, and
+       a tile stretched taller than its own aspect ratio -- by a row track rounded up, or by a
+       neighbour that measured a fraction taller -- left the difference as a bare strip along the
+       bottom with the weave stopping short of it. Flex-grow hands that strip to the art box, which
+       is where it should have belonged. The picture does not distort: the <img> in it is
+       object-fit: cover. */
+    .card-tile .art { border-bottom: 0; flex: 1 1 auto; }
 }
 
 /* A narrow window with a mouse in it is the one case the rule above leaves without a way into a
@@ -2223,8 +2320,53 @@ img[data-state="loading"] ~ .art-wait {
     width: 100%;
     max-width: 320px;
     aspect-ratio: 256 / 113;
-    background-size: contain; background-position: center; background-repeat: no-repeat;
+    object-fit: contain;
     opacity: .9;
+    /* Both for the fallback below: something for it to be positioned against, and a width for it
+       to be sized off -- the strip is as wide as the tile, which runs from two columns to six. */
+    position: relative;
+    container-type: inline-size;
+}
+
+/* The set's name, where its logo is not published yet.
+   ------------------------------------------------------------------------------------------
+   A new set is loggable the day it goes live and the CDN can be days behind on its logo, which
+   left the strip above the booster simply blank -- and blank on a tile whose neighbours are all
+   wordmarks reads as something missing rather than as the set it is.
+
+   Drawn by the image's own pseudo-elements, which is the whole trick: a browser renders them
+   while an image has nothing to show and drops them the moment it does, so the name appears
+   exactly when the logo does not, with no error handler, no class to write and no state to get
+   stuck in. It also covers the wait: a logo still in flight shows the name and is replaced by the
+   picture when it lands, in a box whose height is already fixed, so nothing moves. Firefox draws
+   neither, which leaves it the blank strip it has today rather than a name over a logo.
+
+   ::before is the ground the name is set on. Without it the alt box's own border shows through on
+   some browsers, and the name sits on the tile rather than in the strip the logo would have
+   filled. */
+.pack-choice .logo::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: .2rem;
+    background: var(--bs-secondary-bg);
+}
+.pack-choice .logo::after {
+    content: attr(data-name);
+    position: absolute; inset: 0;
+    display: grid; place-content: center;
+    padding: 0 6%;
+    /* Sized off the strip, like the logo it stands for: at two columns the tile is 320px and at
+       six it is a fraction of that, and one fixed size is a headline at one end and unreadable at
+       the other. Long names wrap and, past what the strip holds, are clipped by it rather than
+       spilling over the booster below -- three lines still fit, and the longest set the game has
+       named takes two. */
+    font-size: clamp(.68rem, 9cqw, 1.15rem);
+    font-weight: 600;
+    line-height: 1.15;
+    text-align: center;
+    text-wrap: balance;
+    color: var(--bs-secondary-color);
+    overflow: hidden;
 }
 
 /* The booster. The box ratio MUST match the art, because `cover` is what keeps the drawn
@@ -4127,3 +4269,64 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 }
 .chip-filter:hover { background: color-mix(in srgb, var(--bs-primary) 26%, transparent); }
 .chip-filter:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+
+/* Art that never arrived, everywhere it is a background.
+   ==============================================================================================
+   Two ways to show a card: an <img>, which the managed loader watches and can mark failed (see
+   the .art-none rules above), and a background-image, which reports nothing at all — a failed
+   background is simply not painted, and the box was left empty. That is most of the app: every
+   thumbnail, the detail art, the hit strip, the offer slots.
+
+   A background cannot be caught, so it is not caught: a stand-in is painted UNDER it and the art
+   covers it when it loads. .pack-choice .art did this for the booster first; this is the same
+   idea made general, so a missing scan reads as "no art" in the same drawn language wherever it
+   happens rather than as a hole in the layout.
+
+   It has to be layered on one element, because these thumbnails have no children to put it in and
+   both of the pseudo-elements are spent on gold flair. So the art moves off `background-image`
+   and into a custom property, and this rule stacks the three layers in paint order: art on top,
+   then the outline, then the weave. A layer whose url fails just leaves the one below it. */
+:root {
+    /* A card: outer frame, the art window, two lines of text under it. */
+    --pp-art-mark: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 100'><g fill='none' stroke='%23888' stroke-width='3' opacity='.55'><rect x='6' y='6' width='60' height='88' rx='5'/><rect x='15' y='16' width='42' height='45' rx='3'/><path d='M15 73h42M15 84h26'/></g></svg>");
+
+    /* The same card at a size where those details would be a smudge: a thumbnail is 1.6rem wide,
+       where the art window's stroke lands under a pixel. Frame, one rule, one disc — the booster
+       placeholder's shapes, so the two read as one family. */
+    --pp-art-mark-sm: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 100'><g fill='none' stroke='%23888' stroke-width='5' opacity='.5'><rect x='7' y='7' width='58' height='86' rx='7'/><path d='M7 32h58'/></g><circle cx='36' cy='64' r='10' fill='%23888' opacity='.26'/></svg>");
+
+    /* A booster rather than a card, for the thumbnails that are packs. Same shapes as the large
+       one on the pack picker, redrawn at thumbnail weight. */
+    --pp-art-mark-pack: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 100'><g fill='none' stroke='%23888' stroke-width='4' opacity='.5'><rect x='7' y='7' width='38' height='86' rx='5'/><path d='M7 30h38'/></g><circle cx='26' cy='62' r='8' fill='%23888' opacity='.26'/></svg>");
+
+    /* Under both: enough texture to say the box was drawn on purpose, not enough to compete with
+       whatever loads on top of it. */
+    --pp-art-weave: repeating-linear-gradient(45deg, rgba(128, 128, 128, .10) 0 4px, transparent 4px 8px);
+}
+
+/* Keyed off the property rather than a list of classes: the sites that carry art are spread over
+   a dozen pages under half as many class names, and the attribute is the one thing they all share.
+
+   The attribute is written three times so the rule weighs as much as a three-class selector. It
+   has to beat the rules that set these boxes' own background-size — `.hits-panel .hit-strip
+   .thumb` is the heaviest of them — because a `cover` meant for the art alone is taken by all
+   three layers, which stretches the weave and blows the outline up to the full box. Written once
+   it lost to half of them; last in the file and weighing three, it ties the worst case and wins
+   on order. --art-fit is what a box says instead. */
+[style*="--art"][style*="--art"][style*="--art"] {
+    background-color: var(--bs-secondary-bg);
+    background-image: var(--art), var(--pp-art-mark), var(--pp-art-weave);
+    background-position: center, center, center;
+    background-repeat: no-repeat, no-repeat, repeat;
+    background-size: var(--art-fit, cover), var(--pp-art-mark-size, 62%) auto, auto;
+}
+
+/* Packs are drawn whole; card art is cropped to the box. */
+.pack-thumb { --art-fit: contain; --pp-art-mark: var(--pp-art-mark-pack); --pp-art-mark-size: 78%; }
+.pack-thumb.deck-thumb, .hit-strip .thumb, .showcase .strip .thumb, .chase-row .pack-thumb {
+    --art-fit: cover;
+    --pp-art-mark: var(--pp-art-mark-sm);
+    --pp-art-mark-size: 72%;
+}
+/* Room for the detailed one only where the box is big. */
+.big-art, .hit-art, .offer-card, .showcase .face { --pp-art-mark-size: 46%; }

@@ -54,13 +54,18 @@
            time the grid is a wall of broken-image markers rather than the odd gap.
 
            The set and number stand in, because that is the same pair the game prints in the card's
-           own corner: it is what you match against when the picture is what you have not got. Not
-           the name, which the caption below already carries.
+           own corner: it is what you match against when the picture is what you have not got.
+
+           The name goes above them, on the tiles wide enough to read one on. The caption below
+           carries it as well, but clipped to one line -- and on a phone the caption is over the
+           art and the name is not drawn at all. CSS decides "wide enough" off the tile's own
+           width, so the span is rendered either way and simply not shown on a narrow one.
 
            aria-hidden, like the spinner: the tile's own label names the card, and a screen reader
-           reading "A1 127" after it would be repeating the id for no one who needed it. *@
+           reading "Illumise B4a 2" after it would be repeating the label for no one who needed
+           it. *@
         <span class="art-none" aria-hidden="true"
-              data-set="@Card.Set" data-nr="@Card.Number"></span>
+              data-set="@Card.Set" data-nr="@Card.Number"><span class="nm">@Card.Name</span></span>
     </span>
 
     <span class="cap">

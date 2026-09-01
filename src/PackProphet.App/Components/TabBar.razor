@@ -37,14 +37,17 @@
        day. The others are places; this is the action.
 
        The pack rather than a plus, and the same drawing as the wordmark's. A plus said "this one
-       writes something" without saying what, and the label under it already says Log; the pack says
-       what is being logged. It is white here because the filled circle sets `color: #fff` and the
-       mark paints in currentColor, so nothing about the glyph changes between its two homes. *@
-    <NavLink class="tab tab-primary" href="log">
+       writes something" without saying what; the pack says what is being logged. It is white here
+       because the filled circle sets `color: #fff` and the mark paints in currentColor, so nothing
+       about the glyph changes between its two homes.
+
+       No label under it, unlike the four destinations: the circle is big enough to carry the
+       meaning on its own, and dropping the word buys the height the larger circle needs. The name
+       still reaches a screen reader through aria-label. *@
+    <NavLink class="tab tab-primary" href="log" aria-label="Log a pack">
         <span class="ico" aria-hidden="true">
-            <PackMark Size="26" />
+            <PackMark Size="32" />
         </span>
-        <span class="lbl">Log</span>
     </NavLink>
 
     <NavLink class="tab" href="chase">

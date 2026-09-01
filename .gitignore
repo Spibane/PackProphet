@@ -16,3 +16,8 @@ obj/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Python bytecode, from the diagnostic tool under tools/DiagProbe. Anchored nowhere in
+# particular because it appears next to whichever script was run.
+__pycache__/
+*.pyc

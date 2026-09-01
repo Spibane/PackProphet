@@ -92,64 +92,125 @@ synthetic test beforehand:
 
 ---
 
-## Opaque "Script error" on iOS Safari, a few seconds after load
+## Opaque "Script error" on iOS: the browser app's own injected script
 
-**Status:** open, non-fatal. Everything on the page works; the app's own error surface catches
-it and shows a row.
+**Status: not this app's bug, and settled by measurement.** It is a third-party iOS browser
+injecting a script that throws. PackProphet is not involved, and there is nothing in the page to
+fix. Kept because six hypotheses were eliminated to get here and because the evidence is what
+makes the conclusion safe to rely on.
 
-**Symptom.** On an iPhone, on the collection page, the on-page error box shows:
+**What decides it.** Safari shows no error. Chrome, Firefox, Edge, Brave and DuckDuckGo on the
+same phone, on the same URL, all show it.
 
-```
-[1] js: Script error (no detail available)
-target: window (a script threw)
-Error object: none (so the throw was cross-origin)
-foreign code loaded (elements, modules, fetches): fetch https://cdn.jsdelivr.net
-Page: / | standalone: no
-at +5.8s after load, page has never been backgrounded this session
-```
+Every browser on iOS is WebKit, which is why "only on iOS" read for four rounds as a WebKit
+problem. But the third-party ones are WebKit inside an app that injects its own code into every
+page — content blocking, autofill, translation, reader mode. That code is not a page subresource,
+so `document.scripts` and resource timing never see it; it is not same-origin, so Safari's muting
+rule strips the message, file and line; and it runs at document start, so it throws before the page
+has done anything. Every field of the report follows from that, and none of it is about this app.
 
-It fires 3.5–6s after load, which is roughly when the card snapshot finishes and the grid
-first renders on a phone. That timing is suggestive, not established.
+**The probe that proved the page is not involved.** `tools/DiagProbe/probe.py` serves three pages
+that differ only in their import map, with no runtime, no CDN and no app code on any of them. All
+three threw:
 
-**Ruled out, and how.** Each of these was a working hypothesis that the evidence killed:
+| Probe | Import map | Result |
+|---|---|---|
+| A | the real one, `integrity` and all | `Script error` |
+| B | same, `integrity` removed | `Script error` |
+| C | **none at all** | `Script error` |
+
+C is the one that matters. `Parser: readyState=complete, 1 script elements reached (last: diag.js)`
+— a page whose entire script content is the error surface itself, with no import map, still throws.
+So it is nothing the app loads, writes or runs.
+
+That also retires the import map, which had been the leading candidate and fitted every measurement
+up to this point: the SDK writes a top-level `integrity` key that older WebKit does not implement,
+and a rejected map is reported by spec as an exception with no script behind it — the report's exact
+shape. It was a good hypothesis and it was wrong. B and C killed it in two page loads.
+
+### Where the reasoning went wrong
+
+One row of the original table killed the right hypothesis with the wrong evidence:
+
+> | A browser extension or content blocker injecting a script | Reproduces in a Private tab. |
+
+A private tab suppresses *Safari extensions*. It does not suppress the code a third-party browser
+**app** injects — that is part of the app, and it runs in private tabs too. So "reproduces in a
+Private tab" never ruled out injection; it ruled out one narrow kind of it, and the row was then
+treated as closing the whole question.
+
+The timing was the other wrong turn. The first report said 3.5–6s, which is about when the card
+snapshot finishes and the grid first renders, and four rounds of hypotheses were built on that
+coincidence. The instrumented report put it at `+0.0s`, before the runtime boots and before any
+CDN request is made.
+
+### What was eliminated on the way, and how
+
+Each of these was a working hypothesis that evidence killed. They are worth keeping only as a
+record of what not to re-run:
 
 | Hypothesis | Killed by |
 |---|---|
-| The app's own share feature | Fires on `/`, not on a chase list. That code is C# with no JavaScript in it. |
-| The iOS share sheet raising it over the page | The report says the page has never been backgrounded. iOS backgrounds a page while the sheet is open. |
-| A browser extension or content blocker injecting a script | Reproduces in a Private tab. |
-| A foreign `<script>` element on the page | None — and the check now covers dynamically imported ES modules and fetches too, which `document.scripts` misses. |
-| The CDN card-data fetch failing | `CardDataLoader` catches a CDN failure and falls back to the vendored snapshot by design. |
-| An unsupported browser API | The modules that load on `/` use only `IntersectionObserver` and `MutationObserver`, both long-supported on iOS. |
+| The app's share feature | Fires on `/`, not on a chase list. That code is C# with no JavaScript in it. |
+| The iOS share sheet raising it over the page | The report says the page has never been backgrounded; iOS backgrounds a page while the sheet is open. |
+| A foreign `<script>` element on the page | None, including dynamically imported ES modules and fetches, which `document.scripts` misses. |
+| The CDN card-data fetch, in any form | `foreign code loaded: none` at the moment of the throw — nothing cross-origin had been requested yet. |
+| An unsupported browser API | The modules that load on `/` use only `IntersectionObserver` and `MutationObserver`. |
+| Any callback the app registered | `callbacks that have thrown: 0`. Every timer, frame, observer and listener is wrapped in a `catch` that would have reported a real Error with its stack. |
+| A worker — also a separate script origin whose errors arrive muted | `secure context: no`, `service worker: unavailable`. No worker can be registered over plain HTTP to a LAN address, and the app creates no other. |
+| Anything that runs when the grid renders | `+0.0s`. Neither the grid nor the runtime exists yet. |
+| The dev server, the LAN origin, the non-secure context | The same error, at the same moment, on the published HTTPS site with a service worker. |
+| The import map the SDK writes | Probes B and C above. |
+| The app's own JavaScript at all | Probe C: one script on the page, and it is the error surface. |
 
-**One row of that table has since been narrowed.** "The CDN card-data fetch failing" was killed
-on the grounds that `CardDataLoader` falls back to the snapshot — true of a fetch that *fails*,
-but until the CDN requests were given a deadline it was not true of one that *hangs*. That does
-not revive the hypothesis here: on the phone the page loads and everything on it works, so the
-loader plainly returned. It only means the fallback covers less than the row assumed, and the
-row's reasoning now holds for both cases rather than one.
+### What the error surface can now do
 
-**Does not reproduce** in a desktop browser at the same LAN origin, so it is not simply a
-consequence of the app being served over plain HTTP from an IP address.
+Safari withholds the message, file and line from `window.onerror`. It does not withhold them from a
+`try`/`catch` inside a same-origin script — the muting is a property of the *report*, not of the
+`Error`. So `diag.js` wraps every asynchronous entry point the app's JavaScript uses — timers,
+animation frames, the three observers, and event listeners — and reports what it catches with the
+stack and the kind of callback it came from.
 
-### The test to run next
+Verified against a script served from a second origin: routed through a wrapped `setTimeout` it
+reported its real message, file and line; raised synchronously, bypassing every wrapper, it still
+arrived bare. So the wrappers defeat the muting for anything that passes through them — and a
+*muted* report now carries real information, because it means no callback was involved at all.
 
-Safari withholds the message, file and line from the page itself, so no amount of in-page
-instrumentation will produce them. Web Inspector is not subject to that.
+The report names the things that turned out to matter: the browser and whether it is a wrapper that
+injects scripts, how many of the app's own callbacks have thrown, where the HTML parser had got to,
+the import map, the secure context, and **its own version** (`diag/6`, on the `Page:` line) — a
+phone reading a cached copy produces an old report that looks like a current one, and two readings
+from different versions of the file were compared before that stamp existed.
 
-1. iPhone: **Settings → Apps → Safari → Advanced → Web Inspector**, on.
-2. Mac: **Safari → Settings → Advanced → Show features for web developers**.
-3. Connect the phone by cable, open the app on it, then on the Mac:
-   **Develop → \<the iPhone\> → the PackProphet tab**.
-4. Reload the page with the console open and read the real error.
+**A muted error with that signature is now counted rather than shown.** Cross-origin throw, no
+wrapper caught anything, and no cross-origin subresource on the page: that is a script the browser
+injected, and opening a red panel on a visitor's phone for another program's bug is noise. Nothing
+is lost — a genuine throw from this app's own code arrives through a wrapper with a full stack,
+.NET exceptions still come through `console.error`, and if anything real does fire, the suppressed
+count and the last full report are shown as the row above it. `window.diagMuted()` returns them on
+demand. Verified: three muted errors produced no box at all, and a real throw afterwards opened it
+with `3 muted errors before this, from the browser rather than from this page` and the report
+attached.
 
-What to look for: the file and line, and whether the frame below it is one of this project's
-modules, the .NET runtime (`dotnet.js` / `blazor.webassembly.js`), or neither. That single
-fact decides whether this is the app's bug or the runtime's.
+Two bugs in the error surface were found on the way, both of which had been hiding evidence:
 
-### If Web Inspector is not available
+- **Resource failures were invisible.** `window.addEventListener('error', ...)` without `capture`
+  never receives them — they fire at the element and do not bubble — so the `e.target.tagName ===
+  'IMG'` guard, which reads as though it did, had never fired once. Every blocked or failed script,
+  stylesheet and icon on the page was silently unreported. Now listened for in the capture phase.
+- **The copy button did nothing on a phone.** `navigator.clipboard` does not exist outside a secure
+  context, which is every phone reading this box over plain HTTP to a LAN address — the case it
+  exists for. `navigator.clipboard?.writeText(...)` there is optional chaining onto `undefined`.
+  It now falls back to a field containing the report, selected, so the OS can copy it.
 
-Force the vendored snapshot instead of the live CDN and see whether the error survives. That
-exonerates or implicates the only cross-origin loader on the page, which is the one thing the
-in-page report can still see but not explain. It is a weaker test than the inspector: it
-narrows rather than answers.
+`tests/PackProphet.App.Tests/DiagUnmutingTests.cs` holds all of it in place: every entry point the
+app's JavaScript uses is wrapped, a *new* kind of callback fails the build rather than quietly
+escaping, resource errors stay in the capture phase, and copying stays independent of a secure
+context.
+
+### If it needs re-opening
+
+It should not, but the discriminator is cheap: **load the page in Safari.** If Safari is clean and
+another iOS browser is not, it is that browser's injected script and not this app. `tools/DiagProbe`
+narrows it further — a probe page whose only script is the error surface reproducing the error is
+proof the page is not involved.

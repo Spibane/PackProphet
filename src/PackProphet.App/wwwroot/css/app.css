@@ -3827,15 +3827,22 @@ tr.row-best {
 .tab-bar .tab:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -3px; }
 
 /* The one tab that writes something rather than going somewhere, and the one used many times in a
-   session. Raised and filled so it reads as the action among four destinations. */
+   session. Filled so it reads as the action among four destinations.
+
+   Inside the bar rather than notched over its top edge. A button that breaks the outline needs a
+   ring in the bar's own colour to cut itself out of the border, and that ring is a third shape on
+   a bar that already has two. Kept within the bar there is nothing to cut out: the fill alone does
+   the work, and it can be the full height of the row because it gave up its label to get there.
+
+   A circle, not a rounded rectangle widened into the tab. That was tried: a filled shape spanning
+   the tab's own width is the shape a selected tab wears in every other bar the user has used, so
+   it read as "you are on Log" on every screen. The circle is narrower than its tab on purpose --
+   being unable to pass for a selection indicator is the point. */
 .tab-bar .tab-primary .ico {
-    width: 2.6rem; height: 2.6rem;
-    margin-top: -.9rem;
+    width: 2.9rem; height: 2.9rem;
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
     background: var(--bs-primary); color: #fff;
-    border: 3px solid var(--bs-tertiary-bg);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
 }
 .tab-bar .tab-primary.active .ico { background: var(--bs-primary); }
 .tab-bar .tab-primary { color: var(--bs-body-color); }

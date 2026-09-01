@@ -101,7 +101,7 @@ else
                 {
                     <button class="offer-card" @onclick="() => Remove(card)"
                             title="Remove @card.Name from the offer"
-                            style="background-image:url('@card.ArtUrl')">
+                            style="--art:url('@card.ArtUrl')">
                         <span class="x" aria-hidden="true">&times;</span>
                     </button>
                 }
@@ -171,7 +171,7 @@ else
                                 <td>
                                     <span class="pack-thumb deck-thumb"
                                           data-tip-img="@c.Card.ArtUrl" data-tip="@c.Card.Name"
-                                          style="background-image:url('@c.Card.ArtUrl')"></span>
+                                          style="--art:url('@c.Card.ArtUrl')"></span>
                                     <strong>@c.Card.Name</strong>
                                     <span class="small text-body-secondary ms-1">@c.Card.Set</span>
                                     @if (Session.Index.Rung(c.Card) is { } rung)

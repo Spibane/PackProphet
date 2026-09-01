@@ -42,7 +42,7 @@
                             @onmouseenter="() => _selected = index">
                         @if (item.Thumb is { Length: > 0 } art)
                         {
-                            <span class="pack-thumb deck-thumb" style="background-image:url('@art')"></span>
+                            <span class="pack-thumb deck-thumb" style="--art:url('@art')"></span>
                         }
                         else
                         {

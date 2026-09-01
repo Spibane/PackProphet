@@ -130,7 +130,7 @@ else
                                     {
                                         <span class="pack-thumb deck-thumb"
                                               data-tip-img="@entry.Card.ArtUrl" data-tip="@entry.Card.Name"
-                                              style="background-image:url('@entry.Card.ArtUrl')"></span>
+                                              style="--art:url('@entry.Card.ArtUrl')"></span>
                                     }
                                 </td>
                                 <td style="width:1.8rem">
@@ -275,7 +275,7 @@ else
                                 <tr class="@(standing == _ranked[0] ? "row-best" : "")">
                                     <td>
                                         <span class="pack-thumb"
-                                              style="background-image:url('@Session.PackArtUrl(standing.PackKey)')"></span>
+                                              style="--art:url('@Session.PackArtUrl(standing.PackKey)')"></span>
                                         <strong>@standing.PackName</strong>
                                         <span class="small text-body-secondary">@standing.Set</span>
                                         @if (standing == _ranked[0])

@@ -15,14 +15,14 @@
     {
         <a class="pack-thumb deck-thumb" href="card/@Card.Key"
            data-tip-img="@Card.ArtUrl" data-tip="@Card.Name"
-           style="background-image:url('@Card.ArtUrl')"
+           style="--art:url('@Card.ArtUrl')"
            aria-label="@Card.Name"></a>
     }
     else
     {
         <span class="pack-thumb deck-thumb"
               data-tip-img="@Card.ArtUrl" data-tip="@Card.Name"
-              style="background-image:url('@Card.ArtUrl')"></span>
+              style="--art:url('@Card.ArtUrl')"></span>
     }
     <span class="nm">
         @Card.Name

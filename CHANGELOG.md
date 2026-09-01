@@ -6,6 +6,26 @@ until then the minor number tracks the roadmap phase.
 
 ### Unreleased
 
+- **A set with no logo yet says its name where the logo would be.** The log screen draws each pack
+  under its set's wordmark, and a set is loggable the day it goes live — days before the community
+  CDN publishes its logo, which left a blank strip above the booster on a tile whose neighbours are
+  all wordmarks. The name now stands in, at the size and in the place the logo would have taken. It
+  is drawn by the image's own pseudo-element, which a browser renders only while the image has
+  nothing to show: no error handler, no class to write, and no state to get stuck in — the failure
+  mode an `onerror` on this screen had the first time round. It covers the wait as well as the
+  absence, since the box's height is fixed either way and nothing moves when the logo lands
+
+- **Art that never arrives is drawn, not left blank.** Only the card grid could tell a failed load
+  from a pending one: everywhere else the art is a background image, which reports nothing, so a
+  missing scan left an empty grey box — every thumbnail, the detail art, the deck and chase faces,
+  the hit strip, the Wonder Pick slots. They now paint a stand-in underneath the art, which the art
+  covers when it loads: the outline of a card (a booster where the box is a pack) on a faint weave.
+  The grid tile takes the same outline behind the set and number it already showed, plus the card's
+  name above them wherever the tile is at least 130px wide — which is where a wrapped name is read
+  rather than deciphered, and which on a phone is the only place the name is drawn at all. The 32px
+  list thumbnail, which showed nothing at all, takes the outline alone. One drawn language, whether
+  the CDN is a day behind on a new set or a single scan is missing
+
 - **A muted error that is provably not this page's is counted rather than shown.** Cross-origin
   throw, no wrapper caught anything, no cross-origin subresource on the page: that is the signature
   of a script the browser injected, and every third-party iOS browser injects one. A red panel on a

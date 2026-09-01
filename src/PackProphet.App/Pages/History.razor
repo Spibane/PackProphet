@@ -131,7 +131,7 @@ else
                 else
                 {
                     <a class="hit-art" href="card/@_showcase.Card.Key"
-                       style="background-image:url('@_showcase.Card.ArtUrl')"
+                       style="--art:url('@_showcase.Card.ArtUrl')"
                        aria-label="Detail for @_showcase.Card.Name"></a>
 
                     <div class="hit-detail">
@@ -166,7 +166,7 @@ else
                             {
                                 <a class="thumb @(hit == _showcase ? "on" : "")"
                                    href="card/@hit.Card.Key"
-                                   style="background-image:url('@hit.Card.ArtUrl')"
+                                   style="--art:url('@hit.Card.ArtUrl')"
                                    title="@hit.Card.Name — @hit.Rung.Symbol"
                                    aria-label="@hit.Card.Name"></a>
                             }
@@ -488,7 +488,7 @@ else
                             </td>
                             <td>
                                 <span class="pack-thumb"
-                                      style="background-image:url('@Session.PackArtUrl($"{entry.Set}:{entry.Pack}")')"></span>
+                                      style="--art:url('@Session.PackArtUrl($"{entry.Set}:{entry.Pack}")')"></span>
                                 <strong>@entry.Pack</strong>
                                 <span class="small text-body-secondary">@entry.Set</span>
                             </td>

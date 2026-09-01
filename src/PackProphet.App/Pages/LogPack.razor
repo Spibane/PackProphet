@@ -140,8 +140,17 @@ else if (_pack is null)
                            when it does not (Paradox Drive has none) the placeholder shows. No
                            error handling and no state to get stuck in, unlike an <img> with
                            onerror, which hid a tile permanently after one aborted request. *@
-                        <span class="logo" style="background-image:url('@PocketCard.SetLogoUrl(set)')"
-                              aria-hidden="true"></span>
+                        @* An <img> rather than a background, alone on this tile, because it is the
+                           one picture here that has something to say when it does not arrive: the
+                           set's name, which is what the logo spells. A background cannot report a
+                           failure and text under one would show through the transparent parts of
+                           every logo that DID load, so the name is drawn by the image's own
+                           pseudo-element -- which a browser renders only once the image is
+                           broken. No script, and nothing to get stuck in: a spurious error costs
+                           the name in place of the logo for one render, not a hidden tile. *@
+                        <img class="logo" src="@PocketCard.SetLogoUrl(set)" alt=""
+                             data-name="@Session.Sets.DisplayName(set)"
+                             decoding="async" draggable="false" aria-hidden="true" />
                         <span class="art">
                             <span class="art-img"
                                   style="background-image:url('@Session.PackArtUrl(pack)')"></span>

@@ -63,7 +63,7 @@ else
                         @* The deck's face card, chosen as its rarest — in practice the card the
                            deck is named after and the one you recognise it by. *@
                         <a class="face" href="decks/@deck.Id"
-                           style="background-image:url('@(deck.Face?.ArtUrl)')"
+                           style="--art:url('@(deck.Face?.ArtUrl)')"
                            aria-label="Open @deck.Name">
                             @if (deck.Face is null)
                             {
@@ -118,7 +118,7 @@ else
                                 <div class="strip">
                                     @foreach (var card in deck.Strip)
                                     {
-                                        <span class="thumb" style="background-image:url('@card.ArtUrl')"
+                                        <span class="thumb" style="--art:url('@card.ArtUrl')"
                                               data-tip="@card.Name"></span>
                                     }
                                 </div>

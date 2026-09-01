@@ -112,7 +112,7 @@ else
                         @if (SetArtUrl(set) is { Length: > 0 } art)
                         {
                             <span class="pack-thumb" aria-hidden="true"
-                                  style="background-image:url('@art')"></span>
+                                  style="--art:url('@art')"></span>
                         }
                         <span class="lbl">
                             @set
@@ -345,7 +345,7 @@ else
                                 @onclick="() => TogglePack(p)" aria-pressed="@Aria.Flag(_pack == p)"
                                 title="@(_pack == p ? $"Show every pack in {_set} again" : $"Only cards from {p}")">
                             <span class="pack-thumb" aria-hidden="true"
-                                  style="background-image:url('@Session.PackArtUrl($"{_set}:{p}")')"></span>
+                                  style="--art:url('@Session.PackArtUrl($"{_set}:{p}")')"></span>
                             <span class="nm">@p</span>
                         </button>
                     }

@@ -621,4 +621,115 @@ public class ScreenshotEndToEndTests
         Assert.All(reading.Matches, m => Assert.True(m.Owned));
         Assert.All(reading.Matches, m => Assert.Equal(MatchSource.Art, m.Source));
     }
+
+    /// <summary>
+    /// IMG_1150, a pack's Opening Results for Team Rocket's Ambition: five cards laid out three then
+    /// two, and every one of them white-bodied. Verbatim <c>scan()</c> output.
+    ///
+    /// This is the picture the detector used to return nothing at all for. A card with a small
+    /// illustration panel over a large white body masks as two pieces — a coloured panel and a strip
+    /// of attack text — with an unmasked white band between them, and neither piece is card-shaped.
+    /// On every other screen a pale card is recovered because its row holds a card that was found,
+    /// which fixes the phase; here there was no such card anywhere, so there was nothing to extend
+    /// from and no size to pin the grid to.
+    ///
+    /// The pieces are now joined back into a card when, and only when, the mask found nothing
+    /// card-shaped in the whole picture. The lattice below is what that produces: 172x240, against
+    /// the 176x245 the same screen measures on IMG_1157. It is four pixels narrow because nothing in
+    /// a picture of only pale cards ever reaches a card's border — the mask can fall short of an edge
+    /// but never past one, and here every region falls short. That is what the grown crops in
+    /// <c>nudged</c> are for.
+    ///
+    /// Its set is not in the fingerprint table, so this fixture cannot show a card being named. What
+    /// it does show is the other half of the contract: five slots found, and every one of them left
+    /// unread rather than pushed onto the nearest thing in the table. The nearest entry to any of
+    /// these crops is 21 bits away against a threshold of 18.
+    /// </summary>
+    private static readonly (int Row, int Col, string Hash, string[] Nearby, double Detail, double Saturation, double Luma)[] PaleReveal =
+    [
+        (0, 0, "30c6ceae97b331f1f1628e0000f8ff7b",
+         ["90e6ce969399a93bf1630c0000fcff1f", "14c6cca5b791b3b3f1620c0000fcff1f", "15c6dcada73133f3f1660c0001f8ff5e",
+          "14c6cca5a52133f3f1628c0000f8ff7f", "30c6ceada5a321f3f1429e0000f8ff7f", "30c6ceaca5a321f3fb429e0000f0ff7f",
+          "14c6cea697b1b1f1f1638c0000f8ff7f", "38c6ceac95b321b3fb604e0000f8ff7b", "90e6ceb6939191b9f1630e0000f8ff3f",
+          "30e6cea6979391b9f9624e0000f8ff3b", "18e6cea6969311b9fb604f0000f8ff3b"], 0.118, 0.212, 0.661),
+        (0, 1, "89a669a1c9a3569a00876000c837469d",
+         ["acb229a1e927dfdb00ff2000ff07ff10", "8cb629a1e9369a9300ff0000ff07ff30", "8d3649a1d34a9a9300ff0000ff07df30",
+          "1cb649a1d972da9a00ff0000d807df9c", "98a649a1d933d29a00874000c8274e9d", "88a649a9d122529a1886600000bf479f",
+          "acb629a1c933de9a00ff0000fc07df9c", "89ae69a9c923569a0887600440bf479f", "acb229a9e927579a00ff0000fc07ff9c",
+          "88a629a9c9a5579a08876000489747ce", "88ae29a9c9a1579b0887600240b747df"], 0.077, 0.153, 0.779),
+        (0, 2, "8ccc6c6b3c773fedff003f000471cf28",
+         ["8ca6bc2f3c3f3ffde03a1f0004e7e97c", "8ccc2c2d3d3f3fedc03a1f000ce7e8f8", "8cc4783d797f7fedc13a1b0008c7f8f0",
+          "8cc4787739773fedc03a3f000cf3ce6c", "8ccc68673d773fedff003f000c71cf20", "8ccc786d3d753fedff003f000071cf29",
+          "8ccc2c6f3c773fedc03a1f000cf3cf2c", "8c8c7c6d3c753fedff003f000071cf29", "84a6ac2b3c3f3fedc03a1f0004f3cf3c",
+          "8c862c6b3c3d3fedff003f000471cf38", "8c847c6f3e353fedff003f000071cf28"], 0.087, 0.129, 0.730),
+        (1, 0, "30e6cecde3d9e175f163ce0000fe79b7",
+         ["b0e6ce6973696155b1730c0001fcf1cf", "b4e6cee3e3f96137b1670c0001fc718f", "35c6ccf3e3d9e1b731e68c0001fc719f",
+          "34e6ccd1e3d9e16531e78c0000fc71af", "30e6ce99e3f9f1e1f162ce0000fc71a7", "30e6ce8ce3f9d1e1f900ce0000fe7927",
+          "34e6cef1e3d9e17531670c0000fc719f", "38a6ce8ce3f9e165f900ee0000fe78b7", "b2e6cee9e3f86175b1730c0000fe70df",
+          "38a6cecce3f86175f1234e0000fe7897", "18a6cecc61f86975f9006f0000fe78b5"], 0.118, 0.250, 0.632),
+        (1, 1, "31e6cab119b7d5b57900c01100f7ddac",
+         ["31e6c8731d339da87900cc108773ef38", "31c7c873b93795b37100dc118f71cf3a", "71c799d3b9359da37300d8118d71cf30",
+          "71c798d3b9b795b97100c8110977dfa8", "31c79b9399a795bd7100c81100f7df28", "11e7cb9593afd5bdf100c83400e755ac",
+          "31c6887399b795b57100c8110cf7cfb8", "14e7ca9411a7d595f900c81500e75d8c", "31e6ca7319b695957900cc1104f3cfbc",
+          "31e6ca3119b6d5b57900c01100f74d94", "19e7ca1019b6d595f900c81500f7498c"], 0.074, 0.254, 0.697),
+    ];
+
+    private static ShotScan PaleRevealScan() => new()
+    {
+        Ok = true, Width = 1320, Height = 2868,
+        Lattice = new ShotLattice
+        {
+            Rows = 2, Cols = 3, CellWidth = 172, CellHeight = 240,
+            Confidence = 1.0, RelativeCellWidth = 0.2671,
+        },
+        Cells =
+        [
+            .. PaleReveal.Select(c => new ShotCell
+            {
+                Row = c.Row, Col = c.Col, Hash = c.Hash, Nearby = [.. c.Nearby],
+                Detail = c.Detail, Saturation = c.Saturation, Luma = c.Luma,
+            }),
+        ],
+    };
+
+    [Fact]
+    public void APackRevealOfOnlyPaleCardsIsFoundAtAll()
+    {
+        // The whole point of the fixture. Five slots, three then two, on a screen that produced no
+        // regions the mask called card-shaped — so every one of them is a card assembled out of its
+        // own illustration panel and attack text.
+        var scan = PaleRevealScan();
+
+        Assert.Equal(5, scan.Cells.Count);
+        Assert.Equal([0, 0, 0, 1, 1], scan.Cells.Select(c => c.Row));
+        Assert.Equal([0, 1, 2, 0, 1], scan.Cells.Select(c => c.Col));
+        Assert.All(scan.Cells, c => Assert.True(c.Detail >= ScreenshotReader.DetailFloor));
+    }
+
+    [Fact]
+    public void ASetTheFingerprintTableDoesNotHaveIsLeftUnreadRatherThanGuessedAt()
+    {
+        // Team Rocket's Ambition is newer than the committed table, so the right answer is not in it
+        // for any of these five. Finding the cards must not turn into naming them: the nearest entry
+        // to any crop here is 21 bits away, against a threshold of 18 and a margin of 6.
+        var reading = new ScreenshotReader(Ix, Table).Read(PaleRevealScan(), CardScreen.PackReveal);
+
+        Assert.Empty(reading.Matches);
+        Assert.Equal(5, reading.UnreadCells);
+    }
+
+    [Fact]
+    public void EveryCropOfAnUnknownPaleCardStaysOutsideTheMatchingThreshold()
+    {
+        // The assertion behind the one above, stated in bits rather than in outcomes, so that a
+        // future threshold change cannot quietly turn these five into wrong answers.
+        foreach (var text in PaleReveal.SelectMany(c => c.Nearby.Prepend(c.Hash)))
+        {
+            Assert.True(ArtHash.TryParse(text, out var hash));
+
+            // Nearest already refuses anything past the threshold, so an empty result IS the
+            // assertion: no entry in the table is close enough to be offered as a candidate.
+            Assert.Empty(Table.Nearest(hash));
+        }
+    }
 }

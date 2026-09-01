@@ -4,7 +4,45 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
-### Unreleased
+### v0.6.0 - 2026-09-01
+
+- **A pack reveal whose cards are all white-bodied is found at last, though not yet framed
+  exactly.** A card with a small illustration panel over a large white body does not mask as one
+  shape: the panel is coloured, the attack text is detailed, and the plain body between and around
+  them is neither, so the card arrives as two pieces with an unmasked white band between them and
+  neither piece is card-shaped. On every other screen such a card is still recovered, because a card
+  that *was* found fixes its row's phase and the column pitch says where the rest must be; on a Team
+  Rocket's Ambition reveal all five are pale, so there was no seed anywhere and the screen read
+  nothing at all. The pieces are now joined back into a card — but only when the mask found nothing
+  card-shaped in the whole picture, which is the case this exists for and the only one with nothing
+  to lose. Eight of the nine reference screenshots come out byte-identical; the ninth goes from 0 of
+  5 to 5 of 5 found
+- **A joined card is measured from its bottom edge and the card aspect, not from its own pieces.**
+  The game draws a NEW flash that hangs about twenty pixels above the card it belongs to and masks
+  as part of the illustration panel, so the top of an assembled region is the least trustworthy
+  thing about it. Taking the pieces' own extent put every row nineteen pixels high and nineteen too
+  tall; the bottom edge is where the card's content ends and nothing protrudes past it
+- **An assembled box is offered at a larger scale as well as nudged.** Such a box is not merely
+  misplaced, it is small — its pieces stop at the illustration and the attack text, and the card's
+  plain border is not in the mask at all — so translating it cannot fix it. It now also offers the
+  box grown by one mask block on each side, at three horizontal anchors, since the mask can fall
+  short of a card by up to a block but never reach past one. Measured by putting exactly that error
+  on the one pack reveal whose cards *are* in the fingerprint table: 3 of 5 read without the grown
+  crops and 4 of 5 with them, at 3 to 9 bits where the true box scores 4 to 11. Growing by half a
+  block recovers nothing, so the whole block is what does the work
+- **What is still open is written down rather than rounded up.** The assembled lattice reads 172x240
+  where the same screen measures 176x245, because nothing in a picture of only pale cards ever
+  reaches a card's border. No wrong answers come of it — the nearest fingerprint to any of that
+  screenshot's sixty crops is 21 bits away against a threshold of 18, so all five stay unread rather
+  than being pushed onto the closest thing in the table. Its set is newer than the committed
+  fingerprints, so the reading itself cannot be verified until the weekly workflow catches up, and
+  `KNOWN-ISSUES.md` says to re-measure then
+- **The known-issues list no longer describes a bug that was already fixed.** It still had IMG_1154
+  reading 7 of 9 copy counts, with Exeggutor ex and Tangela called unreadable; running the real
+  `scan()` over the fixture reads 9 of 9, and the two cards it named are 5 and 4. It also had no
+  entry for IMG_1188, IMG_1189 or IMG_1190, which are committed fixtures. The three-across
+  screenshots overlap on purpose and the table now says so — IMG_1189's clipped top row is
+  IMG_1188's second row, and IMG_1190 is the same nine cards as IMG_1154
 
 - **A set with no logo yet says its name where the logo would be.** The log screen draws each pack
   under its set's wordmark, and a set is loggable the day it goes live — days before the community

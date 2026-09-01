@@ -5,31 +5,42 @@ first one stopped rather than repeating it.
 
 ---
 
-## Screenshot import: one screenshot still reads nothing
+## Screenshot import: one screenshot reads its cards four pixels small
 
-**Status:** open for one fixture of five, and narrowly. Every screen the import targets now reads end
-to end on a real screenshot — both card lists with copy counts, a pack's reveal, and a Wonder Pick
-line-up. What still fails is a pack reveal in which **every** card is white-bodied.
+**Status:** open, and narrowly, for one fixture of nine. Every screen the import targets now reads
+end to end on a real screenshot — both card lists with every copy count on them, a pack's reveal, and
+a Wonder Pick line-up. The pack reveal whose cards are **all** white-bodied is now found rather than
+missed, but the box it is found in is four pixels small, and that costs recognitions.
 
 ### The fixtures
 
-`tests/PackProphet.Tests/fixtures/IMG_115*.jpeg|PNG` are six real 1320x2868 iPhone screenshots.
-Develop against these: every bug in this feature was invisible until they were run through the whole
-chain, and several passed every synthetic test first.
+`tests/PackProphet.Tests/fixtures/` holds nine real 1320x2868 iPhone screenshots. Develop against
+these: every bug in this feature was invisible until they were run through the whole chain, and
+several passed every synthetic test first.
 
 | File | Screen | Result |
 |---|---|---|
 | IMG_1152 | My Cards, three across | **6 of 6** cards, **6 of 6** counts (9, 11, 1, 8, 14, 20) |
-| IMG_1154 | My Cards, three across, scrolled | **9 of 9** cards, **7 of 9** counts |
+| IMG_1154 | My Cards, three across, A1-16 to A1-24 | **9 of 9** cards, **9 of 9** counts (3, 3, 6, 4, 3, 9, 1, 5, 4) |
+| IMG_1188 | My Cards, three across, A1-1 to A1-9 | **9 of 9** cards, **9 of 9** counts (9, 11, 1, 8, 14, 20, 2, 6, 6) |
+| IMG_1189 | My Cards, three across, A1-7 to A1-15 | **9 of 9** cards, **9 of 9** counts (2, 6, 6, 2, 7, 2, 1, 12, 10) |
+| IMG_1190 | My Cards, three across, A1-16 to A1-24 again | **9 of 9** cards, **9 of 9** counts, matching IMG_1154 |
 | IMG_1153 | My Cards, five across | **6 of 6** drawn cards, 9 blank slots placed |
 | IMG_1157 | Opening Results (Wisdom of Sea and Sky) | **5 of 5** cards, pack named as Lugia |
 | IMG_1151 | Wonder Pick (Shining Revelry) | **5 of 5** cards |
-| IMG_1150 | Opening Results (Team Rocket's Ambition) | **0 of 5** |
+| IMG_1150 | Opening Results (Team Rocket's Ambition) | **5 of 5** cards found, none named — see below |
+
+The three-across fixtures overlap on purpose, and the overlap is the check: IMG_1189's clipped top
+row is IMG_1188's second row, and IMG_1190 is the same nine cards as IMG_1154. A count that reads
+differently in two screenshots of the same card is a bug with no argument to be had about it.
 
 IMG_1150 and IMG_1153 are of *Team Rocket's Ambition*, which the vendored snapshot does not have —
 its newest set is B4 — so those two can only be used for geometry, not recognition.
 
 ### Open: a picture in which every card is pale
+
+**Half closed.** The five cards are now found. What is still open is that they are found four pixels
+narrow, and on the one screen where the cost can be measured that loses two cards in five.
 
 The mask that finds cards is "coloured **or** locally detailed", block-wise, and it does not see a
 card with a small art panel over a large white body carrying sparse black text. On IMG_1150 every
@@ -40,15 +51,52 @@ card splits into an art panel and an attack-text strip, and neither is card-shap
 [36,676 168x40]  ar=4.20     [232,676 164x40]  ar=4.10   [424,676 168x40]  ar=4.20
 ```
 
-A pale card is now read **as long as something else in its row is found**: the row's own cards fix
-the phase, the column pitch says where the remaining slots must be, and the fingerprint decides
-whether a card is there. That is how Dunsparce (IMG_1157) and Raticate (IMG_1151) are recovered, and
-neither is found as a region at all.
+A pale card is read **as long as something else in its row is found**: the row's own cards fix the
+phase, the column pitch says where the remaining slots must be, and the fingerprint decides whether a
+card is there. That is how Dunsparce (IMG_1157) and Raticate (IMG_1151) are recovered, and neither is
+found as a region at all. IMG_1150 defeated that because there was nothing to extend *from* — all
+five of its cards are Team Rocket's cards, so no row had a seed.
 
-IMG_1150 defeats that because there is nothing to extend *from* — all five of its cards are Team
-Rocket's cards, so no row has a seed. Fixing it needs the mask itself to see a white card, and the
-obvious ways do not work. It is also the one fixture whose recognition cannot be verified, since its
-set is not in the card data; the weekly workflow will change that, and it should be re-tried then.
+**What now happens.** The two pieces above are two pieces of one card, stacked in the same columns
+with an unmasked white band between them, so `joined()` puts them back together. It runs **only when
+the mask found nothing card-shaped in the whole picture**, which is the case this exists for and the
+only case where there is nothing to lose: six of the nine fixtures come out byte-identical, and the
+two that would otherwise have changed are excluded by that gate. A join has to produce the shape of a
+card, which is what stops a column of cards on the three-across list — 8 pixels apart, sharing their
+columns exactly — from fusing into one stripe.
+
+A joined region is reported **bottom-anchored and sized by the card aspect**, not as the extent of
+its own pieces. The game draws a NEW flash that hangs about 20 pixels above the card it belongs to
+and masks as part of the illustration panel, so a joined region's top is the least trustworthy thing
+about it. Taking the pieces' own extent puts every row 19 pixels high and 19 too tall; taking the
+bottom edge and the one fixed aspect puts it within five.
+
+**What is left, and what it costs.** IMG_1150 now reads a lattice of 172x240, where the same screen
+measures 176x245 on IMG_1157. Nothing in a picture of only pale cards ever reaches a card's border —
+the mask can fall short of an edge but never past one, and here every region falls short — so there
+is no evidence for the missing four pixels anywhere in the image.
+
+The cost was measured rather than guessed at, by putting exactly that error on IMG_1157, whose cards
+*are* in the fingerprint table:
+
+| Box | Cards read | Bits |
+|---|---|---|
+| The true 176x245 | 5 of 5 | 4, 7, 8, 11, 18 |
+| 172x240, bottom-anchored — the joining error | 3 of 5 | 11, 13, 16 |
+| The same, plus the grown crops | 4 of 5 | 3, 5, 6, 9 |
+
+So `nudged()` offers three extra crops when the lattice was assembled: the box grown by one mask
+block on each side, at three horizontal anchors. The mask cannot reach past a card but can fall short
+by up to a block, so the grown box is the other end of what the card can be. Growing by half a block
+recovers nothing — the whole block is what does the work — and the translations, which fix a
+misplaced box, do nothing at all here, because the error is in the box's scale rather than its
+position. The one card still lost is the one that scores 18 bits even from a perfect box.
+
+**No wrong answers in the meantime.** Every crop still has to clear the threshold and the margin on
+its own, so a badly framed card is unread rather than misnamed. Measured on IMG_1150 itself: the
+nearest table entry to any of its 60 crops is 21 bits away, against a threshold of 18. Its set is not
+in the card data — the vendored snapshot's newest set is B4 — so recognition on this fixture cannot
+be verified at all until the weekly workflow adds it, and it should be re-measured then.
 
 Things already ruled out:
 
@@ -59,20 +107,12 @@ Things already ruled out:
 | The same snap aggregated over every card at once | Also wrong. It moved rows that were already correct by 7px, so the strongest aggregate edge is not the card's outer one either. |
 | Splitting a wide region into k cards by aspect ratio | Needs the card size pinned first. Without it, a row of toolbar text is explained as six tiny cards. |
 | Autocorrelating the edge profile to find the grid's period | Reports a 42px pitch on cards 192px apart. A real screenshot is mostly text, and text carries far more edge energy than the gutters. |
-
-It produces no wrong answers in the meantime: a card not found is a card not applied.
-
-### Open: two of nine copy counts
-
-On IMG_1154 the badge segmentation returns a sliver rather than a digit for the last two cards
-(Exeggutor ex and Tangela), so their counts are reported as unknown. Both are cards with a holo
-treatment, which is the likely reason — the badge sits over a brighter, busier corner and the
-relative ink threshold picks the wrong level. Everything else on both three-across fixtures reads
-correctly, and an unreadable digit costs the whole count rather than producing a wrong one.
+| Joining pieces on every picture rather than only when nothing was found | IMG_1151 holds a second Wonder Pick further down the page, and joining finds a pale card in it. That card is real and it still breaks the reading: a sixth region shifts the index the card size is taken from, and 156x220 becomes 164x229 with a third row of slots invented under it. |
+| Snapping the joined box outward to the card's own border | There is nothing to snap to. The border is a white line about 8 luma above the page near the top of the screen, and lower down the card body and the page are both around 222 and indistinguishable. |
 
 ### What it took, so it is not undone
 
-Four findings that each cost a full round of measurement, and each of which had passed every
+Five findings that each cost a full round of measurement, and each of which had passed every
 synthetic test beforehand:
 
 - **Only the card's window is fingerprinted**, never the whole card, because the game draws gold
@@ -84,6 +124,11 @@ synthetic test beforehand:
 - **Rows are anchored from the bottom edge**, and only by cards the screen shows whole.
 - **Columns are worked out per row.** A hand of five is laid out three then two, and the second row
   sits half a pitch across; one shared set of columns never looks at its slots.
+- **A digit's height is its tallest unbroken stack of inked rows**, not the distance from its
+  topmost ink to its bottommost. The badge carries bright artwork at both ends, and two specks 27
+  rows apart with nothing between them measure as tall as the ribbon itself — which made the
+  artefact the tallest thing on the card and got every real digit discarded for being shorter than
+  it. Every digit from 0 to 9 has ink in every row of its own box; a pair of specks cannot fake that.
 - **Each cell offers nine crops**, the centre and eight nudged three pixels. The detector cannot
   place a box closer than two to four pixels and the fingerprint is worth ten bits per pixel of
   error. Every crop still passes the same threshold and margin on its own; among those that pass, the

@@ -88,6 +88,15 @@ const NUDGE = 3;
 /// detector locked onto texture rather than cards, and the payload should not follow it.
 const MAX_CELLS = 160;
 
+/// How far apart two pieces of one card may sit, as a fraction of the card height their shared width
+/// implies. The white band between a pale card's illustration and its attack text measures 0.34 of
+/// the card on the reference screenshots.
+const STACK_GAP = 0.45;
+
+/// How much of the narrower piece's width two stacked pieces must share before they can be the same
+/// card.
+const STACK_OVERLAP = 0.7;
+
 /// Every failure a picture can cause is a failure of the picture, not of the app, so each one comes
 /// back as a sentence the page can show rather than an exception.
 const fail = error => ({ ok: false, error, width: 0, height: 0, lattice: null, cells: [] });
@@ -197,8 +206,17 @@ function grayscale({ w, h, rgba }) {
 
 /// Finds the cards and the grid they sit on, or null when the picture holds no cards.
 function findCards(gray, pixels) {
-    const regions = cardShaped(components(mask(gray, pixels)), gray.w);
-    if (regions.length === 0) return null;
+    const blocks = components(mask(gray, pixels));
+    const regions = cardShaped(blocks, gray.w);
+
+    // Assembling cards out of their pieces is a last resort, not a first pass. Where the mask found
+    // cards, their own size and pitch are better evidence than anything a join could offer, and a
+    // pale card among them is already recovered by extending its row. It is only when nothing
+    // card-shaped was found anywhere that there is no seed to extend from and nothing to lose —
+    // which is exactly the pack reveal whose cards are all white-bodied.
+    const assembled = regions.length === 0;
+    const found = assembled ? cardShaped(joined(blocks, gray.w), gray.w) : regions;
+    if (found.length === 0) return null;
 
     // The card's size from a HIGH QUANTILE of the regions, not their middle. The mask can fall short
     // of a card's edge — it does, by four to eight pixels, depending on what the card has near its
@@ -206,12 +224,12 @@ function findCards(gray, pixels) {
     // across two screenshots of the same screen: the median gives 192x268 on one and 184x260 on the
     // other, where the truth is 192x268 both times, and eight pixels is enough to make every card
     // unrecognisable. The quantile gives 192x268 for both.
-    const cardW = quantile(regions.map(r => r.w), 0.9);
-    const cardH = Math.max(quantile(regions.map(r => r.h), 0.9), Math.round(cardW / CARD_ASPECT));
+    const cardW = quantile(found.map(r => r.w), 0.9);
+    const cardH = Math.max(quantile(found.map(r => r.h), 0.9), Math.round(cardW / CARD_ASPECT));
 
     // Regions well off that size are furniture that happened to be card-shaped — a booster pack
     // thumbnail, a button. Dropped before they can drag the rows and columns around.
-    const cards = regions.filter(r => r.w >= cardW * 0.7 && r.w <= cardW * 1.3);
+    const cards = found.filter(r => r.w >= cardW * 0.7 && r.w <= cardW * 1.3);
     if (cards.length === 0) return null;
 
     // Columns from the leftmost edge seen in each group, rows from the bottom edge. Each is the side
@@ -242,7 +260,7 @@ function findCards(gray, pixels) {
         columns: slotsInRow(cards, top, cardH, pitch, origin, cardW, gray.w, fullWidth),
     }));
 
-    return { cards, cardW, cardH, rows, origin, pitch };
+    return { cards, cardW, cardH, rows, origin, pitch, assembled };
 }
 
 /// The spacing between card columns, taken from the row that shows the most of them. One row is
@@ -371,6 +389,77 @@ function components({ blocks, bw, bh }) {
     return found;
 }
 
+/// Pieces of one pale card, joined into a single region.
+///
+/// A card with a small illustration panel over a large white body does not mask as one shape. The
+/// panel is coloured and the attack text below it is detailed, but the plain body between and around
+/// them is neither, so the card arrives as two or three regions stacked in the same columns with
+/// unmasked white bands between them. Every card on a Team Rocket's Ambition pack reveal is like
+/// that, which is why that screen found nothing at all: with no card-shaped region anywhere there is
+/// no size to pin the grid to and no seed for a row to extend from.
+///
+/// Joining is deliberately timid, and two rules do the work:
+///
+///   - A piece that is ALREADY card-shaped is never touched, as a head or as a member. Where the
+///     mask found the card, it found the card; this only ever assembles what it broke.
+///   - A join has to produce the shape of a card. That is what keeps a column of cards on the
+///     three-across list from fusing into one stripe — those sit 8 pixels apart and share their
+///     columns exactly, and the aspect of the union is the only thing that tells them from the
+///     halves of one card.
+function joined(regions, imageWidth) {
+    const shaped = r => r.w >= imageWidth * MIN_CARD_WIDTH && r.h >= 30
+                     && r.w / r.h >= ASPECT_MIN && r.w / r.h <= ASPECT_MAX;
+
+    // Solid, wide enough to be part of a card, and not a card already.
+    const pieces = regions
+        .map((r, at) => ({ r, at }))
+        .filter(({ r }) => r.fill >= 0.55 && r.w >= imageWidth * MIN_CARD_WIDTH && !shaped(r))
+        .sort((a, b) => a.r.y - b.r.y);
+
+    const taken = new Set();
+    const chains = [];
+
+    for (const head of pieces) {
+        if (taken.has(head.at)) continue;
+
+        let chain = { ...head.r };
+        const members = [head.at];
+
+        for (const { r: next, at } of pieces) {
+            if (taken.has(at) || members.includes(at) || next.y < chain.y) continue;
+
+            const shared = Math.min(chain.x + chain.w, next.x + next.w) - Math.max(chain.x, next.x);
+            if (shared < Math.min(chain.w, next.w) * STACK_OVERLAP) continue;
+
+            const x = Math.min(chain.x, next.x), y = Math.min(chain.y, next.y);
+            const w = Math.max(chain.x + chain.w, next.x + next.w) - x;
+            const h = Math.max(chain.y + chain.h, next.y + next.h) - y;
+
+            if (next.y - (chain.y + chain.h) > (w / CARD_ASPECT) * STACK_GAP) continue;
+            if (w / h < ASPECT_MIN || w / h > ASPECT_MAX) continue;
+
+            // The fill of the least solid piece, not of the union: the white body between them is
+            // unmasked by nature, and averaging it in would reject every card this exists for.
+            chain = { x, y, w, h, fill: Math.min(chain.fill, next.fill) };
+            members.push(at);
+        }
+
+        if (members.length > 1) {
+            for (const at of members) taken.add(at);
+
+            // Anchored on the bottom edge and sized by the card aspect, rather than reported as the
+            // extent of its own pieces. A joined region's top is the least trustworthy thing about
+            // it: the game draws a NEW flash that hangs 20 pixels above the card it belongs to, and
+            // the flash masks as part of the illustration panel. The bottom is where the card's own
+            // content ends and nothing protrudes past it.
+            const h = Math.round(chain.w / CARD_ASPECT);
+            chains.push({ x: chain.x, y: chain.y + chain.h - h, w: chain.w, h, fill: chain.fill });
+        }
+    }
+
+    return [...regions.filter((_, at) => !taken.has(at)), ...chains];
+}
+
 /// Regions the size and shape of a card, in reading order.
 function cardShaped(regions, imageWidth) {
     return regions
@@ -433,7 +522,7 @@ const quantile = (values, at) => {
 /// does not own — the most useful thing on that screen. On a hand of five there are no empty slots
 /// to report, which is why the columns are not tiled across the image in that case.
 function slots(gray, pixels, found) {
-    const { cards, cardW, cardH, rows, origin, pitch } = found;
+    const { cards, cardW, cardH, rows, origin, pitch, assembled } = found;
     const out = [];
 
     for (let row = 0; row < rows.length && out.length < MAX_CELLS; row++) {
@@ -466,7 +555,7 @@ function slots(gray, pixels, found) {
                 row, col,
                 box: [box.x, box.y, box.w, box.h],
                 ...measure(gray, pixels, box),
-                nearby: nudged(gray, pixels, box),
+                nearby: nudged(gray, pixels, box, assembled),
                 digits: readBadge(gray, box),
             });
         }
@@ -703,7 +792,7 @@ function measure(gray, pixels, box) {
 }
 
 /// Fingerprints of the same card shifted a few pixels each way — eight of them, around the centre
-/// crop the cell already carries.
+/// crop the cell already carries, and three more at a larger scale when the box was assembled.
 ///
 /// The detector puts a card's box within two to four pixels of its true edges, and cannot reliably
 /// do better: the box comes from a mask whose extent depends on what the card has near its border.
@@ -715,8 +804,33 @@ function measure(gray, pixels, box) {
 /// Every crop still has to pass the same test on its own — close enough, and clear of the next
 /// card by the full margin — so offering more of them cannot turn a doubtful reading into a
 /// confident one. See ScreenshotReader.Identify.
-function nudged(gray, pixels, box) {
+function nudged(gray, pixels, box, assembled = false) {
     const out = [];
+
+    // A box that was assembled out of a card's interior pieces is not merely misplaced, it is small:
+    // the pieces stop at the illustration and the attack text, and the card's plain border is not in
+    // the mask at all. Translating such a box cannot fix it, because the error is in its scale.
+    //
+    // The mask cannot reach past a card but can fall short of it by up to one block, so the box
+    // grown by a block on each side is the other end of what the card can be. Offered at three
+    // horizontal anchors, since which side the block was lost on is not known.
+    //
+    // Measured, by putting exactly this error on the pack reveal whose cards ARE in the fingerprint
+    // table: a box 4 pixels narrow and 5 short reads 3 of its 5 cards, and the same box with these
+    // crops added reads 4, at 3 to 9 bits where the true box scores 4 to 11. Growing by half a block
+    // instead recovers nothing, so the whole block is what does the work.
+    if (assembled) {
+        const w = box.w + BLOCK * 2;
+        const h = Math.round(w / CARD_ASPECT);
+
+        for (const dx of [0, -BLOCK, -BLOCK * 2]) {
+            const grown = { x: box.x + dx, y: box.y + box.h - h, w, h };
+            if (grown.x < 0 || grown.y < 0) continue;
+            if (grown.x + grown.w > gray.w || grown.y + grown.h > gray.h) continue;
+
+            out.push(measure(gray, pixels, grown).hash);
+        }
+    }
 
     for (const dx of [-NUDGE, 0, NUDGE]) {
         for (const dy of [-NUDGE, 0, NUDGE]) {

@@ -35,15 +35,28 @@ public sealed class CardDataLoader
     private const string Local = "data/snapshot";
 
     /// <summary>
-    /// Card detail comes from a different project to the rest, so it has its own URL rather than
-    /// sitting under the same root. See NOTICE.md: it is AGPL-3.0-or-later, which is why this
+    /// Card detail comes from a different project to the rest, so it has its own root rather than
+    /// sitting under the same one. See NOTICE.md: it is AGPL-3.0-or-later, which is why this
     /// project is.
+    ///
+    /// Two roots for the same files, and the order they are tried in depends on what is being
+    /// asked for.
+    ///
+    /// The npm package is the reliable one. That project's git repository also carries every card
+    /// image and is now 1.84 GB, which is far past the 50 MB jsDelivr allows a /gh/ package — and
+    /// the 4.4 MB detail table is on the edge of being refused for it. The same URL answered 403
+    /// ("Package size exceeded the configured limit of 50 MB") and then 200 minutes apart. The npm
+    /// tarball carries no images, so it is not subject to that at all.
+    ///
+    /// The repository is the fresh one. npm is published per release and can sit a version behind
+    /// the branch, which matters for exactly one thing: a set that has just appeared.
+    ///
+    /// Pinned to major 5. A 6.x would be free to move the fields this app reads.
     /// </summary>
-    private const string FactsCdn =
-        "https://cdn.jsdelivr.net/gh/chase-mew/pokemon-tcg-pocket-cards@main/data/v5/cards.min.json";
+    private const string FactsNpm = "https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-cards@5/data/v5";
 
-    private static string FactsUrl(string root) =>
-        root == Local ? $"{root}/cards.v5.json" : FactsCdn;
+    private const string FactsRepo =
+        "https://cdn.jsdelivr.net/gh/chase-mew/pokemon-tcg-pocket-cards@main/data/v5";
 
     /// <summary>
     /// How long a CDN request gets before it is treated as a failure. The fallback below only
@@ -60,6 +73,24 @@ public sealed class CardDataLoader
     /// It is still a deadline: the point is that a hang ends.
     /// </summary>
     private static readonly TimeSpan FactsDeadline = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// One set's detail is about 270 KB against the whole table's 4.4 MB, so it gets a
+    /// proportionate deadline rather than the same thirty seconds.
+    /// </summary>
+    private static readonly TimeSpan SetFactsDeadline = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Above this many missing sets, one request for the whole table beats a request each.
+    ///
+    /// The per-set files are ~270 KB and the whole table is 4.4 MB, so the arithmetic turns over
+    /// around sixteen — but the case this guards is not a near-miss. It is a vendored snapshot
+    /// that could not be read, or one so old that it predates most of the game: fetching twenty
+    /// sets one at a time would be slower AND larger than the file that contains all of them.
+    /// Four keeps the per-set path to what it is for, which is a set or two that has appeared
+    /// since the last deploy.
+    /// </summary>
+    private const int MostGapsWorthFetchingSetBySet = 4;
 
     private readonly HttpClient _http;
     private CardData? _cached;
@@ -215,30 +246,160 @@ public sealed class CardDataLoader
     /// and called after the UI is usable: it is the largest payload and none of it is needed to
     /// render a collection.
     ///
+    /// The vendored snapshot, then whatever it is missing.
+    /// ==========================================================================================
+    /// This used to be a list of two sources returning the first that answered — the local copy
+    /// and then the CDN — with a comment saying the CDN was "the reason a brand-new set still gets
+    /// detail without a redeploy". It could not do that, and never had: the local read succeeds on
+    /// every visit, so the loop returned on the first pass and the second source was unreachable
+    /// in the only case that mattered. Card detail was frozen at whatever had last been vendored,
+    /// and a new set showed empty attack, ability and HP columns until somebody redeployed.
+    ///
+    /// Both halves of that were right on their own, so both are kept and the gap is what decides:
+    ///
+    ///   * the vendored copy is read first, always. It carries only the fields this app reads —
+    ///     1.5 MB against 4.4 MB — so it parses roughly three times faster, and on any ordinary
+    ///     visit it is the whole answer and nothing leaves the origin.
+    ///   * then whichever sets it does not cover are fetched one file each, about 270 KB, from
+    ///     the same project's per-set files. That is a request for a set that appeared since the
+    ///     last deploy, and nothing at all when there has not been one.
+    ///
+    /// <paramref name="coveringSets"/> is what the card data knows about, which is live from a CDN
+    /// and therefore ahead of anything vendored. Passing none disables the top-up, which is what a
+    /// caller that only wants the vendored table asks for.
+    ///
     /// Returns <see cref="CardFacts.Empty"/> on failure, so a fetch that cannot be completed costs
     /// some columns rather than the app.
     /// </summary>
-    public async Task<CardFacts> LoadFactsAsync(CancellationToken ct = default)
+    public async Task<CardFacts> LoadFactsAsync(
+        IReadOnlyCollection<string>? coveringSets = null, CancellationToken ct = default)
     {
-        // Local first. The vendored copy carries only the fields this app reads — 1.5 MB against
-        // the upstream 4.4 MB — so it parses roughly three times faster. The CDN is the fallback,
-        // and the reason a brand-new set still gets detail without a redeploy.
-        foreach (var root in new[] { Local, Cdn })
+        var (facts, _) = await TryFactsAsync(Local, $"{Local}/cards.v5.json", FactsDeadline, ct);
+
+        // Only when the vendored copy could not be read at all — a corrupt or absent file. The
+        // whole table from upstream is the answer to that, not a per-set walk.
+        if (facts is null or { Count: 0 }) facts = await WholeTableAsync(ct);
+        if (facts is null or { Count: 0 }) return CardFacts.Empty;
+
+        var gaps = MissingSets(facts, coveringSets);
+
+        if (gaps.Count > MostGapsWorthFetchingSetBySet)
         {
-            try
+            var whole = await WholeTableAsync(ct);
+            if (whole is { Count: > 0 }) return new CardFacts(whole);
+        }
+        else
+        {
+            foreach (var code in gaps)
             {
-                var facts = await GetAsync<List<CardFact>>(root, FactsUrl(root), FactsDeadline, ct);
-                if (facts is { Count: > 0 }) return new CardFacts(facts);
-            }
-            // The deadline above cancels through a linked token, so a timeout arrives here as an
-            // OperationCanceledException too. Only the caller's own token means "stop"; anything
-            // else is this source failing, and the other one is still worth trying.
-            catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                // try the other source
+                // Best effort, one set at a time. A set whose detail upstream has not published
+                // yet answers 404 and is simply not added, which is the state the app already
+                // renders: the columns that need it stay blank and everything else works.
+                var added = await SetTableAsync(code, ct);
+                if (added is { Count: > 0 }) facts.AddRange(added);
             }
         }
-        return CardFacts.Empty;
+
+        // CardFacts indexes with TryAdd, so the vendored entries win any collision. Ordering the
+        // concatenation the other way would let a per-set file silently replace the trimmed copy
+        // the app was built against.
+        return new CardFacts(facts);
+    }
+
+    /// <summary>
+    /// Sets the card data knows about that this detail table has nothing for, in the spelling the
+    /// per-set files use.
+    ///
+    /// The two projects code the promos differently — PROMO-A here, pa there — which is the one
+    /// difference that would silently make every promo look like a permanent gap and refetch it on
+    /// every single visit. <see cref="ArtSource.MirrorSetCode"/> is the same translation the art
+    /// URLs use, shared so the pair cannot drift.
+    /// </summary>
+    private static List<string> MissingSets(
+        List<CardFact> have, IReadOnlyCollection<string>? coveringSets)
+    {
+        if (coveringSets is null or { Count: 0 }) return [];
+
+        var covered = have
+            .Select(f => f.SetCode)
+            .Where(c => !string.IsNullOrEmpty(c))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return coveringSets
+            .Select(ArtSource.MirrorSetCode)
+            .Where(code => !covered.Contains(code))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// One set's detail. The repository first and npm second, which is the opposite order to
+    /// <see cref="WholeTableAsync"/> and deliberately so: this call exists for freshness, and the
+    /// repository is the fresher of the two. A 270 KB file is also well clear of the size that
+    /// makes the repository route unreliable — measured, three requests in a row, all served.
+    /// </summary>
+    private async Task<List<CardFact>?> SetTableAsync(string code, CancellationToken ct)
+    {
+        foreach (var root in new[] { FactsRepo, FactsNpm })
+        {
+            var (facts, absent) = await TryFactsAsync(root, $"{root}/{code}/{code}.min.json",
+                                                      SetFactsDeadline, ct);
+            if (facts is { Count: > 0 }) return facts;
+
+            // A plain 404 from the repository settles it for npm as well. The package is published
+            // FROM that repository, so it is never ahead of the branch: a file the branch does not
+            // have cannot be in the package. Which is not a hypothetical -- it is B4a's state right
+            // now, and without this every visit would spend two requests learning it twice.
+            //
+            // A route failure is different, and still worth the second try: that is the 403 the
+            // repository answers when jsDelivr refuses it for the repository's size.
+            if (absent) return null;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// The complete table. npm first here: this is the 4.4 MB file, which is the one the
+    /// repository route can be refused for.
+    /// </summary>
+    private async Task<List<CardFact>?> WholeTableAsync(CancellationToken ct)
+    {
+        foreach (var root in new[] { FactsNpm, FactsRepo })
+        {
+            // No short-circuit on absence here, unlike SetTableAsync: that argument runs one way
+            // only. npm trailing the branch means a 404 from npm says nothing about the branch.
+            var (facts, _) = await TryFactsAsync(root, $"{root}/cards.min.json", FactsDeadline, ct);
+            if (facts is { Count: > 0 }) return facts;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// One attempt at a detail file, and whether the answer was a definite "no such file".
+    ///
+    /// The distinction earns its place because the two failures mean opposite things about trying
+    /// somewhere else: a 404 is upstream telling you it does not have this, and every mirror of
+    /// upstream will say the same; a timeout or a 403 is one route being unavailable, and another
+    /// route may well serve.
+    ///
+    /// A failure is never a fault here. Only the caller's own cancellation propagates, since the
+    /// deadline arrives as a cancellation too.
+    /// </summary>
+    private async Task<(List<CardFact>? Facts, bool Absent)> TryFactsAsync(
+        string root, string url, TimeSpan deadline, CancellationToken ct)
+    {
+        try
+        {
+            return (await GetAsync<List<CardFact>>(root, url, deadline, ct), false);
+        }
+        catch (HttpRequestException e) when (e.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return (null, true);
+        }
+        catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return (null, false);
+        }
     }
 
     private async Task<string?> TryReadVersionAsync(string root, CancellationToken ct)

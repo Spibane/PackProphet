@@ -234,7 +234,13 @@ public sealed class AppSession : IAsyncDisposable
     {
         try
         {
-            var facts = await _loader.LoadFactsAsync();
+            // The sets the card data knows about, which comes live from a CDN and is therefore
+            // ahead of the vendored detail table whenever a set has just been released. Read
+            // before the await rather than after: this is the list the loader needs to work out
+            // what to top up, and Data is reassigned below.
+            var sets = Data?.Index.BySet.Keys.ToArray();
+
+            var facts = await _loader.LoadFactsAsync(sets);
             if (Data is null) return;
 
             Data = Data with { Facts = facts };

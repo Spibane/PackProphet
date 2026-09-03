@@ -114,7 +114,7 @@ public static class ArtSource
         if (_vendored.Contains(set)) urls.Add($"{OwnOrigin}/{set}/{number}.webp");
 
         urls.Add($"{Exchange}/{set}/{number}.webp");
-        urls.Add($"{Mirror}/{MirrorSet(set)}/{number:D3}.webp");
+        urls.Add($"{Mirror}/{MirrorSetCode(set)}/{number:D3}.webp");
         return urls;
     }
 
@@ -122,8 +122,15 @@ public static class ArtSource
     /// The mirror's own spelling of a set code: lower case, and the promos are two letters rather
     /// than the word. Its numbers are zero-padded to three, which is why this is a translation
     /// rather than a second string format.
+    ///
+    /// Public because that repository names its DATA files the same way it names its images, so
+    /// the card-detail top-up in CardDataLoader builds a URL from this too. Two copies of a
+    /// mapping is how the two drift, and the promos are the pair that would drift first.
+    ///
+    /// The reverse direction — their spelling back into this app's — lives on
+    /// <see cref="PackProphet.Data.CardFact.CardKey"/>.
     /// </summary>
-    private static string MirrorSet(string set) => set.ToLowerInvariant() switch
+    public static string MirrorSetCode(string set) => set.ToLowerInvariant() switch
     {
         "promo-a" => "pa",
         "promo-b" => "pb",

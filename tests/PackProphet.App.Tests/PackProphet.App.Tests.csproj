@@ -72,12 +72,16 @@
              Link="CardGrid.razor.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- The deploy workflow, as text. One ordering in it is load-bearing and invisible: the art it
-       vendors has to be written AFTER dotnet publish, or the static-asset pipeline renames the
-       files and the service-worker integrity check starts verifying them. -->
+  <!-- Both workflows, as text. Each has an ordering in it that is load-bearing and invisible: the
+       deploy has to vendor art AFTER dotnet publish, or the static-asset pipeline renames the
+       files and the service-worker integrity check starts verifying them; and the fingerprint
+       refresh has to vendor art BEFORE generating and hand the generator the same directory, or
+       the newest set — the only one it is actually running for — is the one it cannot see. -->
   <ItemGroup>
     <Content Include="..\..\.github\workflows\deploy-pages.yml"
              Link="deploy-pages.yml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\.github\workflows\card-hashes.yml"
+             Link="card-hashes.yml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Every page, as text. One invariant spans all of them: nothing below the bars may pad itself

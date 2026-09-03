@@ -706,13 +706,26 @@ public class ScreenshotEndToEndTests
         Assert.All(scan.Cells, c => Assert.True(c.Detail >= ScreenshotReader.DetailFloor));
     }
 
+    /// <summary>
+    /// The committed table with B4a taken out of it, which is the state it was in when this
+    /// fixture was captured -- and the state any set is in until a refresh has seen its art.
+    ///
+    /// Worth keeping as a table rather than deleting the two tests below it. The property they
+    /// assert is that a card the table does not hold is left UNREAD rather than named, and that
+    /// property does not stop mattering because one set stopped being an example of it. It is the
+    /// reason the importer can be trusted at all on the week a set lands.
+    /// </summary>
+    private static ArtHashTable WithoutTheNewestSet =>
+        new(Table.Entries.Where(e => !e.Set.Equals("B4a", StringComparison.OrdinalIgnoreCase)),
+            Table.Generated);
+
     [Fact]
     public void ASetTheFingerprintTableDoesNotHaveIsLeftUnreadRatherThanGuessedAt()
     {
-        // Team Rocket's Ambition is newer than the committed table, so the right answer is not in it
-        // for any of these five. Finding the cards must not turn into naming them: the nearest entry
-        // to any crop here is 21 bits away, against a threshold of 18 and a margin of 6.
-        var reading = new ScreenshotReader(Ix, Table).Read(PaleRevealScan(), CardScreen.PackReveal);
+        // Finding the cards must not turn into naming them: with B4a absent, the nearest entry to
+        // any crop here is 21 bits away, against a threshold of 18 and a margin of 6.
+        var reading = new ScreenshotReader(Ix, WithoutTheNewestSet)
+            .Read(PaleRevealScan(), CardScreen.PackReveal);
 
         Assert.Empty(reading.Matches);
         Assert.Equal(5, reading.UnreadCells);
@@ -723,13 +736,60 @@ public class ScreenshotEndToEndTests
     {
         // The assertion behind the one above, stated in bits rather than in outcomes, so that a
         // future threshold change cannot quietly turn these five into wrong answers.
+        var table = WithoutTheNewestSet;
+
         foreach (var text in PaleReveal.SelectMany(c => c.Nearby.Prepend(c.Hash)))
         {
             Assert.True(ArtHash.TryParse(text, out var hash));
 
             // Nearest already refuses anything past the threshold, so an empty result IS the
             // assertion: no entry in the table is close enough to be offered as a candidate.
-            Assert.Empty(Table.Nearest(hash));
+            Assert.Empty(table.Nearest(hash));
         }
+    }
+
+    [Fact]
+    public void TheSameRevealIsReadOnceTheArchiveHasSuppliedItsArt()
+    {
+        // The payoff, end to end, on a real screenshot.
+        //
+        // This fixture is a Team Rocket's Ambition pack reveal, and for a fortnight it was
+        // unreadable: B4a's card data was published on 2026-08-27 and its ART was not, so the
+        // fingerprint refresh -- which downloads from the art CDN -- had 0 of its 110 cards. The
+        // art existed the whole time inside the release archive that the DEPLOY was already
+        // extracting from, and once the refresh read the same archive all five slots resolved.
+        //
+        // Which is why this test is here rather than a count in a workflow log. A directory
+        // argument going missing is invisible from a green run; a pack reveal going back to
+        // unreadable is not.
+        var reading = new ScreenshotReader(Ix, Table).Read(PaleRevealScan(), CardScreen.PackReveal);
+
+        // Ix is the snapshot and predates B4a, so the reader cannot name these cards -- it has no
+        // card to name. The fingerprints are the half this fixed, and they are what is asserted.
+        var matched = PaleReveal
+            .Select(c => c.Nearby.Prepend(c.Hash)
+                          .SelectMany(text => ArtHash.TryParse(text, out var h)
+                                                  ? Table.Nearest(h) : [])
+                          .Select(m => m.Entry.Key)
+                          .Distinct(StringComparer.OrdinalIgnoreCase)
+                          .ToArray())
+            .ToArray();
+
+        // Each cell agrees with itself. Eleven crops of one slot -- the cell's own fingerprint and
+        // ten neighbouring offsets -- all landing on ONE card is what separates a real
+        // identification from a table dense enough to match anything: a coincidence does not
+        // survive being re-cropped ten times.
+        Assert.All(matched, m => Assert.True(m.Length == 1,
+            $"one slot matched {m.Length} different cards: {string.Join(", ", m)}"));
+
+        // Tinkatink, Furfrou, Lechonk, Tinkatuff, Gholdengo -- in reading order, and every one of
+        // them a Common or Uncommon, which is what a pack reveal is mostly made of.
+        Assert.Equal(["B4a-48", "B4a-64", "B4a-65", "B4a-49", "B4a-51"],
+                     matched.Select(m => m[0]));
+
+        // And no cell is offered as a match against the snapshot, because the snapshot has no B4a
+        // cards for a fingerprint to point at. The reader is right to hold them back; a deploy
+        // takes the live card data and the same five become named.
+        Assert.Empty(reading.Matches);
     }
 }

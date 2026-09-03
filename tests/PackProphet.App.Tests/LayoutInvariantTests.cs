@@ -266,6 +266,40 @@ public class LayoutInvariantTests
     }
 
     [Fact]
+    public void The_fingerprint_refresh_vendors_art_first_and_generates_from_it()
+    {
+        // The seam this closes, and why it needs a test rather than a comment.
+        //
+        // The fingerprint generator downloads from the art CDN. The only set it has work to do for
+        // is the newest one -- everything older is already in the table -- and the newest set is
+        // reliably the one the CDN has NOT published, because card data ships in days and art is a
+        // manual commit weeks later. So the job's whole purpose landed on the one set it could not
+        // see: B4a was 0 of 110 fingerprinted and 0 of 110 typed while every other set was
+        // complete.
+        //
+        // The art existed the entire time, in the release archive the DEPLOY already extracts from
+        // with this same script. Two jobs wanting identical bytes, one of them asking a source that
+        // did not have them.
+        //
+        // Both halves are silent if they break. Drop the vendor step and the generator still exits
+        // 0 with a green run, having quietly skipped the new set; keep the step but let the two
+        // paths drift apart and the generator reads an empty directory and does the same. Neither
+        // shows up until someone notices a set has no types, which is months later and looks like a
+        // reader bug.
+        var yaml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "card-hashes.yml"));
+
+        var vendor = Regex.Match(yaml, @"vendor-gap-art\.py\s+--out\s+(?<path>\S+)");
+        var generate = Regex.Match(yaml, @"--art-dir\s+(?<path>\S+)");
+
+        Assert.True(vendor.Success, "the refresh no longer vendors art the CDN has not published");
+        Assert.True(generate.Success, "the generator is no longer given a local art directory");
+
+        Assert.Equal(vendor.Groups["path"].Value, generate.Groups["path"].Value);
+        Assert.True(vendor.Index < generate.Index,
+            "art has to be extracted BEFORE the generator reads the directory");
+    }
+
+    [Fact]
     public void Virtualize_item_size_matches_the_row_height_it_renders()
     {
         // Virtualize is told a fixed row height up front. If the stylesheet and that number

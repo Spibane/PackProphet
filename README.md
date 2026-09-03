@@ -378,6 +378,12 @@ seen, downloads only those, and opens a pull request if it found any. The pull r
 every set the table still does not cover completely, with counts — a set far short of its card count
 is artwork upstream has not published yet, and a later run picks it up.
 
+It runs `tools/vendor-gap-art.py` first and hands the generator the directory, because the only set
+the job has work to do for is the newest one and that is reliably the set the art CDN has **not**
+published — card data ships in days, art is a manual commit weeks later. Without it B4a sat at 0 of
+110 fingerprinted and 0 of 110 typed while every other set was complete, with its art available the
+whole time in the release archive the deploy already reads.
+
 `tools/CardHashGen` is the generator behind it, and is deliberately **absent from
 `PackProphet.slnx`**: it needs a native WebP decoder, and `dotnet test` resolves the solution, so
 including it would put SkiaSharp on the deploy path for no reason. Run it by path.
@@ -391,6 +397,10 @@ dotnet run --project tools/CardHashGen -- --only-missing
 
 # one set, to a scratch file
 dotnet run --project tools/CardHashGen -- --set A1a --out /tmp/hashes.txt
+
+# read art from a directory instead of the CDN, for a set the CDN does not have
+tools/vendor-gap-art.py --out /tmp/gap-art
+dotnet run --project tools/CardHashGen -- --art-dir /tmp/gap-art --only-missing
 ```
 
 A run merges rather than replaces: art that 404s today must not remove a card the app can currently

@@ -16,11 +16,14 @@ namespace PackProphet.Vision;
 ///
 /// And generating it offline means it can be checked against the truth. The card detail table
 /// already carries the type for every card released so far, so a generated table can be compared
-/// against 3,761 known answers rather than against the 140 the reader was calibrated on. That is a
+/// against 2,029 known answers rather than against the 140 the reader was calibrated on. That is a
 /// far stronger claim than any test over a handful of fixtures, and a runtime read cannot make it.
 ///
 /// The cost is that a set is only covered once a workflow run has seen its art, which is the same
-/// bargain <see cref="ArtHashTable"/> already makes for the same reason.
+/// bargain <see cref="ArtHashTable"/> already makes for the same reason. That wait is now days
+/// rather than weeks: the workflow extracts a missing set out of the database repository's release
+/// archive instead of waiting for the art CDN to publish it, which is the difference between B4a
+/// being covered on the Monday after release and not at all.
 ///
 /// Only consulted where the card detail is missing. Detail carries the type itself, and it is the
 /// authority: this is the stand-in for the window between a set appearing in the card data and its

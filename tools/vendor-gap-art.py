@@ -16,10 +16,18 @@ so the tail gives the name, offset and size of every member without reading any 
 member is then one ranged request. That is the whole trick, and it is why this can run on every
 deploy rather than being a thing somebody remembers to do.
 
-Usage:
-    tools/vendor-gap-art.py --out build/wwwroot/art
+Two callers, for two different reasons:
 
---out is written straight into the PUBLISHED output, after `dotnet publish`, on purpose:
+    tools/vendor-gap-art.py --out build/wwwroot/art     # the deploy, so the app can serve the art
+    tools/vendor-gap-art.py --out /tmp/gap-art          # the fingerprint refresh, so it can read it
+
+The second is the same problem from the other end. tools/CardHashGen downloads from the art CDN to
+fingerprint a card and read its type badge, and the only set it has work to do for is the newest --
+which is, for the reason above, precisely the set the CDN does not have. So it saw 0 of B4a's 110
+cards while this script was already extracting all 110 of them for the deploy. Both jobs wanted the
+same bytes; now the refresh runs this first and passes the directory as --art-dir.
+
+The deploy's --out is written straight into the PUBLISHED output, after `dotnet publish`, on purpose:
 
   * files added before publish are fingerprinted by the static-asset pipeline, which would rename
     them out from under the URLs ArtSource builds;

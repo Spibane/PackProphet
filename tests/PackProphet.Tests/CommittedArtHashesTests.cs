@@ -13,6 +13,29 @@ public class CommittedArtHashesTests
 {
     private static CardIndex Ix => Snapshot.Index();
 
+    /// <summary>
+    /// The sets the vendored snapshot knows about, which is the population every exact assertion
+    /// below is stated over.
+    ///
+    /// The table is ALLOWED to be ahead of the snapshot, and since the fingerprint refresh learned
+    /// to read the release archive it reliably is. The snapshot is a frozen boot fallback taken on
+    /// its own cadence; the refresh runs weekly and picks up each new set within days of release.
+    /// So a set in the table and not in the snapshot is the two cadences doing their jobs, and the
+    /// entries in it have nothing offline to be checked against — the app learns that set from live
+    /// card data, which no test here has.
+    ///
+    /// Before the seam was closed the two stayed accidentally in step: the refresh downloaded from
+    /// the art CDN, the newest set is the one the CDN has not published, so the refresh silently
+    /// skipped exactly the sets that would have pulled them apart. Which means these assertions
+    /// were never really about the snapshot being a census — they would have failed on the first
+    /// refresh that worked.
+    /// </summary>
+    private static HashSet<string> SnapshotSets =>
+        Ix.BySet.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static ArtHashEntry[] InSnapshotSets =>
+        Table.Entries.Where(e => SnapshotSets.Contains(e.Set)).ToArray();
+
     private static ArtHashTable? _table;
 
     private static ArtHashTable Table
@@ -30,10 +53,39 @@ public class CommittedArtHashesTests
     [Fact]
     public void EveryCardInTheSnapshotHasAFingerprint()
     {
-        Assert.Equal(Ix.All.Count, Table.Count);
+        // A floor on the snapshot, not a census of the table -- see SnapshotSets. Every card that
+        // ships has a fingerprint, and the table may hold sets released since.
+        Assert.Equal(Ix.All.Count, InSnapshotSets.Length);
 
         foreach (var (set, cards) in Ix.BySet)
             Assert.Equal(cards.Count, Table.Covered(set));
+    }
+
+    [Fact]
+    public void WhatTheTableHoldsBeyondTheSnapshotIsWholeSetsAndNotMany()
+    {
+        // The check that survives allowing the table to run ahead. "Ahead" has a shape: a handful
+        // of sets the snapshot has never heard of. A table where a THIRD of the entries are in
+        // unknown sets is not a refresh that worked -- it is a generator that read different card
+        // data than the app loads, which is the defect the strict equality above used to catch as
+        // a side effect.
+        var extra = Table.Entries
+            .Where(e => !SnapshotSets.Contains(e.Set))
+            .GroupBy(e => e.Set, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        Assert.True(extra.Count <= 3,
+            $"{extra.Count} sets are missing from the snapshot ({string.Join(", ", extra.Keys)}) "
+            + "-- the snapshot is badly stale, or the generator read the wrong card data");
+
+        Assert.True(extra.Values.Sum() < Ix.All.Count / 10,
+            $"{extra.Values.Sum()} of {Table.Count} fingerprints name a set the snapshot lacks");
+
+        // Whole sets, not stragglers. A set arriving with three fingerprints is art the CDN is
+        // still publishing; one arriving with 110 is the archive, and it is the archive that this
+        // job now reads. Fifty is comfortably below the smallest real set and far above noise.
+        Assert.All(extra, kv => Assert.True(kv.Value >= 50,
+            $"{kv.Key} has only {kv.Value} fingerprint(s), which is not a whole set"));
     }
 
     [Fact]
@@ -46,7 +98,9 @@ public class CommittedArtHashesTests
         // arrives at the same number from the pixels: fingerprint every card's art, count the
         // distinct values, and the reprints collapse onto each other because they are the same
         // picture. Two independent routes, one answer.
-        var distinct = Table.Entries.Select(e => e.Hash).Distinct().Count();
+        // Over the snapshot's own sets, because that is the population CardIndex counted. Include
+        // a set the snapshot has never heard of and the two sides stop describing the same thing.
+        var distinct = InSnapshotSets.Select(e => e.Hash).Distinct().Count();
 
         Assert.Equal(Ix.DistinctOwnableCards, distinct);
         Assert.Equal(3546, distinct);
@@ -57,7 +111,10 @@ public class CommittedArtHashesTests
     {
         // A table entry with no card behind it is dead weight the reader would never look up, and a
         // sign the generator ran against different card data than the app loads.
-        var orphans = Table.Entries
+        //
+        // Within the snapshot's sets, where "the app knows about it" is answerable offline. A whole
+        // set the snapshot lacks is a different thing and is bounded by the test above.
+        var orphans = InSnapshotSets
             .Where(e => !Ix.ByKey.ContainsKey(e.Key))
             .Select(e => e.Key)
             .Take(10)

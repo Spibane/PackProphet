@@ -19,6 +19,9 @@ namespace PackProphet.Tools;
 /// afternoon, must not remove a card the app can currently recognise, so a run that fetches less
 /// than the table already holds keeps the difference and says so — and refuses outright if it lost
 /// enough to look like an outage rather than a change upstream.
+///
+/// Art comes from the CDN, or from --art-dir where that has it. The second exists because the CDN
+/// is weeks behind on exactly the set this tool is run for; see <see cref="ReadArtDirectory"/>.
 /// </summary>
 internal static class Program
 {
@@ -57,6 +60,7 @@ internal static class Program
         var cardsSource = Arg(args, "--cards") ?? CardsUrl;
         var only = Arg(args, "--set");
         var reportPath = Arg(args, "--report");
+        var artDir = Arg(args, "--art-dir");
 
         // The mode the scheduled workflow runs in. Downloading 3,761 images to discover that 120 of
         // them are new is the whole cost of the job, and skipping what is already fingerprinted
@@ -93,8 +97,11 @@ internal static class Program
             Console.WriteLine($"todo:   {todo.Length} without a fingerprint"
                               + (todo.Length == 0 ? " — nothing to do" : ""));
 
-        var fetched = await FingerprintAllAsync(http, todo);
-        Console.WriteLine($"fetched: {fetched.Count} of {todo.Length}");
+        var onDisk = ReadArtDirectory(artDir);
+        var fetched = await FingerprintAllAsync(http, todo, onDisk);
+        var fromDisk = fetched.Keys.Count(onDisk.ContainsKey);
+        Console.WriteLine($"fetched: {fetched.Count} of {todo.Length}"
+                          + (fromDisk > 0 ? $" ({fromDisk} read from disk, not the CDN)" : ""));
 
         // Everything previously known, with this run's results laid over the top. A card whose art
         // has been redrawn upstream gets the new fingerprint; a card whose art failed to download
@@ -117,7 +124,8 @@ internal static class Program
         await File.WriteAllTextAsync(outPath, table.Serialize(stamp));
 
         Report(table, wanted);
-        if (reportPath is not null) await WriteReportAsync(reportPath, table, wanted, fetched.Count, stamp);
+        if (reportPath is not null)
+            await WriteReportAsync(reportPath, table, wanted, fetched.Count, fromDisk, stamp);
 
         Console.WriteLine($"wrote:  {outPath} — {table.Count} fingerprints, stamped {stamp}");
 
@@ -172,8 +180,57 @@ internal static class Program
         return byKey;
     }
 
+    /// <summary>
+    /// Card art already on disk, by card key, from a directory laid out the way
+    /// tools/vendor-gap-art.py writes one: <c>&lt;set&gt;/&lt;number&gt;.webp</c>.
+    ///
+    /// This is the whole point of --art-dir. Everything else in this file downloads from the art
+    /// CDN, and the newest set is precisely the one the CDN has not published — B4a's card data
+    /// arrived on 2026-08-27 and its art was still absent a week later. So the set that most
+    /// needs a fingerprint and a type is the one this tool could not see at all, while the deploy
+    /// was already extracting that exact art out of the database repository's release archive.
+    /// Two jobs wanting the same bytes and fetching them separately.
+    ///
+    /// Anything in the directory wins over the CDN rather than filling in behind it. There is no
+    /// overlap to arbitrate — the vendor script only extracts sets the CDN has no directory for —
+    /// and preferring disk means a maintainer can point this at a folder and re-run over a set
+    /// without spending a single request.
+    ///
+    /// The set logos and pack art the vendor script writes alongside are ignored here without
+    /// needing to be excluded: neither has a card number for a filename.
+    /// </summary>
+    private static Dictionary<string, string> ReadArtDirectory(string? dir)
+    {
+        var byKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (dir is null) return byKey;
+
+        // Not an error. The vendor script writes nothing at all on a week when the CDN is complete,
+        // and it exits 0 when it could not reach either source, so an absent or empty directory is
+        // its ordinary output and means every card comes from the CDN as before.
+        if (!Directory.Exists(dir))
+        {
+            Console.WriteLine($"art:    nothing at {dir} — every card comes from the CDN");
+            return byKey;
+        }
+
+        foreach (var file in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+        {
+            if (Path.GetFileName(Path.GetDirectoryName(file)) is not { Length: > 0 } set) continue;
+            if (!int.TryParse(Path.GetFileNameWithoutExtension(file), out var number)) continue;
+            byKey[$"{set}-{number}"] = file;
+        }
+
+        var sets = byKey.Keys.Select(k => k[..k.LastIndexOf('-')])
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(s => s, StringComparer.Ordinal);
+
+        Console.WriteLine($"art:    {byKey.Count} image(s) on disk under {dir}"
+                          + (byKey.Count > 0 ? $" — {string.Join(", ", sets)}" : ""));
+        return byKey;
+    }
+
     private static async Task<Dictionary<string, ArtHashEntry>> FingerprintAllAsync(
-        HttpClient http, PocketCard[] cards)
+        HttpClient http, PocketCard[] cards, Dictionary<string, string> onDisk)
     {
         var results = new ConcurrentDictionary<string, ArtHashEntry>();
         var failures = new ConcurrentBag<string>();
@@ -184,7 +241,8 @@ internal static class Program
             new ParallelOptions { MaxDegreeOfParallelism = Concurrency },
             async (card, ct) =>
             {
-                var (hash, type) = await FingerprintAsync(http, card, ct);
+                onDisk.TryGetValue(card.Key, out var local);
+                var (hash, type) = await FingerprintAsync(http, card, local, ct);
                 if (hash is not null)
                 {
                     results[card.Key] = new ArtHashEntry(card.Set, card.Number, hash.Value);
@@ -216,12 +274,33 @@ internal static class Program
     }
 
     /// <summary>
-    /// One card. Two attempts: the art CDN serves the odd 503 under load, and a card lost to that
+    /// One card, from <paramref name="local"/> if it was on disk and from the art CDN otherwise.
+    ///
+    /// Two attempts against the CDN: it serves the odd 503 under load, and a card lost to that
     /// rather than to not existing is worth the second request.
+    ///
+    /// A local file that will not read falls through to the CDN rather than failing the card. It
+    /// is the same reasoning the merge downstream uses — a file this could not read is a reason to
+    /// try the other source, not a reason to lose a fingerprint the table already holds — and the
+    /// line it prints is what distinguishes a bad extraction from a set the CDN simply lacks.
     /// </summary>
     private static async Task<(ArtHash? Hash, string? Type)> FingerprintAsync(
-        HttpClient http, PocketCard card, CancellationToken ct)
+        HttpClient http, PocketCard card, string? local, CancellationToken ct)
     {
+        if (local is not null)
+        {
+            try
+            {
+                var onDisk = Fingerprint(await File.ReadAllBytesAsync(local, ct));
+                if (onDisk.Hash is not null) return onDisk;
+                Console.WriteLine($"        {card.Key}: {local} did not decode — trying the CDN");
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                Console.WriteLine($"        {card.Key}: {e.Message} — trying the CDN");
+            }
+        }
+
         for (var attempt = 0; attempt < 2; attempt++)
         {
             try
@@ -320,7 +399,8 @@ internal static class Program
     /// reconstruct by parsing a log.
     /// </summary>
     private static async Task WriteReportAsync(
-        string path, ArtHashTable table, PocketCard[] cards, int fetchedNow, string stamp)
+        string path, ArtHashTable table, PocketCard[] cards, int fetchedNow, int fromDisk,
+        string stamp)
     {
         var sets = cards
             .GroupBy(c => c.Set)
@@ -328,7 +408,7 @@ internal static class Program
             .OrderBy(s => s.set, StringComparer.Ordinal)
             .ToArray();
 
-        var report = new { generated = stamp, fingerprints = table.Count, fetchedNow, sets };
+        var report = new { generated = stamp, fingerprints = table.Count, fetchedNow, fromDisk, sets };
         await File.WriteAllTextAsync(
             path, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
     }

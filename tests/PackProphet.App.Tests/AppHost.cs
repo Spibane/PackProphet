@@ -16,12 +16,26 @@ using PackProphet.Services;
 /// something that never completes.
 /// </param>
 internal sealed class SnapshotHandler(
-    Func<CancellationToken, Task<HttpResponseMessage>>? onRemote = null) : HttpMessageHandler
+    Func<CancellationToken, Task<HttpResponseMessage>>? onRemote = null,
+    string? artManifest = null) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken ct)
     {
         var url = request.RequestUri!.ToString();
+
+        // The manifest of art this deployment vendored. Absent by default, which is what a
+        // development build and most deploys serve, and what every other test wants.
+        if (request.RequestUri.Host == "test.local" && url.EndsWith("art/index.json", StringComparison.Ordinal))
+        {
+            return Task.FromResult(artManifest is null
+                ? new HttpResponseMessage(HttpStatusCode.NotFound)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                  {
+                      Content = new StringContent(artManifest, System.Text.Encoding.UTF8,
+                                                  "application/json")
+                  });
+        }
 
         // The card art fingerprints, served as the text file they are. Not JSON and not under the
         // snapshot folder, so it needs its own branch — and it is worth having one: without it the

@@ -41,7 +41,8 @@
     <span class="art @(Gold ? "flair gold-flair" : "")">
         @* No rarity badge. The art carries the rarity mark itself. The list layout does show
            rarity, because there the art is a 32px thumbnail. *@
-        <img data-src="@Card.ArtUrl" alt="@Card.Name" decoding="async" draggable="false" />
+        <img data-src="@Card.ArtUrl" data-src-alt="@Card.ArtFallbackUrls"
+             alt="@Card.Name" decoding="async" draggable="false" />
 
         @* Shown only while the art is on its way, hidden by CSS the moment it arrives or fails.
            A real element rather than a pseudo-element: gold flair already owns both of the art

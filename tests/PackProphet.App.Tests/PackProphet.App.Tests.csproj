@@ -72,6 +72,14 @@
              Link="CardGrid.razor.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The deploy workflow, as text. One ordering in it is load-bearing and invisible: the art it
+       vendors has to be written AFTER dotnet publish, or the static-asset pipeline renames the
+       files and the service-worker integrity check starts verifying them. -->
+  <ItemGroup>
+    <Content Include="..\..\.github\workflows\deploy-pages.yml"
+             Link="deploy-pages.yml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- Every page, as text. One invariant spans all of them: nothing below the bars may pad itself
        to the screen edge with a flat utility, because those do not clear a display cutout. -->
   <ItemGroup>

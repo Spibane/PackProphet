@@ -166,6 +166,33 @@ public class TileCaptionTests : AppHost
     }
 
     [Fact]
+    public async Task Both_layouts_hand_the_loader_the_whole_art_chain()
+    {
+        // js/imgloader.js walks data-src-alt when data-src fails, which is what stops the newest
+        // set -- data published, art not yet -- from drawing as a grid of placeholders. A layout
+        // that emitted only data-src would look completely normal until a set gapped.
+        await ReadyAsync();
+        var card = Session.Index.All.First();
+
+        var tile = Tile(card);
+        Assert.Equal(card.ArtFallbackUrls,
+                     tile.Find("img[data-src]").GetAttribute("data-src-alt"));
+
+        var grid = RenderComponent<CardGrid>(p =>
+        {
+            p.Add(g => g.Cards, new[] { card });
+            p.Add(g => g.CountOf, _ => 0);
+            p.Add(g => g.ListView, true);
+        });
+
+        Assert.Equal(card.ArtFallbackUrls,
+                     grid.Find(".card-line .thumb").GetAttribute("data-src-alt"));
+
+        // Not empty, or the assertions above would pass on a card with no fallbacks at all.
+        Assert.Contains("cdn.jsdelivr.net", card.ArtFallbackUrls);
+    }
+
+    [Fact]
     public async Task The_list_row_thumbnail_has_the_same_stand_in()
     {
         await ReadyAsync();

@@ -68,22 +68,30 @@ public sealed class PocketCard
     /// Coverage is 26 of 27 packs — "Paradox Drive" has no image at the time of writing — so
     /// callers must tolerate a 404 rather than assume art exists.
     /// </summary>
-    public static string PackArtUrl(string packName) =>
-        "https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-exchange@main/public/images/packs/"
-        + Uri.EscapeDataString(packName) + ".webp";
+    public static string PackArtUrl(string packName) => ArtSource.PackArt(packName);
 
     /// <summary>
     /// A set's expansion logo. Verified present for every set, using the same casing as the
     /// set codes in the card data. Useful as a fallback where pack art is missing.
     /// </summary>
-    public static string SetLogoUrl(string setCode) =>
-        "https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-exchange@main/public/images/sets/"
-        + $"LOGO_expansion_{Uri.EscapeDataString(setCode)}_en_US.webp";
+    public static string SetLogoUrl(string setCode) => ArtSource.SetLogo(setCode);
 
     /// <summary>
-    /// Verified working CDN pattern: cards-by-set/{SET}/{number}.webp
-    /// Note the number is NOT zero-padded here (unlike the TCGdex id).
+    /// Where to look for this card's art first. See <see cref="ArtSource"/> for why there is more
+    /// than one place to look and what order they go in.
     /// </summary>
-    public string ArtUrl =>
-        $"https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-exchange@main/public/images/cards-by-set/{Set}/{Number}.webp";
+    public string ArtUrl => ArtSource.Candidates(this)[0];
+
+    /// <summary>
+    /// The rest of the chain, in order, pipe-separated for the markup to hand to js/imgloader.js.
+    ///
+    /// A string rather than a list because it is written into a data- attribute, and because the
+    /// loader compares it against the previous value to notice a recycled row pointing at a
+    /// different card. A pipe cannot occur in any of these URLs: set codes are alphanumeric with a
+    /// hyphen and the rest is a fixed prefix.
+    ///
+    /// Empty where there is nothing else to try, which is never today but is not this property's
+    /// business to promise.
+    /// </summary>
+    public string ArtFallbackUrls => string.Join('|', ArtSource.Candidates(this).Skip(1));
 }

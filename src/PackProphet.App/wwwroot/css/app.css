@@ -285,6 +285,12 @@ main > * { flex-shrink: 0; }
     font-size: .95rem; line-height: 1.2; cursor: pointer;
 }
 .app-nav .profile-switch:hover { border-color: var(--bs-primary); }
+/* .95rem is 15.2px, which is under iOS Safari's 16px threshold, so opening the profile switch
+   zoomed the whole app in. The only control in the app that answers for its own font size rather
+   than wearing .form-select-sm -- see the note on that further down. */
+@media (pointer: coarse) {
+    .app-nav .profile-switch { font-size: 1rem; }
+}
 
 /* The two share directions, side by side. They do not compete - each account has its own daily
    allowance - so showing them as one list would imply a queue that does not exist. Stacks on a
@@ -1015,21 +1021,38 @@ main:focus { outline: none; }
     display: inline-flex; align-items: center; justify-content: center;
 }
 
-/* 16px on a phone for anything you can type into or open. Bootstrap's small controls are .875rem,
+/* 16px on touch for anything you can type into or open. Bootstrap's small controls are .875rem,
    which is the right size in a dense bar on a laptop and reads as fine print on a phone: 14px of
    grey label in a 44px-tall box, under body text set at 16. It also has a second cost that only
    shows on a real device -- iOS Safari zooms the whole page in when a focused input or select is
-   smaller than 16px, and does not zoom back out, so choosing a filter left the layout magnified
-   and scrolled somewhere else.
+   smaller than 16px, and does not zoom back out, so touching a field left the layout magnified,
+   scrolled somewhere else, and with the bottom tab bar off the screen entirely.
+
+   Keyed off the CONTROL rather than off the bar it sits in. This was five named containers, and
+   the app has 42 small controls across 17 files: the pairing code on the settings page, the deck
+   and chase-list name fields, the card picker's search, the import boxes, every points and price
+   figure. Every one of them zoomed, and each new one would have had to be remembered into the
+   list. Bootstrap's own class is the thing that sets .875rem, so it is the thing to answer.
+
+   And keyed off the POINTER rather than off a width, matching --ctl-h above. A width could not
+   express this: an iPhone in landscape is 844px wide, so `width < 600px` was false and the zoom
+   came back the moment the phone was turned sideways -- while a 500px window on a desktop got
+   phone-sized controls it had no use for.
+
+   A later rule that sets its own size still wins on source order, which is deliberate rather than
+   incidental: .trade-text is a readonly monospaced list whose four columns only line up at .8rem,
+   and readonly means no keyboard and no zoom to avoid.
 
    Buttons keep .875rem: they cannot be focused into a keyboard, so they cannot trigger the zoom,
    and a one-word label in a bordered pill was not the thing that was hard to read. The height of
-   every control in the bar still comes from --ctl-h, so nothing here changes what lines up. */
-@media (width < 600px) {
-    .page-tools .form-select, .grid-toolbar .form-select, .toolbar-more-body .form-select,
-    .set-picker-body .form-select, .rarity-plan .form-select,
-    .page-tools .form-control, .grid-toolbar .form-control,
-    .toolbar-more-body .form-control, .set-picker-body .form-control { font-size: 1rem; }
+   every control still comes from --ctl-h, so nothing here changes what lines up. */
+@media (pointer: coarse) {
+    .form-control-sm, .form-select-sm,
+    /* Bootstrap's third way of saying the same thing, and it sets the size on the CHILD rather
+       than on the control's own class -- so the two fields that make a collection on the settings
+       page carry a plain .form-control and were 14px anyway. Found by measuring every field on
+       every page rather than by reading the markup, which is the only way this one shows up. */
+    .input-group-sm > .form-control, .input-group-sm > .form-select { font-size: 1rem; }
 }
 
 /* NOT the page header. Its 3rem is a contract rather than a preference -- the toolbar below it is

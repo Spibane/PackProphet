@@ -17,6 +17,7 @@ namespace PackProphet.Services;
 public sealed class AppSession : IAsyncDisposable
 {
     private readonly CardDataLoader _loader;
+    private readonly TypeBadgeSource _badges;
     private readonly IStateStore _store;
     private readonly IJSRuntime _js;
 
@@ -28,11 +29,13 @@ public sealed class AppSession : IAsyncDisposable
 
     private readonly UndoHistory _history = new(UndoDepth);
 
-    public AppSession(CardDataLoader loader, IStateStore store, IJSRuntime js)
+    public AppSession(CardDataLoader loader, IStateStore store, IJSRuntime js,
+                      TypeBadgeSource badges)
     {
         _loader = loader;
         _store = store;
         _js = js;
+        _badges = badges;
     }
 
     public CardData? Data { get; private set; }
@@ -89,8 +92,56 @@ public sealed class AppSession : IAsyncDisposable
     /// <see cref="TypeLabel"/> stays for the places that want one string -- a sort key, a chip
     /// summary -- and this is for the places that ask what a card IS. A dual-typed card belongs in
     /// both of two filters, and no single string can say that.
+    ///
+    /// Falls back to the type read off the card's own artwork where the detail table has nothing.
+    /// The detail is the authority and comes first; the badge table is the stand-in for the window
+    /// between a set appearing in the card data and its detail being published, which is weeks
+    /// wide and is the whole reason the reader exists. See <see cref="TypeBadgeTable"/>.
     /// </summary>
-    public IReadOnlyList<string> TypesOf(PocketCard card) => FactFor(card)?.Subtypes ?? [];
+    public IReadOnlyList<string> TypesOf(PocketCard card)
+    {
+        if (FactFor(card)?.Subtypes is { Count: > 0 } known) return known;
+
+        // Started rather than awaited: a grid row cannot await, and a type that appears a moment
+        // after the first paint is how every other detail column already behaves. Nothing starts
+        // this on a visit where the detail table answered, which is nearly all of them.
+        if (_badges.Loaded is null)
+        {
+            _ = LoadBadgeTypesAsync();
+            return [];
+        }
+
+        var byPrinting = _badges.Loaded.For(card.Key);
+        if (byPrinting.Count > 0) return byPrinting;
+
+        // No row for this printing. An alternate art is the same card wearing different artwork --
+        // and only the base printing has the plain header the reader can read -- so ask the
+        // printings that share this card's identity. That is the same collapse ArtHashTable
+        // documents for fingerprints, done at read time rather than at generation time.
+        foreach (var sibling in Index.All)
+        {
+            if (sibling.Key == card.Key) continue;
+            if (!string.Equals(sibling.OwnershipKey, card.OwnershipKey, StringComparison.Ordinal)) continue;
+
+            var shared = _badges.Loaded.For(sibling.Key);
+            if (shared.Count > 0) return shared;
+        }
+
+        return [];
+    }
+
+    private async Task LoadBadgeTypesAsync()
+    {
+        try
+        {
+            await _badges.GetAsync();
+            Changed?.Invoke();
+        }
+        catch
+        {
+            // Enrichment only, exactly like the card detail it stands in for.
+        }
+    }
 
     /// <summary>Printed detail for a card, by identity. Null only if upstream lacks it.</summary>
     public CardFact? FactFor(PocketCard card)

@@ -28,6 +28,15 @@ internal static class Program
     private const string DefaultOut = "src/PackProphet.App/wwwroot/data/card-hashes.txt";
 
     /// <summary>
+    /// The type badges, written from the same decode as the fingerprints.
+    ///
+    /// Beside the fingerprints rather than in a run of its own because the expensive part of both
+    /// jobs is identical: downloading 3,761 images. Reading the badge off pixels already in memory
+    /// costs 36 samples a card.
+    /// </summary>
+    private const string DefaultTypesOut = "src/PackProphet.App/wwwroot/data/card-types.txt";
+
+    /// <summary>
     /// Simultaneous downloads. Eight is polite to a public CDN and still finishes 3,761 files in a
     /// couple of minutes; the run is not the thing anyone is waiting on.
     /// </summary>
@@ -44,6 +53,7 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         var outPath = Arg(args, "--out") ?? DefaultOut;
+        var typesPath = Arg(args, "--types-out") ?? DefaultTypesOut;
         var cardsSource = Arg(args, "--cards") ?? CardsUrl;
         var only = Arg(args, "--set");
         var reportPath = Arg(args, "--report");
@@ -110,6 +120,25 @@ internal static class Program
         if (reportPath is not null) await WriteReportAsync(reportPath, table, wanted, fetched.Count, stamp);
 
         Console.WriteLine($"wrote:  {outPath} — {table.Count} fingerprints, stamped {stamp}");
+
+        // The type table, merged on the same terms: a card whose art did not download keeps the
+        // type it already had rather than losing it. No regression floor of its own -- the check
+        // above already refused the run if the download looked like an outage.
+        var types = ReadExistingTypes(typesPath);
+        foreach (var (key, reading) in Types)
+            if (reading is { Length: > 0 }) types[key] = reading.Split('/');
+
+        var typeTable = new TypeBadgeTable(
+            types.Select(kv => new KeyValuePair<string, IReadOnlyList<string>>(kv.Key, kv.Value)),
+            null);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(typesPath))!);
+        await File.WriteAllTextAsync(typesPath, typeTable.Serialize(stamp));
+
+        var unread = Types.Count(t => t.Value is null);
+        Console.WriteLine($"wrote:  {typesPath} — {typeTable.Count} types, stamped {stamp}"
+                          + (unread > 0 ? $" ({unread} badge(s) unreadable)" : ""));
+
         return 0;
     }
 
@@ -155,8 +184,21 @@ internal static class Program
             new ParallelOptions { MaxDegreeOfParallelism = Concurrency },
             async (card, ct) =>
             {
-                var hash = await FingerprintAsync(http, card, ct);
-                if (hash is not null) results[card.Key] = new ArtHashEntry(card.Set, card.Number, hash.Value);
+                var (hash, type) = await FingerprintAsync(http, card, ct);
+                if (hash is not null)
+                {
+                    results[card.Key] = new ArtHashEntry(card.Set, card.Number, hash.Value);
+                    // Recorded against the key here rather than inside the decode: eight of these
+                    // run at once, so anything the decode kept in a field of its own would race.
+                    //
+                    // Pokémon only. A Trainer has no energy badge -- its header carries a kind
+                    // label where a Pokémon's carries HP and a badge -- so reading that position
+                    // on one is reading whatever the frame happens to be. Cross-checked against
+                    // the card detail table, that produced a type for 69 Trainers, every one of
+                    // them wrong. The card's own artwork filename says which it is (cPK_ against
+                    // cTR_), so this costs no extra data and no image analysis.
+                    Types[card.Key] = IsPokemon(card) ? type : null;
+                }
                 else failures.Add(card.Key);
 
                 var n = Interlocked.Increment(ref done);
@@ -177,7 +219,7 @@ internal static class Program
     /// One card. Two attempts: the art CDN serves the odd 503 under load, and a card lost to that
     /// rather than to not existing is worth the second request.
     /// </summary>
-    private static async Task<ArtHash?> FingerprintAsync(
+    private static async Task<(ArtHash? Hash, string? Type)> FingerprintAsync(
         HttpClient http, PocketCard card, CancellationToken ct)
     {
         for (var attempt = 0; attempt < 2; attempt++)
@@ -185,7 +227,7 @@ internal static class Program
             try
             {
                 using var response = await http.GetAsync(card.ArtUrl, ct);
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return (null, null);
                 response.EnsureSuccessStatusCode();
 
                 var bytes = await response.Content.ReadAsByteArrayAsync(ct);
@@ -193,12 +235,12 @@ internal static class Program
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
             {
-                if (attempt == 1) return null;
+                if (attempt == 1) return (null, null);
                 await Task.Delay(TimeSpan.FromSeconds(2), ct);
             }
         }
 
-        return null;
+        return (null, null);
     }
 
     /// <summary>
@@ -209,19 +251,53 @@ internal static class Program
     /// browser sees: a canvas starts transparent and <c>getImageData</c> reports premultiplied zero
     /// there, so the two halves agree on what "nothing" looks like.
     /// </summary>
-    private static ArtHash? Fingerprint(byte[] bytes)
+    /// <summary>
+    /// Types read on this run, by card key. Null where the badge could not be read, which is
+    /// counted and reported rather than silently dropped: a set whose frame moved would show up
+    /// here as a run that fingerprinted everything and read no types at all.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, string?> Types = new();
+
+    /// <summary>
+    /// Whether this entry is a Pokémon, from its artwork filename. Unparseable names are treated
+    /// as not-a-Pokémon: the point is to be sure before writing a type, and a name in a shape this
+    /// does not recognise is not being sure.
+    /// </summary>
+    private static bool IsPokemon(PocketCard card) =>
+        CardImageName.TryParse(card.Image, out var name) && !name.IsTrainer;
+
+    /// <summary>Whatever type table is already committed, so a partial run merges into it.</summary>
+    private static Dictionary<string, string[]> ReadExistingTypes(string path)
+    {
+        if (!File.Exists(path)) return [];
+
+        var table = TypeBadgeTable.Parse(File.ReadAllText(path));
+        var byKey = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var set in table.Sets)
+            for (var n = 1; n <= 400; n++)
+            {
+                var key = $"{set}-{n}";
+                var types = table.For(key);
+                if (types.Count > 0) byKey[key] = types.ToArray();
+            }
+
+        return byKey;
+    }
+
+    private static (ArtHash? Hash, string? Type) Fingerprint(byte[] bytes)
     {
         using var data = SKData.CreateCopy(bytes);
         using var codec = SKCodec.Create(data);
-        if (codec is null) return null;
+        if (codec is null) return (null, null);
 
         var info = new SKImageInfo(codec.Info.Width, codec.Info.Height,
                                    SKColorType.Rgba8888, SKAlphaType.Premul);
-        if (info.Width < 8 || info.Height < 8) return null;
+        if (info.Width < 8 || info.Height < 8) return (null, null);
 
         using var bitmap = new SKBitmap(info);
         if (codec.GetPixels(info, bitmap.GetPixels()) is not (SKCodecResult.Success or SKCodecResult.IncompleteInput))
-            return null;
+            return (null, null);
 
         var pixels = bitmap.GetPixelSpan();
         var luma = new byte[info.Width * info.Height];
@@ -231,7 +307,11 @@ internal static class Program
             luma[i] = ArtSampler.Luma(pixels[p], pixels[p + 1], pixels[p + 2]);
         }
 
-        return ArtSampler.Fingerprint(luma, info.Width, info.Height);
+        // The badge, off the same RGBA the fingerprint was reduced from. Rgba8888 with red first
+        // is exactly what TypeBadge.Read expects, so this costs one decode and 36 samples.
+        var type = TypeBadge.Read(pixels, info.Width, info.Height)?.Type;
+
+        return (ArtSampler.Fingerprint(luma, info.Width, info.Height), type);
     }
 
     /// <summary>

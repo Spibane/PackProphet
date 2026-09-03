@@ -385,7 +385,7 @@ else
                         @* The element, or a Trainer's kind. Cheap to draw and it is what tells
                            two cards of the same name apart at a glance. *@
                         <td class="ty" data-pri="3">
-                            @if (fact?.Subtype is { Length: > 0 } subtype)
+                            @foreach (var subtype in fact?.Subtypes ?? [])
                             {
                                 <EnergyPip Type="@subtype" />
                             }

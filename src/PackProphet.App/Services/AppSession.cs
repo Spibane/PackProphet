@@ -83,6 +83,15 @@ public sealed class AppSession : IAsyncDisposable
     /// </summary>
     public string TypeLabel(PocketCard card) => FactFor(card)?.Subtype ?? "";
 
+    /// <summary>
+    /// Every type a card has: one for anything printed so far, two for a dual-typed Pokémon.
+    ///
+    /// <see cref="TypeLabel"/> stays for the places that want one string -- a sort key, a chip
+    /// summary -- and this is for the places that ask what a card IS. A dual-typed card belongs in
+    /// both of two filters, and no single string can say that.
+    /// </summary>
+    public IReadOnlyList<string> TypesOf(PocketCard card) => FactFor(card)?.Subtypes ?? [];
+
     /// <summary>Printed detail for a card, by identity. Null only if upstream lacks it.</summary>
     public CardFact? FactFor(PocketCard card)
     {

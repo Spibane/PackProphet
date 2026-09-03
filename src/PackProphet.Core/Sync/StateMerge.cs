@@ -85,6 +85,27 @@ internal sealed class Conflicts
 public static class StateMerge
 {
     /// <summary>
+    /// Does this state hold nothing a user put there? No cards, no logged packs or Wonder Picks,
+    /// no decks and no chase lists, in any collection.
+    ///
+    /// Not a merge rule -- a safety rail. Every lossy branch below reads "the ancestor had it and
+    /// this side does not" as a deletion, which is right for a state the user emptied and
+    /// catastrophic for one that was never loaded. The two are identical by value, so the caller
+    /// has to know it is holding real state before merging; this is how it says the difference out
+    /// loud when the answer is suspicious.
+    ///
+    /// Preferences and the profile list are deliberately not consulted: a device with three named
+    /// collections and nothing in any of them still has nothing to lose.
+    /// </summary>
+    public static bool NothingRecorded(AppState state) =>
+        state.Profiles.All(p =>
+            p.Collection.Count == 0
+            && p.PackLog.Count == 0
+            && p.WonderLog.Count == 0
+            && p.Decks.Count == 0
+            && p.ChaseLists.Count == 0);
+
+    /// <summary>
     /// Merge remote into local, given the ancestor both were last known to share.
     /// </summary>
     public static MergeResult Merge(AppState local, AppState remote, AppState ancestor)

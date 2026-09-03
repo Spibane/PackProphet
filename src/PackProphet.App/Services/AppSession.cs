@@ -50,6 +50,15 @@ public sealed class AppSession : IAsyncDisposable
     public PointsLedger? Points { get; private set; }
 
     public bool Ready => Data is not null;
+
+    /// <summary>
+    /// True once the saved state has actually been read back. Distinct from <see cref="Ready"/>,
+    /// which is about the card database: State is a field initialised to <c>AppState.Fresh()</c>,
+    /// so before the load it is indistinguishable from a collection the user emptied -- and cloud
+    /// sync, reading it at the wrong moment, merged that emptiness as a deletion of everything.
+    /// Anything that treats absence as intent has to wait for this.
+    /// </summary>
+    public bool Loaded { get; private set; }
     public CardIndex Index => Data?.Index ?? throw new InvalidOperationException("Card data not loaded.");
     public CardFacts Facts => Data?.Facts ?? CardFacts.Empty;
     public SetCatalog Sets => Data?.Sets ?? new SetCatalog(null, []);
@@ -112,6 +121,7 @@ public sealed class AppSession : IAsyncDisposable
     {
         Data = await _loader.LoadAsync(ct);
         State = await _store.LoadAsync(ct);
+        Loaded = true;
         // After the state load, because the engine is built over the user's assumed-rate
         // choices as well as over the published data.
         RebuildEngine();

@@ -217,10 +217,10 @@ else
                     <tr><th scope="col">Rarity</th><th scope="col" class="num">Dust Each</th><th scope="col" class="num">Trades Funded</th></tr>
                 </thead>
                 <tbody>
-                    @foreach (var (label, price) in TradePrices())
+                    @foreach (var (rung, price) in TradePrices())
                     {
                         <tr>
-                            <td>@label</td>
+                            <td><span class="glyphs @rung.GlyphClass">@rung.Symbol</span></td>
                             <td class="num">@price.ToString("N0")</td>
                             <td class="num">@ResourcePlan.DustRunway(_dustSaved, price)</td>
                         </tr>
@@ -393,10 +393,10 @@ else
     /// costs less than a 4-diamond, and a Shiny undercuts a 2-star by 15,000 — so the whole table
     /// is shown rather than one representative price.
     /// </summary>
-    private IEnumerable<(string Label, int Price)> TradePrices() =>
+    private IEnumerable<(RarityRung Rung, int Price)> TradePrices() =>
         Session.Index.Ladder.Rungs
             .Select(rung => (
-                Label: rung.Symbol,
+                Rung: rung,
                 Price: rung.Codes
                     .Select(code => Session.Data!.Rarities.GetValueOrDefault(code)?.TradePrice)
                     .FirstOrDefault(p => p is > 0) ?? 0))

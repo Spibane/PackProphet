@@ -1343,7 +1343,17 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
     border-radius: var(--pp-r-sm); padding: .15rem .4rem;
     font-size: .9rem; line-height: 1.2; white-space: nowrap;
 }
-.rarity-chip.on { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; font-weight: 600; }
+/* A tint rather than a solid fill, matching .chip-tog.on. A solid primary needs white text, and
+   white text is the one thing a rarity mark cannot be: the glyph colours are the point, and they
+   would have to be suppressed on exactly the chips that are selected. The tint is the same
+   selected state the collection's filter chips already wear, and it keeps the mark's family
+   legible at every step of none / 1 / 2. */
+.rarity-chip.on {
+    border-color: var(--bs-primary);
+    background: color-mix(in srgb, var(--bs-primary) 22%, var(--bs-body-bg));
+    color: var(--bs-body-color);
+    font-weight: 600;
+}
 .rarity-chip:disabled { opacity: .5; }
 
 /* The completion plan, folded. Same shape as the collection's set picker, because it is the same
@@ -2128,10 +2138,17 @@ img[data-state="loading"] ~ .art-wait {
 /* Two sets of values, because a rarity glyph is the ONLY rarity indicator in a list row, so
    it has to stay legible in both themes. The light-theme values are darkened for contrast
    against white; dark theme takes the lighter originals. The glyph SHAPE and count carry the
-   tier regardless, so colour is reinforcement rather than the sole channel. */
-.glyphs.diamond { color: #55738f; }
-.glyphs.star    { color: #9a7005; }
-.glyphs.shiny   { color: #18726f; }
+   tier regardless, so colour is reinforcement rather than the sole channel.
+
+   The light three are darker than the values first chosen against the page. Those cleared 4.5:1
+   on the body and nowhere else: the mark now also sits on a selected chip (22% accent over the
+   body) and an applied-filter pill (14% over the bar), and a tinted surface ate the margin --
+   diamond fell to 3.34 and star, which was 4.29 on the page to begin with, to 3.01. Measured on
+   all three surfaces in both themes, the worst case is now 4.52. Crown was already clear and is
+   unchanged. Dark never dropped under 6.7, so it keeps its originals. */
+.glyphs.diamond { color: #465e75; }
+.glyphs.star    { color: #775604; }
+.glyphs.shiny   { color: #156563; }
 .glyphs.crown   { color: #8038a3; }
 
 [data-bs-theme="dark"] .glyphs.diamond { color: #9fbad2; }
@@ -3111,7 +3128,9 @@ tr.row-best {
     background: var(--bs-body-bg); color: var(--bs-body-color);
     border-radius: 1rem; padding: .15rem .55rem; font-size: .9rem;
 }
-.picked-chip .rar { opacity: .6; font-size: .82rem; }
+/* Smaller, but no longer faded: the fade was standing in for "this is secondary", and now that
+   the mark carries its family colour a 60% wash only makes that colour hard to name. */
+.picked-chip .rar { font-size: .82rem; }
 
 /* ================================================================= busy overlay */
 
@@ -4218,6 +4237,18 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 .chip-tog:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
 /* Same size as a list row draws them, so a chip and a card agree on what a rarity looks like. */
 .chip-tog .glyphs { font-size: 1.05rem; letter-spacing: -.04em; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- rarity colour, everywhere
+
+   The four family colours were defined for the list row and then used by whatever happened to be
+   built next, so a rarity was coloured on the collection's filter chips and in a card row and
+   plain grey on the completion plan, the cost table, the trade-price table, the gap lists and the
+   applied-filter pills. Same fact, two appearances.
+
+   `.glyphs` now carries only the colour and inherits everything else, so a caller adds the class
+   without the mark changing size or spacing where it sits. The two places that DO want the larger
+   mark ask for it above, scoped to themselves. */
+.rarity-chip .glyphs, .chip-filter .glyphs { white-space: nowrap; }
 
 /* The grid/list switch, promoted from the disclosure to the always-on bar. Pinned to the far end
    of the row: it is the one control there that changes nothing about WHICH cards are listed, and

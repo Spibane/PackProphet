@@ -236,7 +236,7 @@ else
             @foreach (var card in _picked)
             {
                 <button class="picked-chip" @onclick="() => Unpick(card)" title="Remove">
-                    @card.Name <span class="rar">@card.Rarity</span> &times;
+                    @card.Name <span class="rar glyphs @Session.Index.GlyphClass(card)">@Session.Index.Symbol(card)</span> &times;
                 </button>
             }
         </div>

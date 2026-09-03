@@ -49,7 +49,7 @@ else
                 else
                 {
                     <span class="ttl">Collecting</span>
-                    <span class="cur">@PlanSummary</span>
+                    <span class="cur"><PlanSummary Plan="Draft" Foils="@(ScopeHasFoils ? Session.FoilCopies : 0)" /></span>
                     @* Only when it is not the default. "every set" is what a plan does unless told
                        otherwise, so saying it spends a line on a phone reporting the absence of a
                        decision; "A1 only" is a decision and is worth the room. *@
@@ -180,7 +180,7 @@ else
                         @foreach (var (rung, one, two) in _advisor)
                         {
                             <tr class="@(Draft.Wants(rung.Index) ? "table-active" : "")">
-                                <td>@rung.Symbol @(Draft.Wants(rung.Index) ? $"(x{Draft.Copies(rung.Index)})" : "")</td>
+                                <td><span class="glyphs @rung.GlyphClass">@rung.Symbol</span> @(Draft.Wants(rung.Index) ? $"(x{Draft.Copies(rung.Index)})" : "")</td>
                                 <td class="num">@Fmt(one)</td>
                                 <td class="num">@Fmt(two)</td>
                             </tr>
@@ -805,29 +805,6 @@ else
 
     /// <summary>Filled while its panel is open, outlined while it is not.</summary>
     private static string Toggled(bool open) => open ? "btn-secondary" : "btn-outline-secondary";
-
-    /// <summary>
-    /// The plan as one line, for the collapsed picker: the rungs being collected, with a count
-    /// only where it is more than one. Says "nothing" rather than rendering an empty string,
-    /// because a blank summary reads as a control that failed to load.
-    /// </summary>
-    private string PlanSummary
-    {
-        get
-        {
-            var parts = Session.Index.Ladder.Rungs
-                .Select(rung => (rung.Symbol, Copies: Draft.Copies(rung.Index)))
-                .Where(r => r.Copies > 0)
-                .Select(r => r.Copies > 1 ? $"{r.Symbol}\u00d7{r.Copies}" : r.Symbol)
-                .ToList();
-
-            if (ScopeHasFoils && Session.FoilCopies > 0)
-            {
-                parts.Add(Session.FoilCopies > 1 ? $"foils\u00d7{Session.FoilCopies}" : "foils");
-            }
-            return parts.Count == 0 ? "Nothing" : string.Join(" ", parts);
-        }
-    }
 
     private bool _pending;
     private CancellationTokenSource? _debounce;

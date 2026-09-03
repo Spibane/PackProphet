@@ -245,7 +245,8 @@ else
             @if (_rarities.Count > 0)
             {
                 <button class="chip-filter" @onclick="ClearRarityFilter"
-                        aria-label="Clear the rarity filter">@RarityFilterLabel &times;</button>
+                        aria-label="Clear the rarity filter"><span
+                        class="glyphs @RarityFilterClass">@RarityFilterLabel</span> &times;</button>
             }
             @if (_types.Count > 0)
             {
@@ -600,6 +601,13 @@ else
         && Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == _rarities.First()) is { } rung
             ? rung.Symbol
             : $"{_rarities.Count} rarities";
+
+    /// <summary>The family colour for the pill above, or none while it reports a count.</summary>
+    private string RarityFilterClass =>
+        _rarities.Count == 1
+        && Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == _rarities.First()) is { } rung
+            ? rung.GlyphClass
+            : "";
 
     private string TypeFilterLabel =>
         _types.Count == 1 ? _types.First() : $"{_types.Count} types";

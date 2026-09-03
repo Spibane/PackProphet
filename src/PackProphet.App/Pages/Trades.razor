@@ -45,7 +45,8 @@ else
         }
         @if (_rarity.Length > 0)
         {
-            <button class="chip-filter" @onclick="ResetRarity" aria-label="Show any rarity">@RarityLabel &times;</button>
+            <button class="chip-filter" @onclick="ResetRarity" aria-label="Show any rarity"><span
+                    class="glyphs @RarityClass">@RarityLabel</span> &times;</button>
         }
         @if (ShowFoilFilter && _foils != "with")
         {
@@ -538,6 +539,13 @@ else
         && Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == i) is { } rung
             ? rung.Symbol
             : _rarity;
+
+    /// <summary>The family colour for the pill above. Empty for a rarity off the ladder.</summary>
+    private string RarityClass =>
+        int.TryParse(_rarity, out var i)
+        && Session.Index.Ladder.Rungs.FirstOrDefault(r => r.Index == i) is { } rung
+            ? rung.GlyphClass
+            : "";
 
     private string NextFoilMode() => _foils switch
     {

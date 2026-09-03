@@ -30,11 +30,22 @@ else
     }
 
     @* Foils are not a rung, so they carry no family colour -- they are a second printing of cards
-       that already have one. *@
+       that already have one -- and they are divided off rather than spaced off, which is what the
+       chips that set them do. Read as the next item in the run they looked like one more rarity;
+       the summary and the control it summarises now say the same thing the same way.
+
+       Capitalised like every other label in the line. It was the one lowercase word on the bar. *@
     @if (Foils > 0)
     {
-        @(first ? "" : " ")
-        <text>foils</text>@(Foils > 1 ? $"×{Foils}" : "")
+        @if (!first)
+        {
+            <span class="plan-sep" aria-hidden="true"></span>
+        }
+        @* A non-breaking space, and written as an entity because Razor eats the whitespace in
+           front of a <text> block: the mark rendered flush against the word. It also keeps the
+           two together, which is what the rungs get for free by carrying their mark inside
+           their own label. *@
+        <span class="glyphs foil">@RarityLadder.FoilMark</span><text>&#160;Foils</text>@(Foils > 1 ? $"×{Foils}" : "")
     }
 }
 

@@ -113,6 +113,27 @@
             List
         </button>
     </div>
+
+    @* Back to the top, on the bar as well as floating over the corner.
+       ------------------------------------------------------------------------------------
+       The floating button is the right answer for a thumb: it is where the hand already is and
+       it costs the bar nothing. It is the wrong place to LOOK. Getting back to the top is what
+       you do when you are done reading and want the controls again -- the search box, the set
+       picker, the filters -- and those are all on this bar, so this bar is where the eye goes
+       and the button was in the opposite corner.
+
+       Wide screens only, and the same class from js/gridspy.js that shows the floating one, so
+       the two agree about when there is something to scroll back from. Below the breakpoint the
+       bar is already carrying more than fits on one line and the thumb is on the other button. *@
+    <button class="btn btn-sm btn-outline-secondary to-top-bar" data-to-top type="button"
+            @onclick="ScrollToTopAsync"
+            title="Back to the top of the list" aria-label="Back to the top of the list">
+        <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false">
+            <path d="M8 13V4M3.5 8.5 8 3.5l4.5 5" fill="none" stroke="currentColor"
+                  stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Top
+    </button>
 </div>
 
 <details class="toolbar-more">
@@ -291,7 +312,10 @@
                creating it is the better fix. *@
             @* A row of cells, so the list reads as the data table it looks like. The label is what
                gridkeys.js announces as the cursor moves, so it has to be the whole sentence. *@
-            <div @key="card.Key" class="card-line @(Roomy ? "roomy" : "") @(count > 0 ? "owned" : "")"
+            @* "picked" tints the whole row, because the +N badge that says it sits near the far
+               end: on a phone that is next to everything else in the row, and on a wide screen it
+               is a small chip most of a screen away from the name it belongs to. *@
+            <div @key="card.Key" class="card-line @(Roomy ? "roomy" : "") @(count > 0 ? "owned" : "") @(picked > 0 ? "picked" : "")"
                  data-idx="@idx" data-group="@GroupLabelOf(card)"
                  data-group-art="@GroupArtFor(card)"
                  id="@($"{_gridId}-tile-{idx}")" role="row"

@@ -151,8 +151,13 @@ export function watch(grid, label) {
         //
         // One viewport as the threshold. Less and the button appears while the toolbar it returns
         // you to is still on screen; more and you are hunting for it by the time it is worth having.
-        const up = host?.querySelector('[data-to-top]');
-        if (up) up.classList.toggle('on', scrolledBy(grid) > window.innerHeight);
+        //
+        // querySelectorAll, not querySelector: there are two of these now -- one floating over
+        // the corner and one on the toolbar for wide screens -- and a single lookup would have
+        // driven whichever came first in the DOM and left the other one permanently hidden.
+        const far = scrolledBy(grid) > window.innerHeight;
+        for (const up of host?.querySelectorAll('[data-to-top]') || [])
+            up.classList.toggle('on', far);
     };
 
     // Coalesced to a frame. A scroll fires this dozens of times a second and the work is a handful

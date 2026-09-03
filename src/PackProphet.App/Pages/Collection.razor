@@ -214,7 +214,7 @@ else
               OnAdjust="OnAdjust" OnSweep="OnSweep" OnSet="OnSet"
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
               Roomy="Session.ListRoomy" RoomyChanged="Session.SetListRoomy"
-              RungOf="Session.Index.Rung" TypeOf="Session.TypeLabel" StageOf="Session.StageLabel"
+              RungOf="Session.Index.Rung" TypeOf="Session.TypesOf" StageOf="Session.StageLabel"
               SortKeyOf="Session.Sets.SortKey" GroupOf="GroupLabel" GroupArtOf="GroupArt"
               WantedOf="WantedOf" OnWant="ToggleWant"
               ShowCount="false" ImgFailedChanged="OnArtFailed"
@@ -828,7 +828,8 @@ else
                                  && _rarities.Contains(tier));
 
             if (_types.Count > 0)
-                q = q.Where(c => _types.Contains(Session.TypeLabel(c)));
+                // Any of, not equal to: a dual-typed Pokémon is in both of its types' filters.
+                q = q.Where(c => Session.TypesOf(c).Any(_types.Contains));
 
             if (!string.IsNullOrEmpty(_pack))
                 q = q.Where(c => c.Packs is not null && c.Packs.Contains(_pack));

@@ -167,16 +167,24 @@ else
                 <h2 class="h6">@(_fact.IsPokemon ? "Pokémon" : "Trainer")</h2>
                 <DataTable Label="Card stats" Fit="true">
                     <tbody>
-                        @if (_fact.Subtype is { Length: > 0 } sub)
+                        @* One row however many types the card has. A dual-typed Pokémon gets a
+                           pip and a word each, which is the one place in the app with room to
+                           spell both out in full. *@
+                        @if (_fact.Subtypes.Count > 0)
                         {
                             <tr>
-                                <td>Type</td>
+                                <td>@(_fact.Subtypes.Count > 1 ? "Types" : "Type")</td>
                                 <td>
-                                    @if (HasPip(sub))
+                                    @foreach (var sub in _fact.Subtypes)
                                     {
-                                        <EnergyPip Type="@sub" />
+                                        <span class="ty-one">
+                                            @if (HasPip(sub))
+                                            {
+                                                <EnergyPip Type="@sub" />
+                                            }
+                                            @sub
+                                        </span>
                                     }
-                                    @sub
                                 </td>
                             </tr>
                         }

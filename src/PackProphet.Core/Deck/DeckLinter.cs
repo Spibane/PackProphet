@@ -147,12 +147,22 @@ public sealed class DeckLinter
         {
             var fact = _facts.For(nr);
             if (fact is null || !fact.IsPokemon) continue;
-            if (fact.Subtype is not { Length: > 0 } element) continue;
-            if (element.Equals("colorless", StringComparison.OrdinalIgnoreCase)) continue;
-            if (running.Contains(element)) continue;
 
+            // Colorless attacks on anything, so it is never a mismatch.
+            var elements = fact.Subtypes
+                .Where(e => !e.Equals("colorless", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (elements.Count == 0) continue;
+
+            // A dual-typed Pokémon needs only ONE of its energies to be in the deck: it can be
+            // powered either way. Warning on the one that is absent would tell someone running a
+            // perfectly good Grass deck that their Grass/Water attacker is unsupported.
+            if (elements.Any(running.Contains)) continue;
+
+            var named = string.Join(" or ", elements);
             findings.Add(new(LintSeverity.Warning, "energy-match",
-                $"{fact.Name} is {element}, but the deck does not run {element} energy."));
+                $"{fact.Name} is {named}, but the deck does not run {named} energy."));
         }
     }
 

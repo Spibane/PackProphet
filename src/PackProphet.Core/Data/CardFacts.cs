@@ -1,7 +1,64 @@
 namespace PackProphet.Data;
 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using PackProphet.Domain;
+
+/// <summary>
+/// Reads `subtype` whether upstream sends a string or an array of them.
+///
+/// This is insurance against one specific failure, and the failure is total rather than partial.
+/// Dual-typed Pokémon arrive in October, and the natural way for upstream to express two energies
+/// is to turn this field into an array. System.Text.Json throws on a type mismatch, and it throws
+/// while reading the DOCUMENT — so the first dual-typed card would take the whole 4.4 MB table
+/// with it, and the app would lose attacks, abilities, HP and stage for all 3,761 cards in every
+/// set, not just the new ones. A blank type column on one set is a cosmetic gap; that is the app
+/// silently losing half its data.
+///
+/// An array is joined rather than kept apart, because <see cref="CardFact.Subtype"/> stays a
+/// string for the Trainer kinds that are never plural. <see cref="CardFact.Subtypes"/> reads it
+/// back apart.
+///
+/// Numbers and nulls are tolerated for the same reason: whatever arrives, it must not cost the
+/// document. Anything unreadable becomes null, which renders as an empty type column.
+/// </summary>
+public sealed class SubtypeConverter : JsonConverter<string?>
+{
+    public override string? Read(ref Utf8JsonReader reader, Type typeToConvert,
+                                JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.String:
+                return reader.GetString();
+
+            case JsonTokenType.Null:
+                return null;
+
+            case JsonTokenType.StartArray:
+            {
+                var parts = new List<string>(2);
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                    if (reader.TokenType == JsonTokenType.String
+                        && reader.GetString() is { Length: > 0 } one)
+                        parts.Add(one);
+
+                return parts.Count == 0 ? null : string.Join('/', parts);
+            }
+
+            default:
+                // Skip whatever this is rather than throwing. A nested object here would otherwise
+                // leave the reader mid-value and fail the rest of the document too.
+                reader.Skip();
+                return null;
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
+    {
+        if (value is null) writer.WriteNullValue(); else writer.WriteStringValue(value);
+    }
+}
 
 /// <summary>One attack: its energy cost, damage and effect text.</summary>
 public sealed class CardAttack
@@ -149,8 +206,58 @@ public sealed class CardFact
     /// <summary>
     /// For a Pokémon its energy (Grass, Fire, … Dragon, Colorless); for a Trainer its kind (Item,
     /// Supporter, Tool, Stadium). Shown as one column in the UI.
+    ///
+    /// Stays a single string even though a Pokémon can now have two energies. Two reasons: it is
+    /// what the wire has always carried, and a Trainer's kind is never plural. A dual type arrives
+    /// here as "Grass/Water" and is read apart by <see cref="Subtypes"/> — which is the property
+    /// anything deciding what a card IS should use.
     /// </summary>
+    [JsonConverter(typeof(SubtypeConverter))]
     public string? Subtype { get; set; }
+
+    private string? _splitFrom;
+    private IReadOnlyList<string> _split = [];
+
+    /// <summary>
+    /// The subtype read apart: one entry for every card printed so far, two for a dual-typed
+    /// Pokémon.
+    ///
+    /// Everything that asks "is this card Water" goes through here rather than comparing
+    /// <see cref="Subtype"/>, because a dual-typed card answers yes to two questions and a string
+    /// comparison can only answer one. The type filter, the search, the deck linter's energy check
+    /// and the list column all read this.
+    ///
+    /// Memoised against the raw string by reference: it is read once per visible row per render,
+    /// and the deserialiser assigns the string once.
+    /// </summary>
+    public IReadOnlyList<string> Subtypes
+    {
+        get
+        {
+            if (!ReferenceEquals(_splitFrom, Subtype))
+            {
+                _splitFrom = Subtype;
+                _split = SplitSubtype(Subtype);
+            }
+            return _split;
+        }
+    }
+
+    /// <summary>
+    /// Split on the separators a combined subtype could plausibly use, and on nothing else.
+    ///
+    /// No element name or Trainer kind contains a slash, a comma or a plus, so this cannot break a
+    /// value that is already singular — which is every value in the data at the time of writing.
+    /// </summary>
+    private static IReadOnlyList<string> SplitSubtype(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return [];
+
+        if (raw.IndexOfAny(['/', ',', '+']) < 0) return [raw.Trim()];
+
+        return raw.Split(['/', ',', '+'], StringSplitOptions.RemoveEmptyEntries
+                                             | StringSplitOptions.TrimEntries);
+    }
 
     /// <summary>"Basic", "Stage 1" or "Stage 2". Null for Trainers.</summary>
     public string? Stage { get; set; }

@@ -108,7 +108,11 @@ public static class CardSearch
         if (query.RarityCodes is { Count: > 0 } codes && !codes.Contains(card.Rarity)) return Hit.None;
 
         if (query.Kind is { Length: > 0 } kind && !KindMatches(fact, kind)) return Hit.None;
-        if (query.Subtype is { Length: > 0 } sub && !Equals(fact?.Subtype, sub)) return Hit.None;
+        // Membership rather than equality: a dual-typed Pokémon is both of its types, so
+        // filtering to one of them has to keep it.
+        if (query.Subtype is { Length: > 0 } sub
+            && fact?.Subtypes.Any(s => s.Equals(sub, StringComparison.OrdinalIgnoreCase)) != true)
+            return Hit.None;
         if (query.Stage is { Length: > 0 } stage && !Equals(fact?.Stage, stage)) return Hit.None;
 
         var text = query.Text?.Trim() ?? "";

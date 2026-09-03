@@ -359,16 +359,28 @@
                        @onclick:stopPropagation="true">@card.Name</a>
                 </span>
                 <span class="c-id" role="gridcell">@card.Set&thinsp;@card.Number</span>
-                @{ var ty = TypeOf?.Invoke(card) ?? ""; }
+                @{ var types = TypeOf?.Invoke(card) ?? []; }
                 <span class="c-ty" role="gridcell">
                     @* Icon and label. The icon is the fast read; the word is unambiguous, scannable
                        and the only thing a screen reader has if the SVG is missed. Trainer kinds
-                       have pips too, drawn as outlined rings so they never read as an energy. *@
-                    @if (HasPip(ty))
-                    {
-                        <EnergyPip Type="@ty" />
-                    }
-                    <span class="ty-name">@ty</span>
+                       have pips too, drawn as outlined rings so they never read as an energy.
+
+                       Stacked rather than laid side by side, so a dual-typed Pokémon costs the row
+                       no width at all: the column is 5.4rem because one pip and one word need that
+                       much, and two of each side by side would need eleven. Set against a fixed
+                       50px row it is the one axis with room to spare. *@
+                    <span class="ty-stack @(types.Count > 1 ? "dual" : "")">
+                        @foreach (var one in types)
+                        {
+                            <span class="ty-one">
+                                @if (HasPip(one))
+                                {
+                                    <EnergyPip Type="@one" />
+                                }
+                                <span class="ty-name">@one</span>
+                            </span>
+                        }
+                    </span>
                 </span>
                 <span class="c-st" role="gridcell">@(StageOf?.Invoke(card) ?? "")</span>
                 <span class="c-rr" role="gridcell">
@@ -622,7 +634,11 @@
         && GameRules.EarnsGoldFlair(rung.Group, rung.Count, count, card.IsPromo);
 
     /// <summary>Energy for a Pokémon, trainer kind otherwise. Blank where data is missing.</summary>
-    [Parameter] public Func<PocketCard, string>? TypeOf { get; set; }
+    /// <summary>
+    /// Every type a card has, in order. A list rather than a string because a Pokémon can be
+    /// dual-typed, and the column draws one pip per entry.
+    /// </summary>
+    [Parameter] public Func<PocketCard, IReadOnlyList<string>>? TypeOf { get; set; }
 
     [Parameter] public Func<PocketCard, string>? StageOf { get; set; }
 
@@ -906,7 +922,9 @@
             ListSort.Name => c => c.Name,
             // The column is labelled "set", so it sorts by set FIRST and number within it.
             ListSort.Number => OrderKey,
-            ListSort.Type => c => TypeOf?.Invoke(c) ?? "",
+            // Sorted on the first type, which for every card printed so far is its only one. A
+            // dual-typed card sorts with its primary rather than between two groups.
+            ListSort.Type => c => TypeOf?.Invoke(c) is { Count: > 0 } t ? t[0] : "",
             ListSort.Stage => c => StageOf?.Invoke(c) ?? "",
             ListSort.Rarity => c => RungOf?.Invoke(c)?.Index ?? -1,
             ListSort.Count => c => CountOf(c),

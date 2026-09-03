@@ -193,6 +193,42 @@ public class TileCaptionTests : AppHost
     }
 
     [Fact]
+    public async Task A_dual_typed_card_stacks_its_pips_without_widening_the_column()
+    {
+        // Dual-typed Pokémon arrive in October. Side by side they do not fit: the column is 5.4rem
+        // for one pip and one word, and two of each in a row needs about eleven -- which would come
+        // out of the card name, the thing a list is scanned for. Stacked, they cost no width at all.
+        await ReadyAsync();
+        var cards = Session.Index.All.Take(2).ToArray();
+
+        var grid = RenderComponent<CardGrid>(p =>
+        {
+            p.Add(g => g.Cards, cards);
+            p.Add(g => g.CountOf, _ => 0);
+            p.Add(g => g.ListView, true);
+            p.Add(g => g.TypeOf, c => c.Key == cards[0].Key
+                ? new[] { "Grass", "Water" }
+                : new[] { "Fire" });
+        });
+
+        var rows = grid.FindAll(".card-line[role=row]:not(.head)").ToArray();
+
+        var dual = rows[0].QuerySelector(".ty-stack")!;
+        Assert.Contains("dual", dual.GetAttribute("class")!);
+        Assert.Equal(2, dual.QuerySelectorAll(".ty-one").Length);
+        Assert.Equal(2, dual.QuerySelectorAll(".e").Length);
+        Assert.Equal(["Grass", "Water"],
+                     dual.QuerySelectorAll(".ty-name").Select(n => n.TextContent.Trim()));
+
+        // The single-typed row keeps exactly what it had: one pip, one word, and no dual class --
+        // which is what every card printed so far renders as.
+        var single = rows[1].QuerySelector(".ty-stack")!;
+        Assert.DoesNotContain("dual", single.GetAttribute("class")!);
+        Assert.Single(single.QuerySelectorAll(".ty-one"));
+        Assert.Equal("Fire", single.QuerySelector(".ty-name")!.TextContent.Trim());
+    }
+
+    [Fact]
     public async Task The_list_row_thumbnail_has_the_same_stand_in()
     {
         await ReadyAsync();

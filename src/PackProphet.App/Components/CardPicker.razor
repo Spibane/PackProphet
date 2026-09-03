@@ -737,7 +737,10 @@ else
                     .OrderBy(g => g.Key, StringComparer.Ordinal)
                     .Select(g => new KeyValuePair<string, IReadOnlyList<string>>(
                         g.Key,
-                        g.Select(f => f.Subtype!).Distinct(StringComparer.OrdinalIgnoreCase)
+                        // SelectMany, so a dual-typed Pokémon puts BOTH of its types in the list
+                        // rather than adding "Grass/Water" beside them as a third thing to pick.
+                        // CardSearch matches on membership, so either one finds the card.
+                        g.SelectMany(f => f.Subtypes).Distinct(StringComparer.OrdinalIgnoreCase)
                          .OrderBy(s => s, StringComparer.CurrentCultureIgnoreCase).ToArray()))
                     .ToArray();
 

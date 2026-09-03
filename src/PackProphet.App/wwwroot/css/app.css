@@ -2323,6 +2323,45 @@ img[data-state="loading"] ~ .art-wait {
 .card-line .ty-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (width <= 700px) { .card-line .ty-name { display: none; } }
 
+/* Two types, stacked like a fraction.
+   ==============================================================================================
+   Dual-typed Pokémon arrive in October and the type column is the one that has to hold them. Side
+   by side they do not fit: the column is 5.4rem because one pip plus one word needs that much, and
+   two of each in a row needs about eleven. Widening it takes the width from the card name, which
+   is the thing a list is scanned FOR.
+
+   Stacking spends the axis that has room instead. A compact row is a fixed 50px and one line of
+   type sits in the middle of it; two lines at this size come to about 34px, so they fit inside the
+   row that already exists and no other column moves by a pixel.
+
+   A single type renders exactly as it did before -- one child in a column flex box is laid out
+   identically to one child in a row. Only .dual changes anything. */
+.card-line .ty-stack {
+    display: flex; flex-direction: column; justify-content: center;
+    gap: .1rem; min-width: 0; overflow: hidden;
+}
+.card-line .ty-one { display: flex; align-items: center; gap: .3rem; min-width: 0; }
+.card-line .ty-one .ty-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The pair is quieter than a single type on purpose: two lines already draw more attention than
+   one, and the pips carry the identification. The word only has to stay readable, not compete. */
+.card-line .ty-stack.dual { gap: 0; }
+.card-line .ty-stack.dual .ty-name { font-size: .74rem; line-height: 1.15; }
+.card-line .ty-stack.dual .e { width: .85rem; height: .85rem; }
+
+/* Below 700px the word is hidden, so the pair has the row's height to itself and there is nothing
+   left to shrink for: two full-size pips come to 34px in a 50px row. Shrinking them anyway put
+   13.6px marks on the screen where they are hardest to read and cost nothing to leave alone. */
+@media (width <= 700px) {
+    .card-line .ty-stack.dual .e { width: 1.05rem; height: 1.05rem; }
+}
+
+/* Roomy rows are 94px and wrap their text, so there the stack can breathe and keep full-size
+   pips -- the reason to shrink them does not apply. */
+.card-line.roomy:not(.head) .ty-stack.dual { gap: .15rem; }
+.card-line.roomy:not(.head) .ty-stack.dual .e { width: 1.05rem; height: 1.05rem; }
+.card-line.roomy:not(.head) .ty-stack.dual .ty-name { font-size: .8rem; }
+
 /* ================================================================= pack picker and table */
 
 /* Column count is chosen by the user, as in the collection grid, rather than fixed by an

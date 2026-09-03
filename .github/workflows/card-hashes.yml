@@ -41,6 +41,26 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      # The set this job most needs is the one the art CDN cannot give it.
+      #
+      # A set's card DATA is published within days and its ART is a manual commit weeks later, so
+      # the newest set — the only one with cards this table has never seen — is reliably the one
+      # whose art 404s. B4a is the worked example: card data on 2026-08-27, art still absent a week
+      # later, and 0 of its 110 cards fingerprinted or typed as a result.
+      #
+      # The art does exist by then, inside the database repository's release archive, and the
+      # deploy already extracts it from there with this same script. So both jobs wanted the same
+      # bytes and fetched them separately, and one of them was fetching them from a place that did
+      # not have them. This runs the extraction first and hands the generator the directory.
+      #
+      # Never fatal, for the same reason it is not in the deploy: the script exits 0 with a warning
+      # when it cannot reach either source, and a generator given an empty directory falls back to
+      # the CDN exactly as it did before this step existed.
+      - name: Vendor the art the CDN has not published yet
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/vendor-gap-art.py --out /tmp/gap-art
+
       # By path, not through the solution. CardHashGen is deliberately not in PackProphet.slnx so
       # that the deploy workflow's `dotnet test` never restores a native image decoder it has no
       # use for.
@@ -48,6 +68,7 @@ jobs:
         run: |
           dotnet run --project tools/CardHashGen/CardHashGen.csproj -c Release -- \
             --out src/PackProphet.App/wwwroot/data/card-hashes.txt \
+            --art-dir /tmp/gap-art \
             --report /tmp/coverage.json \
             ${{ inputs.full && ' ' || '--only-missing' }}
 
@@ -112,6 +133,13 @@ jobs:
               f"The table now holds {report['fingerprints']} fingerprints, stamped {report['generated']}.",
               "",
           ]
+
+          # Worth saying out loud, because it is the difference between a set this job can see and
+          # one it cannot: art the CDN has not published, read out of the release archive instead.
+          if report.get('fromDisk'):
+              lines.append(f"{report['fromDisk']} of those came from the release archive rather "
+                           "than the art CDN, which has not published them yet.")
+              lines.append("")
 
           if gaps:
               # Named, not counted. A set at 4/120 is art that has not been published yet and will

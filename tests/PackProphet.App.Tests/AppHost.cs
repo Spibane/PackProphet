@@ -15,14 +15,34 @@ using PackProphet.Services;
 /// that is simply unreachable. A test that wants a CDN which hangs rather than fails passes
 /// something that never completes.
 /// </param>
+/// <param name="remoteFiles">
+/// Remote responses by URL suffix, for the card-detail top-up: it fetches one file per set that
+/// the vendored table does not cover, and what matters is WHICH files it asks for. Anything not
+/// listed falls through to <paramref name="onRemote"/> and then to a 404, which is what a set
+/// upstream has not published yet actually answers.
+/// </param>
 internal sealed class SnapshotHandler(
     Func<CancellationToken, Task<HttpResponseMessage>>? onRemote = null,
-    string? artManifest = null) : HttpMessageHandler
+    string? artManifest = null,
+    IReadOnlyDictionary<string, string>? remoteFiles = null) : HttpMessageHandler
 {
+    /// <summary>Every URL asked for, in order. A request not made is as much of an assertion as one made.</summary>
+    public List<string> Requests { get; } = [];
+
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken ct)
     {
         var url = request.RequestUri!.ToString();
+        Requests.Add(url);
+
+        if (remoteFiles is not null)
+            foreach (var (suffix, json) in remoteFiles)
+                if (url.EndsWith(suffix, StringComparison.Ordinal))
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(json, System.Text.Encoding.UTF8,
+                                                    "application/json")
+                    });
 
         // The manifest of art this deployment vendored. Absent by default, which is what a
         // development build and most deploys serve, and what every other test wants.

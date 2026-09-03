@@ -90,6 +90,218 @@ public class CardDataLoaderTests
         Assert.True(facts.Count > 0, "no card detail loaded");
     }
 
+    // ------------------------------------------------------------------ card detail top-up
+    //
+    // The vendored detail table is read on every visit and is whatever was last deployed; the card
+    // DATA comes live from a CDN and runs ahead of it whenever a set is released. What closes that
+    // gap is a per-set fetch, and these cover the part that is easy to get wrong: which files it
+    // asks for. A top-up that requests the whole table, or re-requests sets it already has, would
+    // pass any test that only looked at the facts it ended up with.
+
+    /// <summary>
+    /// One card of fabricated detail, in the upstream schema. Assembled rather than interpolated:
+    /// the payload is mostly braces, and a raw interpolated literal cannot hold "}}}" as content.
+    /// </summary>
+    private static string SetFile(string setCode, int nr, string cardName, string attack) =>
+        """
+        [{"id":"SET-001","name":"NAME","set_code":"SET","deckBuilderNr":NR,
+          "type":"Pokémon","stage":"Basic","health":60,
+          "attacks":{"1":{"cost":"C","name":"ATTACK","damage":10,"effect":null}}}]
+        """
+        .Replace("SET", setCode, StringComparison.Ordinal)
+        .Replace("NAME", cardName, StringComparison.Ordinal)
+        .Replace("NR", nr.ToString(), StringComparison.Ordinal)
+        .Replace("ATTACK", attack, StringComparison.Ordinal);
+
+    /// <summary>The sets the vendored snapshot covers, in this app's spelling.</summary>
+    private static readonly string[] Vendored =
+    [
+        "A1", "A1a", "A2", "A2a", "A2b", "A3", "A3a", "A3b", "A4", "A4a", "A4b",
+        "B1", "B1a", "B2", "B2a", "B2b", "B3", "B3a", "B3b", "B4", "PROMO-A", "PROMO-B",
+    ];
+
+    private static (CardDataLoader Loader, SnapshotHandler Handler) Detail(
+        IReadOnlyDictionary<string, string>? remoteFiles)
+    {
+        var handler = new SnapshotHandler(remoteFiles: remoteFiles);
+        return (new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") }),
+                handler);
+    }
+
+    [Fact]
+    public async Task Detail_for_a_set_released_since_the_last_deploy_is_fetched_on_its_own()
+    {
+        // The whole point. B4a's cards exist in the live card data and its detail is not in the
+        // vendored table, so its attacks and abilities were blank until somebody redeployed.
+        var (loader, handler) = Detail(new Dictionary<string, string>
+        {
+            ["/b4a/b4a.min.json"] = SetFile("b4a", 90001, "Volbeat", "Tackle"),
+        });
+
+        var facts = await loader.LoadFactsAsync([.. Vendored, "B4a"]);
+
+        var added = facts.ForPrinting("B4a-1");
+        Assert.NotNull(added);
+        Assert.Equal("Volbeat", added.Name);
+        Assert.Equal("Tackle", added.Attacks!["1"].Name);
+
+        // The vendored table is still there underneath it.
+        Assert.NotNull(facts.ForPrinting("A1-1"));
+
+        // One remote file, for the one missing set. Not the 4.4 MB whole table, and not a request
+        // for any set already covered.
+        var remote = handler.Requests.Where(u => !u.Contains("data/snapshot/")).ToList();
+        Assert.Single(remote);
+        Assert.EndsWith("/b4a/b4a.min.json", remote[0], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task No_gap_means_nothing_leaves_the_origin()
+    {
+        // The ordinary visit, which is nearly all of them. The vendored table answers completely
+        // and the top-up must cost exactly nothing -- otherwise every user pays a request per load
+        // for a set that has not been released.
+        var (loader, handler) = Detail(null);
+
+        var facts = await loader.LoadFactsAsync(Vendored);
+
+        // Count is distinct CARDS, not rows: the 3,761 entries collapse to about 2,244 identities,
+        // since alternate arts share a card and trainers carry no deck-builder number at all.
+        Assert.True(facts.Count > 2000, $"only {facts.Count} facts");
+        Assert.NotNull(facts.ForPrinting("A1-1"));
+        Assert.DoesNotContain(handler.Requests, u => !u.Contains("data/snapshot/"));
+    }
+
+    [Fact]
+    public async Task The_promos_are_not_mistaken_for_a_permanent_gap()
+    {
+        // The two projects spell the promos differently -- PROMO-A here, pa there. Compared without
+        // translating, both promo sets look missing on every single load, so every user would fetch
+        // two files forever to be told what the vendored table already said.
+        var (loader, handler) = Detail(null);
+
+        await loader.LoadFactsAsync(["PROMO-A", "PROMO-B"]);
+
+        Assert.DoesNotContain(handler.Requests, u => u.Contains("/pa/") || u.Contains("/promo"));
+    }
+
+    [Fact]
+    public async Task A_set_upstream_has_not_published_yet_is_not_a_failure()
+    {
+        // Which is B4a's actual state at the time of writing: its cards exist, its detail does not
+        // anywhere. A 404 has to leave the vendored table intact rather than emptying it.
+        var (loader, _) = Detail(null);
+
+        var facts = await loader.LoadFactsAsync([.. Vendored, "B4a"]);
+
+        // Count is distinct CARDS, not rows: the 3,761 entries collapse to about 2,244 identities,
+        // since alternate arts share a card and trainers carry no deck-builder number at all.
+        Assert.True(facts.Count > 2000, $"only {facts.Count} facts");
+        Assert.NotNull(facts.ForPrinting("A1-1"));
+        Assert.Null(facts.ForPrinting("B4a-1"));
+    }
+
+    [Fact]
+    public async Task A_definite_404_stops_it_asking_the_second_route()
+    {
+        // B4a's state at the time of writing. The npm package is published FROM the repository, so
+        // it is never ahead of the branch -- a file the branch does not have cannot be in the
+        // package. Asking anyway would double the cost of a gap that upstream simply has not
+        // filled, on every single visit.
+        var (loader, handler) = Detail(null);
+
+        await loader.LoadFactsAsync([.. Vendored, "B4a"]);
+
+        var remote = handler.Requests.Where(u => !u.Contains("data/snapshot/")).ToList();
+        Assert.Single(remote);
+        Assert.Contains("/gh/", remote[0]);      // the repository, which is the fresher of the two
+        Assert.DoesNotContain(handler.Requests, u => u.Contains("/npm/pokemon-tcg-pocket-cards"));
+    }
+
+    [Fact]
+    public async Task Enough_missing_sets_and_it_asks_for_the_whole_table_instead()
+    {
+        // A vendored table that could not be read, or one so old it predates most of the game.
+        // Twenty per-set requests would be slower AND larger than the one file containing all of
+        // them, so past a handful the walk is abandoned.
+        var many = Enumerable.Range(1, 12).Select(i => $"Z{i}").ToArray();
+        var (loader, handler) = Detail(new Dictionary<string, string>
+        {
+            ["/cards.min.json"] = SetFile("z1", 90002, "Nothing", "Nothing"),
+        });
+
+        await loader.LoadFactsAsync([.. Vendored, .. many]);
+
+        var remote = handler.Requests.Where(u => !u.Contains("data/snapshot/")).ToList();
+        Assert.Single(remote);
+        Assert.EndsWith("/cards.min.json", remote[0], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task The_untrimmed_upstream_row_parses_into_the_fields_the_app_reads()
+    {
+        // The vendored table is a TRIMMED copy: same rows, fewer fields. A topped-up set arrives
+        // untrimmed, carrying a dozen fields this app has no use for, so this is a real upstream
+        // row verbatim -- b4-005 Dustox -- checking that the ones it does read still land and the
+        // rest are ignored rather than throwing.
+        //
+        // Includes the shapes that would break a careless reader: an ability wrapped in an
+        // "exists" object, a second attack slot present but entirely null, and nulls in fields
+        // typed as strings.
+        const string upstream = """
+        [{"id":"b4-005","name":"Dustox","set_code":"b4","set_name":"Ruler of the Skies",
+          "pack":"Ruler of the Skies","release_date":"2026-07-30","type":"Pokémon",
+          "subtype":"Grass","stage":"Stage 2","evolves_from":"Cascoon","rarity":"◊◊◊",
+          "pack_points":150,"ex":false,"mega":false,"shiny":false,"special_tags":null,
+          "art_style":null,"health":120,"retreat":1,"weakness":"Fire",
+          "ability":{"exists":true,"name":"Variety Powder","effect":"Once during your turn, you may use this Ability."},
+          "card_text":null,
+          "attacks":{"1":{"cost":"CC","name":"Cutting Wind","damage":60,"effect":null},
+                     "2":{"cost":null,"name":null,"damage":null,"effect":null}},
+          "points":1,"deckBuilderNr":1966,"artist":"Midori Harada",
+          "image":"https://example.invalid/b4/005.webp","alternate_versions":[]}]
+        """;
+
+        var (loader, _) = Detail(new Dictionary<string, string> { ["/zz/zz.min.json"] = upstream });
+
+        var facts = await loader.LoadFactsAsync([.. Vendored, "ZZ"]);
+
+        var dustox = facts.ForPrinting("B4-5");
+        Assert.NotNull(dustox);
+        Assert.Equal("Dustox", dustox.Name);
+        Assert.Equal("Stage 2", dustox.Stage);
+        Assert.Equal("Cascoon", dustox.EvolvesFrom);
+        Assert.Equal(120, dustox.Health);
+        Assert.Equal("Fire", dustox.Weakness);
+        Assert.Equal(150, dustox.PackPoints);
+        Assert.Equal("Variety Powder", dustox.Ability?.Name);
+        Assert.True(dustox.HasAbility);
+
+        // Two energies, expanded from the packed "CC" the data stores.
+        Assert.Equal("Cutting Wind", dustox.Attacks!["1"].Name);
+        Assert.Equal("60", dustox.Attacks["1"].DamageLabel);
+        Assert.Equal(2, dustox.Attacks["1"].CostSymbols.Count);
+
+        // The empty second slot survives as an empty slot rather than as an attack.
+        Assert.Null(dustox.Attacks["2"].Name);
+    }
+
+    [Fact]
+    public async Task Passing_no_set_list_leaves_the_vendored_table_alone()
+    {
+        // The caller that wants only what shipped. Also what every other test in this suite gets,
+        // so a top-up cannot start making requests behind them.
+        var (loader, handler) = Detail(null);
+
+        var facts = await loader.LoadFactsAsync();
+
+        // Count is distinct CARDS, not rows: the 3,761 entries collapse to about 2,244 identities,
+        // since alternate arts share a card and trainers carry no deck-builder number at all.
+        Assert.True(facts.Count > 2000, $"only {facts.Count} facts");
+        Assert.NotNull(facts.ForPrinting("A1-1"));
+        Assert.DoesNotContain(handler.Requests, u => !u.Contains("data/snapshot/"));
+    }
+
     [Fact]
     public async Task A_cancelled_caller_is_not_mistaken_for_a_slow_source()
     {
@@ -97,6 +309,6 @@ public class CardDataLoaderTests
         await cancelled.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => Loader(Hang).LoadFactsAsync(cancelled.Token));
+            () => Loader(Hang).LoadFactsAsync(ct: cancelled.Token));
     }
 }

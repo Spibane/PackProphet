@@ -266,6 +266,69 @@ public class LayoutInvariantTests
     }
 
     [Fact]
+    public void Every_control_you_can_type_into_reaches_16px_on_a_touch_device()
+    {
+        // iOS Safari zooms the whole page in when a focused input or select computes smaller than
+        // 16px, and does not zoom back out. The page is left magnified, scrolled somewhere else,
+        // and with the bottom tab bar off the screen -- from nothing more than tapping a field.
+        //
+        // Two things about the rule are load-bearing and neither is visible from the CSS reading
+        // sensibly, which is why they are asserted rather than commented:
+        //
+        //   the trigger    pointer, not width. `width < 600px` is the obvious way to write "on a
+        //                  phone" and it is wrong for this: an iPhone in landscape is 844px wide,
+        //                  so turning the phone sideways brought the zoom straight back.
+        //   the coverage   Bootstrap has three ways of setting .875rem on a control -- the two
+        //                  -sm classes and .input-group-sm on the PARENT -- and the third was
+        //                  missed on first attempt, leaving the settings page's two fields at 14px
+        //                  while every other field in the app was fixed.
+        var css = WithoutComments(Css);
+
+        // Every media block in the file, paired with the condition it is gated on.
+        var blocks = Regex.Matches(css, @"@media\s*(?<cond>\([^{]*)\{(?:[^{}]|\{[^{}]*\})*\}",
+                                   RegexOptions.Singleline)
+                          .Select(m => (Cond: m.Groups["cond"].Value, Body: m.Value))
+                          .ToArray();
+
+        var coarse = blocks.Where(b => b.Cond.Contains("pointer: coarse", StringComparison.Ordinal))
+                           .Select(b => b.Body)
+                           .ToArray();
+
+        Assert.NotEmpty(coarse);
+
+        foreach (var selector in new[]
+                 {
+                     ".form-control-sm", ".form-select-sm",
+                     ".input-group-sm > .form-control", ".input-group-sm > .form-select",
+                 })
+        {
+            Assert.True(coarse.Any(b => b.Contains(selector, StringComparison.Ordinal)
+                                        && b.Contains("font-size: 1rem", StringComparison.Ordinal)),
+                $"{selector} is not raised to 1rem under a coarse pointer, so a field wearing it "
+                + "zooms the page in on iOS");
+        }
+
+        // The bespoke one, which answers for its own size rather than wearing a Bootstrap class.
+        Assert.True(coarse.Any(b => b.Contains(".profile-switch", StringComparison.Ordinal)),
+            "the profile switch is a bare select at .95rem and zooms unless it is raised too");
+
+        // And nothing put it back behind a width. This is the part a later tidy-up would undo,
+        // because grouping it with the other phone rules looks like housekeeping -- and a width
+        // block would keep every one of the assertions above passing while the landscape case
+        // silently came back.
+        var byWidth = blocks
+            .Where(b => b.Cond.Contains("width", StringComparison.Ordinal))
+            .Where(b => b.Body.Contains("form-control-sm", StringComparison.Ordinal)
+                        || b.Body.Contains("form-select-sm", StringComparison.Ordinal))
+            .Select(b => b.Cond.Trim())
+            .ToArray();
+
+        Assert.True(byWidth.Length == 0,
+            "the small-control font size is gated on a width as well as a pointer: "
+            + string.Join(", ", byWidth));
+    }
+
+    [Fact]
     public void The_fingerprint_refresh_vendors_art_first_and_generates_from_it()
     {
         // The seam this closes, and why it needs a test rather than a comment.

@@ -130,6 +130,14 @@ public sealed class SyncService : IAsyncDisposable
             return;
         }
 
+        // BEFORE the pairing code is read, and before anything subscribes to changes: a merge
+        // reads _session.State, and until this returns that is AppState.Fresh() -- an empty
+        // collection, which every rule in StateMerge reads as "the user deleted all of it".
+        // MainLayout starts this on first render, long before a page's InitAsync has finished
+        // loading state, so without this await the whole feature is a race whose losing side is
+        // silent, total and pushed to every other device.
+        await _session.InitAsync();
+
         _device = await DeviceIdAsync();
         _session.Changed += OnLocalChange;
 
@@ -155,6 +163,8 @@ public sealed class SyncService : IAsyncDisposable
         await _gate.WaitAsync();
         try
         {
+            if (Blocked() is { } why) { Fail(why); return null; }
+
             Working("Setting up…");
 
             // A fresh code is a fresh document, so nothing is pulled and nothing is merged: this
@@ -216,6 +226,8 @@ public sealed class SyncService : IAsyncDisposable
         await _gate.WaitAsync();
         try
         {
+            if (Blocked() is { } why) { Fail(why); return false; }
+
             Working("Looking for your collection…");
 
             var keys = await _crypto.DeriveAsync(code);
@@ -312,10 +324,37 @@ public sealed class SyncService : IAsyncDisposable
 
     // ---- The sync itself -----------------------------------------------------------------
 
+    /// <summary>
+    /// Why this device must not sync right now, or null when it may.
+    ///
+    /// All three are the same fault: the state in hand is empty for a reason that is not the user
+    /// emptying it, and a merge cannot tell those apart. Refusing is free -- the collection is
+    /// local-first and the next launch syncs -- while proceeding writes the emptiness to every
+    /// paired device.
+    /// </summary>
+    private string? Blocked()
+    {
+        if (!_session.Loaded)
+            return "Waiting for your collection to load before syncing.";
+
+        if (_session.LoadFailed)
+            return "The collection saved here could not be read, so nothing was synced -- syncing "
+                 + "now would copy that loss to your other device. Restore from a backup, or open "
+                 + "this on the device that still has your cards.";
+
+        if (_session.StorageUnavailable)
+            return "This browser is giving the app no storage, so there is nothing here to sync "
+                 + "from. Your other device is untouched.";
+
+        return null;
+    }
+
     /// <summary>Pull, merge, push. The whole of it.</summary>
     public async Task SyncAsync()
     {
         if (!Paired || !_options.Configured) return;
+
+        if (Blocked() is { } why) { Fail(why); return; }
 
         await _gate.WaitAsync();
         try
@@ -392,6 +431,21 @@ public sealed class SyncService : IAsyncDisposable
             if (opened.State is null)
             {
                 Fail(opened.Problem!);
+                return;
+            }
+
+            // Last line of defence, and the one that does not depend on getting the ordering
+            // right somewhere else. Nothing local, something in the ancestor: the merge would
+            // read every card, deck and list as deleted here, honour it, and push that up. A user
+            // who really did clear everything still has the logs, so this cannot be reached by
+            // resetting a collection -- only by state that was never loaded.
+            if (_ancestor is not null
+                && StateMerge.NothingRecorded(_session.State)
+                && !StateMerge.NothingRecorded(_ancestor))
+            {
+                Fail("This device came up with an empty collection where it should have one, so "
+                   + "nothing was synced. Your stored copy is untouched. Reload the page, and "
+                   + "restore from a backup if it is still empty.");
                 return;
             }
 

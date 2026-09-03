@@ -88,9 +88,10 @@
     /// opens: a user pairs their devices once and then expects the app to keep itself current
     /// wherever they happen to be looking.
     ///
-    /// Deliberately not awaited into the render path. It waits for the collection to load, then
-    /// makes a network round trip, and blocking first paint on either would trade a working
-    /// offline-first app for a spinner.
+    /// Deliberately not awaited into the render path: it waits for the collection to load (inside
+    /// InitAsync, which is where that wait has to live -- this fires on first render, when a
+    /// page's own load is still in flight), then makes a network round trip. Blocking first paint
+    /// on either would trade a working offline-first app for a spinner.
     /// </summary>
     protected override void OnAfterRender(bool firstRender)
     {

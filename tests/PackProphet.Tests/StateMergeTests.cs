@@ -646,4 +646,64 @@ public class StateMergeTests
 
         Assert.Equal(2, merged.Active.Decks.Count);
     }
+
+    // ---- The unloaded-state rail ----------------------------------------------------------
+
+    [Fact]
+    public void A_state_that_was_never_loaded_is_recognisable_before_it_is_merged()
+    {
+        // The whole point of the check: a fresh AppState and a genuinely empty one are equal by
+        // value, so this is what the caller has instead -- "is there anything here to lose".
+        Assert.True(StateMerge.NothingRecorded(AppState.Fresh()));
+        Assert.False(StateMerge.NothingRecorded(With(c => c["a.webp"] = 1)));
+    }
+
+    [Fact]
+    public void A_named_but_empty_collection_still_counts_as_nothing_recorded()
+    {
+        // Renaming a collection, or making a second one, is not something to lose.
+        var state = AppState.Fresh();
+        var named = state with
+        {
+            Profiles = [state.Active with { Name = "Alt account" }, Profile.NewDefault("p2", "Main")],
+        };
+
+        Assert.True(StateMerge.NothingRecorded(named));
+    }
+
+    [Fact]
+    public void A_logged_pack_alone_is_enough_to_count_as_recorded()
+    {
+        var state = AppState.Fresh();
+        var logged = state with
+        {
+            Profiles =
+            [
+                state.Active with
+                {
+                    PackLog = [new PackOpenEvent(DateTimeOffset.UnixEpoch, "A1", "pikachu", "", [])],
+                },
+            ],
+        };
+
+        Assert.False(StateMerge.NothingRecorded(logged));
+    }
+
+    [Fact]
+    public void Merging_an_unloaded_state_would_delete_everything_which_is_what_the_rail_prevents()
+    {
+        // Not a fix for the merge -- this documents WHY the caller must not reach it. The rules
+        // here are right: local lacks what the ancestor had, so it was deleted here. They are
+        // right about a user's deletion and catastrophic about a state that never loaded, and
+        // nothing inside a three-way merge can tell those apart. SyncService checks first.
+        var ancestor = With(c => { c["a.webp"] = 1; c["b.webp"] = 2; });
+        var remote = Clone(ancestor);
+        var unloaded = AppState.Fresh();
+
+        var merged = StateMerge.Merge(unloaded, remote, ancestor).State;
+
+        Assert.Empty(Owned(merged));
+        Assert.True(StateMerge.NothingRecorded(unloaded));
+        Assert.False(StateMerge.NothingRecorded(ancestor));
+    }
 }

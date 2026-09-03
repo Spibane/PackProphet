@@ -1,0 +1,46 @@
+@* The completion plan as one line: the rungs being collected, with a count only where it is more
+   than one. Shared by the Packs picker's collapsed summary and the per-set overrides on Settings,
+   which had two implementations that disagreed on the multiplier ("2◆ x2" against "2◆×2").
+
+   A component rather than a string because the marks are coloured, and colour needs an element per
+   rung. That is the whole reason this exists: the line sits directly above the chips that set it,
+   and a grey summary under coloured chips read as a different kind of thing.
+
+   Says "Nothing" rather than rendering empty, because a blank summary reads as a control that
+   failed to load. *@
+
+@inject AppSession Session
+
+@{
+    var rungs = Session.Index.Ladder.Rungs.Where(r => Plan.Copies(r.Index) > 0).ToList();
+    var first = true;
+}
+
+@if (rungs.Count == 0 && Foils == 0)
+{
+    <text>Nothing</text>
+}
+else
+{
+    foreach (var rung in rungs)
+    {
+        @(first ? "" : " ")
+        first = false;
+        <span class="glyphs @rung.GlyphClass">@rung.Symbol</span>@(Plan.Copies(rung.Index) > 1 ? $"×{Plan.Copies(rung.Index)}" : "")
+    }
+
+    @* Foils are not a rung, so they carry no family colour -- they are a second printing of cards
+       that already have one. *@
+    @if (Foils > 0)
+    {
+        @(first ? "" : " ")
+        <text>foils</text>@(Foils > 1 ? $"×{Foils}" : "")
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public RarityPlan Plan { get; set; } = default!;
+
+    /// <summary>Parallel foils wanted, or zero where the scope has none to want.</summary>
+    [Parameter] public int Foils { get; set; }
+}

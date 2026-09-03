@@ -14,7 +14,7 @@
             aria-pressed="@Aria.Flag(want > 0)"
             title="@(want == 0 ? $"Not collecting {rung.Symbol}" : $"Collecting {want} of each {rung.Symbol}") — tap to change"
             @onclick="() => OnCycle.InvokeAsync(rung.Index)">
-        @rung.Symbol@(want > 1 ? $" x{want}" : "")
+        <span class="glyphs @rung.GlyphClass">@rung.Symbol</span>@(want > 1 ? $" x{want}" : "")
     </button>
 }
 

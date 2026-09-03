@@ -108,7 +108,7 @@
                 {
                     <span class="avail-chip on">
                         <span class="ttl">@set</span>
-                        <span class="small">@PlanSummary(set)</span>
+                        <span class="small"><PlanSummary Plan="Session.Profile.Targets.PlanFor(set)" /></span>
                         <button class="chip-link" @onclick="() => ClearOverride(set)"
                                 title="Follow the default plan again">Use Default</button>
                     </span>
@@ -722,19 +722,6 @@
         Session.Profile.Targets.PlanBySet.Keys
             .OrderBy(Session.Sets.SortKey, StringComparer.Ordinal)
             .ToArray();
-
-    /// <summary>An override at a glance, so the list says what it differs into, not just that it differs.</summary>
-    private string PlanSummary(string set)
-    {
-        var plan = Session.Profile.Targets.PlanFor(set);
-        var parts = Session.Index.Ladder.Rungs
-            .Where(r => plan.Copies(r.Index) > 0)
-            .Select(r => plan.Copies(r.Index) > 1
-                ? $"{r.Symbol} x{plan.Copies(r.Index)}"
-                : r.Symbol);
-
-        return string.Join(" ", parts) is { Length: > 0 } summary ? summary : "Nothing";
-    }
 
     private void ClearOverride(string set) => Session.ClearPlanOverride(set);
 

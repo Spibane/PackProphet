@@ -12,13 +12,24 @@ using PackProphet.Domain;
 /// <param name="Codes">Rarity codes on this rung — 2-star covers both SR and SAR.</param>
 public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyList<string> Codes)
 {
-    /// <summary>Short label, e.g. "2◆" or "Crown".</summary>
+    /// <summary>
+    /// Short label, e.g. "2◆" or "Crown ♛".
+    ///
+    /// Every rung carries its own mark. Two did not: Crown was the bare word, and Shiny was the
+    /// bare word at one and "Shiny 2★" at two — a star, which is a different family with a
+    /// different colour, so the one shiny label that had a mark had the wrong one. On a row of
+    /// chips that made three of ten unscannable, and the label is what a chip shows.
+    ///
+    /// Diamond and Star count in digits because four repeated marks is wider than a chip wants;
+    /// Shiny repeats, because there are only two of them and "Shiny 2✦" reads as a quantity of
+    /// shinies rather than as the second shiny rung.
+    /// </summary>
     public string Symbol => Group switch
     {
         "Diamond" => $"{Count}◆",
         "Star" => $"{Count}★",
-        "Shiny" => Count > 1 ? $"Shiny {Count}★" : "Shiny",
-        "Crown" => "Crown",
+        "Shiny" => $"Shiny {new string('✦', Count)}",
+        "Crown" => "Crown ♛",
         _ => $"{Group} {Count}"
     };
 
@@ -49,6 +60,21 @@ public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyLis
 /// </summary>
 public sealed class RarityLadder
 {
+    /// <summary>
+    /// The mark for a parallel foil, which is not a rung and so has no <see cref="RarityRung"/>
+    /// to carry one.
+    ///
+    /// A diamond framed rather than filled, because that is what a parallel foil is: a second
+    /// printing of a card that already sits on the 1-3 diamond rungs. It is deliberately not one
+    /// of the four family marks and deliberately not coloured like them — the thing a reader has
+    /// to see is that this is a separate axis from the ladder, which is also why the controls put
+    /// a divider in front of it.
+    ///
+    /// Here rather than in the two components that draw it, which is two literals to keep in
+    /// step for one character.
+    /// </summary>
+    public const string FoilMark = "◈";
+
     private static readonly Dictionary<string, int> GroupOrder = new()
     {
         ["Diamond"] = 0,

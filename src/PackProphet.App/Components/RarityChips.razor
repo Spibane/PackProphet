@@ -33,6 +33,9 @@
             title="@(Session.FoilCopies == 0
                 ? "Parallel foils are not counted. There are 139 of them — the Deluxe set's second printings of its 1-3 diamond cards — and they come only from a limited-time pack. Tap to collect them."
                 : $"Collecting {Session.FoilCopies} of each parallel foil, counted separately from the diamond rungs. Tap to change.")">
+        @* A mark of its own, like every rung has. The word alone was the only chip in the row
+           with nothing to scan for, and it is the longest label of the eleven. *@
+        <span class="glyphs foil">@RarityLadder.FoilMark</span>
         Parallel Foils@(Session.FoilCopies > 1 ? $" x{Session.FoilCopies}" : "")
     </button>
 }

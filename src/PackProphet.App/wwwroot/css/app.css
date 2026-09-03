@@ -1090,6 +1090,21 @@ main:focus { outline: none; }
     .page-tools > .bar-sep { display: none; }
 }
 
+/* The same divider, drawn for a run of inline text rather than for a flex row.
+
+   The completion plan's collapsed summary is a sentence of rarity marks inside one span, and the
+   parallel foils on the end of it are a different axis from the rungs before them -- which the
+   chips that set them say with a .bar-sep and the summary said with a space. bar-sep itself
+   cannot go there: it stretches to a flex line's height, and in a span it collapses to a 1px
+   square. This takes its height from the text instead. */
+.plan-sep {
+    display: inline-block;
+    width: 1px; height: .95em;
+    margin: 0 .3rem;
+    vertical-align: -.1em;
+    background: var(--bs-border-color);
+}
+
 /* The title is the one thing every header has, so it gets one definition rather than a <strong>
    styled slightly differently on each page. */
 .page-head .title {
@@ -1599,10 +1614,6 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-tile.sel { outline: 3px solid var(--bs-primary); }
 .card-tile.picked { outline: 3px solid var(--bs-success); opacity: 1; }
 
-/* A row has no card art to outline against, so the sweep/range highlight is a tint instead —
-   stronger than .owned's, since a selection has to read over a card already tinted for owning. */
-.card-line.sel { background: color-mix(in srgb, var(--bs-primary) 22%, transparent); }
-
 .card-tile img { width: 100%; height: 100%; display: block; object-fit: cover; background: #333; }
 
 /* Waiting for art.
@@ -2068,11 +2079,42 @@ img[data-state="loading"] ~ .art-wait {
     align-items: center;
     gap: .45rem;
     height: 50px;
-    padding: .25rem .6rem;
+    /* Wider on the right than on the left, because the right is where the row ends in a pair of
+       tap targets and where the scrollbar lands on top of them. A phone draws an overlay
+       scrollbar over the content rather than beside it, so at the old .6rem -- .35rem below
+       600px -- the + shared its pixels with the track, and the tap scrolled the list or hit
+       nothing. Reserved by hand rather than by scrollbar-gutter, which an overlay scrollbar
+       does not honour.
+
+       A token because roomy restates the padding and the phone template overrides one side of
+       it, so the number was already in three places. */
+    --row-end: 1.1rem;
+    padding: .25rem var(--row-end) .25rem .6rem;
     border-bottom: 1px solid var(--bs-border-color);
     user-select: none;
 }
 .card-line.owned { background: color-mix(in srgb, var(--bs-primary) 7%, transparent); }
+
+/* Picked out of the pack being logged. The row carries a "+N" badge in its own column, which is
+   the exact figure and is unmistakable on a phone -- and on a 1600px row it is one small green
+   chip near the far end, nine columns from the name it belongs to, so reading which card was
+   picked meant tracking back along the row. The tint says it for the whole width at once, and
+   the badge stays for the count.
+
+   Green rather than the accent because that is already the colour of the badge and of the button
+   this leads to ("add N to collection"); the accent tint on this row means owning, which the same
+   card may also be. Owned is 7% and this is 16%, so a row that is both reads as picked. */
+.card-line.picked { background: color-mix(in srgb, var(--bs-success) 16%, transparent); }
+
+/* A row has no card art to outline against, so the sweep/range highlight is a tint instead —
+   stronger than .owned's, since a selection has to read over a card already tinted for owning.
+
+   Declared here rather than up with the other .sel rules, which is where it was and where it
+   never actually won: three single-class tints at equal specificity are resolved by source
+   order, and both of the rules above it came later in the file. Sweeping a collection you own
+   showed no selection at all, and picking is now a third tint on the same rows. A live gesture
+   outranks a stored fact, so it goes last. */
+.card-line.sel { background: color-mix(in srgb, var(--bs-primary) 22%, transparent); }
 
 /* The name is what you scan a list FOR, so it gets a step over its row and a heavier weight.
    Everything around it is supporting detail and can stay quieter. */
@@ -2156,6 +2198,11 @@ img[data-state="loading"] ~ .art-wait {
 [data-bs-theme="dark"] .glyphs.shiny   { color: #3fbdbd; }
 [data-bs-theme="dark"] .glyphs.crown   { color: #c288dd; }
 
+/* The parallel foil mark is not one of the four families and is not coloured like one -- see
+   RarityLadder.FoilMark. Stated rather than inherited, because the chip it sits on dims its own
+   text while unselected, and the mark is the part that has to stay scannable either way. */
+.glyphs.foil { color: var(--bs-body-color); }
+
 /* ---- row density -------------------------------------------------------------------
    Two heights, and the number MUST agree with Virtualize's ItemSize in CardGrid.razor or the
    scrollbar mis-sizes and the list jumps while scrolling:
@@ -2176,7 +2223,7 @@ img[data-state="loading"] ~ .art-wait {
 .card-line.roomy:not(.head) {
     height: 94px;
     align-items: start;
-    padding: .5rem .6rem;
+    padding: .5rem var(--row-end) .5rem .6rem;
 }
 /* Text may wrap in roomy — that is the entire point — but still clips at the cell, so a very
    long effect cannot push the row past its declared height. */
@@ -3215,7 +3262,11 @@ tr.row-best {
         grid-template-columns: var(--art-w) var(--want-col) minmax(4rem,1fr) var(--type-col) var(--rarity-col) var(--pick-col) 2rem 3.6rem;
         gap: .3rem;
         padding-left: calc(.35rem + var(--safe-l));
-        padding-right: calc(.35rem + var(--safe-r));
+        /* The left is cut to .35rem here to buy width back for the name; the right cannot
+           follow it. This is the width where the scrollbar is an overlay drawn on top of the
+           last cell, and the last cell is the +/- pair. The name pays for it instead: it is a
+           1fr track with a 4rem floor and it clips with an ellipsis, where the + misses. */
+        --row-end: calc(.95rem + var(--safe-r));
     }
     /* Type joins the columns already dropped at each step up the file. Below 700px it was only a
        17px pip anyway, but the column still cost 51px because its header is a sort button reading
@@ -4171,6 +4222,21 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 /* Above the tab bar, which is fixed to the bottom edge at these widths. */
 @media (width <= 1056px) {
     .to-top { bottom: calc(1rem + var(--tab-bar-h) + 1px + env(safe-area-inset-bottom)); }
+}
+
+/* The same thing on the toolbar, for a pointer rather than a thumb.
+   ==========================================================================================
+   An ordinary button in the bar, so its height, border and hover come from the controls beside
+   it rather than being restated here. When it shows is the only part of it this rule owns.
+
+   Two rules because .grid-toolbar .btn sets a display of its own and outweighs a single class:
+   hiding this one has to be written at the same weight or heavier, or the bar's rule puts it
+   back. 900px is where the bar stops being tight -- under 600 it wraps to two rows outright,
+   and between the two there is a row of controls with no slack to spend on a second way to do
+   something the floating button is already doing. */
+.grid-toolbar .to-top-bar { display: none; }
+@media (width >= 900px) {
+    .grid-toolbar .to-top-bar.on { display: inline-flex; gap: .3rem; flex: none; }
 }
 
 /* A row of toggle chips: rarity marks and type pips, several selectable at once. Replaces two

@@ -23,6 +23,17 @@ public class RarityGlyphTests
     }
 
     [Fact]
+    public void EveryRungsLabel_CarriesTheSameMarkItsGlyphsDo()
+    {
+        // The completion plan's chips and its collapsed summary show Symbol, not Glyphs, so a
+        // rung whose label is only a word is a chip with nothing to scan for. Two of the ten
+        // were: Crown was the bare word, and the second Shiny rung read "Shiny 2★" -- a star,
+        // which is a different family drawn in a different colour.
+        Assert.All(Ladder.Rungs, r =>
+            Assert.Contains(r.Glyphs[..1], r.Symbol, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void EveryRungHasGlyphsAndAColourClass()
     {
         Assert.All(Ladder.Rungs, r =>

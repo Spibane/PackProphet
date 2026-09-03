@@ -176,6 +176,24 @@ public class LayoutInvariantTests
     }
 
     [Fact]
+    public void Every_back_to_top_control_is_driven_by_the_script_that_shows_them()
+    {
+        // Both buttons are rendered always and shown by gridspy.js once there is a screen of list
+        // scrolled past. There are two of them -- one floating over the corner for a thumb, one on
+        // the toolbar for a pointer -- and the script used to look them up with querySelector,
+        // which silently drove whichever came first in the DOM and left the other permanently
+        // hidden. Nothing about that reads as broken: the button is in the markup, it is styled,
+        // and it never appears.
+        var buttons = Regex.Matches(Grid, @"data-to-top").Count;
+        Assert.True(buttons > 1, "the grid should render both back-to-top controls");
+
+        var spy = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "js", "gridspy.js"));
+
+        Assert.Contains("querySelectorAll('[data-to-top]')", spy, StringComparison.Ordinal);
+        Assert.DoesNotContain("querySelector('[data-to-top]')", spy, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Virtualize_item_size_matches_the_row_height_it_renders()
     {
         // Virtualize is told a fixed row height up front. If the stylesheet and that number

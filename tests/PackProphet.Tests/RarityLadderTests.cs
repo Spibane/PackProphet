@@ -25,7 +25,7 @@ public class RarityLadderTests
     {
         var symbols = Ladder.Rungs.Select(r => r.Symbol).ToArray();
         Assert.Equal(
-            new[] { "1◆", "2◆", "3◆", "4◆", "1★", "2★", "3★", "Shiny", "Shiny 2★", "Crown" },
+            new[] { "1◆", "2◆", "3◆", "4◆", "1★", "2★", "3★", "Shiny ✦", "Shiny ✦✦", "Crown ♛" },
             symbols);
     }
 

@@ -143,6 +143,29 @@ public class TileCaptionTests : AppHost
     }
 
     [Fact]
+    public async Task A_picked_row_says_so_across_its_whole_width()
+    {
+        // The "+N" badge sits in one column of a row that can be 1600px wide, so on a wide screen
+        // working out which card it belonged to meant tracking back along the row. The class is
+        // what the row tint hangs off; the badge stays for the exact figure.
+        await ReadyAsync();
+        var cards = Session.Index.All.Take(4).ToArray();
+
+        var grid = RenderComponent<CardGrid>(p =>
+        {
+            p.Add(g => g.Cards, cards);
+            p.Add(g => g.CountOf, _ => 0);
+            p.Add(g => g.ListView, true);
+            p.Add(g => g.PickedOf, c => c.Key == cards[1].Key ? 2 : 0);
+        });
+
+        var rows = grid.FindAll(".card-line[role=row]:not(.head)").ToArray();
+        Assert.DoesNotContain("picked", rows[0].GetAttribute("class")!);
+        Assert.Contains("picked", rows[1].GetAttribute("class")!);
+        Assert.Contains("+2", rows[1].QuerySelector(".c-pick")!.TextContent);
+    }
+
+    [Fact]
     public async Task The_list_row_thumbnail_has_the_same_stand_in()
     {
         await ReadyAsync();

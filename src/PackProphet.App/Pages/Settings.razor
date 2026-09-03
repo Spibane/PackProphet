@@ -837,7 +837,21 @@
     {
         if (!_confirmingReset) { _confirmingReset = true; return; }
         _confirmingReset = false;
-        Session.Mutate(p => p with { Collection = new(), PackLog = [], WonderLog = [] });
+        Session.Mutate(p => p with
+        {
+            Collection = new(),
+            PackLog = [],
+            WonderLog = [],
+
+            // Otherwise both logs come straight back from the other device on the next sync,
+            // leaving a history of packs whose cards this reset has just erased.
+            RemovedLog =
+            [
+                .. p.RemovedLog,
+                .. p.PackLog.Select(LogId.Of),
+                .. p.WonderLog.Select(LogId.Of),
+            ]
+        });
 
         _message = Session.MultipleProfiles
             ? $"{Session.Profile.Name}: collection, pack log and Wonder Pick log erased. Your other collections are untouched."

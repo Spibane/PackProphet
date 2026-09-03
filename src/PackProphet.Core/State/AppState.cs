@@ -27,7 +27,22 @@ public sealed record PackOpenEvent(
     string Set,
     string Pack,
     string Variant,
-    List<string> OwnershipKeys);
+    List<string> OwnershipKeys)
+{
+    /// <summary>
+    /// Stable identity, assigned when the pack is logged and kept through every edit.
+    ///
+    /// The merge used to identify a row by its contents, which is fine until a row changes:
+    /// redating a pack rewrote At, the other device still held the original, and the two were no
+    /// longer the same row. One pack became two, counted twice in every history figure. An id
+    /// that survives the edit is what makes "this row moved" expressible at all.
+    ///
+    /// Nullable because a save written before v5 has none. <see cref="StateSerializer"/> fills
+    /// them in on read -- deterministically, from the contents, so two devices migrating the same
+    /// row independently arrive at the same id rather than forking it.
+    /// </summary>
+    public string? Id { get; init; }
+}
 
 /// <summary>
 /// One Wonder Pick offer that was evaluated. Offers seen are logged rather than only offers taken,
@@ -38,7 +53,11 @@ public sealed record WonderOfferEvent(
     List<string> OwnershipKeys,
     int StaminaCost,
     bool Taken,
-    string? Received);
+    string? Received)
+{
+    /// <summary>Stable identity. See <see cref="PackOpenEvent.Id"/>, which it works exactly like.</summary>
+    public string? Id { get; init; }
+}
 
 /// <summary>
 /// A regenerating resource pool. Pack, Wonder and Trade are three instances of this one shape, and
@@ -300,6 +319,22 @@ public sealed record Profile(
     public List<string> TradeBoard { get; init; } = [];
 
     /// <summary>
+    /// Log rows this collection has deleted, by id -- for the pack log and the Wonder log alike,
+    /// since the ids are unique across both.
+    ///
+    /// Both logs are append-only to the merge, which is what stops a row one device has not seen
+    /// from reading as a deletion. The cost is that a row the user really did delete came back on
+    /// the next sync from whichever device still had it: clearing the history, or resetting a
+    /// collection, undid itself. A deletion has to be a thing the state says, not the absence of
+    /// one, or it cannot survive a union.
+    ///
+    /// Kept rather than pruned, because "absent here" and "never arrived here" are the same
+    /// silence. It grows only when something is deleted, and holds an id per row rather than a
+    /// row, so a cleared history of several thousand packs costs tens of kilobytes.
+    /// </summary>
+    public List<string> RemovedLog { get; init; } = [];
+
+    /// <summary>
     /// The game's own lifetime counters, or null if never entered. An optional property rather
     /// than a constructor parameter, so existing saves deserialize unchanged and no schema bump
     /// is needed.
@@ -360,7 +395,7 @@ public sealed record AppState(
     string ActiveProfileId,
     Prefs Prefs)
 {
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
 
     public static AppState Fresh()
     {

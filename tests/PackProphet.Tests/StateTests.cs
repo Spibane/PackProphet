@@ -315,4 +315,61 @@ public class StateTests
         Assert.NotNull(back);
         Assert.Empty(back!.Prefs.AssumedRateDonors);
     }
+
+    /// <summary>A v4 save: two logged packs, no row ids, since ids did not exist yet.</summary>
+    private const string V4WithLog =
+        """{"schemaVersion":4,"profiles":[{"id":"p","name":"n","collection":{},"targets":{"defaultPlan":{"0":1},"planBySet":{}},"decks":[],"chaseLists":[],"packLog":[{"at":"2026-03-01T12:00:00+00:00","set":"A1","pack":"A1:pikachu","variant":"std","ownershipKeys":["x.webp"]},{"at":"2026-03-01T12:00:00+00:00","set":"A1","pack":"A1:pikachu","variant":"std","ownershipKeys":["x.webp"]}],"wonderLog":[],"resources":null}],"activeProfileId":"p","prefs":{"theme":"auto"}}""";
+
+    [Fact]
+    public void Two_devices_migrating_the_same_log_agree_on_every_row_id()
+    {
+        // The property the whole migration rests on. Each device reads its own copy, offline,
+        // with no way to ask the other what it called anything -- so the ids have to fall out of
+        // the row's contents. Random ones would turn every existing pack into one pack per
+        // device at the next sync, which is the fault this was meant to end.
+        var phone = StateSerializer.Deserialize(V4WithLog)!;
+        var laptop = StateSerializer.Deserialize(V4WithLog)!;
+
+        Assert.Equal(
+            phone.Active.PackLog.Select(e => e.Id),
+            laptop.Active.PackLog.Select(e => e.Id));
+        Assert.All(phone.Active.PackLog, e => Assert.False(string.IsNullOrWhiteSpace(e.Id)));
+    }
+
+    [Fact]
+    public void Two_identical_rows_in_one_log_are_still_told_apart()
+    {
+        // Both rows in that save are the same pack at the same instant with the same cards -- a
+        // burst the game gave twice. Deriving an id from the contents alone would give them one
+        // id between them, and the merge would collapse two packs into one.
+        var back = StateSerializer.Deserialize(V4WithLog)!;
+
+        Assert.Equal(2, back.Active.PackLog.Count);
+        Assert.Equal(2, back.Active.PackLog.Select(e => e.Id).Distinct().Count());
+    }
+
+    [Fact]
+    public void A_row_that_already_has_an_id_keeps_it_through_a_reload()
+    {
+        var state = AppState.Fresh();
+        state.Active.PackLog.Add(
+            new PackOpenEvent(DateTimeOffset.UnixEpoch, "A1", "A1:pikachu", "std", ["x.webp"])
+            {
+                Id = "abc123abc123",
+            });
+
+        var back = StateSerializer.Deserialize(StateSerializer.Serialize(state))!;
+
+        Assert.Equal("abc123abc123", back.Active.PackLog[0].Id);
+    }
+
+    [Fact]
+    public void A_save_from_a_newer_schema_is_refused_rather_than_read_lossily()
+    {
+        // v5 added row ids and the deleted-row list. A build that does not know those fields
+        // would drop them on read and store the loss on the next write -- which for the deleted
+        // list means every deletion undoing itself again.
+        Assert.Null(StateSerializer.Deserialize(
+            V4WithLog.Replace("\"schemaVersion\":4", $"\"schemaVersion\":{AppState.CurrentSchemaVersion + 1}")));
+    }
 }

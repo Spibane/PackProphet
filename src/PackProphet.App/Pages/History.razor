@@ -669,7 +669,12 @@ else
             {
                 Collection = collection,
                 Resources = p.Resources with { PackPointsBySet = points },
-                PackLog = p.PackLog.Where(x => !doomed.Contains(x)).ToList()
+                PackLog = p.PackLog.Where(x => !doomed.Contains(x)).ToList(),
+
+                // Said, not merely done. Dropping the row leaves the other device holding a row
+                // this one has never seen -- indistinguishable from a pack logged on the phone
+                // while this laptop was closed -- and the next sync handed it back.
+                RemovedLog = [.. p.RemovedLog, .. entries.Select(LogId.Of)]
             };
         });
     }

@@ -151,16 +151,59 @@ public static class StateSerializer
             .Select(w => w with { Wanted = w.Wanted ?? new Dictionary<string, int>() })
             .ToList(),
 
-        PackLog = (p.PackLog ?? []).Where(e => e is not null)
-            .Select(e => e with { OwnershipKeys = e.OwnershipKeys ?? [] }).ToList(),
+        // Ids are filled in here rather than in a migration step, so that a row arriving without
+        // one -- a pre-v5 save, a hand-edited backup, a row some future code path forgets to
+        // name -- is named once, at the boundary every reader comes through.
+        PackLog = WithIds(
+            (p.PackLog ?? []).Where(e => e is not null)
+                .Select(e => e with { OwnershipKeys = e.OwnershipKeys ?? [] }),
+            LogId.Content, (e, id) => e with { Id = id }),
 
-        WonderLog = (p.WonderLog ?? []).Where(e => e is not null)
-            .Select(e => e with { OwnershipKeys = e.OwnershipKeys ?? [] }).ToList(),
+        WonderLog = WithIds(
+            (p.WonderLog ?? []).Where(e => e is not null)
+                .Select(e => e with { OwnershipKeys = e.OwnershipKeys ?? [] }),
+            LogId.Content, (e, id) => e with { Id = id }),
+
+        RemovedLog = (p.RemovedLog ?? []).Where(k => !string.IsNullOrWhiteSpace(k))
+            .Distinct(StringComparer.Ordinal).ToList(),
 
         TradeBoard = (p.TradeBoard ?? []).Where(k => !string.IsNullOrWhiteSpace(k)).ToList(),
 
         Resources = Normalise(p.Resources)
     };
+
+    /// <summary>
+    /// Name every row that has no name, from its contents, so that two devices reading their own
+    /// copy of the same log independently agree on what to call each row. Rows that already have
+    /// an id keep it -- this can never rename a row, only name an unnamed one.
+    /// </summary>
+    private static List<T> WithIds<T>(
+        IEnumerable<T> log, Func<T, string> content, Func<T, string, T> name)
+    {
+        var occurrences = new Dictionary<string, int>(StringComparer.Ordinal);
+        var result = new List<T>();
+
+        foreach (var row in log)
+        {
+            var key = content(row);
+
+            // Counted for every row, not only the unnamed ones: the count is a position among
+            // identical contents, and skipping the named ones would shift it.
+            var occurrence = occurrences.GetValueOrDefault(key);
+            occurrences[key] = occurrence + 1;
+
+            result.Add(Named(row) ? row : name(row, LogId.Derive(key, occurrence)));
+        }
+
+        return result;
+
+        static bool Named(T row) => row switch
+        {
+            PackOpenEvent e => e.Id is { Length: > 0 },
+            WonderOfferEvent e => e.Id is { Length: > 0 },
+            _ => false,
+        };
+    }
 
     private static Resources Normalise(Resources? r) =>
         r is null

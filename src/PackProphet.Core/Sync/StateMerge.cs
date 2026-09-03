@@ -73,8 +73,11 @@ internal sealed class Conflicts
 ///                       HIGHER count wins -- a tracker that forgets a card you own is worse than
 ///                       one that shows a card you sold, and the second is visible where the first
 ///                       is not.
-///   Pack and Wonder log union. Append-only ledgers, so a row missing from one side is a row that
-///                       side has not seen yet, never a deletion. Deduplicated on identity.
+///   Pack and Wonder log per row id. A row missing from one side is a row that side has not seen
+///                       yet, never a deletion -- absence cannot delete, because a device that
+///                       has not synced in a week is absent from most of the week. A deletion is
+///                       said out loud instead, as an id in RemovedLog, and those union: once a
+///                       row is deleted anywhere it stays deleted everywhere.
 ///   Decks, chase lists  per id. Added on either side, kept. Deleted on one side and untouched on
 ///                       the other, deleted. Edited on both, THIS device wins and it is reported.
 ///   Everything else     per field, this device wins a genuine conflict, except resource pools and
@@ -96,6 +99,11 @@ public static class StateMerge
     ///
     /// Preferences and the profile list are deliberately not consulted: a device with three named
     /// collections and nothing in any of them still has nothing to lose.
+    ///
+    /// A recorded deletion does count, and has to. Resetting a collection now empties the logs for
+    /// real rather than having them handed back, so a device that has just been reset looks
+    /// exactly like one whose state never loaded -- except for the tombstones, which are the
+    /// user's own deliberate act and the one thing an unloaded state cannot have.
     /// </summary>
     public static bool NothingRecorded(AppState state) =>
         state.Profiles.All(p =>
@@ -103,7 +111,8 @@ public static class StateMerge
             && p.PackLog.Count == 0
             && p.WonderLog.Count == 0
             && p.Decks.Count == 0
-            && p.ChaseLists.Count == 0);
+            && p.ChaseLists.Count == 0
+            && p.RemovedLog.Count == 0);
 
     /// <summary>
     /// Merge remote into local, given the ancestor both were last known to share.
@@ -199,6 +208,12 @@ public static class StateMerge
             $"{listClashes} chase {(listClashes == 1 ? "list was" : "lists were")} edited on both " +
             $"devices in {where}; kept this device's version.");
 
+        // Deletions union, and are applied to both logs: a row deleted on either device is gone
+        // from the result even when the other device still holds it, which is the whole point of
+        // recording the deletion rather than inferring it from absence.
+        var removed = new HashSet<string>(local.RemovedLog, StringComparer.Ordinal);
+        removed.UnionWith(remote.RemovedLog);
+
         return local with
         {
             // A device that never renamed the collection should not outvote one that did.
@@ -208,8 +223,11 @@ public static class StateMerge
             Collection = collection,
             Decks = decks,
             ChaseLists = lists,
-            PackLog = UnionLog(local.PackLog, remote.PackLog, PackKey),
-            WonderLog = UnionLog(local.WonderLog, remote.WonderLog, WonderKey),
+            PackLog = MergeLog(local.PackLog, remote.PackLog, b?.PackLog, LogId.Of, e => e.At,
+                               removed, conflicts, where, "logged pack"),
+            WonderLog = MergeLog(local.WonderLog, remote.WonderLog, b?.WonderLog, LogId.Of,
+                                 e => e.At, removed, conflicts, where, "Wonder Pick offer"),
+            RemovedLog = [.. removed],
             Targets = MergeTargets(local.Targets, remote.Targets, b?.Targets, conflicts, where),
             Resources = MergeResources(local.Resources, remote.Resources, b?.Resources,
                                        conflicts, where),
@@ -274,28 +292,99 @@ public static class StateMerge
         return result;
     }
 
-    // ---- Append-only ledgers -------------------------------------------------------------
+    // ---- Logs -------------------------------------------------------------
 
-    private static List<T> UnionLog<T>(List<T> local, List<T> remote, Func<T, string> identity)
+    /// <summary>
+    /// A log, merged row by row on identity, with deleted rows dropped and the result put back in
+    /// order.
+    ///
+    /// This was a plain union on content identity, which was wrong twice over. A row the user
+    /// deleted came back from whichever device still had it, so clearing the history undid
+    /// itself. And an EDITED row -- redating a pack -- changed its own content identity, so the
+    /// other device's copy no longer matched it and the union kept both: one pack, logged twice,
+    /// counted twice in every figure on the history page.
+    ///
+    /// Row ids fix the second, and make the first expressible: a deletion is an id in RemovedLog
+    /// rather than an absence, and an absence goes back to meaning "not seen here yet".
+    ///
+    /// Sorted on the way out, by time and then by id. Not cosmetic: two devices that merged the
+    /// same rows in a different order would hold lists that compare unequal, and the merge would
+    /// push and re-push a result that never settles.
+    /// </summary>
+    private static List<T> MergeLog<T>(
+        List<T> local, List<T> remote, List<T>? ancestor,
+        Func<T, string> id, Func<T, DateTimeOffset> at, HashSet<string> removed,
+        Conflicts conflicts, string where, string what)
+        where T : class
     {
-        var seen = new HashSet<string>();
-        var all = new List<T>(local.Count + remote.Count);
+        // Indexed rather than scanned. MergeById does the same work with FirstOrDefault, which is
+        // fine for a dozen decks and quadratic for a log: a pair of devices with three thousand
+        // packs each would compare nine million times per sync, on a phone.
+        var theirs = ById(remote, id);
+        var before = ById(ancestor, id);
+        var mineByKey = ById(local, id);
 
-        foreach (var item in local.Concat(remote))
-            if (seen.Add(identity(item))) all.Add(item);
+        var clashes = 0;
+        var merged = new List<T>(local.Count + remote.Count);
 
-        return all;
+        foreach (var mine in local)
+        {
+            var key = id(mine);
+            var them = theirs.GetValueOrDefault(key);
+            var was = before.GetValueOrDefault(key);
+
+            if (them is null)
+            {
+                // Gone there. Honoured unless this device edited it since -- an edit is the more
+                // recent intent, and deleting would throw it away.
+                if (was is not null && Same(mine, was)) continue;
+                merged.Add(mine);
+                continue;
+            }
+
+            if (Same(mine, them)) { merged.Add(mine); continue; }
+
+            var mineChanged = was is null || !Same(mine, was);
+            var theirsChanged = was is null || !Same(them, was);
+
+            if (!mineChanged) { merged.Add(them); continue; }
+            if (!theirsChanged) { merged.Add(mine); continue; }
+
+            merged.Add(mine);
+            clashes++;
+        }
+
+        foreach (var them in remote)
+        {
+            var key = id(them);
+            if (mineByKey.ContainsKey(key)) continue;
+
+            var was = before.GetValueOrDefault(key);
+            if (was is not null && Same(them, was)) continue;    // deleted here, untouched there
+            merged.Add(them);
+        }
+
+        conflicts.Add(clashes,
+            $"{clashes} {(clashes == 1 ? what : what + "s")} in {where} " +
+            $"{(clashes == 1 ? "was" : "were")} edited on both devices; kept this device's.");
+
+        return merged.Where(row => !removed.Contains(id(row)))
+                     .OrderBy(at).ThenBy(id, StringComparer.Ordinal)
+                     .ToList();
     }
 
     /// <summary>
-    /// Identity of a logged pack. The timestamp alone is not enough -- a ten-pack burst can share
-    /// a second -- and the cards pulled are what make two rows at the same instant different.
+    /// Rows by id, first one wins. A duplicate id cannot come out of this app -- ids are assigned
+    /// on read and on log -- but it can come out of a hand-edited backup, and a merge is not the
+    /// place to throw over one.
     /// </summary>
-    private static string PackKey(PackOpenEvent e) =>
-        $"{e.At.ToUnixTimeMilliseconds()}|{e.Set}|{e.Pack}|{e.Variant}|{string.Join(",", e.OwnershipKeys)}";
-
-    private static string WonderKey(WonderOfferEvent e) =>
-        $"{e.At.ToUnixTimeMilliseconds()}|{e.StaminaCost}|{e.Taken}|{e.Received}|{string.Join(",", e.OwnershipKeys)}";
+    private static Dictionary<string, T> ById<T>(List<T>? rows, Func<T, string> id)
+        where T : class
+    {
+        var index = new Dictionary<string, T>(rows?.Count ?? 0, StringComparer.Ordinal);
+        foreach (var row in rows ?? []) index.TryAdd(id(row), row);
+        return index;
+    }
 
     // ---- Keyed collections ---------------------------------------------------------------
 

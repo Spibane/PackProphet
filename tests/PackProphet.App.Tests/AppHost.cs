@@ -146,6 +146,7 @@ public abstract class AppHost : TestContext
         Services.AddSingleton<PaletteSwitch>();
         Services.AddSingleton<GridFocus>();
         Services.AddSingleton<ArtHashSource>();
+        Services.AddSingleton<TypeBadgeSource>();
         Services.AddSingleton<ShotScanner>();
 
         Services.AddSingleton<BrowserStore>();

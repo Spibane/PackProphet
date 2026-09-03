@@ -47,6 +47,15 @@
   </ItemGroup>
 
 
+  <!-- The committed card type badges, read as data for the same reason. The test that matters
+       about this file compares it against the types the card detail table already knows, which is
+       a check on 2,000-odd real answers rather than on a handful of fixtures. -->
+  <ItemGroup>
+    <Content Include="..\..\src\PackProphet.App\wwwroot\data\card-types.txt"
+             Link="card-types.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+
   <!-- A real export from PTCGP Tracker, kept byte for byte as that site wrote it. A fixture we
        authored ourselves would only prove this code can read its own output; the point of this
        one is that it was produced by the tracker rather than by us. Card counts only — the

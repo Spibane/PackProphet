@@ -12,9 +12,26 @@ information, a dataset with no licence at all, and scraping the origin directly.
 
 | Source | Used for | Licence |
 | --- | --- | --- |
-| [chase-mew/pokemon-tcg-pocket-cards](https://github.com/chase-mew/pokemon-tcg-pocket-cards) v5 | Attacks, abilities, evolution stage, element, HP, retreat, weakness, evolves-from | AGPL-3.0-or-later |
+| [chase-mew/pokemon-tcg-pocket-cards](https://github.com/chase-mew/pokemon-tcg-pocket-cards) v5 | Attacks, abilities, evolution stage, element, HP, retreat, weakness, evolves-from; expansion logos; **card artwork, as the second source in the chain** | AGPL-3.0-or-later |
 | [flibustier/pokemon-tcg-pocket-database](https://github.com/flibustier/pokemon-tcg-pocket-database) | **Pull rates** (published nowhere else), pack membership, rarity economics (pack points, shinedust), set/series grouping, artwork filenames | MIT, © Jon (flibustier) |
-| [flibustier/pokemon-tcg-exchange](https://github.com/flibustier/pokemon-tcg-exchange) | Card and booster artwork | MIT, © Jon (flibustier) |
+| [flibustier/pokemon-tcg-exchange](https://github.com/flibustier/pokemon-tcg-exchange) | Card and booster artwork, as the first source in the chain | MIT, © Jon (flibustier) |
+
+### Why artwork has more than one source
+
+Card data and card artwork are published from two different repositories on two different
+cadences. The data ships within days of a set going live; the artwork is a manual commit that
+lands when it lands. B4a's data was published on 2026-08-27 and its artwork was still absent a
+week later, which drew every card in the newest set as a placeholder.
+
+So artwork is a chain rather than a single URL — see `PackProphet.Core/Domain/ArtSource.cs`. Both
+remote sources are already listed above, both are reached over jsDelivr, and neither is a new
+dependency: the chain is an ordering of what this project already used.
+
+Artwork for a set neither source has published yet is taken from the
+[pokemon-tcg-pocket-database release archive](https://github.com/flibustier/pokemon-tcg-pocket-database/releases)
+at deploy time — the same MIT source as the second row above, and the same artwork, distributed by
+its author as a release asset rather than per file. It is written into the published site and never committed;
+see `tools/vendor-gap-art.py`.
 
 Card data ultimately originates from **[Limitless TCG](https://pocket.limitlesstcg.com/cards)**,
 from which the datasets above are compiled.

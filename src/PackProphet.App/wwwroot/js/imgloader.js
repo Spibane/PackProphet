@@ -37,6 +37,34 @@ let prefetchQueue = [];
 const attempted = new Set();      // urls fetched or in flight, so nothing is requested twice
 let prefetched = 0;
 
+// Art is a CHAIN of urls, not one url.
+//
+// Card art and card data are published from different repositories on different cadences, so the
+// newest set's art routinely does not exist at the source this app has always used -- see
+// ArtSource in the Core project. data-src is the first place to look and data-src-alt carries the
+// rest, pipe-separated, in order. An <img> reports failure with no status code, so "missing here"
+// and "throttled here" are the same event and both are answered the same way: try the next one.
+//
+// One in-flight slot covers a whole chain. Walking the candidates does not open a second stream,
+// which is what stops a set that is missing upstream from tripling the concurrency the cap exists
+// to hold down.
+function candidates(img) {
+    const first = img.dataset.src;
+    if (!first) return [];
+    const rest = img.dataset.srcAlt ? img.dataset.srcAlt.split('|').filter(Boolean) : [];
+    return [first, ...rest];
+}
+
+// One retry round per card, after a pause, before a tile is called failed.
+//
+// jsDelivr answers a burst of a few hundred image requests with 403s, and a card grid is exactly
+// that burst. The loader used to mark the first failure permanent, so a throttled response became
+// a blank card until the row was recycled -- art that is present, on a CDN that is working, drawn
+// as missing. Every candidate has to fail twice, spaced, to count.
+const RETRY_AFTER_MS = 1500;
+const retried = new Set();     // identities that have had their second chance
+let timers = new Set();
+
 // Urls that have loaded successfully at least once, and so are in the browser's cache.
 //
 // A tile scrolling into view gets a fresh <img> with no state at all -- hidden, spinner up -- and
@@ -48,7 +76,12 @@ let prefetched = 0;
 // there to keep a fast scroll from opening hundreds of streams on one connection, and a cache hit
 // opens none. (The other half of that flash was CardGrid rendering unkeyed rows, which threw away
 // every visible tile's DOM on each window change. See the note on @key there.)
-const ready = new Set();
+//
+// A Map rather than a Set now: the key is what the tile ASKED for (data-src, which is the
+// element's identity and what the recycling checks compare) and the value is the url that
+// actually answered, which may be further down the chain. Keyed the other way round, a tile
+// scrolling back into view would take the fast path to the candidate that had already failed.
+const ready = new Map();
 let cached = 0;
 
 function enqueue(img) {
@@ -63,8 +96,8 @@ function enqueue(img) {
     if (img.dataset.state === 'queued') return;
 
     // Already in the cache: show it now rather than making it wait behind five other tiles for a
-    // slot it does not need.
-    if (ready.has(want)) { showCached(img, want); return; }
+    // slot it does not need. What gets shown is the url that worked, not the one asked for.
+    if (ready.has(want)) { showCached(img, want, ready.get(want)); return; }
 
     img.dataset.state = 'queued';
     queue.push(img);
@@ -72,7 +105,9 @@ function enqueue(img) {
 }
 
 /// Point a tile at art the browser already has. Takes no in-flight slot.
-function showCached(img, url) {
+///
+/// `want` is the identity to record against; `url` is the candidate that answered for it.
+function showCached(img, want, url) {
     img.onload = img.onerror = null;
     img.classList.remove('img-failed');
     img.dataset.state = 'loading';
@@ -81,12 +116,12 @@ function showCached(img, url) {
     // The memory-cache case, and the one that matters: `complete` is already true in this same
     // tick, so the tile goes straight to done and is never once painted as pending. No blank
     // frame, no spinner, nothing to flash.
-    if (img.complete && img.naturalWidth > 0) { cachedDone(img, url, true); return; }
+    if (img.complete && img.naturalWidth > 0) { cachedDone(img, want, true); return; }
 
     // Disk cache, or a decode still in progress. Still off the queue -- it is not going to the
     // network -- but it does get the ordinary pending look for however long it takes.
-    img.onload = () => cachedDone(img, url, true);
-    img.onerror = () => cachedDone(img, url, false);
+    img.onload = () => cachedDone(img, want, true);
+    img.onerror = () => cachedDone(img, want, false);
 }
 
 function cachedDone(img, url, ok) {
@@ -99,9 +134,11 @@ function cachedDone(img, url, ok) {
     } else {
         // Evicted since we last saw it, so this went to the network after all and failed there.
         // Forget the url and let the managed queue retry it under the cap, where a failure is
-        // handled properly.
+        // handled properly -- and let it have a fresh retry round, since a cache eviction is not
+        // evidence about the source.
+        attempted.delete(ready.get(url));
         ready.delete(url);
-        attempted.delete(url);
+        retried.delete(url);
     }
 
     // Same stale check the queued path makes: the tile may have been recycled onto a different
@@ -147,11 +184,20 @@ function pumpVisible() {
         inflight++;
         img.dataset.state = 'loading';
         const requested = img.dataset.src;
-        const done = ok => {
+        const chain = candidates(img);
+        let step = 0;
+
+        const settle = ok => {
             inflight--;
             img.dataset.state = ok ? 'done' : 'error';
-            if (ok) { loaded++; img.dataset.loadedSrc = requested; ready.add(requested); }
-            else { failed++; img.classList.add('img-failed'); }
+            if (ok) {
+                loaded++;
+                img.dataset.loadedSrc = requested;
+                ready.set(requested, chain[step]);
+            } else {
+                failed++;
+                img.classList.add('img-failed');
+            }
             img.onload = img.onerror = null;
 
             // The card under this element changed while we were fetching, so what just
@@ -163,10 +209,46 @@ function pumpVisible() {
             }
             pump();
         };
+
+        const done = ok => {
+            if (ok || img.dataset.stale) { settle(ok); return; }
+
+            // Next candidate, on the slot this element already holds.
+            if (step + 1 < chain.length) {
+                step++;
+                attempted.add(chain[step]);
+                img.src = chain[step];
+                return;
+            }
+
+            // Every place this card could be said no. Once that is a pause and another go --
+            // a throttled CDN and a card that does not exist look identical from here, and only
+            // one of them is worth asking twice. The slot is given back first: holding it through
+            // the wait would idle a sixth of the budget per failing tile.
+            if (!retried.has(requested)) {
+                retried.add(requested);
+                inflight--;
+                img.onload = img.onerror = null;
+                delete img.dataset.state;
+                const t = setTimeout(() => {
+                    timers.delete(t);
+                    // Dropped from the DOM, or pointed at a different card, while we waited.
+                    if (!img.isConnected || img.dataset.src !== requested) return;
+                    for (const url of chain) attempted.delete(url);
+                    enqueue(img);
+                }, RETRY_AFTER_MS);
+                timers.add(t);
+                pump();
+                return;
+            }
+
+            settle(false);
+        };
+
         img.onload = () => done(true);
         img.onerror = () => done(false);
-        attempted.add(requested);
-        img.src = img.dataset.src;
+        attempted.add(chain[step]);
+        img.src = chain[step];
     }
 }
 
@@ -184,7 +266,9 @@ function pumpPrefetch() {
             prefetched++;
             // Only a success means the cache holds it. Marking a failure ready would send tiles
             // down the fast path to fetch it again, one per tile, outside the cap.
-            if (ok) ready.add(url); else attempted.delete(url);
+            // Primary only: this is opportunistic warming, and a tile that finds the primary
+            // missing will walk the rest of the chain properly under the cap.
+            if (ok) ready.set(url, url); else attempted.delete(url);
             probe.onload = probe.onerror = null;
             pump();
         };
@@ -230,7 +314,7 @@ export function init(root) {
 
 export function stats() {
     return { loaded, failed, cached, queued: queue.length, inflight, prefetched,
-             prefetchPending: prefetchQueue.length, ready: ready.size };
+             prefetchPending: prefetchQueue.length, ready: ready.size, retrying: timers.size };
 }
 
 /// Queue every given url for background fetching, replacing any previous prefetch. Called
@@ -253,5 +337,10 @@ export function refresh() {
 
 export function dispose() {
     io?.disconnect(); mo?.disconnect();
+    // The retry timers hold a reference to an <img> in a grid that is going away, and one of them
+    // firing after disposal would re-enqueue into a loader with no observer to drive it.
+    for (const t of timers) clearTimeout(t);
+    timers = new Set();
+    retried.clear();
     io = mo = host = null; queue = []; prefetchQueue = []; inflight = 0;
 }

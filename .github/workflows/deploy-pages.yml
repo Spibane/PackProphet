@@ -100,6 +100,32 @@ jobs:
       - name: Publish
         run: dotnet publish src/PackProphet.App/PackProphet.App.csproj -c Release -o build
 
+      # Card art for the sets the art CDN has not published yet.
+      #
+      # Card data and card art come from the same author in two repositories on two cadences, so
+      # the newest set's data arrives days or weeks before its art -- and until the art lands,
+      # every card in the set people are actually opening draws as a placeholder. The art does
+      # exist by then, attached to the database repository's release as one ~400 MB zip, and the
+      # script reads about 6 MB of it by ranged request.
+      #
+      # AFTER publish, and that ordering is the whole design:
+      #
+      #   * added before publish, the files would be fingerprinted by the static-asset pipeline and
+      #     renamed out from under the URLs ArtSource builds;
+      #   * added before publish, they would also land in service-worker-assets.js, where the
+      #     integrity check below would then be verifying files this step wrote rather than files
+      #     the build produced;
+      #   * and nothing here is ever committed, so the repository does not grow by a set every
+      #     month -- at 12.5 sets and ~103 MB a year, a decade of vendored art would otherwise be
+      #     1.2 GB of git history for files the working tree does not even hold.
+      #
+      # Never fatal. A CDN that is briefly unavailable must not block a deploy: the app falls back
+      # to the remote chain, which is where it looked before any of this existed.
+      - name: Vendor the art upstream has not published yet
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 tools/vendor-gap-art.py --out build/wwwroot/art
+
       # GitHub Pages runs Jekyll by default, which silently DROPS directories whose
       # names start with an underscore — including _framework. Without this file the
       # deploy "succeeds" and serves a blank page with no useful error.

@@ -26,3 +26,9 @@ __pycache__/
 # is how `dotnet run` reaches a real Supabase project while the committed file stays the placeholder
 # a fork builds against. The deployed values come from repository variables — see deploy-pages.yml.
 src/PackProphet.App/wwwroot/appsettings.Development.json
+
+# Card art for sets the art CDN has not published yet. The deploy workflow writes this into the
+# PUBLISHED output and never into the tree -- see tools/vendor-gap-art.py and the note in
+# ArtSource -- but the script takes an --out, and pointing it here to try it out must not turn six
+# megabytes of card art into a commit that stays in the history forever.
+src/PackProphet.App/wwwroot/art/

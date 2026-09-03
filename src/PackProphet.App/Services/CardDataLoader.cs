@@ -12,10 +12,17 @@ public enum DataSource { Cdn, VendoredSnapshot }
 /// here and RouteCost / PointsLedger both need them. Read from the data, never hardcoded: they
 /// are balance numbers the developers can change.
 /// </param>
+/// <param name="VendoredArtSets">
+/// Sets this deployment shipped card art for, from the manifest the deploy workflow writes.
+/// Reported here as well as pushed into <see cref="ArtSource"/> because that is process-wide state
+/// and this is a fact about one load — which is what makes it assertable, and what lets a
+/// diagnostics view say where the art on screen is coming from.
+/// </param>
 public sealed record CardData(
     CardIndex Index, PullRates Rates, CardFacts Facts, SetCatalog Sets, PackArtCatalog PackArt,
     IReadOnlyDictionary<string, Rarity> Rarities,
-    DataSource Source, string? Version);
+    DataSource Source, string? Version,
+    IReadOnlyCollection<string> VendoredArtSets);
 
 /// <summary>
 /// Loads the card database, preferring the live CDN so newly released sets appear without a
@@ -72,14 +79,74 @@ public sealed class CardDataLoader
         return await _http.GetFromJsonAsync<T>(url, cts.Token);
     }
 
+    /// <summary>
+    /// Which sets this deployment shipped art for.
+    ///
+    /// Written into the published output by the deploy workflow and deliberately NOT committed, so
+    /// it is absent in development, absent in tests, and absent on a deploy that found nothing
+    /// missing upstream. All three of those are a 404, and a 404 means "none" rather than a fault.
+    ///
+    /// It is also not precached: the service worker's include list matches `^data/`, and this
+    /// deliberately does not live under data/ -- a manifest that came back from the install-time
+    /// cache would name the sets of whichever deploy the user first visited.
+    /// </summary>
+    private const string ArtManifest = "art/index.json";
+
+    private sealed record VendoredArt(List<string>? Sets, List<string>? Packs);
+
+    /// <summary>
+    /// Its own deadline, and a short one.
+    ///
+    /// This is a few dozen bytes from the host already serving the page, and the app is on
+    /// "Loading card data…" until it answers. It also has no fallback worth waiting for: the
+    /// answer to a manifest that does not arrive is "no vendored art", which is what a
+    /// development build and most deploys say anyway. A hang here used to hold the boot open
+    /// indefinitely -- caught by the test that hangs every remote request, which is exactly the
+    /// shape of a network that drops packets rather than refusing them.
+    /// </summary>
+    private static readonly TimeSpan ArtManifestDeadline = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// Read the art manifest and tell <see cref="ArtSource"/> what it found. Awaited inside
+    /// <see cref="LoadAsync"/> rather than fired off beside it: it decides what every tile's
+    /// data-src is, so it has to be answered before the first grid renders or the newest set
+    /// spends a request per card discovering the upstream gap it was vendored to fill.
+    ///
+    /// Same origin and a couple of dozen bytes, so awaiting it costs a round trip to the host
+    /// already serving the page.
+    /// </summary>
+    private async Task<IReadOnlyCollection<string>> ReadArtManifestAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(ArtManifestDeadline);
+
+            var manifest = await _http.GetFromJsonAsync<VendoredArt>(ArtManifest, cts.Token);
+            ArtSource.UseVendored(manifest?.Sets, manifest?.Packs);
+        }
+        catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            // Absent, malformed, or offline with nothing cached. Every card falls back to the
+            // remote chain, which is where it came from before any of this existed.
+            ArtSource.UseVendored(null, null);
+        }
+
+        return ArtSource.VendoredSets.ToArray();
+    }
+
     public async Task<CardData> LoadAsync(CancellationToken ct = default)
     {
         if (_cached is not null) return _cached;
 
-        var fromCdn = await TryLoadAsync(Cdn, DataSource.Cdn, ct);
-        return _cached = fromCdn ?? await TryLoadAsync(Local, DataSource.VendoredSnapshot, ct)
+        var art = await ReadArtManifestAsync(ct);
+
+        var loaded = await TryLoadAsync(Cdn, DataSource.Cdn, ct)
+            ?? await TryLoadAsync(Local, DataSource.VendoredSnapshot, ct)
             ?? throw new InvalidOperationException(
                 "Neither the CDN nor the vendored snapshot could be loaded.");
+
+        return _cached = loaded with { VendoredArtSets = art };
     }
 
     private async Task<CardData?> TryLoadAsync(string root, DataSource source, CancellationToken ct)
@@ -111,8 +178,11 @@ public sealed class CardDataLoader
             // enough to look like the app has hung. It is enrichment — attacks and abilities —
             // rather than something a screen needs to function, so LoadFactsAsync fetches it
             // afterwards and folds it in.
+            // VendoredArtSets is filled in by LoadAsync, which read the manifest before either
+            // source was tried: it is a fact about the deployment rather than about which of the
+            // two data sources answered.
             return new CardData(index, new PullRates(rates), CardFacts.Empty, catalog, packArt,
-                                rarities, source, version);
+                                rarities, source, version, []);
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or NotSupportedException
                                       or System.Text.Json.JsonException)

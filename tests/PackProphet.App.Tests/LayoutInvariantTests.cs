@@ -194,6 +194,78 @@ public class LayoutInvariantTests
     }
 
     [Fact]
+    public void The_image_loader_still_walks_the_fallback_chain_and_retries()
+    {
+        // Card art is a chain, because card data and card art are published on different cadences
+        // and the newest set regularly has one without the other -- see ArtSource. Two halves of
+        // that live in js/imgloader.js and both fail silently if they go:
+        //
+        //   data-src-alt   dropped, and only the primary is ever tried: a set missing upstream
+        //                  draws as placeholders again, exactly as before the chain existed.
+        //   the retry      dropped, and a throttled 403 from a burst of a few hundred image
+        //                  requests becomes a permanently blank card.
+        //
+        // There is no JavaScript test runner in this repository, so this is a source assertion in
+        // the same style as the gridspy check above. It is a guard against removal, not a
+        // behavioural test.
+        var loader = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "js", "imgloader.js"));
+
+        Assert.Contains("dataset.srcAlt", loader, StringComparison.Ordinal);
+        Assert.Contains("RETRY_AFTER_MS", loader, StringComparison.Ordinal);
+
+        // The markup has to be handing it over, or the attribute is read and always empty.
+        Assert.Contains("data-src-alt=\"@card.ArtFallbackUrls\"", Grid, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Vendored_art_is_written_after_publish_and_before_the_integrity_check()
+    {
+        // Three separate reasons this ordering is load-bearing, and not one of them is visible
+        // from a deploy that reports success:
+        //
+        //   before publish  -- the static-asset pipeline fingerprints what it finds, renaming the
+        //                      files out from under the urls ArtSource builds;
+        //   before publish  -- the files also land in service-worker-assets.js, so the integrity
+        //                      step below verifies this script's output rather than the build's;
+        //   after the check -- nothing catches a step that wrote into a precached path.
+        //
+        // Moving the step is a one-line edit and the deploy would still go green either way.
+        var yaml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "deploy-pages.yml"));
+
+        var publish = yaml.IndexOf("- name: Publish", StringComparison.Ordinal);
+        var vendor = yaml.IndexOf("vendor-gap-art.py", StringComparison.Ordinal);
+        var verify = yaml.IndexOf("- name: Verify the service worker manifest",
+                                  StringComparison.Ordinal);
+
+        Assert.True(publish >= 0, "the deploy no longer has a Publish step by that name");
+        Assert.True(vendor >= 0, "the deploy no longer vendors art");
+        Assert.True(verify >= 0, "the deploy no longer verifies the service worker manifest");
+
+        Assert.True(publish < vendor, "art must be vendored AFTER dotnet publish");
+        Assert.True(vendor < verify, "art must be vendored BEFORE the integrity check");
+    }
+
+    [Fact]
+    public void Vendored_art_is_written_somewhere_the_service_worker_does_not_precache()
+    {
+        // The precache include list matches `^data/` outright, so art written under data/ would be
+        // downloaded in full on a first visit -- and the stylesheet's own comments treat 663 KB as
+        // worth excluding. A set is about 6 MB.
+        var yaml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "deploy-pages.yml"));
+        var worker = File.ReadAllText(Path.Combine(AppContext.BaseDirectory,
+                                                   "service-worker.published.js"));
+
+        var arg = Regex.Match(yaml, @"vendor-gap-art\.py\s+--out\s+(?<path>\S+)");
+        Assert.True(arg.Success, "could not find where the deploy writes vendored art");
+
+        var under = arg.Groups["path"].Value.Replace("build/wwwroot/", "", StringComparison.Ordinal);
+
+        Assert.Contains(@"/^data\//", worker);      // the rule this is avoiding still exists
+        Assert.False(under.StartsWith("data/", StringComparison.Ordinal),
+            $"art is written to {under}, which the service worker precaches on install");
+    }
+
+    [Fact]
     public void Virtualize_item_size_matches_the_row_height_it_renders()
     {
         // Virtualize is told a fixed row height up front. If the stylesheet and that number

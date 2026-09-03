@@ -437,8 +437,9 @@ public sealed class SyncService : IAsyncDisposable
             // Last line of defence, and the one that does not depend on getting the ordering
             // right somewhere else. Nothing local, something in the ancestor: the merge would
             // read every card, deck and list as deleted here, honour it, and push that up. A user
-            // who really did clear everything still has the logs, so this cannot be reached by
-            // resetting a collection -- only by state that was never loaded.
+            // who really did clear everything leaves the deletions recorded behind them, which an
+            // unloaded state cannot have, so this cannot be reached by resetting a collection --
+            // only by state that was never loaded.
             if (_ancestor is not null
                 && StateMerge.NothingRecorded(_session.State)
                 && !StateMerge.NothingRecorded(_ancestor))

@@ -611,7 +611,7 @@ else
             var log = new List<PackOpenEvent>(p.PackLog)
             {
                 // Variant is unknown from the user's point of view; they just opened "a pack".
-                new(DateTimeOffset.Now, set, parts[1], "unknown", keys)
+                new(DateTimeOffset.Now, set, parts[1], "unknown", keys) { Id = LogId.New() }
             };
 
             return p with

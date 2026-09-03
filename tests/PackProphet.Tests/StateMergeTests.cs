@@ -138,7 +138,7 @@ public class StateMergeTests
         Assert.Equal(Owned(once), Owned(twice.State));
     }
 
-    // ---- Append-only ledgers -------------------------------------------------------------
+    // ---- Logs -------------------------------------------------------------
 
     [Fact]
     public void Packs_logged_on_both_devices_all_survive()
@@ -188,22 +188,142 @@ public class StateMergeTests
     }
 
     [Fact]
-    public void A_pack_log_entry_deleted_on_one_device_comes_back()
+    public void A_pack_the_other_device_has_not_seen_yet_is_not_a_deletion()
     {
-        // Deliberate: the log is append-only, so a row one side lacks is a row it has not seen.
-        // There is no delete-a-pack control, and treating an absence as a deletion would let a
-        // stale device quietly empty a history.
+        // The property the union was protecting, and the one that has to survive being able to
+        // delete: a device that has been closed for a week is absent from most of the week.
         var at = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
-        var ancestor = AppState.Fresh();
-        ancestor.Active.PackLog.Add(new PackOpenEvent(at, "A1", "A1:pikachu", "std", ["x.webp"]));
+        var ancestor = Clone(AppState.Fresh());
 
         var local = Clone(ancestor);
+        local.Active.PackLog.Add(Pack(at, "x.webp"));
+
+        var merged = StateMerge.Merge(local, Clone(ancestor), ancestor).State;
+
+        Assert.Single(merged.Active.PackLog);
+    }
+
+    [Fact]
+    public void A_deleted_pack_stays_deleted_rather_than_being_handed_back()
+    {
+        // The old behaviour: the row came back from whichever device still had it, while the
+        // cards and pack points that deleting it reversed stayed reversed. A history of packs
+        // whose cards are not in the collection, and every figure on the page counting them.
+        var at = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        var ancestor = Clone(Logged(at, "x.webp"));
         var remote = Clone(ancestor);
-        remote.Active.PackLog.Clear();
+
+        var local = Deleted(ancestor);
 
         var merged = StateMerge.Merge(local, remote, ancestor).State;
 
-        Assert.Single(merged.Active.PackLog);
+        Assert.Empty(merged.Active.PackLog);
+        Assert.Single(merged.Active.RemovedLog);
+    }
+
+    [Fact]
+    public void A_deletion_carries_across_a_first_pair_where_nothing_can_be_inferred()
+    {
+        // No ancestor, so absence proves nothing and the union is the forgiving reading. The
+        // tombstone is the difference between "I have not seen that row" and "I deleted it",
+        // and it is the only thing that can say so here.
+        var at = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        var logged = Clone(Logged(at, "x.webp"));
+
+        var merged = StateMerge.FirstPair(Deleted(logged), logged).State;
+
+        Assert.Empty(merged.Active.PackLog);
+    }
+
+    [Fact]
+    public void Redating_a_pack_moves_it_rather_than_duplicating_it()
+    {
+        // Identity used to be the row's contents, which included the timestamp -- so moving a
+        // pack to another day made it a different row, and the other device's copy of the
+        // original survived alongside it.
+        var at = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        var ancestor = Clone(Logged(at, "x.webp"));
+        var remote = Clone(ancestor);
+
+        var local = Clone(ancestor);
+        var moved = local.Active.PackLog[0] with { At = at.AddDays(-2) };
+        local.Active.PackLog[0] = moved;
+
+        var merged = StateMerge.Merge(local, remote, ancestor).State;
+
+        var row = Assert.Single(merged.Active.PackLog);
+        Assert.Equal(at.AddDays(-2), row.At);
+    }
+
+    [Fact]
+    public void Resetting_a_collection_does_not_get_its_history_back()
+    {
+        // Cards and logs went in opposite directions: the cards were deleted everywhere and the
+        // history came back, so the reset left a state neither device had asked for.
+        var at = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        var ancestor = Clone(Logged(at, "x.webp"));
+        ancestor.Active.Collection["x.webp"] = 1;
+
+        var remote = Clone(ancestor);
+        var reset = Clone(ancestor);
+        var wiped = reset.Active with
+        {
+            Collection = new(),
+            PackLog = [],
+            RemovedLog = [.. reset.Active.PackLog.Select(LogId.Of)],
+        };
+        var local = reset with { Profiles = [wiped] };
+
+        var merged = StateMerge.Merge(local, remote, ancestor).State;
+
+        Assert.Empty(merged.Active.PackLog);
+        Assert.Empty(merged.Active.Collection);
+    }
+
+    [Fact]
+    public void A_log_merged_on_two_devices_comes_out_in_the_same_order_on_both()
+    {
+        // Otherwise the two hold lists that compare unequal forever, and each sync pushes a
+        // result the next one undoes.
+        var at = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        var ancestor = Clone(AppState.Fresh());
+
+        var phone = Clone(ancestor);
+        phone.Active.PackLog.Add(Pack(at.AddHours(2), "later.webp"));
+
+        var laptop = Clone(ancestor);
+        laptop.Active.PackLog.Add(Pack(at, "earlier.webp"));
+
+        var onPhone = StateMerge.Merge(phone, laptop, ancestor).State;
+        var onLaptop = StateMerge.Merge(laptop, phone, ancestor).State;
+
+        Assert.Equal(
+            onPhone.Active.PackLog.Select(e => e.Id),
+            onLaptop.Active.PackLog.Select(e => e.Id));
+        Assert.True(StateMerge.SameState(onPhone, onLaptop));
+    }
+
+    private static PackOpenEvent Pack(DateTimeOffset at, string card) =>
+        new(at, "A1", "A1:pikachu", "std", [card]) { Id = LogId.New() };
+
+    /// <summary>A state holding one logged pack.</summary>
+    private static AppState Logged(DateTimeOffset at, string card)
+    {
+        var state = AppState.Fresh();
+        state.Active.PackLog.Add(Pack(at, card));
+        return state;
+    }
+
+    /// <summary>That state with the pack deleted the way the history page deletes it.</summary>
+    private static AppState Deleted(AppState state)
+    {
+        var copy = Clone(state);
+        var without = copy.Active with
+        {
+            PackLog = [],
+            RemovedLog = [.. copy.Active.PackLog.Select(LogId.Of)],
+        };
+        return copy with { Profiles = [without] };
     }
 
     // ---- Decks and chase lists -----------------------------------------------------------
@@ -656,6 +776,19 @@ public class StateMergeTests
         // value, so this is what the caller has instead -- "is there anything here to lose".
         Assert.True(StateMerge.NothingRecorded(AppState.Fresh()));
         Assert.False(StateMerge.NothingRecorded(With(c => c["a.webp"] = 1)));
+    }
+
+    [Fact]
+    public void A_collection_the_user_reset_is_not_mistaken_for_one_that_never_loaded()
+    {
+        // The two are identical apart from the tombstones: no cards, no logs, nothing. Getting
+        // this wrong would block every sync after a reset, telling the user their collection had
+        // failed to load when they had just cleared it themselves.
+        var at = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        var reset = Deleted(Clone(Logged(at, "x.webp")));
+
+        Assert.Empty(reset.Active.PackLog);
+        Assert.False(StateMerge.NothingRecorded(reset));
     }
 
     [Fact]

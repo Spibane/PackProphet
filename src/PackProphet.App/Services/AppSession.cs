@@ -821,6 +821,9 @@ public sealed class AppSession : IAsyncDisposable
             var log = new List<WonderOfferEvent>(p.WonderLog)
             {
                 new(DateTimeOffset.Now, keys, staminaCost, taken, received?.OwnershipKey)
+                {
+                    Id = LogId.New()
+                }
             };
 
             var next = p with { WonderLog = log };

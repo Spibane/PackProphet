@@ -250,7 +250,7 @@ public class ShotImportHostingTests : AppHost
         first.Click();
 
         // Still on the import, and the button now says what pressing it again costs.
-        Assert.Contains("Really? the other picture goes", Collapse(page.Markup));
+        Assert.Contains("Really? Other screenshots will be deleted.", Collapse(page.Markup));
         Assert.Contains("two.png", page.Markup);
 
         page.FindAll("button.btn-primary:not(#log-all)").ElementAt(0).Click();
@@ -314,7 +314,7 @@ public class ShotImportHostingTests : AppHost
         UploadTwo(page);
 
         page.FindAll("button.btn-primary").ElementAt(0).Click();
-        Assert.Contains("Really? the other picture goes", Collapse(page.Markup));
+        Assert.Contains("Really? Other screenshots will be deleted.", Collapse(page.Markup));
         Assert.Contains("two.png", page.Markup);
 
         page.FindAll("button.btn-primary").ElementAt(0).Click();

@@ -249,7 +249,7 @@ else
                                     @onclick="() => AdoptShot(reading)">
                                 @if (Confirming(reading))
                                 {
-                                    <text>Really? @OthersLost</text>
+                                    <text>Really? Other screenshots will be deleted.</text>
                                 }
                                 else
                                 {
@@ -409,15 +409,6 @@ else
     private bool AdoptCostsTheRest => (_shots?.Readings.Count ?? 0) > 1;
 
     private bool Confirming(ShotReading reading) => ReferenceEquals(_confirmAdopt, reading);
-
-    private string OthersLost
-    {
-        get
-        {
-            var others = Math.Max(0, (_shots?.Readings.Count ?? 0) - 1);
-            return others == 1 ? "the other picture goes" : $"the other {others} pictures go";
-        }
-    }
 
     private string AdoptWarning =>
         AdoptCostsTheRest

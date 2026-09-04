@@ -59,11 +59,15 @@ public sealed class CardDataLoader
         "https://cdn.jsdelivr.net/gh/chase-mew/pokemon-tcg-pocket-cards@main/data/v5";
 
     /// <summary>
-    /// How long a CDN request gets before it is treated as a failure. The fallback below only
-    /// runs when an attempt *returns*, so a request that hangs — connection held open, no
-    /// response, which is what a network that drops packets to the CDN rather than refusing
-    /// them looks like — would otherwise leave the app on "Loading card data…" for good.
-    /// Short, because the snapshot behind it loads in about a second.
+    /// How long a CDN request gets to ANSWER before it is treated as a failure. The fallback below
+    /// only runs when an attempt *returns*, so a request that hangs — connection held open, no
+    /// response, which is what a network that drops packets to the CDN rather than refusing them
+    /// looks like — would otherwise leave the app on "Loading card data…" for good.
+    ///
+    /// Short because it is only the round trip: five seconds is generous for 470 KB from a CDN and
+    /// nowhere near enough to parse it, which is why <see cref="GetAsync"/> is careful to stop the
+    /// clock at the end of the exchange. Read that note before shortening this further, and before
+    /// assuming a timeout here means the network.
     /// </summary>
     private static readonly TimeSpan CdnDeadline = TimeSpan.FromSeconds(5);
 
@@ -100,15 +104,47 @@ public sealed class CardDataLoader
     /// <summary>
     /// Fetch JSON, putting a deadline on anything that leaves the origin. Local reads are left
     /// alone: they are files the app shipped with, and a slow parse on a phone is not a hang.
+    ///
+    /// The deadline covers the EXCHANGE and stops there, which is the distinction this method
+    /// exists to make. It used to hand the deadline's token to GetFromJsonAsync, and that call
+    /// deserialises under the same token — so the clock ran through the parse as well as the
+    /// download, and the parse is the slow half by two orders of magnitude. This app publishes
+    /// without AOT, so System.Text.Json runs in the IL interpreter: 3,879 cards is 470 KB that
+    /// arrives in under ten milliseconds and then takes seconds to turn into objects.
+    ///
+    /// The result was a fallback that fired every single time, on every device, and said the wrong
+    /// thing about why. The CDN answered 200 with the whole body, the deadline expired mid-parse,
+    /// TaskCanceledException came back, and the app reported "CDN unreachable" and loaded the
+    /// vendored snapshot instead. Live card data had quietly stopped working, and the visible
+    /// symptom was that a set released since the last deploy did not exist — the newest set, which
+    /// is the one whose packs somebody is opening, and the one whose screenshots then read as
+    /// nothing but unrecognised cards.
+    ///
+    /// A parse cannot hang, so nothing is lost by leaving it unbounded: it is CPU-bound work on
+    /// bytes already in hand. What the deadline is for is a connection that is held open and never
+    /// answers, which is what a network that drops packets to the CDN looks like, and that is
+    /// entirely inside GetStringAsync.
     /// </summary>
     private async Task<T?> GetAsync<T>(string root, string url, TimeSpan deadline, CancellationToken ct)
     {
         if (root == Local) return await _http.GetFromJsonAsync<T>(url, ct);
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(deadline);
-        return await _http.GetFromJsonAsync<T>(url, cts.Token);
+        string json;
+        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ct))
+        {
+            cts.CancelAfter(deadline);
+            json = await _http.GetStringAsync(url, cts.Token);
+        }
+
+        return System.Text.Json.JsonSerializer.Deserialize<T>(json, JsonOptions);
     }
+
+    /// <summary>
+    /// What <c>GetFromJsonAsync</c> uses when it is given none, kept here so the hand-rolled
+    /// deserialise above reads the same JSON the same way — camelCase names, case-insensitive.
+    /// </summary>
+    private static readonly System.Text.Json.JsonSerializerOptions JsonOptions =
+        new(System.Text.Json.JsonSerializerDefaults.Web);
 
     /// <summary>
     /// Which sets this deployment shipped art for.

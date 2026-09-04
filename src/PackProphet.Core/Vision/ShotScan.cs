@@ -61,6 +61,17 @@ public sealed class ShotCell
     public int Row { get; set; }
     public int Col { get; set; }
 
+    /// <summary>
+    /// Where this slot was cut, as x, y, width, height in working-scale pixels. Empty where the
+    /// scanner did not say.
+    ///
+    /// Read for one thing: the horizontal offset between rows, which is what tells a hand of five
+    /// from a page of a card list — see <see cref="ScreenshotReader.Infer"/>. The column index will
+    /// not do, because it is the position rounded to the nearest slot and the whole signal is the
+    /// half a slot that rounding throws away.
+    /// </summary>
+    public double[] Box { get; set; } = [];
+
     /// <summary>32 hex digits, or empty when the region was too flat to fingerprint.</summary>
     public string Hash { get; set; } = "";
 

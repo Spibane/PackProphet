@@ -93,13 +93,18 @@ public class ScreenshotImportPageTests : AppHost
     {
         var blank = blanks.Length > 0 ? blanks : [5, 9, 12];
 
+        // 1060 wide, not 848. The width only matters through RelativeCellWidth, and at 848 a slot
+        // came to 0.236 of the screen -- a number no five-across list produces. The real thing
+        // measures 0.168 and the three-across list 0.29, and the fixture was sitting between them,
+        // on the ownership side only because the threshold used to be 0.28. It has to be a size a
+        // phone really produces, or it is testing the rule against a picture that cannot exist.
         return new ShotScan
         {
-            Ok = true, Width = 848, Height = 1402,
+            Ok = true, Width = 1060, Height = 1402,
             Lattice = new ShotLattice
             {
                 Rows = 4, Cols = 4, CellWidth = 200, CellHeight = 273,
-                Confidence = 0.49, RelativeCellWidth = 200.0 / 848,
+                Confidence = 0.49, RelativeCellWidth = 200.0 / 1060,
             },
             Cells = Enumerable.Range(1, 16).Select(n => new ShotCell
             {

@@ -37,14 +37,39 @@ public class ScreenshotReadingTests
     private static ArtHashTable TableFor(string set, int count) =>
         new(Enumerable.Range(1, count).Select(n => new ArtHashEntry(set, n, Distinct(n))), "2026-08-27");
 
-    private static ShotCell Cell(int row, int col, ArtHash? hash, double sat = 0.4, double detail = 0.5) =>
+    private static ShotCell Cell(int row, int col, ArtHash? hash, double sat = 0.4, double detail = 0.5,
+                                double[]? box = null) =>
         new()
         {
             Row = row, Col = col,
             Hash = hash?.ToString() ?? "",
             Luma = 0.5, Saturation = sat,
             Detail = hash is null ? 0.01 : detail,
+            Box = box ?? [],
         };
+
+    /// <summary>
+    /// Five cards as the game deals them: three across, then two centred under the gaps — which puts
+    /// the second row half a slot along. Boxes and all, because that offset is the whole of what
+    /// tells a hand from a page of a card list.
+    ///
+    /// The relative width is 0.27, which is what a reveal really measures and is BELOW the 0.28 the
+    /// old rule demanded of one. A hand has to be recognised at its own size rather than at a size
+    /// invented to make the rule work.
+    /// </summary>
+    private static ShotScan Hand()
+    {
+        const double slot = 220, w = 200, h = 280;
+
+        ShotCell At(int row, int col, double x, int seed) =>
+            Cell(row, col, Distinct(seed), box: [x, row * h, w, h]);
+
+        return Scan(2, 3,
+        [
+            At(0, 0, 0, 1), At(0, 1, slot, 2), At(0, 2, slot * 2, 3),
+            At(1, 0, slot * 0.5, 4), At(1, 1, slot * 1.5, 5),
+        ], relCellWidth: 0.27);
+    }
 
     private static ShotScan Scan(int rows, int cols, IEnumerable<ShotCell> cells, double relCellWidth = 0.2) =>
         new()
@@ -392,6 +417,42 @@ public class ScreenshotReadingTests
     }
 
     [Fact]
+    public void AHandIsToldFromACardListByItsStaggerAndNotByItsSize()
+    {
+        // The bug this closes: the old rule called a hand anything at least 0.28 of the screen
+        // across, and a hand measures 0.24 to 0.28. The branch had never been taken on a real
+        // screenshot -- every reveal in the fixtures was read as a page of the five-across list.
+        var reader = new ScreenshotReader(Ix, TableFor("A1", 40));
+
+        // At its real width, which the old rule refused.
+        Assert.Equal(CardScreen.PackReveal, reader.Read(Hand()).Screen);
+
+        // A card list's rows start at the same column, so there is no stagger to find. Same two
+        // rows, same size, boxes squared up -- and it is a list.
+        var squared = Scan(2, 3,
+        [
+            Cell(0, 0, Distinct(1), box: [0, 0, 200, 280]),
+            Cell(0, 1, Distinct(2), box: [220, 0, 200, 280]),
+            Cell(1, 0, Distinct(3), box: [0, 280, 200, 280]),
+            Cell(1, 1, Distinct(4), box: [220, 280, 200, 280]),
+        ], relCellWidth: 0.29);
+
+        Assert.Equal(CardScreen.CopiesGrid, reader.Read(squared).Screen);
+
+        // And a row that starts a WHOLE slot along is a list with its first card missing, not a
+        // hand. That is the offset a list really produces -- the five-across fixture measures three
+        // whole slots -- so it has to fall outside the window that catches half of one.
+        var gapped = Scan(2, 3,
+        [
+            Cell(0, 0, Distinct(1), box: [0, 0, 200, 280]),
+            Cell(0, 1, Distinct(2), box: [220, 0, 200, 280]),
+            Cell(1, 1, Distinct(3), box: [220, 280, 200, 280]),
+        ], relCellWidth: 0.29);
+
+        Assert.Equal(CardScreen.CopiesGrid, reader.Read(gapped).Screen);
+    }
+
+    [Fact]
     public void AShortRowIsCountableRatherThanLookingComplete()
     {
         // The sentence about a hand coming up short is no longer written here, because the reading
@@ -425,17 +486,14 @@ public class ScreenshotReadingTests
             relCellWidth: 0.32));
         Assert.Equal(CardScreen.CopiesGrid, copies.Screen);
 
-        // A hand of five, which the game lays out three then two — so two populated rows of large
-        // cards, and never more than two.
-        var hand = reader.Read(Scan(2, 3,
-            [Cell(0, 0, Distinct(1)), Cell(0, 1, Distinct(2)), Cell(1, 0, Distinct(3))],
-            relCellWidth: 0.32));
+        // A hand of five, which the game lays out three then two and centres the two — so the second
+        // row starts half a slot along, which no card list ever does.
+        var hand = reader.Read(Hand());
         Assert.Equal(CardScreen.PackReveal, hand.Screen);
 
         // A pack's reveal and a Wonder Pick's line-up are the same picture. Nothing in the geometry
         // separates them, so the pack is the default and the page the user is on decides.
-        Assert.False(reader.Read(Scan(2, 3, [Cell(0, 0, Distinct(1))], relCellWidth: 0.32),
-                                 CardScreen.WonderPick).ScreenWasInferred);
+        Assert.False(reader.Read(Hand(), CardScreen.WonderPick).ScreenWasInferred);
     }
 
     [Fact]

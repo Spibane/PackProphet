@@ -30,6 +30,14 @@ const CARD_ASPECT = 0.717;
 const ASPECT_MIN = 0.55;
 const ASPECT_MAX = 0.95;
 
+/// How much taller than its width implies a region may be and still be measured as a card.
+///
+/// The margin is for the WIDTH's under-reach, not the height's: a region an honest two percent
+/// narrow implies a height two percent short, and the region is then two percent over it while
+/// being a perfectly good card. Anything further over is furniture the mask joined to the card —
+/// see the note in findCards.
+const TALLEST_HONEST = 1.02;
+
 /// Smallest card, as a fraction of the image width. The tightest real layout is the five-across card
 /// list, where a card is about a sixth of the screen; anything much smaller is an icon or a chip.
 const MIN_CARD_WIDTH = 0.10;
@@ -209,13 +217,48 @@ function findCards(gray, pixels) {
     const blocks = components(mask(gray, pixels));
     const regions = cardShaped(blocks, gray.w);
 
-    // Assembling cards out of their pieces is a last resort, not a first pass. Where the mask found
-    // cards, their own size and pitch are better evidence than anything a join could offer, and a
-    // pale card among them is already recovered by extending its row. It is only when nothing
-    // card-shaped was found anywhere that there is no seed to extend from and nothing to lose —
-    // which is exactly the pack reveal whose cards are all white-bodied.
-    const assembled = regions.length === 0;
-    const found = assembled ? cardShaped(joined(blocks, gray.w), gray.w) : regions;
+    // Assembling cards out of their pieces fills the gaps the mask left; it does not replace what
+    // the mask found. Where a card masked as one shape, that shape is the better evidence and the
+    // assembly is not consulted for it.
+    //
+    // This used to run only when NOTHING card-shaped was found anywhere, on the reasoning that a
+    // pale card among solid ones is recovered by extending its row. That holds for a pale card, and
+    // fails for a pale ROW: extending a row needs one card in it to fix the phase, and a pack whose
+    // second row is two white-bodied cards has none. A mixed pack reveal is the common case, not
+    // the edge — the newest set is Team Rocket's, half its cards have white bodies, and a pack of
+    // three coloured and two white read as three cards with the other two never looked at.
+    //
+    // What an assembly is held to, where the mask found any cards at all to hold it to. A join is a
+    // guess about where a broken card's pieces end, and it is loose enough that the game's own
+    // furniture chains into something card-shaped now and then: a reveal's "Next" button and the
+    // banner above it assemble into a passable card below the real ones. One invented region is
+    // enough to drag the consensus size off every genuine card and hang a row of empty slots under
+    // them, so two cheap conditions keep them out, and neither applies when the mask found nothing
+    // — there is then no size and no place to check against, and the assembly stands on its own,
+    // which is the all-white reveal joined() was written for.
+    const masked = regions.length > 0 ? quantile(regions.map(r => r.w), 0.9) : 0;
+    const near = masked / CARD_ASPECT * 0.25;
+    const top = Math.min(...regions.map(r => r.y));
+    const bottom = Math.max(...regions.map(r => r.y + r.h));
+
+    const rebuilt = cardShaped(joined(blocks, gray.w), gray.w)
+        // Size. Furniture cannot come out the size of the cards already on screen: measured across
+        // these screenshots, every genuine assembly lands between 0.96 and 1.05 of the masked
+        // width, and the invented one lands at 1.13.
+        .filter(r => masked === 0 || (r.w >= masked * 0.90 && r.w <= masked * 1.10))
+        // Place. Rows of cards butt up against one another, so the row below a row of cards starts
+        // where that one ended, give or take a gutter. An assembly starting well clear of
+        // everything the mask found is not the next row of anything: a genuine recovered row starts
+        // a ninth of a card below the last masked one, and the two invented ones start a third and
+        // a half of a card below.
+        .filter(r => masked === 0 || (r.y - bottom <= near && top - (r.y + r.h) <= near))
+        // Not a card the mask already has. joined() will not use a piece that is already
+        // card-shaped, but a card can still break into a shaped panel plus scraps that chain into a
+        // second region over the same card, and two boxes on one card is two readings of it.
+        .filter(r => !regions.some(o => overlap(r, o) > Math.min(r.w * r.h, o.w * o.h) * 0.25));
+
+    const found = [...regions, ...rebuilt];
+    const assembled = rebuilt.length > 0;
     if (found.length === 0) return null;
 
     // The card's size from a HIGH QUANTILE of the regions, not their middle. The mask can fall short
@@ -225,7 +268,29 @@ function findCards(gray, pixels) {
     // other, where the truth is 192x268 both times, and eight pixels is enough to make every card
     // unrecognisable. The quantile gives 192x268 for both.
     const cardW = quantile(found.map(r => r.w), 0.9);
-    const cardH = Math.max(quantile(found.map(r => r.h), 0.9), Math.round(cardW / CARD_ASPECT));
+
+    // The height needs the same high quantile and cannot have it, because the reasoning that
+    // justifies one for the width — the mask can fall short of a card's edge but never reach past
+    // it — is false vertically. The game draws the "NEW" flash ABOVE a card's top edge and the
+    // copy-count banner BELOW its bottom one, so a region that swallows either is taller than the
+    // card it came from, and a quantile chosen to pick the tallest regions picks exactly those.
+    //
+    // Measured on 23 pack screenshots: a clean region is 244 tall where the card is 245, and a
+    // badged one is 264 — eight percent, where four pixels is enough to lose the card. It shows up
+    // as a whole screenful failing at once, because the flash is drawn on every card in a pack the
+    // player has none of, which is the newest set, which is the one being opened.
+    //
+    // So the tall ones are dropped before the quantile rather than clamped after it, and what
+    // remains is measured as before. Regions are called too tall against the height this shot's own
+    // card WIDTH implies, allowing a little for that width's own under-reach: the contaminated ones
+    // sit 7.5% over and the honest ones within 2.8%, so the two do not overlap. Dropping too many
+    // is safe and dropping too few is not — with nothing left the aspect-derived height stands,
+    // and that is right to within a pixel or two either way.
+    const derived = Math.round(cardW / CARD_ASPECT);
+    const upright = found.filter(r => r.h <= derived * TALLEST_HONEST);
+    const cardH = upright.length > 0
+        ? Math.max(quantile(upright.map(r => r.h), 0.9), derived)
+        : derived;
 
     // Regions well off that size are furniture that happened to be card-shaped — a booster pack
     // thumbnail, a button. Dropped before they can drag the rows and columns around.
@@ -263,9 +328,10 @@ function findCards(gray, pixels) {
     return { cards, cardW, cardH, rows, origin, pitch, assembled };
 }
 
-/// The spacing between card columns, taken from the row that shows the most of them. One row is
-/// better evidence than all of them pooled: on a hand of five, laid out three then two, the second
-/// row sits half a pitch across from the first, and pooling the two gives a spacing that is neither.
+/// The spacing between card columns, taken from the row that shows the most of them, or 0 when the
+/// picture does not say. One row is better evidence than all of them pooled: on a hand of five, laid
+/// out three then two, the second row sits half a pitch across from the first, and pooling the two
+/// gives a spacing that is neither.
 function columnPitch(cards, columns, cardW, cardH) {
     const byRow = new Map();
     for (const card of cards) {
@@ -275,10 +341,28 @@ function columnPitch(cards, columns, cardW, cardH) {
 
     const widest = [...byRow.values()].sort((a, b) => b.length - a.length)[0] ?? [];
     const from = widest.length >= 2 ? widest : columns;
-    if (from.length < 2) return cardW;
+    if (from.length < 2) return 0;
 
     const sorted = [...from].sort((a, b) => a - b);
-    return median(...sorted.slice(1).map((at, i) => at - sorted[i]));
+    const gap = median(...sorted.slice(1).map((at, i) => at - sorted[i]));
+
+    // What the gap between two found cards says about the spacing, which is not the same number.
+    //
+    // Cards do not overlap, so a slot is at least a card wide. A gap of two card widths is
+    // therefore not a two-card-wide slot, it is two slots with nothing found in the middle one —
+    // the pale cards the mask misses, on the very screens where they cluster. Taken at face value
+    // that gap tiles the row at double pitch and the skipped card is never even looked at.
+    //
+    // Dividing errs towards more slots than there are cards, which is the right way to be wrong: a
+    // slot with nothing in it fingerprints to nothing and is reported unread, where a slot that was
+    // never emitted loses a card the picture plainly shows.
+    const pitch = gap / Math.max(1, Math.floor(gap / cardW));
+
+    // Below a card's width the number cannot be a spacing at all. It is what the fallback above
+    // produces on a hand of five when only one card per row was found: the two rows are offset by
+    // half a slot, so the "columns" it measures across them are half-pitch apart and describe a row
+    // that does not exist. Zero says so, and the row is left with the cards actually found.
+    return pitch >= cardW ? pitch : 0;
 }
 
 /// Where the cards in one row sit, including the places a card should be and was not found.
@@ -298,19 +382,32 @@ function slotsInRow(cards, top, cardH, pitch, origin, cardW, imageWidth, fullWid
         .sort((a, b) => a - b);
 
     const seed = here.length > 0 ? here : [origin];
-    if (pitch < cardW * 0.5) return seed;
+    if (pitch <= 0) return seed;
 
-    const found = new Set(seed);
     const leftmost = fullWidth ? 0 : Math.min(...seed) - pitch;
     const rightmost = fullWidth ? imageWidth : Math.max(...seed) + pitch;
 
-    for (let at = seed[0] - pitch; at >= leftmost; at -= pitch) found.add(Math.round(at));
-    for (let at = seed[0] + pitch; at <= rightmost; at += pitch) found.add(Math.round(at));
+    // Where a card was actually found beats where the pitch says one should be, and the order these
+    // go in is the whole of that rule. Both are offered, two slots half a pitch apart are the same
+    // slot, and whichever was offered first is the one kept — so seeding with the found cards is
+    // what stops a tiled guess from standing in for a card whose position is known.
+    //
+    // It is not a small difference. A row of a pack's reveal is tiled from its leftmost card, and
+    // the game's own spacing is not exactly uniform, so by the far end of the row the tiling is six
+    // pixels off the card sitting there. Six pixels is not a near miss at this sampling rate: the
+    // card that reads at 10 bits from its own box reads at 27 from the tiled one, which is over the
+    // threshold and lost. Sorting first and deduplicating afterwards, as this did, kept whichever
+    // came first left-to-right — the tiled one, every time.
+    const at = [];
+    const offer = x => { if (!at.some(y => Math.abs(y - x) <= pitch * 0.5)) at.push(x); };
 
-    return [...found]
-        .filter(at => at >= 0 && at + cardW <= imageWidth)
-        .sort((a, b) => a - b)
-        .filter((at, i, all) => i === 0 || at - all[i - 1] > pitch * 0.5);
+    seed.forEach(offer);
+    for (let x = seed[0] - pitch; x >= leftmost; x -= pitch) offer(Math.round(x));
+    for (let x = seed[0] + pitch; x <= rightmost; x += pitch) offer(Math.round(x));
+
+    return at
+        .filter(x => x >= 0 && x + cardW <= imageWidth)
+        .sort((a, b) => a - b);
 }
 
 /// Blocks that might be part of a card: coloured, or carrying text. Either alone misses a screen —
@@ -387,6 +484,13 @@ function components({ blocks, bw, bh }) {
     }
 
     return found;
+}
+
+/// The area two regions share, in pixels. Zero when they do not meet.
+function overlap(a, b) {
+    const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+    const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+    return w > 0 && h > 0 ? w * h : 0;
 }
 
 /// Pieces of one pale card, joined into a single region.

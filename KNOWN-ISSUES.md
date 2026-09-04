@@ -56,16 +56,19 @@ discovered.
 
 ## Screenshot import: one screenshot reads its cards four pixels small
 
-**Status:** open, and narrowly, for one fixture of nine. Every screen the import targets now reads
-end to end on a real screenshot — both card lists with every copy count on them, a pack's reveal, and
-a Wonder Pick line-up. The pack reveal whose cards are **all** white-bodied is now found rather than
-missed, but the box it is found in is four pixels small, and that costs recognitions.
+**Status:** open, and narrowly, and no longer costing anything measurable. Every screen the import
+targets reads end to end on a real screenshot — both card lists with every copy count on them, a
+pack's reveal, and a Wonder Pick line-up. The pack reveal whose cards are **all** white-bodied is
+found, and the box it is found in is still four pixels small; what changed is that the grown crops
+now recover all five of its cards anyway. See *A bulk import of the newest set* below, which closed
+most of this and reversed one of the conclusions in the ruled-out table.
 
 ### The fixtures
 
-`tests/PackProphet.Tests/fixtures/` holds nine real 1320x2868 iPhone screenshots. Develop against
-these: every bug in this feature was invisible until they were run through the whole chain, and
-several passed every synthetic test first.
+`tests/PackProphet.Tests/fixtures/` holds nine real 1320x2868 iPhone screenshots, and
+`fixtures/bulk_packs/` twenty-three more of them — one user's bulk import, almost all of it Team
+Rocket's Ambition. Develop against these: every bug in this feature was invisible until they were
+run through the whole chain, and several passed every synthetic test first.
 
 | File | Screen | Result |
 |---|---|---|
@@ -77,14 +80,16 @@ several passed every synthetic test first.
 | IMG_1153 | My Cards, five across | **6 of 6** drawn cards, 9 blank slots placed |
 | IMG_1157 | Opening Results (Wisdom of Sea and Sky) | **5 of 5** cards, pack named as Lugia |
 | IMG_1151 | Wonder Pick (Shining Revelry) | **5 of 5** cards |
-| IMG_1150 | Opening Results (Team Rocket's Ambition) | **5 of 5** cards found, none named — see below |
+| IMG_1150 | Opening Results (Team Rocket's Ambition) | **5 of 5** cards, named at 5 to 13 bits |
 
 The three-across fixtures overlap on purpose, and the overlap is the check: IMG_1189's clipped top
 row is IMG_1188's second row, and IMG_1190 is the same nine cards as IMG_1154. A count that reads
 differently in two screenshots of the same card is a bug with no argument to be had about it.
 
-IMG_1150 and IMG_1153 are of *Team Rocket's Ambition*, which the vendored snapshot does not have —
-its newest set is B4 — so those two can only be used for geometry, not recognition.
+IMG_1150 and IMG_1153 are of *Team Rocket's Ambition*. The vendored snapshot still does not carry
+B4a, so `dotnet test` can only use those two for geometry — but the committed fingerprint table does
+carry it, so recognition on them is measurable against the table directly, which is what
+`PackRevealBoxingTests` does and why it goes through `ArtHashTable` rather than `ScreenshotReader`.
 
 ### Open: a picture in which every card is pale
 
@@ -156,8 +161,70 @@ Things already ruled out:
 | The same snap aggregated over every card at once | Also wrong. It moved rows that were already correct by 7px, so the strongest aggregate edge is not the card's outer one either. |
 | Splitting a wide region into k cards by aspect ratio | Needs the card size pinned first. Without it, a row of toolbar text is explained as six tiny cards. |
 | Autocorrelating the edge profile to find the grid's period | Reports a 42px pitch on cards 192px apart. A real screenshot is mostly text, and text carries far more edge energy than the gutters. |
-| Joining pieces on every picture rather than only when nothing was found | IMG_1151 holds a second Wonder Pick further down the page, and joining finds a pale card in it. That card is real and it still breaks the reading: a sixth region shifts the index the card size is taken from, and 156x220 becomes 164x229 with a third row of slots invented under it. |
+| Joining pieces on every picture rather than only when nothing was found | **Now done, and this row was wrong about why it failed.** IMG_1151's sixth region is not the pale card it was read as — it is the page furniture below the cards, and it is a full 1.13 of the masked card width and a third of a card clear of the bottom row. Both are things a real card cannot be, so both are now checked and it is dropped. See below. |
 | Snapping the joined box outward to the card's own border | There is nothing to snap to. The border is a white line about 8 luma above the page near the top of the screen, and lower down the card body and the page are both around 222 and indistinguishable. |
+
+### A bulk import of the newest set, and the three boxing bugs it exposed
+
+**Closed.** Twenty-three pack openings imported at once, almost all Team Rocket's Ambition, and most
+of the cards came back unread. Across the whole set of fixtures the reading went from **66 of 114
+slots to 114 of 118**, and twenty of the twenty-two pack reveals now read all five. None of it was the
+fingerprints or the thresholds — the right card was already the nearest entry nearly everywhere, and
+the ambiguity margin never once bit. All three causes were the box.
+
+- **The consensus height was taken from a high quantile, and the game draws outside the card.** The
+  quantile is justified for the width because the mask can fall short of a card's edge and never
+  reach past it. Vertically that is false: the NEW flash sits above the card's top edge and the
+  copy-count banner below its bottom one, so a region that swallows either is taller than its card —
+  264 against 245 — and a quantile picked to take the tallest regions takes exactly those. It fails
+  a whole screenful at once, because the flash marks a card the player does not own and so is on
+  every card of a set they have just started opening. Regions too tall for the width to explain are
+  now dropped before the quantile, and with none left the aspect-derived height stands.
+- **A gap of two card widths was read as the column spacing.** Where the middle card of a row is
+  pale and unfound, the two cards either side of it are two slots apart, and the row then tiles at
+  double pitch with the skipped card never emitted. The gap is now divided by how many card widths
+  it spans. The same code produced a *sub*-card-width pitch on a hand of five where only one card
+  per row was found — the two rows are offset by half a slot, so the columns measured across them
+  describe a row that does not exist — which tiled six garbage slots over five cards; a spacing
+  narrower than a card is now reported as no spacing at all.
+- **Tiled positions displaced the cards actually found.** Slots were pooled and then deduplicated in
+  left-to-right order, so where a tiled guess and a found card fell within half a pitch the tiled one
+  won on sort order every time. The game's spacing is not exactly uniform, and by the far end of a
+  row the tiling is six pixels off the card sitting there: 10 bits from its own box, 27 from the
+  tiled one. Found positions are now offered first, and the tiling only fills what they leave.
+
+Joining also now runs on every picture rather than only when the mask found nothing, which is what
+recovers a *pale row* — a mixed pack of three coloured cards and two white ones, where the second row
+has no seed to extend from and was simply never looked at. Four fixtures read 2 or 3 cards for that
+reason. The gate that made it safe is two conditions on each assembled region, both measured: it must
+be within a tenth of the width of the cards the mask already found (every genuine assembly lands
+between 0.96 and 1.05, the invented ones at 1.13), and it must sit against the block of masked cards
+rather than clear of it (a genuine recovered row starts a ninth of a card below the last masked one,
+the invented ones a third and a half).
+
+**Still open, and small.** Two cards across the twenty-three read at 19 bits against a threshold of
+18 and stay unread; both are ordinary cards on otherwise clean shots, so this is the fingerprint's
+own tolerance rather than a placement error. IMG_1198, the one copies grid in the set, reads 6 of its
+9 — its bottom row is cut off by the screen edge.
+
+### Latent: the screen-kind guess has almost no margin left
+
+**Open, and not currently reachable.** `ScreenshotReader.Infer` separates a three-across copies grid
+from a five-across ownership list on slot width as a fraction of the screen, at 0.28, and calls
+anything wide with at most two populated rows a pack reveal. Measured across these thirty-three
+screenshots, a pack reveal is **0.242 to 0.279** of the screen and a copies grid **0.286 to 0.298**.
+The threshold sits in a gap six thousandths wide, by luck rather than design, and the reveal branch
+is unreachable on this phone — every reveal here measures under 0.28 and would be guessed as an
+ownership list.
+
+Nothing is broken by that today, and the reason is worth writing down before someone "fixes" it: the
+only caller that passes no screen is the collection import page, which does not offer *pack reveal*
+as a choice at all, and the two pages where a reveal is expected both force the kind. A reveal
+misread as an ownership list is also not dangerous — its five cards are random pulls rather than a
+run of set numbers, so the row anchors disagree, and the positional naming that could invent missing
+cards switches itself off. But the margin is thin enough that a different device could cross it, and
+the fix is not to nudge the constant: a reveal's second row sits half a pitch across from its first,
+which no card list ever does, and that is a difference in kind rather than in degree.
 
 ### What it took, so it is not undone
 

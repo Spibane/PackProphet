@@ -207,6 +207,12 @@ the invented ones a third and a half).
 own tolerance rather than a placement error. IMG_1198, the one copies grid in the set, reads 6 of its
 9 — its bottom row is cut off by the screen edge.
 
+Neither is now a dead end. A slot that comes back unnamed is shown to the user with a crop of itself
+and a search box, and what they pick joins the reading as a match like any other — so the remaining
+gap costs a few seconds rather than a card. That also changes what raising `MaxDistance` would buy:
+the two 19-bit cards are recoverable by hand, and loosening a threshold whose whole job is to refuse
+cards that are not in the table would be paying for them in the wrong currency.
+
 ### Latent: the screen-kind guess has almost no margin left
 
 **Open, and not currently reachable.** `ScreenshotReader.Infer` separates a three-across copies grid

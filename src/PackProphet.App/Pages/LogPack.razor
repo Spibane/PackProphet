@@ -90,7 +90,7 @@ else if (_pack is null)
                         {
                             <button class="btn btn-primary" @onclick="() => AdoptShot(reading, guess.PackKey)">
                                 Open @guess.PackKey.Split(':')[1] with these
-                                @reading.RecognisedCount @Fmt.S(reading.RecognisedCount, "card")
+                                @reading.NamedCount @Fmt.S(reading.NamedCount, "card")
                             </button>
                         }
                         else if (guess.Candidates.Count > 1)
@@ -457,9 +457,11 @@ else
         // Sets the pack and clears the picks, so the cards have to go in afterwards.
         ChooseCore(pack);
 
-        // Only artwork matches. Nothing on a reveal screen is placed by position, but the reading
-        // type is shared with the card lists, where things are.
-        foreach (var match in reading.Matches.Where(m => m.Source == MatchSource.Art))
+        // Everything except a card placed by its position in a list. Nothing on a reveal screen is
+        // placed that way, but the reading type is shared with the card lists, where things are.
+        // A slot the user named by hand counts: they were shown the card and said what it is, which
+        // is a better answer than the fingerprint managed and the reason they were asked.
+        foreach (var match in reading.Matches.Where(m => m.Source != MatchSource.GridPosition))
             _picked.Add(match.Card);
     }
 

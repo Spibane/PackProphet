@@ -4496,3 +4496,48 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 }
 /* Room for the detailed one only where the box is big. */
 .big-art, .hit-art, .offer-card, .showcase .face { --pp-art-mark-size: 46%; }
+
+/* ================================================================= unrecognised slots
+   The screenshot import's loose ends: a picture of one card slot the reader could not name,
+   beside the box for naming it.
+
+   The picture is sized by the card's own aspect and NOT by what came back, because the two are
+   not always the same thing — a slot cut off by the edge of the screen is a short crop, and a
+   column of thumbnails that each set their own height turns the list into a staircase. object-fit
+   keeps the crop honest inside that frame rather than stretching it to fill. */
+.slot-shot {
+    width: 3.4rem;
+    aspect-ratio: 367 / 512;
+    border-radius: var(--pp-r-xs);
+    overflow: hidden;
+    background-color: var(--bs-secondary-bg);
+    background-image: var(--pp-art-weave);
+}
+
+.slot-shot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    -webkit-user-drag: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* A slot with no picture: the frame still holds its place in the column so the rows line up. */
+.slot-shot-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--bs-secondary-color);
+}
+
+/* The card chosen for a slot, at the same size as the crop it answers, so the two read as a pair. */
+.slot-pick {
+    display: block;
+    flex: none;
+    width: 2.2rem;
+    aspect-ratio: 367 / 512;
+    border-radius: var(--pp-r-xs);
+}

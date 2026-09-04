@@ -106,7 +106,7 @@
 
 @foreach (var shot in _shots)
 {
-    var reading = shot.Reading;
+    var reading = shot.Fixed;
 
     @if (reading is { Ok: false })
     {
@@ -158,6 +158,13 @@
                             </td>
                         </tr>
                     }
+                    @if (shot.Picks.Count > 0)
+                    {
+                        <tr>
+                            <th scope="row" class="fw-normal">Named by hand</th>
+                            <td class="text-end">@shot.Picks.Count.ToString("N0")</td>
+                        </tr>
+                    }
                     @if (reading.UnreadCells > 0)
                     {
                         <tr>
@@ -178,14 +185,27 @@
             <Notice Severity="Notice.Level.Warning">@note</Notice>
         }
 
-        @if (reading.Matches.Count == 0)
+        @* A hand that came up short. Asked here rather than written into the reading's own notes,
+           because the answer changes underneath it: name the missing slot and the hand is complete,
+           and a note fixed at the moment of reading would still be saying four. *@
+        @if (IsHand(reading) && reading.NamedCount > 0 && reading.NamedCount < GameRules.WonderPickCardsShown)
+        {
+            <Notice Severity="Notice.Level.Warning">
+                Only @reading.NamedCount of the @GameRules.WonderPickCardsShown cards have been named.
+                Cards mid-animation, or partly behind another card, are the usual reason &mdash; name
+                the rest below, or take the shot again.
+            </Notice>
+        }
+
+        @if (reading.Matches.Count == 0 && reading.UnreadCells == 0)
         {
             <Notice Severity="Notice.Level.Warning">
                 Card slots were found but none could be named. A set released in the last few weeks may
                 not have its artwork in this build yet.
             </Notice>
         }
-        else
+
+        @if (reading.Matches.Count > 0)
         {
             <div class="table-responsive mb-3">
                 <table class="table table-sm align-middle mb-0">
@@ -237,7 +257,57 @@
                     </tbody>
                 </table>
             </div>
+        }
 
+        @* The slots the reader gave up on, each with its picture and a box to name it.
+           ==========================================================================================
+           Offered rather than merely counted, because by the time a slot lands here every automatic
+           answer has been tried: the artwork was too far from anything in the table, or too close to
+           two things at once, or the card is half off the edge of the screen. A person looking at the
+           picture settles all three in a second, and the alternative on offer was retaking the
+           screenshot.
+
+           Below the table rather than mixed into it. The table is what the app read and this is what
+           it could not, and interleaving them would put rows that mean "I know this" next to rows
+           that mean "you tell me" under one heading. *@
+        @if (shot.Reading.UnreadSlots.Count > 0)
+        {
+            <section class="mb-3">
+                @* Every slot that came back unnamed stays on this list, including the ones since
+                   named. A pick made from a thumbnail is a pick that can be wrong, and a row that
+                   vanishes the moment it is answered is a row that cannot be corrected — the card
+                   would be in the table above with no way back to the picture it came from. *@
+                <h3 class="h6 mb-1">
+                    @if (reading.UnreadCells == 0)
+                    {
+                        <text>Every slot named</text>
+                    }
+                    else if (reading.UnreadCells == 1)
+                    {
+                        <text>One slot could not be named</text>
+                    }
+                    else
+                    {
+                        <text>@reading.UnreadCells slots could not be named</text>
+                    }
+                </h3>
+                <p class="small text-body-secondary mb-1">
+                    Name one and it joins the list above. Leave it and nothing happens to it.
+                </p>
+
+                @foreach (var slot in shot.Reading.UnreadSlots)
+                {
+                    <SlotFix Slot="slot"
+                             Group="@($"{_group}-{shot.Id}")"
+                             Picked="@shot.Picks.GetValueOrDefault((slot.Row, slot.Col))"
+                             PreferSets="reading.SetsSeen"
+                             OnPick="card => Name(shot, slot, card)" />
+                }
+            </section>
+        }
+
+        @if (reading.Matches.Count > 0)
+        {
             @Actions?.Invoke(reading)
         }
     }
@@ -334,17 +404,49 @@
 
     /// <summary>The readings that came to something, in the order the pictures were given.</summary>
     private IReadOnlyList<ShotReading> Readings =>
-        _shots.Where(s => s.Reading.Ok).Select(s => s.Reading).ToArray();
+        _shots.Where(s => s.Reading.Ok).Select(s => s.Fixed).ToArray();
 
     /// <summary>One picture and what it turned out to say. The scan is kept so the reading can be redone.</summary>
     private sealed class Shot
     {
         public required string Name { get; init; }
 
+        /// <summary>
+        /// Distinguishes this picture's controls from another picture's. The file name will not do:
+        /// a phone hands over eight files and two of them can be called the same thing, and two
+        /// fields sharing an id tie the wrong label to the wrong box.
+        /// </summary>
+        public required int Id { get; init; }
+
         /// <summary>Null when the pixel side failed, in which case <see cref="Reading"/> carries why.</summary>
         public ShotScan? Scan { get; init; }
 
+        /// <summary>What the reader made of it, before anything the user has said.</summary>
         public required ShotReading Reading { get; set; }
+
+        /// <summary>
+        /// Slots the user has named, by position in this picture. Kept beside the reading rather
+        /// than folded into it, so re-reading under a different screen does not throw them away —
+        /// the slots are a fact about the pixels and the answers are a fact about the cards, and
+        /// neither depends on which screen the picture is taken to be of.
+        /// </summary>
+        public Dictionary<(int Row, int Col), PocketCard> Picks { get; } = [];
+
+        /// <summary>The reading as it now stands, with everything the user has named folded in.</summary>
+        public ShotReading Fixed => Reading.WithManual(Picks);
+    }
+
+    /// <summary>
+    /// Records what the user says a slot is, or clears it again.
+    ///
+    /// Nothing is applied here. A named slot becomes another row in the same review table the
+    /// recognised cards are in, and the host's own button is still what commits any of it — a card
+    /// the user pointed at is evidence like any other, not an instruction.
+    /// </summary>
+    private void Name(Shot shot, ShotSlot slot, PocketCard? card)
+    {
+        if (card is null) shot.Picks.Remove((slot.Row, slot.Col));
+        else shot.Picks[(slot.Row, slot.Col)] = card;
     }
 
     protected override void OnParametersSet()
@@ -407,7 +509,7 @@
                 // notice moves and a long batch does not look hung.
                 if (_total > 1) StateHasChanged();
 
-                _shots.Add(await ReadOne(file));
+                _shots.Add(await ReadOne(file, _shots.Count));
                 _done++;
             }
         }
@@ -422,7 +524,7 @@
     /// seven that were fine, so a failure becomes a failed reading in its own right and the batch
     /// carries on.
     /// </summary>
-    private async Task<Shot> ReadOne(IBrowserFile file)
+    private async Task<Shot> ReadOne(IBrowserFile file, int id)
     {
         try
         {
@@ -434,13 +536,14 @@
             var scan = await Scanner.ScanAsync(
                 $"data:{mime};base64,{Convert.ToBase64String(buffer.ToArray())}");
 
-            return new Shot { Name = file.Name, Scan = scan, Reading = Interpret(scan) };
+            return new Shot { Name = file.Name, Id = id, Scan = scan, Reading = Interpret(scan) };
         }
         catch (Exception ex)
         {
             return new Shot
             {
                 Name = file.Name,
+                Id = id,
                 Reading = ShotReading.Failed(
                     $"That file could not be read ({ex.GetType().Name}).",
                     _screen ?? CardScreen.OwnershipGrid),
@@ -478,6 +581,14 @@
         reading.Screen == CardScreen.CopiesGrid;
 
     /// <summary>
+    /// A hand of five rather than a page of a list: a pack's reveal or a Wonder Pick's line-up.
+    /// The two screens where the reading is expected to be complete, and where falling short of
+    /// five is worth saying.
+    /// </summary>
+    private static bool IsHand(ShotReading reading) =>
+        reading.Screen is CardScreen.PackReveal or CardScreen.WonderPick;
+
+    /// <summary>
     /// How a row was arrived at, in the user's terms. Confidence is a word rather than a number: the
     /// distance behind it is meaningful against a threshold and meaningless as a quantity, and
     /// printing "7" would invite a precision that is not there.
@@ -485,6 +596,7 @@
     private static string ReadAs(ShotMatch match) => match switch
     {
         { Source: MatchSource.GridPosition } => "blank slot, named by the cards around it",
+        { Source: MatchSource.Manual } => "you named it",
         { IsMarginal: true } => "artwork recognised, less certainly",
         _ => "artwork recognised",
     };

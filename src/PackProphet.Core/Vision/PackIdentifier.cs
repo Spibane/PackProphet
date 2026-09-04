@@ -45,13 +45,18 @@ public sealed record PackGuess(
 public static class PackIdentifier
 {
     /// <summary>
-    /// Identify the pack behind a reading. Only cards recognised from their artwork are used —
-    /// anything placed by position is not evidence about a pack, and on a reveal screen there is
-    /// nothing to place by position anyway.
+    /// Identify the pack behind a reading. Everything except a card placed by its position in a
+    /// list — that is not evidence about a pack, and on a reveal screen there is nothing placed
+    /// that way anyway.
+    ///
+    /// A slot the user named by hand counts, and counts fully. It is the one card in the hand
+    /// somebody has actually looked at, so treating it as weaker evidence than a fingerprint would
+    /// be exactly backwards — and a five-card hand where the fifth was named is often the hand that
+    /// finally narrows to one pack.
     /// </summary>
     public static PackGuess Identify(CardIndex index, ShotReading reading) =>
         Identify(index, reading.Matches
-            .Where(m => m.Source == MatchSource.Art)
+            .Where(m => m.Source != MatchSource.GridPosition)
             .Select(m => m.Card));
 
     public static PackGuess Identify(CardIndex index, IEnumerable<PocketCard> cards)

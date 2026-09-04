@@ -1,3 +1,4 @@
+using PackProphet.Domain;
 using PackProphet.Data;
 using PackProphet.Vision;
 
@@ -322,16 +323,89 @@ public class ScreenshotReadingTests
         Assert.Empty(reading.Notes);
     }
 
+    /// <summary>
+    /// A slot that could not be named comes back as a slot, with the picture of it, rather than as
+    /// a number. Everything the manual fix is built on: without the position there is nothing to
+    /// attach an answer to, and without the picture there is nothing to answer from.
+    /// </summary>
     [Fact]
-    public void AShortRowSaysSoRatherThanLookingComplete()
+    public void ASlotThatCannotBeNamedComesBackWithItsPicture()
     {
+        var reader = new ScreenshotReader(Ix, TableFor("A1", 20));
+
+        // In the table for nothing: two arbitrary hashes are ~64 bits apart, so this is a card the
+        // reader has no answer for, which is the case the user is being asked about.
+        var stranger = Cell(0, 2, Distinct(9_001));
+        stranger.Thumb = "data:image/jpeg;base64,SLOT";
+
+        var cells = new[] { Cell(0, 0, Distinct(1)), Cell(0, 1, Distinct(2)), stranger };
+
+        var reading = reader.Read(Scan(1, 5, cells, relCellWidth: 0.19), CardScreen.PackReveal);
+
+        Assert.Equal(2, reading.NamedCount);
+        var slot = Assert.Single(reading.UnreadSlots);
+        Assert.Equal((0, 2), (slot.Row, slot.Col));
+        Assert.Equal("data:image/jpeg;base64,SLOT", slot.Thumb);
+    }
+
+    /// <summary>
+    /// Naming a slot moves it: out of the outstanding list and into the reading, as a match the
+    /// hosts act on. Both halves matter — a card that joined the table but left the slot behind
+    /// would be applied twice over, and one that left the slot without joining would be lost.
+    /// </summary>
+    [Fact]
+    public void NamingASlotByHandFoldsItIntoTheReading()
+    {
+        var reader = new ScreenshotReader(Ix, TableFor("A1", 20));
+
+        var cells = new[]
+        {
+            Cell(0, 0, Distinct(1)),
+            Cell(0, 1, Distinct(9_001)),
+        };
+
+        var reading = reader.Read(Scan(1, 5, cells, relCellWidth: 0.19), CardScreen.PackReveal);
+        Assert.Single(reading.UnreadSlots);
+
+        var card = Ix.ByKey["A1-7"];
+        var fixedUp = reading.WithManual(new Dictionary<(int, int), PocketCard> { [(0, 1)] = card });
+
+        Assert.Empty(fixedUp.UnreadSlots);
+        Assert.Equal(2, fixedUp.Matches.Count);
+        Assert.Equal(2, fixedUp.NamedCount);
+
+        // Still one card recognised. What the artwork managed does not change because someone
+        // answered the question it could not.
+        Assert.Equal(1, fixedUp.RecognisedCount);
+
+        var named = Assert.Single(fixedUp.Matches, m => m.Source == MatchSource.Manual);
+        Assert.Equal("A1-7", named.Card.Key);
+        Assert.Equal((0, 1), (named.Row, named.Col));
+
+        // In slot order, not appended at the end: the review table reads down the picture, and a
+        // hand-named card belongs where it sits in it.
+        Assert.Equal([0, 1], fixedUp.Matches.Select(m => m.Col).ToArray());
+
+        // The original is untouched, so a re-read under a different screen still has the slot to
+        // offer and the answer to re-apply.
+        Assert.Single(reading.UnreadSlots);
+    }
+
+    [Fact]
+    public void AShortRowIsCountableRatherThanLookingComplete()
+    {
+        // The sentence about a hand coming up short is no longer written here, because the reading
+        // is made once and the shortfall can be closed afterwards — the user names the missing slot
+        // and a note fixed at read time would still be saying two. What the reading owes is the
+        // count the question is asked from, and the asking is ShotImport's.
         var reader = new ScreenshotReader(Ix, TableFor("A1", 20));
         var cells = new[] { Cell(0, 0, Distinct(1)), Cell(0, 1, Distinct(2)) };
 
         var reading = reader.Read(Scan(1, 5, cells, relCellWidth: 0.19), CardScreen.WonderPick);
 
         Assert.Equal(CardScreen.WonderPick, reading.Screen);
-        Assert.Contains(reading.Notes, n => n.Contains("five cards"));
+        Assert.Equal(2, reading.NamedCount);
+        Assert.Empty(reading.Notes);
     }
 
     [Fact]

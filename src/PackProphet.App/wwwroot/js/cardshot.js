@@ -24,6 +24,20 @@ const WORK_MAX = 1400;
 /// Sampling grid, matching ArtHash.Grid.
 const ArtHashGrid = 9;
 
+/// The longest side of a slot's thumbnail, and how hard it is compressed. Big enough to tell one
+/// Pokémon from another at a glance, which is all it is for — the fingerprint is computed from the
+/// full-resolution box and never from this.
+const THUMB_MAX = 96;
+const THUMB_QUALITY = 0.7;
+
+/// How many slots of one picture get a thumbnail.
+///
+/// A real screen holds five to twenty-five, so this never binds on a screenshot of the game; it is
+/// here because MAX_CELLS allows 160 and a lattice found in something that is not a card list could
+/// reach it. At about 3 KB a slot, the cap is the difference between a bounded few hundred KB and
+/// half a megabyte of pictures nobody asked for, per picture, times twenty pictures.
+const THUMB_CELLS = 60;
+
 /// A Pocket card's width over its height. The one fixed fact about the shapes being looked for, and
 /// the thing that separates a card from every other rectangle on screen.
 const CARD_ASPECT = 0.717;
@@ -179,7 +193,35 @@ function draw(bitmap) {
     canvas.height = h;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(bitmap, 0, 0, w, h);
-    return { w, h, rgba: ctx.getImageData(0, 0, w, h).data };
+
+    // The canvas travels with the pixels because the slots are cut back out of it — see
+    // thumbnail(). Redrawing the image a second time for that would decode it again, and the
+    // measurements are all in this canvas's coordinates anyway.
+    return { w, h, canvas, rgba: ctx.getImageData(0, 0, w, h).data };
+}
+
+/// A small picture of one slot, for a card the reader could not name.
+///
+/// The point is a person looking at it. A slot that comes back unread is a slot where every
+/// automatic answer has already been tried, so what is left is to show someone the card and let
+/// them say what it is — and a row of card names with no pictures beside them is not something
+/// anyone can check against a screenshot they took ten minutes ago.
+///
+/// Cut here rather than in the page because this is where the image is: the page hands the scanner
+/// a data URL and lets it go, and keeping several megabytes of base64 per picture alive so the
+/// review can crop it later would cost far more than the pictures do. Measured on these fixtures,
+/// every slot of a whole screenshot comes to 19-34 KB at this size, against 5-12 MB for the
+/// screenshot it came from.
+function thumbnail({ canvas }, box) {
+    const scale = Math.min(1, THUMB_MAX / Math.max(box.w, box.h));
+    const thumb = document.createElement('canvas');
+    thumb.width = Math.max(1, Math.round(box.w * scale));
+    thumb.height = Math.max(1, Math.round(box.h * scale));
+
+    thumb.getContext('2d').drawImage(
+        canvas, box.x, box.y, box.w, box.h, 0, 0, thumb.width, thumb.height);
+
+    return thumb.toDataURL('image/jpeg', THUMB_QUALITY);
 }
 
 /// Luma per pixel, in a flat array. Rec. 601 weights: the exact coefficients do not matter to a hash
@@ -647,8 +689,14 @@ function slots(gray, pixels, found) {
             // A card the screen cut off cannot be fingerprinted — the picture holds part of it. Its
             // region is much shorter than the consensus, which is how it is told from a whole one,
             // and it is reported as a slot that could not be read rather than measured wrongly.
+            // A card the screen cut off still gets its picture. It cannot be fingerprinted and it
+            // is perfectly legible to a person, which is exactly the case the thumbnail is for.
             if (here && here.h < cardH * 0.9) {
-                out.push({ row, col, box: [box.x, box.y, box.w, box.h], hash: '', luma: 0, saturation: 0, detail: 1 });
+                out.push({
+                    row, col, box: [box.x, box.y, box.w, box.h],
+                    hash: '', luma: 0, saturation: 0, detail: 1,
+                    thumb: out.length < THUMB_CELLS ? thumbnail(pixels, box) : '',
+                });
                 continue;
             }
 
@@ -661,6 +709,7 @@ function slots(gray, pixels, found) {
                 ...measure(gray, pixels, box),
                 nearby: nudged(gray, pixels, box, assembled),
                 digits: readBadge(gray, box),
+                thumb: out.length < THUMB_CELLS ? thumbnail(pixels, box) : '',
             });
         }
     }

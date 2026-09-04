@@ -65,6 +65,16 @@ public sealed class ShotCell
     public string Hash { get; set; } = "";
 
     /// <summary>
+    /// A small JPEG of this slot, as a data URL, or empty where the scanner did not cut one.
+    ///
+    /// Carried for the slots that come back unnamed, which is the one place the app has to ask a
+    /// person what a card is: a name typed into a box is only checkable against the picture it was
+    /// typed for. Never used to recognise anything — the fingerprint is computed from the
+    /// full-resolution box, and this is a couple of thousand bytes at 96 pixels.
+    /// </summary>
+    public string Thumb { get; set; } = "";
+
+    /// <summary>
     /// The same card fingerprinted from crops nudged a few pixels each way. The detector locates a
     /// card to within two to four pixels and cannot reliably do better, while the fingerprint has no
     /// tolerance for that — so the reader is given a spread to choose from rather than one box to

@@ -129,7 +129,7 @@ public class PackIdentifierTests
         [
             new ShotMatch(Card("A1-1"), 0, 0, 3, true, MatchSource.Art),
             new ShotMatch(Card("A1-5"), 0, 1, -1, false, MatchSource.GridPosition),
-        ], 0, []);
+        ], [], []);
 
         // A1-5 is Pikachu-exclusive and would break the intersection if it counted.
         Assert.Equal("A1:Mewtwo", PackIdentifier.Identify(Ix, reading).PackKey);

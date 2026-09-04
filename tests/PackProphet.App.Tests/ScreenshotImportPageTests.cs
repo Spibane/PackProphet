@@ -2,6 +2,7 @@ namespace PackProphet.App.Tests;
 
 using Microsoft.AspNetCore.Components.Forms;
 using Bunit.JSInterop.InvocationHandlers;
+using PackProphet.Components;
 using PackProphet.Pages;
 using PackProphet.Vision;
 
@@ -157,7 +158,7 @@ public class ScreenshotImportPageTests : AppHost
         // Regression: the actions moved from per-picture to once-for-all-pictures when the import
         // learned to take several, and the new block rendered for any picture that merely read
         // cleanly. A shot of a set too new for this build reads cleanly and names nothing, so the
-        // page showed "none could be named" and a live apply button that did nothing when pressed.
+        // page showed a live apply button that did nothing when pressed.
         var scan = MeasuredScan();
         foreach (var cell in scan.Cells) cell.Hash = new string('0', 32);
 
@@ -166,8 +167,54 @@ public class ScreenshotImportPageTests : AppHost
         page.FindComponent<InputFile>()
             .UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "nothing.png"));
 
-        Assert.Contains("none could be named", page.Markup);
         Assert.Empty(page.FindAll("button.btn-primary"));
+
+        // Nothing to apply is not nothing to do. Thirteen of the sixteen slots hold something and
+        // none of them could be named, so every one of them is offered with a box to name it —
+        // which is the whole of what this page can still usefully do with a picture like this.
+        Assert.Contains("13 slots could not be named", page.Markup);
+        Assert.Equal(13, page.FindComponents<SlotFix>().Count);
+    }
+
+    [Fact]
+    public async Task A_slot_named_by_hand_is_applied_like_any_other_card()
+    {
+        // The end of the manual fix, and the only part of it worth a page test: what the user picks
+        // has to reach the collection by the same route a recognised card does. The pieces above it
+        // -- the slot coming back with its picture, the pick folding into the reading -- are covered
+        // in the engine suite, where they can be stated without a browser.
+        //
+        // Slot 3 is made unrecognisable rather than blank: a hash in the table for nothing. That is
+        // a slot with a card in it the reader cannot name, which is the case the search box exists
+        // for -- a blank slot is a card the user does not own and is named by its neighbours.
+        var scan = MeasuredScan();
+        scan.Cells[2].Hash = new string('0', 31) + "1";
+
+        JSInterop.SetupModule("./js/cardshot.js").Setup<ShotScan>("scan", _ => true).SetResult(scan);
+        var page = await PageAsync();
+        page.FindComponent<InputFile>()
+            .UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "cards.png"));
+
+        var fix = Assert.Single(page.FindComponents<SlotFix>());
+        Assert.Equal("Row 1, card 3", fix.Find("label").TextContent);
+
+        // Typed and then waited on, because the search is debounced -- a scan of every card in the
+        // game on each keystroke is what that delay is there to avoid.
+        fix.Find("input[type=search]").Input("Charmander");
+        await Task.Delay(600);
+        fix.Render();
+
+        var pick = fix.FindAll("button").First(b => b.TextContent.Contains("A1-33"));
+        pick.Click();
+
+        // In the table as a card the user named, in its own slot, and counted apart from what the
+        // artwork managed.
+        Assert.Contains("you named it", page.Markup);
+        Assert.Contains("Named by hand", page.Markup);
+        Assert.DoesNotContain("could not be named", page.Markup);
+
+        page.Find("button.btn-primary").Click();
+        Assert.Equal(1, Session.CountOf(Session.Index.ByKey["A1-33"]));
     }
 
     [Fact]

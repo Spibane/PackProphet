@@ -240,6 +240,27 @@ public sealed class ScreenshotReader
     private static int CellKey(ShotCell cell) => cell.Row * 1000 + cell.Col;
 
     /// <summary>
+    /// Slots that hold something and came back without a name, in reading order.
+    ///
+    /// "Hold something" is <see cref="DetailFloor"/>, the same line that decides whether a slot is
+    /// searched for at all: a slot below it was never looked up, and on these screens it is the
+    /// empty space at the end of a row rather than a card. Offering those for naming would be
+    /// offering to name nothing. The ownership list keeps its own version of this, because there a
+    /// flat slot is a card — see <see cref="ReadOwnershipGrid"/>.
+    ///
+    /// Deduplicated by slot for the same reason the recognition is: a lattice that reported one
+    /// slot twice must not ask the user about it twice.
+    /// </summary>
+    private static List<ShotSlot> Unnamed(
+        ShotScan scan, Dictionary<int, Recognition> recognised, Func<ShotCell, bool> owned) =>
+        scan.Cells
+            .Where(c => c.Detail >= DetailFloor && !recognised.ContainsKey(CellKey(c)))
+            .DistinctBy(CellKey)
+            .OrderBy(c => c.Row).ThenBy(c => c.Col)
+            .Select(c => new ShotSlot(c.Row, c.Col, c.Thumb, owned(c)))
+            .ToList();
+
+    /// <summary>
     /// A pack's five cards, or a Wonder Pick's. No ownership is decided here: everything visible is
     /// a card that is there, and what that means — added to a collection, or weighed up as an offer
     /// — belongs to the page, not to the reader.
@@ -252,15 +273,17 @@ public sealed class ScreenshotReader
             .Select(r => new ShotMatch(r.Card, r.Cell.Row, r.Cell.Col, r.Distance, true, MatchSource.Art))
             .ToArray();
 
-        var unread = scan.Cells.Count(c => c.Detail >= DetailFloor) - matches.Length;
+        var unread = Unnamed(scan, recognised, _ => true);
         var notes = new List<string>();
 
-        if (matches.Length > 0 && matches.Length < 5)
-            notes.Add($"Only {matches.Length} of the five cards were recognised. Cards mid-animation, "
-                      + "or partly behind another card, are the usual reason.");
+        // No note here about a hand coming up short of five. It was one, and it could not stay one:
+        // a note is written when the reading is made, and this one stops being worth saying the
+        // moment the user names the missing slot themselves. What is left of a hand is a live
+        // question about the reading as it now stands rather than a fact about how it was read, so
+        // it is asked where it can be re-asked — see ShotImport.
 
         AddSetSpreadNote(matches, notes);
-        return new ShotReading(true, null, kind, inferred, matches, Math.Max(0, unread), notes);
+        return new ShotReading(true, null, kind, inferred, matches, unread, notes);
     }
 
     /// <summary>
@@ -290,7 +313,7 @@ public sealed class ScreenshotReader
             .DistinctBy(m => m.Card.OwnershipKey)
             .ToArray();
 
-        var unread = scan.Cells.Count(c => c.Detail >= DetailFloor) - recognised.Count;
+        var unread = Unnamed(scan, recognised, _ => true);
         var notes = new List<string>();
 
         // No note about this list being unable to report what is missing. It is an import: it adds
@@ -307,7 +330,7 @@ public sealed class ScreenshotReader
                       + "copy, and never fewer than you already have.");
 
         AddSetSpreadNote(matches, notes);
-        return new ShotReading(true, null, kind, inferred, matches, Math.Max(0, unread), notes);
+        return new ShotReading(true, null, kind, inferred, matches, unread, notes);
     }
 
     /// <summary>
@@ -332,17 +355,23 @@ public sealed class ScreenshotReader
 
         var anchors = RowAnchors(lattice, recognised, notes);
         var placeholderCeiling = PlaceholderCeiling(recognised.Values);
-        var unread = 0;
+        var unread = new List<ShotSlot>();
 
         foreach (var cell in scan.Cells)
         {
             if (recognised.ContainsKey(CellKey(cell))) continue;
 
-            // A slot with art in it that could not be named is not evidence of anything. Counted
+            // A slot with art in it that could not be named is not evidence of anything. Set aside
             // and left alone: guessing its number from its neighbours would be sound, but calling
             // an unreadable card *missing* when the reason it was unreadable might be a foil or a
-            // crop would delete something the user owns.
-            if (!LooksLikeAPlaceholder(cell, placeholderCeiling)) { unread++; continue; }
+            // crop would delete something the user owns. It is handed back as a slot the user can
+            // name, which is the one thing that does settle it.
+            if (!LooksLikeAPlaceholder(cell, placeholderCeiling))
+            {
+                unread.Add(new ShotSlot(cell.Row, cell.Col, cell.Thumb,
+                                        cell.Saturation >= ColourlessFloor));
+                continue;
+            }
 
             if (!anchors.TryGetValue(cell.Row, out var anchor)) continue;
 

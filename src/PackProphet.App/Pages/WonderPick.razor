@@ -382,7 +382,8 @@ else
         _received = "";
         _logged = null;
 
-        foreach (var match in reading.Matches.Where(m => m.Source == MatchSource.Art)
+        // Recognised or named by hand, but never placed by position -- see LogPack.AdoptShot.
+        foreach (var match in reading.Matches.Where(m => m.Source != MatchSource.GridPosition)
                                              .Take(GameRules.WonderPickCardsShown))
             _offer.Add(match.Card);
 

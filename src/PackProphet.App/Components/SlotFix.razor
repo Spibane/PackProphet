@@ -1,0 +1,201 @@
+@inject AppSession Session
+
+@* One card slot the reader could not name, and the means to name it.
+
+   Its own component so a keystroke re-renders one row rather than the whole review. The same
+   reasoning as CardPicker: a picture of nine cards with three unread slots under it is three search
+   boxes on a page that also holds three tables, and typing into one of them must not re-render the
+   other two.
+
+   Deliberately not CardPicker itself. That component is the deck and chase-list builder — a heading,
+   six facet dropdowns, an owned/all toggle, a running count of what is already picked — and all of
+   it answers questions ("which Basics do I own", "show me the Supporters") that nobody has while
+   looking at a photograph of one specific card. Here the question is always the same and always
+   closed: that one, what is it. So: a box, a few names, and the picture to check them against. *@
+
+<div class="d-flex gap-3 align-items-start py-2 border-top">
+
+    @* The slot as the camera saw it, at the shape of a card so a row of them lines up whether or
+       not the picture came through. *@
+    <div class="slot-shot flex-shrink-0">
+        @if (!string.IsNullOrEmpty(Slot.Thumb))
+        {
+            <img src="@Slot.Thumb" alt="@($"The unrecognised card at {Where}")" />
+        }
+        else
+        {
+            @* A blank slot on a card list has nothing to show, and it is still nameable. Said
+               rather than left as an empty box, which reads as a picture that failed to load. *@
+            <span class="slot-shot-empty" role="img" aria-label="No picture of this slot">&mdash;</span>
+        }
+    </div>
+
+    <div class="flex-grow-1 min-w-0">
+        @if (Picked is { } card)
+        {
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="slot-pick" style="--art:url('@card.ArtUrl')" role="img" aria-label=""></span>
+                <span>
+                    <a href="card/@card.Key">@card.Name</a>
+                    <span class="d-block small text-body-secondary">@card.Key &mdash; you said so</span>
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-auto"
+                        @onclick="Clear">
+                    Change
+                </button>
+            </div>
+        }
+        else
+        {
+            <label class="form-label small mb-1" for="@_id">@Where</label>
+            <input id="@_id" class="form-control form-control-sm" type="search"
+                   placeholder="Type the card's name" autocomplete="off"
+                   value="@_text" @oninput="OnTyped" />
+
+            @if (_results.Count > 0)
+            {
+                <ul class="list-unstyled mb-0 mt-1 d-flex flex-wrap gap-1">
+                    @foreach (var hit in _results)
+                    {
+                        <li>
+                            @* The set and number are on the button, not only the name. Half the
+                               reason a slot is unread in the first place is that two printings of
+                               one Pokémon look alike, so a list of identical names would hand the
+                               user back the very ambiguity the reader refused to guess at. *@
+                            <button type="button" class="btn btn-sm btn-outline-primary text-start"
+                                    @onclick="() => Pick(hit)">
+                                @hit.Name
+                                <span class="d-block small opacity-75">@hit.Key</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+                @if (_more > 0)
+                {
+                    <p class="small text-body-secondary mb-0 mt-1">
+                        @_more.ToString("N0") more &mdash; type a little more of the name.
+                    </p>
+                }
+            }
+            else if (_searched && _text.Trim().Length >= MinLength)
+            {
+                <p class="small text-body-secondary mb-0 mt-1">No card of that name.</p>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>Below this a search is every card in the game, which is not a search.</summary>
+    private const int MinLength = 2;
+
+    /// <summary>
+    /// Enough to choose between the printings of one Pokémon, which is the case this exists for,
+    /// and few enough that the row does not become a page. Anything beyond it is answered by typing
+    /// another letter rather than by scrolling.
+    /// </summary>
+    private const int MaxResults = 8;
+
+    /// <summary>Matches CardPicker: long enough that a scan does not start mid-word.</summary>
+    private static readonly TimeSpan TypingSettle = TimeSpan.FromMilliseconds(400);
+
+    [Parameter, EditorRequired] public ShotSlot Slot { get; set; } = default!;
+
+    /// <summary>What the user has said this slot is, or null while it is still unnamed.</summary>
+    [Parameter] public PocketCard? Picked { get; set; }
+
+    /// <summary>Null clears the slot again.</summary>
+    [Parameter] public EventCallback<PocketCard?> OnPick { get; set; }
+
+    /// <summary>
+    /// Sets this picture already produced cards from, which are ranked first.
+    ///
+    /// A screenshot is of one screen and a screen is nearly always one set, so the card under the
+    /// cursor is overwhelmingly likely to be from a set the reader already named something in. That
+    /// is exactly the reprint case — "Pikachu" spans a dozen sets and the right one is the one the
+    /// rest of the picture is from — and it costs a comparison per hit to use.
+    /// </summary>
+    [Parameter] public IReadOnlyList<string> PreferSets { get; set; } = [];
+
+    /// <summary>Distinguishes this row's field and label from every other slot's on the page.</summary>
+    [Parameter] public string Group { get; set; } = "slot";
+
+    private string _id = "slot";
+    private string _text = "";
+    private bool _searched;
+    private int _more;
+    private IReadOnlyList<PocketCard> _results = [];
+    private CancellationTokenSource? _typing;
+
+    protected override void OnParametersSet() =>
+        _id = $"{Group}-r{Slot.Row}c{Slot.Col}";
+
+    /// <summary>Where in the picture this slot is, in the terms someone looking at it would use.</summary>
+    private string Where => $"Row {Slot.Row + 1}, card {Slot.Col + 1}";
+
+    private async Task OnTyped(ChangeEventArgs e)
+    {
+        _text = e.Value?.ToString() ?? "";
+
+        _typing?.Cancel();
+        _typing = new CancellationTokenSource();
+        var token = _typing.Token;
+
+        try
+        {
+            await Task.Delay(TypingSettle, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;             // superseded by a later keystroke
+        }
+
+        Search();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Every printing, not one row per card. The deck builder collapses a card's printings because
+    /// a deck does not care which one you hold; this is the opposite — the slot IS one printing,
+    /// ownership is recorded per artwork, and choosing between the printings is the whole task.
+    /// </summary>
+    private void Search()
+    {
+        var text = _text.Trim();
+        _searched = true;
+
+        if (!Session.Ready || text.Length < MinLength)
+        {
+            _results = [];
+            _more = 0;
+            return;
+        }
+
+        var query = new CardQuery(text);
+        var preferred = PreferSets.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var hits = Session.Index.All
+            .Select(card => (Card: card, Rank: CardSearch.Rank(card, null, query)))
+            .Where(h => h.Rank != CardSearch.Hit.None)
+            .OrderByDescending(h => preferred.Contains(h.Card.Set))
+            .ThenByDescending(h => h.Rank)
+            .ThenBy(h => h.Card.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(h => h.Card.Set, StringComparer.Ordinal)
+            .ThenBy(h => h.Card.Number)
+            .ToArray();
+
+        _more = Math.Max(0, hits.Length - MaxResults);
+        _results = hits.Take(MaxResults).Select(h => h.Card).ToArray();
+    }
+
+    private Task Pick(PocketCard card)
+    {
+        _text = "";
+        _results = [];
+        _searched = false;
+        _more = 0;
+        return OnPick.InvokeAsync(card);
+    }
+
+    private Task Clear() => OnPick.InvokeAsync(null);
+}

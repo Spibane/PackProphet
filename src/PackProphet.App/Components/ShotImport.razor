@@ -426,7 +426,14 @@
         public ShotScan? Scan { get; init; }
 
         /// <summary>What the reader made of it, before anything the user has said.</summary>
-        public required ShotReading Reading { get; set; }
+        public required ShotReading Reading
+        {
+            get => _reading;
+            set { _reading = value; _fixed = null; }
+        }
+
+        private ShotReading _reading = null!;
+        private ShotReading? _fixed;
 
         /// <summary>
         /// Slots the user has named, by position in this picture. Kept beside the reading rather
@@ -436,8 +443,19 @@
         /// </summary>
         public Dictionary<(int Row, int Col), PocketCard> Picks { get; } = [];
 
-        /// <summary>The reading as it now stands, with everything the user has named folded in.</summary>
-        public ShotReading Fixed => Reading.WithManual(Picks);
+        /// <summary>
+        /// The reading as it now stands, with everything the user has named folded in.
+        ///
+        /// Cached until something changes it, and the caching is load-bearing rather than a saving.
+        /// A host can hold on to a reading between renders — the log screen does, to remember which
+        /// picture's button has been pressed once — and a fresh instance every render would make
+        /// that impossible to recognise. Invalidated wherever the two inputs move: a re-read under
+        /// a different screen, and a slot being named.
+        /// </summary>
+        public ShotReading Fixed => _fixed ??= Reading.WithManual(Picks);
+
+        /// <summary>Forgets the folded reading, after a pick has changed what it would be.</summary>
+        public void Refold() => _fixed = null;
     }
 
     /// <summary>
@@ -451,6 +469,8 @@
     {
         if (card is null) shot.Picks.Remove((slot.Row, slot.Col));
         else shot.Picks[(slot.Row, slot.Col)] = card;
+
+        shot.Refold();
     }
 
     protected override void OnParametersSet()

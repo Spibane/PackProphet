@@ -88,9 +88,20 @@ else if (_pack is null)
 
                         @if (guess.PackKey is not null)
                         {
-                            <button class="btn btn-primary" @onclick="() => AdoptShot(reading, guess.PackKey)">
-                                Open @guess.PackKey.Split(':')[1] with these
-                                @reading.NamedCount @Fmt.S(reading.NamedCount, "card")
+                            <button class="btn btn-primary" aria-live="polite"
+                                    title="@AdoptWarning"
+                                    @onclick="() => AdoptShot(reading, guess.PackKey)">
+                                @if (Confirming(reading, guess.PackKey))
+                                {
+                                    <text>Really? @OthersLost</text>
+                                }
+                                else
+                                {
+                                    <text>
+                                        Open @guess.PackKey.Split(':')[1] with these
+                                        @reading.NamedCount @Fmt.S(reading.NamedCount, "card")
+                                    </text>
+                                }
                             </button>
                         }
                         else if (guess.Candidates.Count > 1)
@@ -103,9 +114,10 @@ else if (_pack is null)
                                 @foreach (var candidate in guess.Candidates)
                                 {
                                     var pack = candidate;
-                                    <button class="btn btn-sm btn-outline-primary"
+                                    <button class="btn btn-sm btn-outline-primary" aria-live="polite"
+                                            title="@AdoptWarning"
                                             @onclick="() => AdoptShot(reading, pack)">
-                                        @pack.Split(':')[1]
+                                        @(Confirming(reading, pack) ? "Really?" : pack.Split(':')[1])
                                     </button>
                                 }
                             </div>
@@ -533,8 +545,52 @@ else
     /// against the same grid showing what was picked — so a card read wrongly is visible and
     /// fixable before anything reaches the collection.
     /// </summary>
+    /// <summary>
+    /// The picture and pack whose button has been pressed once, while pressing it costs the others.
+    ///
+    /// Keyed by both, because a picture can offer a shortlist of packs and pressing a different one
+    /// is a different decision — it moves the question rather than answering it. Keyed by the
+    /// reading's identity, which <see cref="ShotImport"/> holds steady between renders for this.
+    /// </summary>
+    private (ShotReading Reading, string Pack)? _confirmAdopt;
+
+    /// <summary>
+    /// Whether taking one picture into the workspace would throw the rest away. It does: the
+    /// workspace holds one pack, so the page renders its other branch and the import goes with it.
+    /// Nothing to warn about over a single picture, which is the case this page was built around.
+    /// </summary>
+    private bool AdoptCostsTheRest => (_shots?.Readings.Count ?? 0) > 1;
+
+    private bool Confirming(ShotReading reading, string pack) =>
+        _confirmAdopt is { } c && ReferenceEquals(c.Reading, reading) && c.Pack == pack;
+
+    private string OthersLost
+    {
+        get
+        {
+            var others = Math.Max(0, (_shots?.Readings.Count ?? 0) - 1);
+            return others == 1 ? "the other picture goes" : $"the other {others} pictures go";
+        }
+    }
+
+    private string AdoptWarning =>
+        AdoptCostsTheRest
+            ? "Opening one pack clears the other pictures — they are not logged, and you would have "
+              + "to choose them again. Log them all at once with the button below instead."
+            : "";
+
     private void AdoptShot(ShotReading reading, string pack)
     {
+        // Asked once, the way a delete is. Losing nineteen readings to a mis-tap is not undoable —
+        // nothing was written, so there is nothing to undo, and the files have to be chosen again.
+        if (AdoptCostsTheRest && !Confirming(reading, pack))
+        {
+            _confirmAdopt = (reading, pack);
+            return;
+        }
+
+        _confirmAdopt = null;
+
         // Sets the pack and clears the picks, so the cards have to go in afterwards.
         ChooseCore(pack);
 

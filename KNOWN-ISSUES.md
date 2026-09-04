@@ -213,24 +213,33 @@ gap costs a few seconds rather than a card. That also changes what raising `MaxD
 the two 19-bit cards are recoverable by hand, and loosening a threshold whose whole job is to refuse
 cards that are not in the table would be paying for them in the wrong currency.
 
-### Latent: the screen-kind guess has almost no margin left
+### Closed: the screen-kind guess was measuring the wrong thing
 
-**Open, and not currently reachable.** `ScreenshotReader.Infer` separates a three-across copies grid
-from a five-across ownership list on slot width as a fraction of the screen, at 0.28, and calls
-anything wide with at most two populated rows a pack reveal. Measured across these thirty-three
-screenshots, a pack reveal is **0.242 to 0.279** of the screen and a copies grid **0.286 to 0.298**.
-The threshold sits in a gap six thousandths wide, by luck rather than design, and the reveal branch
-is unreachable on this phone — every reveal here measures under 0.28 and would be guessed as an
-ownership list.
+**Fixed.** `ScreenshotReader.Infer` used to call a pack reveal anything at least 0.28 of the screen
+across with at most two populated rows. A reveal measures **0.242 to 0.279**, so the branch had never
+once been taken: all twenty-four reveals in the fixtures were guessed as pages of the five-across
+list, and the rule scored **7 of 31**. It passed its unit test because the test was written to
+satisfy the rule rather than measured from a picture — 0.32, a width no screenshot of this game
+produces.
 
-Nothing is broken by that today, and the reason is worth writing down before someone "fixes" it: the
-only caller that passes no screen is the collection import page, which does not offer *pack reveal*
-as a choice at all, and the two pages where a reveal is expected both force the kind. A reveal
-misread as an ownership list is also not dangerous — its five cards are random pulls rather than a
-run of set numbers, so the row anchors disagree, and the positional naming that could invent missing
-cards switches itself off. But the margin is thin enough that a different device could cross it, and
-the fix is not to nudge the constant: a reveal's second row sits half a pitch across from its first,
-which no card list ever does, and that is a difference in kind rather than in degree.
+Width could not have separated them. A reveal tops out at 0.279 and the three-across list starts at
+0.286, which is a gap of six thousandths and a coincidence rather than a margin.
+
+What does separate them is a difference in kind. The game deals five cards as three then two and
+centres the two, so the second row starts **half a slot** along; a card list's rows all start at the
+same column, and where a row's first card is missing it starts a *whole* slot along, or two, or
+three. Measured over the fixtures: every hand lands at 0.52 to 0.59 of a card width, every
+three-across page at 0.00 to 0.04, and the five-across page at 3.26 — three whole slots. The window
+is 0.35 to 0.75, several times clear of both, and the rule now scores **31 of 31**.
+
+Reading the offset needs the slot's box, which the scanner had always sent and `ShotCell` had always
+thrown away. The column index will not do: it is the position rounded to the nearest slot, and the
+signal is the half a slot the rounding discards.
+
+With the hand caught by its stagger, the width test is left separating only the two card lists —
+0.168 against 0.286 — so its threshold moved to the middle of that gap at 0.23. Being wrong there is
+not symmetrical: a three-across list read as the five-across one is the case where a gap in the
+numbering starts naming cards as missing.
 
 ### What it took, so it is not undone
 

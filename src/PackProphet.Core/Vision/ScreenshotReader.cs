@@ -105,21 +105,71 @@ public sealed class ScreenshotReader
     {
         if (scan.Lattice is not { } lattice) return CardScreen.OwnershipGrid;
 
-        // Rows that hold something, not rows the lattice reported. The detector tiles the whole
-        // screenshot, so a shot of five cards on a tall screen comes back with rows that are really
-        // the empty space around them.
-        var populated = scan.Cells
-            .Where(c => c.Detail >= DetailFloor)
-            .Select(c => c.Row)
-            .Distinct()
-            .Count();
+        // Cells that hold something. The detector tiles the whole screenshot, so a shot of five
+        // cards on a tall screen comes back with rows that are really the empty space around them.
+        var filled = scan.Cells.Where(c => c.Detail >= DetailFloor).ToArray();
 
-        var width = lattice.RelativeCellWidth;
+        if (IsAHand(filled, lattice)) return CardScreen.PackReveal;
 
-        // A hand of five: two populated rows at most, and cards taking a third of the width or more.
-        if (populated <= 2 && width >= 0.28) return CardScreen.PackReveal;
+        return lattice.RelativeCellWidth >= ThreeAcross
+            ? CardScreen.CopiesGrid
+            : CardScreen.OwnershipGrid;
+    }
 
-        return width >= 0.28 ? CardScreen.CopiesGrid : CardScreen.OwnershipGrid;
+    /// <summary>
+    /// Slot width, as a fraction of the screen, above which a card list is the three-across one.
+    ///
+    /// Only ever asked of a card list now, which is why it sits where it does. Measured across
+    /// thirty-three screenshots, the three-across list runs 0.286 to 0.298 of the screen and the
+    /// five-across 0.168, so this is the middle of a gap wide enough to drive through. It used to be
+    /// 0.28 and had to do a second job — keeping a hand of five on the other side of it — which left
+    /// eight thousandths between the two and got the hand wrong anyway. Being wrong here is not
+    /// symmetrical: a three-across list read as the five-across one is the case where a gap in the
+    /// numbering starts naming cards as missing.
+    /// </summary>
+    private const double ThreeAcross = 0.23;
+
+    /// <summary>How far apart two rows of a hand start, as a fraction of a card's width.</summary>
+    private const double StaggerMin = 0.35;
+    private const double StaggerMax = 0.75;
+
+    /// <summary>
+    /// Whether this is five cards in hand — a pack's reveal or a Wonder Pick's line-up — rather than
+    /// a page of a card list.
+    ///
+    /// The signal is that the game deals five cards as three then two, and centres the two: the
+    /// second row starts half a slot across from the first. A card list cannot do that. Its rows all
+    /// start at the same column, and where the first card of a row is missing the row starts a WHOLE
+    /// slot further along, or two, or three — so the offsets a list produces are multiples of the
+    /// pitch and the offset a hand produces is half of one. That is a difference in kind, and it is
+    /// what this asks about.
+    ///
+    /// Measured over thirty-three real screenshots: every one of the twenty-two hands lands between
+    /// 0.52 and 0.59 of a card width, every three-across page between 0.00 and 0.04, and the
+    /// five-across page at 3.26 — three whole slots. The window below is several times clear of both.
+    ///
+    /// What this replaces was a width test, and the width test could not have worked: it called a
+    /// hand anything at least 0.28 of the screen across, and a hand measures 0.24 to 0.28. The branch
+    /// had never once been taken on a real screenshot. It passed its test because the test was
+    /// written to satisfy the rule rather than measured from a picture — 0.32, a number no
+    /// screenshot of this game produces.
+    /// </summary>
+    private static bool IsAHand(IReadOnlyList<ShotCell> filled, ShotLattice lattice)
+    {
+        if (lattice.CellWidth <= 0) return false;
+
+        // Exactly two, because that is what a hand of five is. One row cannot be staggered against
+        // anything, and three or more is a list however its rows happen to line up.
+        var rows = filled
+            .Where(c => c.Box.Length == 4)
+            .GroupBy(c => c.Row)
+            .Select(g => g.Min(c => c.Box[0]))
+            .ToArray();
+
+        if (rows.Length != 2) return false;
+
+        var offset = Math.Abs(rows[0] - rows[1]) / lattice.CellWidth;
+        return offset is >= StaggerMin and <= StaggerMax;
     }
 
     private readonly record struct Recognition(ShotCell Cell, PocketCard Card, int Distance);

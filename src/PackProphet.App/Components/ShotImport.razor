@@ -138,7 +138,23 @@
         @if (reading.ScreenWasInferred && Choices.Count > 1)
         {
             <Notice Severity="Notice.Level.Info" Dense="true">
-                Read as <strong>@ScreenName(reading.Screen)</strong>. Say which above if that is wrong.
+                Read as <strong>@ScreenName(reading.Screen)</strong>.
+                @if (Choices.Any(c => c.Value == reading.Screen))
+                {
+                    <text>Say which above if that is wrong.</text>
+                }
+                else
+                {
+                    @* The guess landed on a screen this host does not offer, which on the collection
+                       import means a pack's reveal or a Wonder Pick line-up. Pointing at the picker
+                       would be pointing at a list the answer is not in, so it says what it did with
+                       it instead: the cards are cards either way, and the event they came from is
+                       logged on the page that page is for. *@
+                    <text>
+                        The cards are added the same way. Logging the pack or the pick itself is on
+                        its own page.
+                    </text>
+                }
             </Notice>
         }
 

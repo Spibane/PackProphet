@@ -71,7 +71,7 @@ else if (_pack is null)
         <details class="mb-3">
             <summary class="small text-body-secondary">Read it off a screenshot instead</summary>
             <div class="pt-2">
-                <ShotImport Group="pack" Choices="@ShotChoices">
+                <ShotImport @ref="_shots" Group="pack" Choices="@ShotChoices">
                     <Intro>
                         Screenshot the <strong>Opening Results</strong> screen, with all five cards
                         showing. The cards say which pack it was.
@@ -111,7 +111,88 @@ else if (_pack is null)
                             </div>
                         }
                     </Actions>
+
+                    @* Every picture at once, which is how packs are actually opened: in a run of
+                       ten, screenshotted as you go, imported in one sitting. Without this the only
+                       route was the per-picture button above, and that one takes you into the
+                       picker for a single pack — which unmounts this whole control and loses the
+                       other nine readings with it. Ten packs meant ten uploads.
+
+                       Only offered from two pictures up. Over a single reading it would be a second
+                       button saying the same thing as the one above it, minus the chance to check
+                       the cards in the picker first. *@
+                    <Together Context="readings">
+                        @if (readings.Count > 1)
+                        {
+                            var plan = Plan(readings);
+
+                            <section class="mt-3 border-top pt-3">
+                                <h2 class="h6">All @readings.Count pictures</h2>
+
+                                @if (plan.Unidentified > 0)
+                                {
+                                    <Notice Severity="Notice.Level.Warning" Dense="true">
+                                        @plan.Unidentified of these pictures
+                                        @(plan.Unidentified == 1 ? "does" : "do") not say which pack
+                                        @(plan.Unidentified == 1 ? "it is" : "they are") &mdash; too few
+                                        cards named, or cards that fit more than one pack. Use that
+                                        picture's own button above, or name its slots first.
+                                    </Notice>
+                                }
+
+                                @if (_bulkMiscount is { } query)
+                                {
+                                    <Notice Severity="Notice.Level.Warning" Dense="true">
+                                        @query
+                                        <button class="btn btn-sm btn-warning ms-2 py-0"
+                                                disabled="@Busy.IsBusy" @onclick="LogAllAnyway">
+                                            Log @plan.Ready.Count Anyway
+                                        </button>
+                                    </Notice>
+                                }
+
+                                @if (plan.Ready.Count > 0)
+                                {
+                                    <button id="log-all" class="btn btn-primary" disabled="@Busy.IsBusy"
+                                            @onclick="() => LogAll(plan)">
+                                        Log @plan.Ready.Count @Fmt.S(plan.Ready.Count, "pack")
+                                        &mdash; @plan.Cards @Fmt.S(plan.Cards, "card") in all
+                                    </button>
+
+                                    @* Named so it can be checked before it is pressed. Twelve packs
+                                       logged in one press is twelve events and sixty cards, and
+                                       "which packs" is the thing you would want to have seen. *@
+                                    <p class="small text-body-secondary mb-0 mt-1">
+                                        @string.Join(", ", plan.Ready
+                                            .GroupBy(r => r.Pack.Split(':')[1])
+                                            .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
+                                            .Select(g => g.Count() > 1 ? $"{g.Key} ×{g.Count()}" : g.Key))
+                                    </p>
+                                }
+                            </section>
+                        }
+                    </Together>
                 </ShotImport>
+
+                @* Outside the import, because logging a batch clears it: the readings are spent and
+                   the button that consumed them must not still be there, so the one thing that has
+                   to outlive them is the account of what happened. *@
+                @if (_bulkLogged is { } done)
+                {
+                    <Notice Severity="Notice.Level.Success" Class="mt-3">
+                        Logged @done.Packs @Fmt.S(done.Packs, "pack")
+                        and @done.Cards @Fmt.S(done.Cards, "card").
+                        @if (done.Capped.Count > 0)
+                        {
+                            <span class="text-danger-emphasis">
+                                @string.Join(", ", done.Capped) hit the @GameRules.PackPointsCap
+                                pack-point cap, so further packs of
+                                @(done.Capped.Count == 1 ? "that set" : "those sets") earn nothing.
+                                Spend before opening.
+                            </span>
+                        }
+                    </Notice>
+                }
             </div>
         </details>
 
@@ -633,6 +714,163 @@ else
     private void MarkPackOnSale()
     {
         if (_pack is not null) Session.SetLimitedPackAvailable(_pack, true);
+    }
+
+    // ---- logging a whole batch of pictures -------------------------------------------------
+
+    /// <summary>The import control, so a batch that has been logged can be taken off the screen.</summary>
+    private ShotImport? _shots;
+
+    /// <summary>What the last batch came to, once one has been logged.</summary>
+    private (int Packs, int Cards, IReadOnlyList<string> Capped)? _bulkLogged;
+
+    /// <summary>The batch's miscount question, once it has been asked. Same one-press-then-confirm as a single pack.</summary>
+    private string? _bulkMiscount;
+
+    /// <summary>One picture's worth of a batch: the pack its cards say it is, and those cards.</summary>
+    private readonly record struct Opened(string Pack, IReadOnlyList<PocketCard> Cards);
+
+    /// <param name="Ready">Pictures that name a pack, in the order they were read.</param>
+    /// <param name="Unidentified">Pictures whose cards do not settle on one pack. Left for the per-picture buttons.</param>
+    /// <param name="Short">Of the ready ones, how many hold a number of cards their pack cannot.</param>
+    private readonly record struct Batch(
+        IReadOnlyList<Opened> Ready, int Unidentified, int Short)
+    {
+        public int Cards => Ready.Sum(r => r.Cards.Count);
+    }
+
+    /// <summary>
+    /// What a batch of pictures would log, worked out before anything is written.
+    ///
+    /// A picture that does not settle on one pack is left out rather than guessed at, and counted
+    /// so the page can say how many were left. That is the same call <see cref="PackIdentifier"/>
+    /// makes for a single picture — the difference is only that here the answer must not stop the
+    /// other eleven.
+    /// </summary>
+    private Batch Plan(IReadOnlyList<ShotReading> readings)
+    {
+        var ready = new List<Opened>();
+        var unidentified = 0;
+        var shortOfAFullPack = 0;
+
+        foreach (var reading in readings)
+        {
+            // Recognised or named by hand, never placed by position -- see AdoptShot.
+            var cards = reading.Matches
+                .Where(m => m.Source != MatchSource.GridPosition)
+                .Select(m => m.Card)
+                .ToArray();
+
+            var pack = PackIdentifier.Identify(Session.Index, reading).PackKey;
+            if (pack is null || cards.Length == 0) { unidentified++; continue; }
+
+            ready.Add(new Opened(pack, cards));
+
+            var sizes = Session.Odds is null
+                ? (IReadOnlySet<int>)new HashSet<int>()
+                : Session.Odds.Rates.CardCounts(pack.Split(':')[0]);
+
+            if (sizes.Count > 0 && !sizes.Contains(cards.Length)) shortOfAFullPack++;
+        }
+
+        return new Batch(ready, unidentified, shortOfAFullPack);
+    }
+
+    /// <summary>
+    /// Asked once, like the single-pack commit: a batch where some picture holds the wrong number
+    /// of cards is worth a second press, because the odds check on History compares what was
+    /// recorded against what the model predicted and a miscount there reads as the model being
+    /// wrong. Asked once for the batch rather than once per picture — twelve identical questions
+    /// is a dialog to click through rather than a question to answer.
+    /// </summary>
+    private Task LogAll(Batch plan)
+    {
+        if (plan.Ready.Count == 0) return Task.CompletedTask;
+
+        if (_bulkMiscount is null && plan.Short > 0)
+        {
+            _bulkMiscount =
+                $"{plan.Short} of these {Fmt.S(plan.Short, "picture")} "
+                + $"{(plan.Short == 1 ? "holds" : "hold")} a number of cards that pack cannot. "
+                + "Log them anyway if that is what you meant — but the odds check on History "
+                + "compares what you record against what the model predicted, so a miscount there "
+                + "looks like the model being wrong.";
+            return Task.CompletedTask;
+        }
+
+        return LogAllCore(plan);
+    }
+
+    /// <summary>The second press, which arrives with the answer.</summary>
+    private Task LogAllAnyway()
+    {
+        var readings = _shots?.Readings ?? [];
+        return readings.Count == 0 ? Task.CompletedTask : LogAllCore(Plan(readings));
+    }
+
+    private Task LogAllCore(Batch plan) =>
+        plan.Ready.Count == 0
+            ? Task.CompletedTask
+            : Busy.RunAsync(
+                $"Logging {plan.Ready.Count} {Fmt.S(plan.Ready.Count, "pack")}…",
+                () => CommitBatch(plan));
+
+    /// <summary>
+    /// Every pack in the batch, in one mutation.
+    ///
+    /// One mutation rather than one per picture, for the reason the collection import gives: the
+    /// undo history should hold "logged twelve packs" rather than twelve steps to walk back one at
+    /// a time. It is also the only way the pack-point cap comes out right — points accrue per set
+    /// and stop dead at the cap, so twelve packs of one set have to be added in sequence against a
+    /// running total rather than each against the total as it was before any of them.
+    /// </summary>
+    private void CommitBatch(Batch plan)
+    {
+        var opened = plan.Ready;
+        if (opened.Count == 0) return;
+
+        var capped = new List<string>();
+
+        Session.Mutate(p =>
+        {
+            var collection = new Dictionary<string, int>(p.Collection);
+            var points = new Dictionary<string, int>(p.Resources.PackPointsBySet);
+            var log = new List<PackOpenEvent>(p.PackLog);
+            var now = DateTimeOffset.Now;
+
+            foreach (var (pack, cards) in opened)
+            {
+                var parts = pack.Split(':');
+                var set = parts[0];
+                var keys = cards.Select(c => c.OwnershipKey).ToList();
+
+                foreach (var key in keys)
+                    collection[key] = collection.GetValueOrDefault(key) + 1;
+
+                var before = points.GetValueOrDefault(set);
+                var after = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
+                points[set] = after;
+
+                if (after >= GameRules.PackPointsCap && !capped.Contains(set)) capped.Add(set);
+
+                // Variant is unknown from the user's point of view; they just opened "a pack".
+                log.Add(new PackOpenEvent(now, set, parts[1], "unknown", keys) { Id = LogId.New() });
+            }
+
+            return p with
+            {
+                Collection = collection,
+                Resources = p.Resources with { PackPointsBySet = points },
+                PackLog = log,
+            };
+        });
+
+        _bulkLogged = (opened.Count, plan.Cards, capped);
+        _bulkMiscount = null;
+
+        // The batch is spent. Left on screen it is a button that opens every one of these packs a
+        // second time, and the summary above says what happened without it.
+        _shots?.Clear();
     }
 
     public void Dispose()

@@ -105,7 +105,9 @@ public class ShotImportHostingTests : AppHost
         var page = RenderComponent<LogPack>();
         UploadTwo(page);
 
-        Assert.Equal(2, page.FindAll("h2").Count);
+        // The per-picture headings, which are the ones named after a file. The batch section below
+        // them is an h2 as well and is not one of these.
+        Assert.Equal(2, page.FindAll("h2.h5").Count);
         Assert.Contains("one.png", page.Markup);
         Assert.Contains("two.png", page.Markup);
     }
@@ -122,12 +124,108 @@ public class ShotImportHostingTests : AppHost
         UploadTwo(page);
 
         // ElementAt rather than the indexer: the pinned AngleSharp does not expose the one bUnit's
-        // element collection reaches for.
-        var adopt = page.FindAll("button.btn-primary");
+        // element collection reaches for. Excluding the batch button, which is one offer about all
+        // the pictures rather than one of the per-picture offers being counted here.
+        var adopt = page.FindAll("button.btn-primary:not(#log-all)");
         Assert.Equal(2, adopt.Count);
         adopt.ElementAt(1).Click();
 
         Assert.Contains("picked 5 of 5", page.Markup);
+    }
+
+    [Fact]
+    public async Task A_run_of_packs_is_logged_in_one_press_and_one_undo_step()
+    {
+        // The gap this closes: the per-picture button opens the picker for one pack, and doing that
+        // unmounts the import along with every other reading in it. Ten packs meant ten uploads.
+        //
+        // Two different packs, so the batch cannot be collapsing them into one: A1-1..A1-4 and A1-8
+        // are Mewtwo-exclusive, A1-100..A1-104 are Pikachu's.
+        StubTwo(HandScan(), HandScan(["A1-100", "A1-101", "A1-102", "A1-103", "A1-104"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        Assert.Contains("Mewtwo, Pikachu", Collapse(page.Markup));
+
+        // Re-found inside InvokeAsync and waited for, because logging runs through UiBusy, which
+        // defers the work off the click -- see GridFilterTests.
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() => Assert.Equal(2, Session.Profile.PackLog.Count));
+
+        // Two events, one per picture, each carrying its own pack -- not one event of ten cards.
+        var log = Session.Profile.PackLog;
+        Assert.Equal(2, log.Count);
+        Assert.Equal(["Mewtwo", "Pikachu"], log.Select(e => e.Pack).Order().ToArray());
+        Assert.All(log, e => Assert.Equal(5, e.OwnershipKeys.Count));
+
+        Assert.Equal(1, Session.CountOf(Session.Index.ByKey["A1-1"]));
+        Assert.Equal(1, Session.CountOf(Session.Index.ByKey["A1-100"]));
+
+        // Points accrue per pack, so two packs of one set is two lots -- and both sets got theirs.
+        Assert.Equal(GameRules.PackPointsPerPack, Session.Profile.Resources.PackPointsBySet["A1"] / 2);
+
+        page.WaitForAssertion(() =>
+            Assert.Contains("Logged 2 packs and 10 cards", Collapse(page.Markup)));
+
+        // One step, not two. Five packs logged in one press should be five packs unlogged in one
+        // press back, rather than a row of undos to walk through.
+        Assert.True(Session.CanUndo);
+        Session.Undo();
+        Assert.Empty(Session.Profile.PackLog);
+        Assert.Equal(0, Session.CountOf(Session.Index.ByKey["A1-1"]));
+
+        // And the readings are gone: the batch is spent, and a button still on screen is a button
+        // that opens all of them a second time.
+        Assert.Empty(page.FindAll("#log-all"));
+        Assert.DoesNotContain("one.png", page.Markup);
+    }
+
+    [Fact]
+    public async Task A_picture_that_does_not_name_a_pack_is_left_out_of_the_batch_and_counted()
+    {
+        // A batch must not be all-or-nothing over one picture that does not settle. A1-26 to A1-30
+        // are in all three A1 packs, so a hand of them narrows to three and finishes at none -- the
+        // other picture still logs, and the page says how many were left for the per-picture
+        // buttons.
+        StubTwo(HandScan(), HandScan(["A1-26", "A1-27", "A1-28", "A1-29", "A1-30"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        Assert.Contains("1 of these pictures does not say which pack it is", Collapse(page.Markup));
+
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() => Assert.Single(Session.Profile.PackLog));
+
+        var logged = Assert.Single(Session.Profile.PackLog);
+        Assert.Equal("Mewtwo", logged.Pack);
+        page.WaitForAssertion(() =>
+            Assert.Contains("Logged 1 pack and 5 cards", Collapse(page.Markup)));
+    }
+
+    [Fact]
+    public async Task A_batch_holding_a_wrong_sized_pack_asks_once_before_logging()
+    {
+        // The same question the single-pack commit asks, asked once for the batch rather than once
+        // per picture. Four cards is not a size an A1 pack comes in, and a miscount recorded here
+        // reads on History as the odds model being wrong.
+        StubTwo(HandScan(), HandScan(["A1-1", "A1-2", "A1-3", "A1-4"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() =>
+            Assert.Contains("holds a number of cards that pack cannot", Collapse(page.Markup)));
+
+        Assert.Empty(Session.Profile.PackLog);          // asked, not done
+
+        await page.InvokeAsync(() => page.Find("button.btn-warning").Click());
+        page.WaitForAssertion(() => Assert.Equal(2, Session.Profile.PackLog.Count));
     }
 
     [Fact]

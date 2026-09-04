@@ -402,8 +402,12 @@
     private string? _coverageWarning;
     private ArtHashTable _table = ArtHashTable.Empty;
 
-    /// <summary>The readings that came to something, in the order the pictures were given.</summary>
-    private IReadOnlyList<ShotReading> Readings =>
+    /// <summary>
+    /// The readings that came to something, in the order the pictures were given. Public so a host
+    /// acting on the batch can re-derive it after the fact — the confirm step of a two-press action
+    /// arrives without the plan the first press computed.
+    /// </summary>
+    public IReadOnlyList<ShotReading> Readings =>
         _shots.Where(s => s.Reading.Ok).Select(s => s.Fixed).ToArray();
 
     /// <summary>One picture and what it turned out to say. The scan is kept so the reading can be redone.</summary>
@@ -566,6 +570,24 @@
         foreach (var shot in _shots)
             if (shot.Scan is { } scan)
                 shot.Reading = Interpret(scan);
+    }
+
+    /// <summary>
+    /// Drops every reading on screen. For a host that has just acted on all of them at once.
+    ///
+    /// It exists because logging a pack is not something that can be done twice by accident. The
+    /// collection import can be applied again and lands on the same collection — it sets counts —
+    /// but a pack log increments them and appends an event, so a second press of a button that is
+    /// still on screen opens twelve packs that were never opened. Clearing what has been consumed
+    /// is a stronger guard than disabling it, because there is then nothing left to press.
+    /// </summary>
+    public void Clear()
+    {
+        _shots.Clear();
+        _tooMany = null;
+        _done = 0;
+        _total = 0;
+        StateHasChanged();
     }
 
     private static string ScreenName(CardScreen screen) => screen switch

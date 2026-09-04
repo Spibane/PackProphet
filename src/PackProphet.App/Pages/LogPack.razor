@@ -93,7 +93,7 @@ else if (_pack is null)
                                     @onclick="() => AdoptShot(reading, guess.PackKey)">
                                 @if (Confirming(reading, guess.PackKey))
                                 {
-                                    <text>Really? @OthersLost</text>
+                                    <text>Really? Other screenshots will be deleted.</text>
                                 }
                                 else
                                 {
@@ -117,7 +117,9 @@ else if (_pack is null)
                                     <button class="btn btn-sm btn-outline-primary" aria-live="polite"
                                             title="@AdoptWarning"
                                             @onclick="() => AdoptShot(reading, pack)">
-                                        @(Confirming(reading, pack) ? "Really?" : pack.Split(':')[1])
+                                        @(Confirming(reading, pack)
+                                            ? "Really? Other screenshots will be deleted."
+                                            : pack.Split(':')[1])
                                     </button>
                                 }
                             </div>
@@ -563,15 +565,6 @@ else
 
     private bool Confirming(ShotReading reading, string pack) =>
         _confirmAdopt is { } c && ReferenceEquals(c.Reading, reading) && c.Pack == pack;
-
-    private string OthersLost
-    {
-        get
-        {
-            var others = Math.Max(0, (_shots?.Readings.Count ?? 0) - 1);
-            return others == 1 ? "the other picture goes" : $"the other {others} pictures go";
-        }
-    }
 
     private string AdoptWarning =>
         AdoptCostsTheRest

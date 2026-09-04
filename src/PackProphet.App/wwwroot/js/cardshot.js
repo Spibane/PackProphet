@@ -24,18 +24,34 @@ const WORK_MAX = 1400;
 /// Sampling grid, matching ArtHash.Grid.
 const ArtHashGrid = 9;
 
-/// The longest side of a slot's thumbnail, and how hard it is compressed. Big enough to tell one
-/// Pokémon from another at a glance, which is all it is for — the fingerprint is computed from the
-/// full-resolution box and never from this.
-const THUMB_MAX = 96;
+/// The part of a card a thumbnail keeps: the name and the illustration, and none of the half below
+/// them.
+///
+/// A thumbnail of the whole card is mostly attack text, a stats bar and the copy-count banner, all
+/// of it far too small to read at this size and all of it crowding out the one thing worth looking
+/// at. Cropping to the picture roughly doubles the picture.
+///
+/// The band is measured to hold both card layouts, which do not put their illustration in the same
+/// place: a Pokémon's runs from 0.07 to 0.47 of the card's height with its name above it at 0.02,
+/// and a Trainer's from 0.14 to 0.51 with its kind and its name above that. One window covering both
+/// keeps the name either way, which matters because the name is what gets typed into the box beside
+/// it.
+const ART = { left: 0.04, right: 0.96, top: 0.02, bottom: 0.50 };
+
+/// The longest side of a slot's thumbnail, and how hard it is compressed. Sized so the zoomed view
+/// is about life size rather than an enlargement of too few pixels — the crop is under half the
+/// card's area, so this is a smaller picture than the number suggests. The fingerprint is computed
+/// from the full-resolution box and never from this.
+const THUMB_MAX = 176;
 const THUMB_QUALITY = 0.7;
 
 /// How many slots of one picture get a thumbnail.
 ///
 /// A real screen holds five to twenty-five, so this never binds on a screenshot of the game; it is
 /// here because MAX_CELLS allows 160 and a lattice found in something that is not a card list could
-/// reach it. At about 3 KB a slot, the cap is the difference between a bounded few hundred KB and
-/// half a megabyte of pictures nobody asked for, per picture, times twenty pictures.
+/// reach it. Measured at 2 to 7 KB a slot — a hand of five large cards is dearer per slot than a
+/// page of twenty-five small ones — so a whole picture runs 34 to 56 KB and the cap holds the
+/// pathological one to a few hundred, against 5 to 12 MB for the screenshot itself.
 const THUMB_CELLS = 60;
 
 /// A Pocket card's width over its height. The one fixed fact about the shapes being looked for, and
@@ -209,17 +225,20 @@ function draw(bitmap) {
 ///
 /// Cut here rather than in the page because this is where the image is: the page hands the scanner
 /// a data URL and lets it go, and keeping several megabytes of base64 per picture alive so the
-/// review can crop it later would cost far more than the pictures do. Measured on these fixtures,
-/// every slot of a whole screenshot comes to 19-34 KB at this size, against 5-12 MB for the
-/// screenshot it came from.
+/// review can crop it later would cost far more than the pictures do. Every slot of a whole
+/// screenshot comes to a few tens of KB, against 5-12 MB for the screenshot it came from.
 function thumbnail({ canvas }, box) {
-    const scale = Math.min(1, THUMB_MAX / Math.max(box.w, box.h));
-    const thumb = document.createElement('canvas');
-    thumb.width = Math.max(1, Math.round(box.w * scale));
-    thumb.height = Math.max(1, Math.round(box.h * scale));
+    const x = box.x + box.w * ART.left;
+    const y = box.y + box.h * ART.top;
+    const w = box.w * (ART.right - ART.left);
+    const h = box.h * (ART.bottom - ART.top);
 
-    thumb.getContext('2d').drawImage(
-        canvas, box.x, box.y, box.w, box.h, 0, 0, thumb.width, thumb.height);
+    const scale = Math.min(1, THUMB_MAX / Math.max(w, h));
+    const thumb = document.createElement('canvas');
+    thumb.width = Math.max(1, Math.round(w * scale));
+    thumb.height = Math.max(1, Math.round(h * scale));
+
+    thumb.getContext('2d').drawImage(canvas, x, y, w, h, 0, 0, thumb.width, thumb.height);
 
     return thumb.toDataURL('image/jpeg', THUMB_QUALITY);
 }

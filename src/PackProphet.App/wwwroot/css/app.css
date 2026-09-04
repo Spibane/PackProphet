@@ -4501,26 +4501,68 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
    The screenshot import's loose ends: a picture of one card slot the reader could not name,
    beside the box for naming it.
 
-   The picture is sized by the card's own aspect and NOT by what came back, because the two are
-   not always the same thing — a slot cut off by the edge of the screen is a short crop, and a
-   column of thumbnails that each set their own height turns the list into a staircase. object-fit
-   keeps the crop honest inside that frame rather than stretching it to fill. */
+   The frame is the shape of the CROP rather than of a card — cardshot.js keeps the name and the
+   illustration and throws the text half away, which comes out landscape. Fixed, and not sized by
+   what came back, because the two are not always the same thing: a slot cut off by the edge of the
+   screen is a short crop, and a column of thumbnails each setting their own height is a staircase.
+
+   Not overflow:hidden, and that is deliberate — the zoom below is a transform on the image, and a
+   clipping ancestor would trim the enlargement to the size of the thing being enlarged. The crop
+   already fills the frame exactly, so there is nothing to clip in the resting state. */
 .slot-shot {
-    width: 3.4rem;
-    aspect-ratio: 367 / 512;
+    width: 5.4rem;
+    aspect-ratio: 1.374;
+    padding: 0;
+    border: 0;
     border-radius: var(--pp-r-xs);
-    overflow: hidden;
     background-color: var(--bs-secondary-bg);
     background-image: var(--pp-art-weave);
 }
 
 .slot-shot img {
+    display: block;
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
+    border-radius: var(--pp-r-xs);
     -webkit-user-drag: none;
     user-select: none;
     -webkit-user-select: none;
+
+    /* Positioned from the start so the hover only has to move z-index. Changing position on hover
+       reflows, and a thumbnail that shifts a pixel as the pointer lands on it reads as broken. */
+    position: relative;
+    z-index: 0;
+    transform-origin: left center;
+    transition: transform .12s ease-out, box-shadow .12s ease-out;
+}
+
+/* Zoomed on hover and on focus, and the focus half is the point on a phone: this page is used
+   beside the game, where there is no pointer to hover with. A tap focuses the button and enlarges
+   it; a tap anywhere else puts it back.
+
+   :focus and NOT :focus-visible, which is the whole difference between this working on a phone and
+   not. focus-visible exists to keep focus rings off things that were tapped or clicked, so it is
+   precisely the wrong test for "someone just tapped this to look at it" — it would have left the
+   zoom working with a mouse and a keyboard and nowhere else. The cost is that a mouse click leaves
+   the picture open after the pointer moves away, which is closer to a feature: click to keep it up,
+   click off to put it down. The ring below stays on focus-visible, where it belongs. */
+.slot-shot:hover img,
+.slot-shot:focus img {
+    /* Bounded by the crop's own resolution rather than by how big a picture would be nice. The
+       thumbnail is 176px across at most, the resting frame is 86, and this lands the enlargement at
+       about 190 — a shade over life size, where 2.6 would have been blowing 162 pixels up to 225 and
+       showing it. A sharp picture at two and a bit times is worth more than a soft one at three. */
+    transform: scale(2.2);
+    z-index: 30;
+    box-shadow: 0 .5rem 1.5rem rgb(0 0 0 / .45);
+}
+
+.slot-shot:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
+/* Somebody who has asked for less movement gets the enlargement without the travel. */
+@media (prefers-reduced-motion: reduce) {
+    .slot-shot img { transition: none; }
 }
 
 /* A slot with no picture: the frame still holds its place in the column so the rows line up. */
@@ -4528,8 +4570,6 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
     color: var(--bs-secondary-color);
 }
 

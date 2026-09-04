@@ -128,7 +128,11 @@ public class ShotImportHostingTests : AppHost
         // the pictures rather than one of the per-picture offers being counted here.
         var adopt = page.FindAll("button.btn-primary:not(#log-all)");
         Assert.Equal(2, adopt.Count);
+
+        // Twice, because taking one picture into the workspace discards the other and is asked
+        // about first -- see the confirm test below.
         adopt.ElementAt(1).Click();
+        page.FindAll("button.btn-primary:not(#log-all)").ElementAt(1).Click();
 
         Assert.Contains("picked 5 of 5", page.Markup);
     }
@@ -226,6 +230,95 @@ public class ShotImportHostingTests : AppHost
 
         await page.InvokeAsync(() => page.Find("button.btn-warning").Click());
         page.WaitForAssertion(() => Assert.Equal(2, Session.Profile.PackLog.Count));
+    }
+
+    [Fact]
+    public async Task Adopting_one_of_several_pictures_asks_before_dropping_the_rest()
+    {
+        // Taking one picture into the pack workspace unmounts the import and every other reading
+        // with it. Nothing is written, so there is nothing to undo -- the files simply have to be
+        // chosen again. Asked once, the way a delete is.
+        StubTwo(HandScan(), HandScan(["A2-1", "A2-2", "A2-3", "A2-4", "A2-5"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        var first = page.FindAll("button.btn-primary:not(#log-all)").ElementAt(0);
+        Assert.Contains("Open Mewtwo with these", Collapse(first.TextContent));
+
+        first.Click();
+
+        // Still on the import, and the button now says what pressing it again costs.
+        Assert.Contains("Really? the other picture goes", Collapse(page.Markup));
+        Assert.Contains("two.png", page.Markup);
+
+        page.FindAll("button.btn-primary:not(#log-all)").ElementAt(0).Click();
+        Assert.Contains("picked 5 of 5", page.Markup);
+    }
+
+    [Fact]
+    public async Task Adopting_the_only_picture_asks_nothing()
+    {
+        // Nothing is lost with one picture, and a confirm on the ordinary path is a tap for its own
+        // sake. This is the case the page was built around.
+        StubScan(HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        Upload(page);
+
+        page.Find("button.btn-primary").Click();
+
+        Assert.DoesNotContain("Really?", page.Markup);
+        Assert.Contains("picked 5 of 5", page.Markup);
+    }
+
+    [Fact]
+    public async Task Pressing_a_different_pack_moves_the_question_rather_than_answering_it()
+    {
+        // A picture whose cards fit several packs offers a shortlist. Pressing Mewtwo and then
+        // Charizard is two different decisions, so the second press must re-ask rather than being
+        // taken as the confirm for the first. A1-26 to A1-30 are in all three A1 packs.
+        StubTwo(HandScan(["A1-26", "A1-27", "A1-28", "A1-29", "A1-30"]), HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        var shortlist = page.FindAll("button.btn-outline-primary");
+        Assert.True(shortlist.Count >= 2, "the shortlist should offer more than one pack");
+
+        shortlist.ElementAt(0).Click();
+        Assert.Contains("Really?", page.Markup);
+
+        // A different pack, so the workspace must not open.
+        page.FindAll("button.btn-outline-primary").ElementAt(1).Click();
+        Assert.DoesNotContain("picked", page.Markup);
+        Assert.Contains("Really?", page.Markup);
+
+        // The same one twice does open it.
+        page.FindAll("button.btn-outline-primary").ElementAt(1).Click();
+        Assert.Contains("picked 5 of 5", page.Markup);
+    }
+
+    [Fact]
+    public async Task Appraising_one_of_several_offers_asks_before_dropping_the_rest()
+    {
+        // The Wonder Pick page has the same shape and the same cost: the import shows only while
+        // the bench is empty, so filling it takes the other readings away.
+        StubTwo(HandScan(), HandScan(["A2-1", "A2-2", "A2-3", "A2-4", "A2-5"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<WonderPick>();
+        UploadTwo(page);
+
+        page.FindAll("button.btn-primary").ElementAt(0).Click();
+        Assert.Contains("Really? the other picture goes", Collapse(page.Markup));
+        Assert.Contains("two.png", page.Markup);
+
+        page.FindAll("button.btn-primary").ElementAt(0).Click();
+        Assert.DoesNotContain("two.png", page.Markup);      // the bench is loaded, the import gone
     }
 
     [Fact]

@@ -238,17 +238,31 @@ else
             <details class="mt-3">
                 <summary class="small text-body-secondary">Read the offer off a screenshot instead</summary>
                 <div class="pt-2">
-                    <ShotImport Group="wonder" Choices="@ShotChoices">
+                    <ShotImport @ref="_shots" Group="wonder" Choices="@ShotChoices">
                         <Intro>
                             Screenshot the <strong>Wonder Pick</strong> screen. One offer per picture
                             &mdash; @GameRules.WonderPickCardsShown cards.
                         </Intro>
                         <Actions Context="reading">
-                            <button class="btn btn-primary" @onclick="() => AdoptShot(reading)">
-                                Appraise these @reading.RecognisedCount
-                                @Text.Fmt.S(reading.RecognisedCount, "card")
+                            <button class="btn btn-primary" aria-live="polite"
+                                    title="@AdoptWarning"
+                                    @onclick="() => AdoptShot(reading)">
+                                @if (Confirming(reading))
+                                {
+                                    <text>Really? @OthersLost</text>
+                                }
+                                else
+                                {
+                                    @* NamedCount rather than RecognisedCount: a slot the user named
+                                       by hand is appraised with the rest, so it has to be counted
+                                       with the rest. *@
+                                    <text>
+                                        Appraise these @reading.NamedCount
+                                        @Text.Fmt.S(reading.NamedCount, "card")
+                                    </text>
+                                }
                             </button>
-                            @if (reading.RecognisedCount > GameRules.WonderPickCardsShown)
+                            @if (reading.NamedCount > GameRules.WonderPickCardsShown)
                             {
                                 @* More than one offer in frame. Taking the first five would appraise
                                    a mixture of two offers, which is worse than saying so. *@
@@ -376,8 +390,54 @@ else
     /// Capped at the five slots an offer has. A screenshot of the Wonder Pick list can hold several
     /// offers at once, and the page says so rather than quietly appraising a mixture of two.
     /// </summary>
+    /// <summary>
+    /// The import control, so the page can tell whether taking one offer would cost the others.
+    /// </summary>
+    private ShotImport? _shots;
+
+    /// <summary>
+    /// The picture whose button has been pressed once, while pressing it costs the others. One
+    /// offer per picture here, so unlike the log screen there is nothing to key but the reading —
+    /// whose identity <see cref="ShotImport"/> holds steady between renders for this.
+    /// </summary>
+    private ShotReading? _confirmAdopt;
+
+    /// <summary>
+    /// Whether appraising one picture would throw the rest away. It does: the page shows the import
+    /// only while there is no offer on the bench, so filling the bench takes the import with it.
+    /// </summary>
+    private bool AdoptCostsTheRest => (_shots?.Readings.Count ?? 0) > 1;
+
+    private bool Confirming(ShotReading reading) => ReferenceEquals(_confirmAdopt, reading);
+
+    private string OthersLost
+    {
+        get
+        {
+            var others = Math.Max(0, (_shots?.Readings.Count ?? 0) - 1);
+            return others == 1 ? "the other picture goes" : $"the other {others} pictures go";
+        }
+    }
+
+    private string AdoptWarning =>
+        AdoptCostsTheRest
+            ? "Appraising one offer clears the other pictures — nothing is recorded either way, but "
+              + "you would have to choose them again. Appraise them one at a time from a fresh "
+              + "upload, or start with the one you are deciding about."
+            : "";
+
     private void AdoptShot(ShotReading reading)
     {
+        // Asked once, the way a delete is. There is nothing to undo afterwards -- no state was
+        // written -- so a mis-tap costs the other readings outright and the files have to be
+        // chosen again.
+        if (AdoptCostsTheRest && !Confirming(reading))
+        {
+            _confirmAdopt = reading;
+            return;
+        }
+
+        _confirmAdopt = null;
         _offer.Clear();
         _received = "";
         _logged = null;

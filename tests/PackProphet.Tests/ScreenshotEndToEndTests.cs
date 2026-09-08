@@ -792,4 +792,82 @@ public class ScreenshotEndToEndTests
         // takes the live card data and the same five become named.
         Assert.Empty(reading.Matches);
     }
+
+    /// <summary>
+    /// IMG_1234: a pack reveal taken while the iOS volume overlay was on screen, sitting over the
+    /// left edge of the first card. Verbatim <c>scan()</c> output again.
+    ///
+    /// The overlay is masked as part of the card it covers, so that card's region begins twenty
+    /// working-scale pixels early -- at x=20 where the card starts at 38. That much is expected and
+    /// costs one card: the crop is too far out to fingerprint, and the slot is reported unread so a
+    /// person can name it.
+    ///
+    /// What it cost as well was a card at the OTHER end of the picture, and that was a defect. A
+    /// slot's column is its position divided by the pitch and rounded, the overlay stretched the top
+    /// row's first gap from 202 to 212, and columnPitch took a median over an even number of gaps --
+    /// which is the upper one. Both cards of the bottom row then rounded to column 1. Row and column
+    /// are the whole of a slot's name here, so the two became one slot: the recognition keyed
+    /// them together and kept the nearer, and the unread list deduplicated the other away. The
+    /// fifth card of the pack did not come back unread, because the reader was never shown it.
+    /// It simply was not in the reading at all, and nothing on the review said so.
+    ///
+    /// Fixed on the JavaScript side, where the numbers are made -- the pitch is now measured across
+    /// the row's whole span, and a row's columns are held strictly increasing whatever the
+    /// arithmetic says. Both alone are enough for this picture; both are kept because a pitch can be
+    /// wrong for reasons other than an overlay, and losing a card in silence is the wrong failure.
+    /// </summary>
+    private static readonly (int Row, int Col, string Hash, double Luma, double Saturation, double Detail)[] OverlaidReveal =
+    [
+        (0, 0, "2de5e155eecdafcffff01af6afd4aff7", 0.6700, 0.2332, 0.0622),
+        (0, 1, "183360a082339ab2ff3360fc8019ce10", 0.6600, 0.3741, 0.0658),
+        (0, 2, "1ca664c49e362709def00d408837f8cc", 0.6418, 0.4909, 0.0671),
+        (1, 1, "30e6cee9e3f96175f1634e0000fe719f", 0.6413, 0.2373, 0.1242),
+        (1, 2, "4672f76878f4f297fbff0f7c08f7c107", 0.5519, 0.3698, 0.0951),
+    ];
+
+    private static ShotScan OverlaidRevealScan() => new()
+    {
+        Ok = true, Width = 1320, Height = 2868,
+        Lattice = new ShotLattice
+        {
+            Rows = 2, Cols = 3, CellWidth = 176, CellHeight = 245,
+            Confidence = 1.0, RelativeCellWidth = 0.2733,
+        },
+        Cells =
+        [
+            .. OverlaidReveal.Select(c => new ShotCell
+            {
+                Row = c.Row, Col = c.Col, Hash = c.Hash,
+                Luma = c.Luma, Saturation = c.Saturation, Detail = c.Detail,
+            }),
+        ],
+    };
+
+    [Fact]
+    public void AnOverlaidRevealStillGivesEveryCardItsOwnSlot()
+    {
+        // Five cards, five names. Before the fix the bottom row came back as 1 and 1.
+        var slots = OverlaidRevealScan().Cells.Select(c => (c.Row, c.Col)).ToArray();
+
+        Assert.Equal(5, slots.Length);
+        Assert.Equal(5, slots.Distinct().Count());
+    }
+
+    [Fact]
+    public void NoCardOfAnOverlaidRevealGoesMissingBetweenTheScanAndTheReading()
+    {
+        // The property that actually matters to someone looking at the review, and the one the
+        // collision broke: every slot the scanner found is accounted for afterwards -- named, or
+        // listed as a slot to name by hand. Counted as a sum rather than as five unread cells so
+        // that this keeps testing what it is about once the table can name these cards.
+        var reading = new ScreenshotReader(Ix, Table)
+            .Read(OverlaidRevealScan(), CardScreen.PackReveal);
+
+        Assert.Equal(5, reading.Matches.Count + reading.UnreadCells);
+
+        // And each one is individually nameable, which is the whole point of reporting them one by
+        // one: a slot the user cannot point at is a slot they cannot fix.
+        Assert.Equal(reading.UnreadSlots.Select(s => (s.Row, s.Col)).Distinct().Count(),
+                     reading.UnreadCells);
+    }
 }

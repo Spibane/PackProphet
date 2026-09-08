@@ -417,7 +417,26 @@ function columnPitch(cards, columns, cardW, cardH) {
     // Dividing errs towards more slots than there are cards, which is the right way to be wrong: a
     // slot with nothing in it fingerprints to nothing and is reported unread, where a slot that was
     // never emitted loses a card the picture plainly shows.
-    const pitch = gap / Math.max(1, Math.floor(gap / cardW));
+    const step = gap / Math.max(1, Math.floor(gap / cardW));
+
+    // Then that spacing re-measured across the whole row rather than believed from one gap.
+    //
+    // A gap is the distance between two found cards, and either card being a few pixels out of
+    // place is worth the whole error. That is not hypothetical: an iOS volume overlay sitting over
+    // the first card of a row is masked as part of it, and the card's left edge is then reported
+    // twenty pixels early. The row's two gaps come out 212 and 192 where both are truly 202, and
+    // median() of an even count takes the upper one -- so the contaminated gap becomes the pitch
+    // outright.
+    //
+    // The span from the first card to the last carries the same error over every slot it crosses
+    // instead of one, which for a row of three halves it and for a five-across list quarters it.
+    // How many slots that is comes from the gap estimate, which is accurate enough to count with
+    // long before it is accurate enough to measure with.
+    //
+    // A pitch estimated long is not a rounding detail. It is what put both cards of IMG_1234's
+    // bottom row on column 1, and a column is an identity -- see slots().
+    const span = sorted[sorted.length - 1] - sorted[0];
+    const pitch = span > 0 ? span / Math.max(1, Math.round(span / step)) : step;
 
     // Below a card's width the number cannot be a spacing at all. It is what the fallback above
     // produces on a hand of five when only one card per row was found: the two rows are offset by
@@ -691,6 +710,10 @@ function slots(gray, pixels, found) {
     const out = [];
 
     for (let row = 0; row < rows.length && out.length < MAX_CELLS; row++) {
+        // The last column number given out in this row. Rows are independent: the same number in
+        // two rows is two different slots and always was.
+        let previous = -1;
+
         for (const x of rows[row].columns) {
             if (out.length >= MAX_CELLS) break;
 
@@ -700,7 +723,25 @@ function slots(gray, pixels, found) {
             // The column index counts from the grid's own origin, so a card keeps the same number
             // whichever row it is in. On a card list that number IS its place in the set's ordering,
             // which is what lets a recognised card name the blanks beside it.
-            const col = pitch > 0 ? Math.round((x - origin) / pitch) : 0;
+            //
+            // And because it is an identity, it has to be unique within its row. Row and column are
+            // the whole of a slot's name on the other side of the wire: PackProphet.Vision keys both
+            // its recognition and its unread list by them, so two slots answering to one name are
+            // one slot, and the second card is not merely misread -- it never reaches the reader at
+            // all. It cannot be recognised, and it cannot be offered to be named by hand either,
+            // since that list is built from the slots the reader saw and gave up on.
+            //
+            // Nothing above guarantees uniqueness, because the number is a position divided by an
+            // estimated pitch and rounded. Estimate the pitch five percent long and two neighbours
+            // round to the same number, which is what IMG_1234 does -- a hand of five whose bottom
+            // two cards both came out as column 1, so the fifth card of the pack simply vanished.
+            //
+            // A row's slots arrive sorted and no two sit within half a pitch of one another, so
+            // their numbers must strictly increase; where the arithmetic says otherwise it is the
+            // arithmetic that is wrong. Nudging the number keeps the card, and a card at a number
+            // one too high is visible and correctable in a way a deleted card is not.
+            const col = Math.max(previous + 1, pitch > 0 ? Math.round((x - origin) / pitch) : 0);
+            previous = col;
 
             const here = cards.find(c => Math.abs(c.x - box.x) <= cardW * LINE_TOLERANCE
                                       && Math.abs(c.y - box.y) <= cardH * LINE_TOLERANCE);

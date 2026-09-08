@@ -180,11 +180,15 @@ jobs:
                   src/PackProphet.App/wwwroot/data/card-types.txt
           git commit -m 'Fingerprint the card art that has appeared since the last run'
 
-          # --force-with-lease refuses outright when there is no remote ref to hold a lease on, so
-          # the first push of this branch has to be a plain one. Later pushes replace a branch only
-          # this workflow writes to, and the lease still guards against racing another run.
-          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-            git push --force-with-lease origin "$branch"
+          # A bare --force-with-lease reads the branch's remote-tracking ref, and this checkout has
+          # none: it is a shallow clone of the base branch, fetching that branch alone. Git then
+          # rejects the push as stale info rather than falling back to a plain one, which is what
+          # broke this step. Naming the value the lease expects asks the same question -- has
+          # anything else written this branch since -- without needing a ref to read it from.
+          # An empty answer means the branch is not there at all, and a first push cannot be forced.
+          remote_sha=$(git ls-remote --heads origin "$branch" | awk '{print $1}')
+          if [ -n "$remote_sha" ]; then
+            git push --force-with-lease="refs/heads/$branch:$remote_sha" origin "$branch"
           else
             git push origin "$branch"
           fi

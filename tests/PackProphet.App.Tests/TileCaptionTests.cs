@@ -4,6 +4,7 @@ using PackProphet.Components;
 using PackProphet.Domain;
 using PackProphet.Pages;
 using PackProphet.Services;
+using PackProphet.Text;
 
 /// <summary>
 /// The tile: art in a box of its own, and the three controls in a caption strip under it.
@@ -31,28 +32,35 @@ public class TileCaptionTests : AppHost
     }
 
     [Fact]
-    public async Task The_art_is_a_box_of_its_own_and_holds_only_the_image()
+    public async Task The_art_is_a_box_of_its_own_and_holds_the_image_and_one_badge()
     {
         // The aspect ratio, the clip and the gold flair live on this element. Left on the tile they
         // would have squashed the picture by the height of the caption.
-        var tile = Tile(await AnyCardAsync());
+        var tile = Tile(await AnyCardAsync(), count: 3);
 
         var art = tile.Find(".card-tile .art");
         Assert.NotNull(art.QuerySelector("img[data-src]"));
 
-        // Nothing else inside it: the spinner is not furniture, it stands in for the image.
-        Assert.Empty(art.QuerySelectorAll(".cnt, .info, .want"));
+        // The count, and nothing else. Three badges covered three corners of the picture you are
+        // looking at in order to recognise a card, which is why they left; one is a different
+        // proposition, and a quantity is the thing a text caption cannot make read across six
+        // columns. So the count comes back and the other two stay in the caption.
+        Assert.NotNull(art.QuerySelector(".cnt"));
+        Assert.Empty(art.QuerySelectorAll(".info, .want, .no, .rr"));
     }
 
     [Fact]
-    public async Task The_caption_carries_the_heart_the_name_and_the_count()
+    public async Task The_caption_carries_the_number_the_name_and_the_heart()
     {
         var card = await AnyCardAsync();
         var tile = Tile(card, count: 3, want: true);
 
         var cap = tile.Find(".card-tile .cap");
-        Assert.NotNull(cap.QuerySelector("button.want"));
-        Assert.Equal("3", cap.QuerySelector(".cnt")!.TextContent.Trim());
+
+        // The printed number leads it. The grid is in number order by default, so "I am looking
+        // for 143" is answerable by eye only if the numbers are on screen; it used to be in the
+        // tooltip and the accessible label and nowhere a sighted user could read without hovering.
+        Assert.Equal(card.Number.ToString(), cap.QuerySelector(".no")!.TextContent.Trim());
 
         // The link is the card's NAME, not the word "info". Below the art those six characters
         // labelled a thing that already has a label, and the printed name on a 200px tile is small,
@@ -60,19 +68,56 @@ public class TileCaptionTests : AppHost
         var link = cap.QuerySelector("a.info")!;
         Assert.Equal(card.Name, link.TextContent.Trim());
         Assert.Contains(card.Name, link.GetAttribute("aria-label")!);
+
+        // The heart is last, after the facts, because it is the one control among them.
+        Assert.NotNull(cap.QuerySelector("button.want"));
+
+        // And the count is NOT here any more: it is a badge on the art.
+        Assert.Null(cap.QuerySelector(".cnt"));
     }
 
     [Fact]
-    public async Task The_count_keeps_its_slot_when_there_is_nothing_to_count()
+    public async Task The_count_badge_is_absent_where_there_is_nothing_to_count()
     {
-        // A virtualised grid needs every row to be the same height. A caption that collapsed on the
-        // cards you do not own — which is most of them — would make the scrollbar lie about how long
-        // the list is, so the slot stays and the stylesheet hides its contents.
+        // It kept an empty slot while it was in the caption, because a virtualised grid needs every
+        // row the same height and a strip that collapsed on the cards you do not own -- which is
+        // most of them -- would make the scrollbar lie. On the art it is out of the flow, so there
+        // is no row height to keep and an unowned card simply has no badge.
         var tile = Tile(await AnyCardAsync(), count: 0, want: true);
 
-        var cnt = tile.Find(".card-tile .cap .cnt");
+        var cnt = tile.Find(".card-tile .cnt");
         Assert.Contains("none", cnt.ClassList);
         Assert.Equal("", cnt.TextContent.Trim());
+
+        // The caption is still there and still the same shape, which is what the row height
+        // actually depends on now.
+        Assert.NotNull(tile.Find(".card-tile .cap .no"));
+    }
+
+    [Fact]
+    public async Task The_rarity_is_in_the_caption_where_the_grid_supplies_a_ladder()
+    {
+        var card = await AnyCardAsync();
+        var rung = Session.Index.Rung(card);
+        Assert.NotNull(rung);
+
+        var withLadder = RenderComponent<CardTile>(p =>
+        {
+            p.Add(t => t.Card, card);
+            p.Add(t => t.Rung, rung);
+        });
+
+        // The glyphs the game prints, from the same rungs the list view and the filter chips draw,
+        // so a chip and a card agree on what a rarity looks like.
+        var rr = withLadder.Find(".card-tile .cap .rr");
+        Assert.Equal(rung!.Glyphs, rr.TextContent.Trim());
+        Assert.Contains(rung.GlyphClass, rr.ClassList);
+
+        // And omitted rather than left as an empty slot on a grid given no ladder -- the picker
+        // screens pass no RungOf at all.
+        var withoutLadder = Tile(card);
+        Assert.Empty(withoutLadder.FindAll(".rr"));
+        Assert.NotNull(withoutLadder.Find(".card-tile .cap"));
     }
 
     [Fact]

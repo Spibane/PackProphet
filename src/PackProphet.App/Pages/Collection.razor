@@ -14,17 +14,38 @@ else
 {
     <div class="page-head">
         <h1 class="title">Collection</h1>
-        @* Where you are and how far along, in the header rather than in the filters bar: it is the
-           answer the page exists to give, and the filters bar is for changing something rather
-           than for reading a total. *@
+        @* Where you are and how far along. In the page bar rather than with the controls: it is
+           the answer the page exists to give, and the rail beside the grid is for changing
+           something rather than for reading a total.
+
+           The status as a sentence, with the two figures that are answers picked out of the three
+           that are context.
+
+           "target 19 / 72" is a ratio, and a ratio is something you subtract before you can act on
+           it. What you actually want to know is how much is left, so it says that. The subtraction
+           was being done by the reader, every time, on the one line of the page that exists to be
+           read rather than changed.
+
+           It also has to carry what the filters are set to once the rail folds into a sheet on a
+           phone, because a count with its filters out of sight is a lie -- so this is the line that
+           grows that clause rather than a second bar appearing to hold it. *@
         <span class="subtitle" title="Distinct cards you own here, total copies including duplicates, and progress against the rarities you have chosen to collect">
             @Label(_set)
-            &middot; @Stats.Owned of @Stats.Cards owned
+            &middot; <strong>@Stats.Owned of @Stats.Cards</strong> owned
             @* Copies as well as cards, since they answer different questions: one is how far
                through the set you are, the other how much you are holding — and gold flair needs
                ten of a card, so duplicates are worth counting. *@
             &middot; @Stats.Copies copies
-            &middot; target @TargetOwned / @TargetTotal
+            &middot;
+            @if (TargetTotal - TargetOwned is > 0 and var outstanding)
+            {
+                <strong class="short">@outstanding short</strong>
+                <text> of target</text>
+            }
+            else
+            {
+                <text>target met</text>
+            }
         </span>
         <span class="actions">
             <button class="btn btn-sm btn-outline-secondary" disabled="@(!Session.CanUndo)"

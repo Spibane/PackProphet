@@ -636,6 +636,7 @@ else
                               Gold="@Gold(card, CountOf(card))"
                               Picked="@(PickedOf?.Invoke(card) ?? 0)"
                               Wanted="@(WantedOf?.Invoke(card) ?? 0)"
+                              Rung="@RungOf?.Invoke(card)"
                               OnWant="OnWant"
                               ShowInfo="@(!Sweeping)"
                               OnHold="OpenDetail"

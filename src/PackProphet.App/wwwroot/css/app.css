@@ -125,6 +125,231 @@
 .page-body.measure-text { max-inline-size: var(--measure-text); }
 .page-body.measure-wide { max-inline-size: var(--measure-wide); }
 
+/* the rail
+   ==================================================================================
+   A column for the controls that used to be a bar, on the pages whose job is browsing.
+
+   The count it replaces: nav, page header, set tabs, filter row, control row -- five strips and
+   about 300px before the first card on a phone-width collection. The rule that replaced them is
+   that no page stacks more than two horizontal bars, which on a desktop means the nav and the
+   page bar, and leaves the page's own controls nowhere horizontal to go.
+
+   A rail is not just the same controls turned ninety degrees. A bar can afford a chip, so a
+   filter arrives as "Missing only" with no indication of what it is one of; a column has room for
+   the heading, so the control says what it sets. The count goes in the heading of the group that
+   decides it, for the same reason.
+
+   Sized to the page rather than fixed: the collection's rail has five groups and the decks shelf
+   has two. A sidebar of a fixed height would have to pad the short one, which is the argument for
+   this over a sidebar.
+
+   It scrolls with the page rather than pinning. Pinned, it would need its own scroller as soon as
+   the collection's five groups outgrew a laptop, and a second scrollbar beside a virtualised grid
+   is two things that scroll where the user meant one.
+
+   Placement is explicit rather than by flow order, because three of this container's four
+   children go in the second column and the fourth is fixed and in no column at all. */
+:root { --rail-w: 216px; }
+
+.page-body.railed {
+    display: grid;
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    align-items: start;
+}
+
+.page-body.railed > .page-rail { grid-area: 1 / 1; }
+.page-body.railed > .grid-wrap { grid-area: 1 / 2; }
+
+/* The strip naming the set under your thumb shares the grid's cell instead of taking a row above
+   it. A third bar is the thing the rail exists to remove, and "which set am I in" is worth an
+   overlay over the first row of cards and not a strip of page that is there the whole way down.
+   Same sticky offset as before, so it still parks under the bars rather than at the viewport top;
+   align-self keeps it from stretching to the height of the grid it floats over. */
+.page-body.railed > .grid-spy {
+    grid-area: 1 / 2;
+    align-self: start;
+    z-index: 5;
+    margin: .4rem .5rem 0;
+    border: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--bs-border-color);
+    border-radius: var(--pp-r-sm);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, .25);
+}
+
+.page-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 16px 14px 20px;
+    border-right: 1px solid var(--pp-hairline, var(--bs-border-color));
+    background: var(--pp-deep, var(--bs-tertiary-bg));
+}
+
+.rail-group {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    min-inline-size: 0;
+}
+
+/* The group's own heading, and where a reading that belongs to the group goes: "Showing" carries
+   the card count, because a count with an invisible filter behind it is the thing this shell was
+   built to stop. */
+.rail-group > .ttl {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .5rem;
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.rail-group > .ttl > .cnt {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    color: var(--bs-body-color);
+    font-weight: 600;
+}
+
+/* A segmented pair, filling the rail's width. Bootstrap's own btn-group would do this, but it
+   sizes to its content and a two-state control whose halves are "Adds" and "Removes" reads as a
+   toggle only when the two halves are the same width. */
+.rail-seg { display: flex; min-inline-size: 0; }
+.rail-seg > .btn {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    min-height: var(--ctl-h);
+    border-radius: 0;
+}
+.rail-seg > .btn:first-child {
+    border-start-start-radius: var(--pp-r-sm);
+    border-end-start-radius: var(--pp-r-sm);
+}
+.rail-seg > .btn:last-child {
+    border-start-end-radius: var(--pp-r-sm);
+    border-end-end-radius: var(--pp-r-sm);
+}
+/* Collapse the shared edge, so the pair reads as one control and not two that happen to touch. */
+.rail-seg > .btn + .btn { margin-inline-start: -1px; }
+
+/* Everything the page hands the rail runs the full width. In the toolbar these controls sized
+   themselves to their content and to the room left on the line; in a column, a select that stops
+   short of the edge looks like it failed to load.
+
+   block-size is pinned as well as min-height, because the search field is a flex item sized to
+   fill a bar and a column is taller than a bar: left to grow it became a 110px box. */
+.page-rail .form-select,
+.page-rail .form-control,
+.page-rail > .rail-group > .btn {
+    inline-size: 100%;
+    max-inline-size: none;
+    block-size: var(--ctl-h);
+    min-height: var(--ctl-h);
+}
+
+/* The search field's `flex: 1 1 8rem` is written for a bar, where the flex basis is a WIDTH and
+   8rem is the least it should shrink to. In a column that same basis is a height, so the box came
+   out 128px tall. Reset rather than re-specified: in this shell it fills the width and stands at
+   one control's height, which the rule above already says. */
+.page-rail .grid-search { flex: none; }
+
+/* A filter group turns ninety degrees with the shell. On a bar its label sits beside its chips,
+   because a bar's spare room is horizontal; in a column the label goes above them, and the chips
+   get the full width to wrap into rather than the ~130px left over beside a word. */
+.page-rail .chip-group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: .3rem;
+}
+.page-rail .chip-group > .ttl {
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.page-rail .chip-toolbar { flex-wrap: wrap; }
+
+/* The separators the bar used to need between groups. The column already has 18px of gap and a
+   heading per group, so a rule as well is the third signal for one boundary. */
+.page-rail .bar-sep { display: none; }
+
+/* One rarity tier of the target: its glyphs, how far along it is, and how many copies are left.
+   A three-track grid rather than flex, so the bars line up down the column whether a tier's mark
+   is one diamond or four -- the whole point of the row is comparing the lengths. */
+.tier-row {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr) 2.6rem;
+    align-items: center;
+    gap: .5rem;
+    font-size: .78rem;
+}
+.tier-row > .bar {
+    block-size: 6px;
+    border-radius: var(--pp-r-xs);
+    /* Ink at low alpha, not one of the surface tokens. A track has to read against whatever it is
+       drawn on, and this one is drawn on the rail -- a fourth surface, which in the light skin sits
+       within a shade of the sunk one the other tracks in the app use. */
+    background: color-mix(in srgb, var(--bs-body-color) 16%, transparent);
+    overflow: hidden;
+}
+.tier-row > .bar > span {
+    display: block;
+    block-size: 100%;
+    background: var(--bs-primary);
+}
+.tier-row > .fig {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-secondary-color);
+}
+
+/* The gap note reads as prose in a column, where on its own bar it had to be a headline. Its list
+   is a disclosure, so the group is one line until asked. */
+.page-rail .gap-strip {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: .78rem;
+}
+.page-rail .gap-strip .hd {
+    text-align: start;
+    inline-size: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: inherit;
+}
+.page-rail .gap-strip .x { align-self: flex-start; }
+.page-rail .gap-list { padding-inline-start: 1rem; margin: 0; }
+
+/* Below the desk width the column has nowhere to be, so the groups stack above the grid and keep
+   every control reachable. This is the honest intermediate, not the destination: the phone
+   treatment is a pair of floating buttons opening a sheet that repeats these groups in this
+   order, and it replaces this rule rather than adding to it. */
+@media (width <= 900px) {
+    .page-body.railed { grid-template-columns: minmax(0, 1fr); }
+    .page-body.railed > .page-rail {
+        grid-area: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--pp-hairline, var(--bs-border-color));
+    }
+    .page-body.railed > .grid-wrap,
+    .page-body.railed > .grid-spy { grid-area: auto; }
+    .page-body.railed > .grid-spy {
+        margin: 0;
+        border-inline: 0;
+        border-top: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
 /* breakpoints
 
    Three named widths. Everything new uses these; the older rules below still sit on nine ad hoc
@@ -413,6 +638,11 @@ main:focus { outline: none; }
     /* Chrome. Distinct enough from the body to mark "this is a control bar" on its own. */
     --bs-tertiary-bg: #edf0f4;
     --bs-secondary-bg: #e2e7ec;
+
+    /* Recessed, for the rail. See the note in the paper skin on why a rail cannot reuse the bar's
+       surface. Slate's dark form has no palette block of its own -- it is Bootstrap's, left as
+       shipped -- so there it falls back to the raised surface at the use site. */
+    --pp-deep: #e7ebf0;
 }
 
 /* outline buttons
@@ -580,6 +810,12 @@ main:focus { outline: none; }
     --bs-table-border-color: #e2ded6;
     --pp-hairline: #e2ded6;
 
+    /* The recessed surface. See the note in the dark form. The light skin has very little room
+       under its body colour before it reaches the sunk surface, and the first value tried was
+       #eae7e0 -- a shade off the sunk #ebe8e2, which made every track drawn on the rail vanish.
+       This sits between raised and sunk, so all four steps stay separable. */
+    --pp-deep: #f2efe8;
+
     /* Chosen. 5.6:1 under white as a fill and 5.0:1 as ink on the raised surface, so it is safe
        both ways round -- which it has to be, since the token is a fill in nine places and a
        colour in six. */
@@ -633,6 +869,12 @@ main:focus { outline: none; }
     --bs-border-color-translucent: rgba(238, 236, 234, .16);
     --bs-table-border-color: #2c2b31;
     --pp-hairline: #2c2b31;
+
+    /* A fourth surface, BELOW the body rather than above it, for the rail and for a secondary
+       column. The other three step upward -- body, raised, sunk -- and a rail cannot use any of
+       them: raised is what the bars are, and a control column that matches the bar it replaced
+       reads as a bar that fell over. Recessed says "this is the edge of the page" instead. */
+    --pp-deep: #141317;
 
     /* Still fill-first: 4.8:1 under white, which the nine fills need. */
     --bs-primary: #cf3b44;

@@ -59,16 +59,19 @@ public class GridFilterTests : AppHost
     }
 
     [Fact]
-    public async Task The_missing_filter_is_in_the_disclosure_and_nowhere_else()
+    public async Task The_missing_filter_is_one_control_and_nowhere_else()
     {
         // One control, in the select with the other five ownership filters. It had a button of its
         // own on the always-on bar as well, which is six controls' worth of bar on a phone and the
         // same state said twice: pressed button, and a chip beside it reading "missing only".
+        //
+        // The shell moved -- the controls are in a rail now rather than on a bar and a disclosure
+        // -- and the invariant did not: still one control, wherever the controls live.
         var page = await PageAsync();
 
-        Assert.DoesNotContain(page.FindAll(".grid-toolbar button"),
+        Assert.DoesNotContain(page.FindAll(".page-rail button"),
                               b => b.TextContent.Contains("Missing Only"));
-        Assert.Contains(page.FindAll(".toolbar-more-body option"),
+        Assert.Contains(page.FindAll(".page-rail option"),
                         o => o.TextContent.Contains("Missing Only"));
 
         // A collection that owns nothing has nothing missing to hide, so the filter would pass this
@@ -80,7 +83,7 @@ public class GridFilterTests : AppHost
         var all = Listed(page);
 
         await page.InvokeAsync(() =>
-            page.Find(".toolbar-more-body select").Change("missing"));
+            page.Find(".page-rail select").Change("missing"));
         page.WaitForAssertion(() => Assert.True(Listed(page) < all,
             $"missing-only listed {Listed(page)} of {all}"));
 
@@ -90,14 +93,20 @@ public class GridFilterTests : AppHost
     }
 
     [Fact]
-    public async Task The_layout_switch_is_on_the_always_on_bar()
+    public async Task The_layout_switch_is_not_behind_a_disclosure()
     {
+        // List mode is not a preference among equals: it is the only view carrying a count per
+        // row, the set and number, type, rarity and the printed text. Behind a summary reading
+        // "filters and layout" it was findable only by someone who already suspected it existed,
+        // so it may never go back behind one -- on a bar or in a rail.
         var page = await PageAsync();
 
-        var bar = page.Find(".grid-toolbar");
-        Assert.Contains("Grid", bar.TextContent);
-        Assert.Contains("List", bar.TextContent);
-        Assert.NotNull(page.Find(".grid-toolbar .layout-switch"));
+        var rail = page.Find(".page-rail");
+        Assert.Contains("Grid", rail.TextContent);
+        Assert.Contains("List", rail.TextContent);
+
+        Assert.Empty(page.FindAll(".page-rail details"));
+        Assert.Null(page.Find(".page-rail").QuerySelector("details"));
     }
 
     [Fact]
@@ -120,8 +129,9 @@ public class GridFilterTests : AppHost
         Assert.True(one < everything, "one rarity narrowed nothing");
         Assert.True(two > one, $"a second rarity did not widen the list: {two} vs {one}");
 
-        // And the bar reports the filter, since the count means something different with it on.
-        Assert.Contains("2 rarities", page.Find(".grid-toolbar").TextContent);
+        // And the controls report the filter, since the count means something different with it
+        // on. In the rail the two sit in one group, which is the point of the group.
+        Assert.Contains("2 rarities", page.Find(".page-rail").TextContent);
     }
 
     [Fact]
@@ -133,7 +143,7 @@ public class GridFilterTests : AppHost
         await ChipAsync(page, 0, 0);
         Assert.True(Listed(page) < everything);
 
-        await ClickAsync(page, ".grid-toolbar .chip-filter");
+        await ClickAsync(page, ".page-rail .chip-filter");
         page.WaitForAssertion(() => Assert.Equal(everything, Listed(page)));
     }
 

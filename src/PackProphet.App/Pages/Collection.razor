@@ -46,6 +46,14 @@ else
             {
                 <text>target met</text>
             }
+
+            @* What the filters are set to, once any are. Last, because it is the clause that
+               varies -- the three figures before it are on every load and read as one line, and a
+               clause that appears and disappears in the middle of them would move them about. *@
+            @if (FilterWords is { Length: > 0 } words)
+            {
+                <span class="filters">showing @words</span>
+            }
         </span>
         <span class="actions">
             <button class="btn btn-sm btn-outline-secondary" disabled="@(!Session.CanUndo)"
@@ -157,7 +165,7 @@ else
               RungOf="Session.Index.Rung" TypeOf="Session.TypesOf" StageOf="Session.StageLabel"
               SortKeyOf="Session.Sets.SortKey" GroupOf="GroupLabel" GroupArtOf="GroupArt"
               WantedOf="WantedOf" OnWant="ToggleWant"
-              ShowCount="false" ImgFailedChanged="OnArtFailed"
+              ShowCount="false" ImgFailedChanged="OnArtFailed" ActiveFilters="ActiveFilters"
               FactOf="Session.FactFor" FactsReady="Session.FactsReady">
         @* Filters live in the grid's toolbar rather than in a bar of their own. With a nav, a
            header, the set tabs, a filter row and a control row, this page put five bars above the
@@ -657,6 +665,44 @@ else
     private static string GroupArt(PocketCard card) => PocketCard.SetLogoUrl(card.Set);
 
     /// <summary>The wording the ownership dropdown uses, so a chip and its control agree.</summary>
+    /// <summary>
+    /// How many of the five filters are applied, for the count on the phone's filter button.
+    /// </summary>
+    private int ActiveFilters =>
+        (_search is { Length: > 0 } ? 1 : 0)
+        + (_own != "all" ? 1 : 0)
+        + (_rarities.Count > 0 ? 1 : 0)
+        + (_types.Count > 0 ? 1 : 0)
+        + (_pack is { Length: > 0 } ? 1 : 0);
+
+    /// <summary>
+    /// What the filters are set to, in words, for the page bar.
+    ///
+    /// This is the half of the phone treatment that keeps the rest of it honest. The controls fold
+    /// into a sheet, and a count with its filters out of sight is a lie -- "110 cards" means
+    /// something different with "missing only" on, and the sheet that says so is shut. A badge
+    /// reading "2" says there are filters without saying what they are, which is not the same
+    /// thing and does not fix it.
+    ///
+    /// Same labels the chips carry, from the same state, so the words in the bar and the chips in
+    /// the sheet cannot say different things about one filter.
+    /// </summary>
+    private string FilterWords
+    {
+        get
+        {
+            var on = new List<string>(5);
+
+            if (_search is { Length: > 0 }) on.Add($"\u201c{_search}\u201d");
+            if (_own != "all") on.Add(OwnFilterLabel);
+            if (_rarities.Count > 0) on.Add(RarityFilterLabel);
+            if (_types.Count > 0) on.Add(TypeFilterLabel);
+            if (_pack is { Length: > 0 }) on.Add(_pack);
+
+            return string.Join(", ", on);
+        }
+    }
+
     private string OwnFilterLabel => _own switch
     {
         "missing" => "missing only",

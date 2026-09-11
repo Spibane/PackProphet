@@ -35,7 +35,19 @@
    Group order is the order the phone sheet repeats, so both viewports teach one vocabulary. *@
 @if (Rail is not null)
 {
-    <div class="page-rail">
+    @* popover, and see the note on .page-rail in app.css: the attribute is what lets this be a
+       column at one width and a sheet at another without a second copy of every control in it.
+       Above the fold width the stylesheet overrides the UA popover rules and it is an ordinary
+       grid item, so the attribute costs a desktop nothing but the two buttons below being
+       hidden. *@
+    <div class="page-rail" popover id="@(_gridId)-rail">
+        @* Sheet only. The bar it is dragged and tapped shut by; on a column there is nothing to
+           dismiss. *@
+        <div class="rail-handle">
+            <button class="btn btn-sm btn-outline-secondary" popovertarget="@(_gridId)-rail"
+                    popovertargetaction="hide">Done</button>
+        </div>
+
         @* In a group of its own, like everything else here, so it is not a bare flex child of the
            column with a bar's sizing still on it. *@
         @if (Search is not null)
@@ -48,7 +60,7 @@
            say what the two states are rather than leaving a green button to imply it. *@
         @if (AllowRemove && (!ListView || Sweeping))
         {
-            <div class="rail-group">
+            <div class="rail-group mode">
                 <span class="ttl" id="@(_gridId)-mode">Tapping a card</span>
                 <div class="rail-seg" role="group" aria-labelledby="@(_gridId)-mode">
                     <button class="btn btn-sm @(Removing ? "btn-outline-secondary" : "btn-success")"
@@ -138,6 +150,38 @@
         @* Last, and the reason a rail beats a bar: what goes here is different on every page that
            has one, and is sized to the page rather than to the room a bar happened to have. *@
         @Rail
+    </div>
+
+    @* The phone's controls. Two buttons rather than a bar, because a bar here is the third one and
+       the rule is two -- and because twelve cards fit on screen beside these where six fit under a
+       bar carrying the same controls.
+
+       The mode first and always, never inside the sheet: it is the only control in the app that
+       can take a card away, and its state has to be readable without opening anything. It is also
+       the smaller of the two, since it is read far more often than it is pressed.
+
+       The filter button carries its own count, because that is the number that says whether the
+       sheet is worth opening. What the filters actually ARE is said in words in the page bar's
+       subtitle -- a count with its filters out of sight is a lie, and a badge saying "2" does not
+       fix that on its own. *@
+    <div class="rail-fabs">
+        @if (AllowRemove && (!ListView || Sweeping))
+        {
+            <button class="rail-fab mode @(Removing ? "removing" : "adding")"
+                    @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
+                    title="@(Removing ? $"{GestureVerb} removes a copy. Press to switch back to adding." : $"{GestureVerb} adds a copy. Press to switch to removing.")">
+                @(Removing ? "Tap removes" : "Tap adds")
+            </button>
+        }
+
+        <button class="rail-fab filters" popovertarget="@(_gridId)-rail"
+                aria-label="@(ActiveFilters == 1 ? "Filters, 1 applied" : $"Filters, {ActiveFilters} applied")">
+            Filters
+            @if (ActiveFilters > 0)
+            {
+                <span class="n">@ActiveFilters</span>
+            }
+        </button>
     </div>
 }
 else
@@ -843,6 +887,17 @@ else
     /// image loader rather than counted here, so there is nothing the page could compute itself.
     /// </summary>
     [Parameter] public EventCallback<int> ImgFailedChanged { get; set; }
+
+    /// <summary>
+    /// How many filters the page currently has applied, for the count on the phone's filter
+    /// button.
+    ///
+    /// Supplied rather than counted here, because the grid does not know what a filter is: it is
+    /// handed <see cref="Cards"/> already narrowed, and <see cref="FilterChips"/> as opaque
+    /// markup. The page owns the predicates, so the page owns the number -- and it is the same
+    /// number the chips are built from, so the two cannot disagree about whether anything is on.
+    /// </summary>
+    [Parameter] public int ActiveFilters { get; set; }
 
     /// <summary>
     /// One chip per filter currently applied. This is the half of filtering that may never hide —

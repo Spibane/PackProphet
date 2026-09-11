@@ -125,91 +125,10 @@ else
         </div>
     </details>
 
-    @* Collection-wide rather than scoped to the visible set: evolution does not care which set a
-       card came from, and scoping it would hide the gap whose fix lives one tab over. Collapsed by
-       default, since the grid is what the page is for. *@
-    @if (Session.ShowGapStrip && Session.Gaps is { Complete: false } gaps)
-    {
-        <div class="gap-strip">
-            <button class="hd" @onclick="() => _showGaps = !_showGaps"
-                    aria-expanded="@Aria.Flag(_showGaps)">
-                <span class="chev" aria-hidden="true">@(_showGaps ? "▾" : "▸")</span>
-                <strong>@gaps.BlockedCards</strong>
-                @(gaps.BlockedCards == 1 ? "card you own cannot evolve" : "cards you own cannot evolve")
-                <span class="text-body-secondary">
-                    (@gaps.Gaps.Count missing
-                    @(gaps.Gaps.Count == 1 ? "link" : "links"), across every set)
-                </span>
-            </button>
-
-            @* Early on nearly every evolution is missing a stage, so this reports a standing fact
-               rather than something that resolves. The filter and the Settings toggle both remain,
-               so dismissing hides the bar rather than the feature. *@
-            <button class="x" @onclick="() => Session.SetShowGapStrip(false)"
-                    title="Hide this bar for good. The 'fills an evolution gap' filter still works, and Settings brings it back."
-                    aria-label="Hide the evolution gap bar">&times;</button>
-
-            @if (_showGaps)
-            {
-                <p class="small text-body-secondary mb-2">
-                    Any printing works: the game evolves on the printed name.
-                    @if (_own != "gaps")
-                    {
-                        <button class="btn btn-sm btn-outline-primary py-0 ms-1"
-                                @onclick="ShowGapFills">Show them in the grid</button>
-                    }
-                </p>
-
-                <ul class="gap-list">
-                    @foreach (var gap in gaps.Gaps)
-                    {
-                        <li>
-                            @if (gap.Easiest is { } easiest)
-                            {
-                                <a href="card/@easiest.Key">@gap.MissingName</a>
-                                <span class="rr">@RarityName(easiest)</span>
-                                <span class="text-body-secondary">From @easiest.Set</span>
-                            }
-                            else
-                            {
-                                <span>@gap.MissingName</span>
-                            }
-
-                            @if (gap.NoPackRoute)
-                            {
-                                <span class="badge text-bg-warning"
-                                      title="No printing of it comes from a pack you can open, so opening will never produce one">
-                                    No pack has it
-                                </span>
-                            }
-
-                            <span class="text-body-secondary">
-                                (blocks @string.Join(", ", gap.Blocks.Select(b => b.Name)))
-                            </span>
-
-                            @if (gap.Requires is { } deeper)
-                            {
-                                <span class="text-body-secondary">
-                                    (and it needs @deeper, which you also lack)
-                                </span>
-                            }
-                        </li>
-                    }
-                </ul>
-
-                @if (gaps.Unverified > 0)
-                {
-                    <p class="small text-body-tertiary mb-0">
-                        @gaps.Unverified of @gaps.Checked owned Pokémon have no stage data published
-                        yet, so a gap among them cannot be detected. A clean list is not proof there
-                        are none.
-                    </p>
-                }
-            }
-        </div>
-    }
-
-    <PageShell Flush="true">
+    @* railed: the page's controls go in a column beside the grid rather than on bars above it.
+       See the note on .page-rail in app.css for what that buys and what it cost to keep doing it
+       the other way. *@
+    <PageShell Flush="true" Class="railed">
     <CardGrid Cards="Filtered" CountOf="Session.CountOf" Columns="Session.GridColumns"
               OnAdjust="OnAdjust" OnSweep="OnSweep" OnSet="OnSet"
               ListView="Session.ListView" ListViewChanged="Session.SetListView"
@@ -261,7 +180,7 @@ else
         </FilterChips>
 
         <Filters>
-            <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Filter by what you own" @onchange="OnOwnFilter">
+            <select class="form-select form-select-sm" aria-label="Filter by what you own" @onchange="OnOwnFilter">
                 <option value="all">All Cards</option>
                 <option value="missing">Missing Only</option>
                 <option value="owned">Owned Only</option>
@@ -359,29 +278,166 @@ else
             @* Columns only mean something in the grid layout. *@
             @* select-narrow: on a phone the panel gives a full row to anything that sets a filter
                and half a row to a single control, and this is one of the single controls. *@
-            <select class="form-select form-select-sm select-narrow" style="max-width:6rem" aria-label="Columns in the grid" @onchange="OnColumns"
+            <select class="form-select form-select-sm select-narrow" aria-label="Columns in the grid" @onchange="OnColumns"
                     hidden="@Session.ListView">
                 @foreach (var n in new[] { 3, 4, 5, 6, 8, 10 })
                 {
                     <option value="@n" selected="@(n == Session.GridColumns)">@n Cols</option>
                 }
             </select>
+        </ToolbarExtras>
+
+        @* What only this page has, at the foot of the rail.
+
+           Both of these used to be bars. The target was four figures in the header, where "target
+           178 / 286" says you are behind without saying at what, and the evolution gap was a strip
+           of its own between the set tabs and the first card -- a fourth bar, carrying a standing
+           fact that early on is true of nearly every collection.
+
+           In a column they are readings rather than controls, so they go last: a rail is scanned
+           from the top for the thing you came to change, and neither of these is that. *@
+        <Rail>
             @* Both act on one set. Across every set they would be indiscriminate, and "erase
-               everything" lives in Settings. *@
+               everything" lives in Settings.
+
+               A group of their own, because the rail gives them one. In the toolbar they shared a
+               disclosure with the column count and the density toggle -- the only room there was
+               -- and the first thing the rail did with them was file them under "Layout". *@
             @if (!ViewingAll)
             {
-                <button class="btn btn-sm btn-outline-secondary" @onclick="MarkTargetOwned"
-                        disabled="@Busy.IsBusy"
-                        title="Mark every card this set's plan wants as owned">
-                    Fill target
-                </button>
-                <button class="btn btn-sm btn-outline-danger" @onclick="ClearSet"
-                        disabled="@Busy.IsBusy" aria-live="polite"
-                        title="Set every card in this set back to zero. Undo works.">
-                    @(_confirmClear ? "Clear. Sure?" : "Clear set")
-                </button>
+                <div class="rail-group">
+                    <span class="ttl">This set</span>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="MarkTargetOwned"
+                            disabled="@Busy.IsBusy"
+                            title="Mark every card this set's plan wants as owned">
+                        Fill target
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="ClearSet"
+                            disabled="@Busy.IsBusy" aria-live="polite"
+                            title="Set every card in this set back to zero. Undo works.">
+                        @(_confirmClear ? "Clear. Sure?" : "Clear set")
+                    </button>
+                </div>
             }
-        </ToolbarExtras>
+
+            <div class="rail-group">
+                <span class="ttl">
+                    Target
+                    <span class="cnt">@TargetOwned / @TargetTotal</span>
+                </span>
+
+                @* Per tier, because the total cannot say which one is holding you up. A plan
+                   wanting two of every diamond and one of every star finishes the diamonds long
+                   before the stars, and "24 short" spread over four tiers is a different job from
+                   24 short at one crown. Copies rather than cards, matching the figure above it --
+                   the two disagreeing about the same collection is worse than either being
+                   coarse. *@
+                @foreach (var (rung, wanted, satisfied) in TargetByRung)
+                {
+                    <div class="tier-row">
+                        <span class="glyphs @rung.GlyphClass" aria-hidden="true">@rung.Glyphs</span>
+                        <span class="visually-hidden">@rung.Symbol</span>
+                        <span class="bar" aria-hidden="true">
+                            <span style="inline-size:@(Pct(satisfied, wanted))%"></span>
+                        </span>
+                        <span class="fig">
+                            @if (satisfied >= wanted)
+                            {
+                                <text>done</text>
+                            }
+                            else
+                            {
+                                @(wanted - satisfied)
+                            }
+                        </span>
+                    </div>
+                }
+            </div>
+
+            @* Collection-wide rather than scoped to the visible set: evolution does not care which set a
+               card came from, and scoping it would hide the gap whose fix lives one tab over. Collapsed by
+               default, since the grid is what the page is for. *@
+            @if (Session.ShowGapStrip && Session.Gaps is { Complete: false } gaps)
+            {
+                <div class="gap-strip">
+                    <button class="hd" @onclick="() => _showGaps = !_showGaps"
+                            aria-expanded="@Aria.Flag(_showGaps)">
+                        <span class="chev" aria-hidden="true">@(_showGaps ? "▾" : "▸")</span>
+                        <strong>@gaps.BlockedCards</strong>
+                        @(gaps.BlockedCards == 1 ? "card you own cannot evolve" : "cards you own cannot evolve")
+                        <span class="text-body-secondary">
+                            (@gaps.Gaps.Count missing
+                            @(gaps.Gaps.Count == 1 ? "link" : "links"), across every set)
+                        </span>
+                    </button>
+
+                    @* Early on nearly every evolution is missing a stage, so this reports a standing fact
+                       rather than something that resolves. The filter and the Settings toggle both remain,
+                       so dismissing hides the bar rather than the feature. *@
+                    <button class="x" @onclick="() => Session.SetShowGapStrip(false)"
+                            title="Hide this bar for good. The 'fills an evolution gap' filter still works, and Settings brings it back."
+                            aria-label="Hide the evolution gap bar">&times;</button>
+
+                    @if (_showGaps)
+                    {
+                        <p class="small text-body-secondary mb-2">
+                            Any printing works: the game evolves on the printed name.
+                            @if (_own != "gaps")
+                            {
+                                <button class="btn btn-sm btn-outline-primary py-0 ms-1"
+                                        @onclick="ShowGapFills">Show them in the grid</button>
+                            }
+                        </p>
+
+                        <ul class="gap-list">
+                            @foreach (var gap in gaps.Gaps)
+                            {
+                                <li>
+                                    @if (gap.Easiest is { } easiest)
+                                    {
+                                        <a href="card/@easiest.Key">@gap.MissingName</a>
+                                        <span class="rr">@RarityName(easiest)</span>
+                                        <span class="text-body-secondary">From @easiest.Set</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@gap.MissingName</span>
+                                    }
+
+                                    @if (gap.NoPackRoute)
+                                    {
+                                        <span class="badge text-bg-warning"
+                                              title="No printing of it comes from a pack you can open, so opening will never produce one">
+                                            No pack has it
+                                        </span>
+                                    }
+
+                                    <span class="text-body-secondary">
+                                        (blocks @string.Join(", ", gap.Blocks.Select(b => b.Name)))
+                                    </span>
+
+                                    @if (gap.Requires is { } deeper)
+                                    {
+                                        <span class="text-body-secondary">
+                                            (and it needs @deeper, which you also lack)
+                                        </span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+
+                        @if (gaps.Unverified > 0)
+                        {
+                            <p class="small text-body-tertiary mb-0">
+                                @gaps.Unverified of @gaps.Checked owned Pokémon have no stage data published
+                                yet, so a gap among them cannot be detected. A clean list is not proof there
+                                are none.
+                            </p>
+                        }
+                    }
+                </div>
+            }
+        </Rail>
     </CardGrid>
     </PageShell>
 }
@@ -757,6 +813,73 @@ else
     private int TargetTotal => TargetStat.Wanted;
 
     private int TargetOwned => TargetStat.Satisfied;
+
+    /// <summary>
+    /// The same target, split by rarity tier, for the rail's last group.
+    ///
+    /// Deliberately the same arithmetic as <see cref="TargetStat"/>, card for card: the header
+    /// says how far through the target you are and the rail says which tier is holding you up,
+    /// and two figures disagreeing about one collection is worse than either of them being coarse.
+    /// So this asks the target the same question per card — <see cref="AppSession.RequiredCopies"/>
+    /// is the same <c>RarityLadderTarget</c> the totals come from, foil rule and per-set plan
+    /// included — rather than reading the plan and counting rarities itself, which is exactly the
+    /// shortcut that let the old header disagree with every other screen.
+    ///
+    /// Copies rather than cards. A plan asking for two of every diamond is half satisfied by one
+    /// of each, and a tier counted in cards would call that finished.
+    ///
+    /// Cached on the same signature as <see cref="Stats"/>, plus the plan itself: it is read
+    /// during render and walks every card in scope, which is 3,500 of them on "all cards". The
+    /// plan goes in the key because it can change from Settings without a card moving, and a tier
+    /// breakdown that ignored it would go stale in the one way nothing else would catch.
+    /// </summary>
+    private IReadOnlyList<(RarityRung Rung, int Wanted, int Satisfied)> TargetByRung
+    {
+        get
+        {
+            var plan = string.Join(",", TargetSets.Select(s =>
+                string.Join("/", Session.Plan(s).CopiesByTier
+                    .OrderBy(kv => kv.Key)
+                    .Select(kv => $"{kv.Key}:{kv.Value}"))));
+
+            var signature = $"{_set}|{_series}|{Session.CollectionRevision}|{plan}";
+            if (signature == _rungsFor) return _rungs;
+
+            var wanted = new Dictionary<int, int>();
+            var satisfied = new Dictionary<int, int>();
+
+            // De-duplicated by ownership key for the same reason the header counts are: a card
+            // reprinted in a later set is one card you own, and counting entries would ask for it
+            // twice.
+            foreach (var card in InSet.DistinctBy(c => c.OwnershipKey))
+            {
+                var need = Session.RequiredCopies(card);
+                if (need <= 0) continue;
+
+                var rung = Session.Index.Rung(card);
+                if (rung is null) continue;
+
+                wanted[rung.Index] = wanted.GetValueOrDefault(rung.Index) + need;
+                satisfied[rung.Index] =
+                    satisfied.GetValueOrDefault(rung.Index) + Math.Min(Session.CountOf(card), need);
+            }
+
+            // Ladder order, and only the tiers the plan actually wants: a row reading "0 of 0" for
+            // a rarity nobody is collecting is a row that says the control is broken.
+            _rungsFor = signature;
+            return _rungs = Session.Index.Ladder.Rungs
+                .Where(r => wanted.ContainsKey(r.Index))
+                .Select(r => (r, wanted[r.Index], satisfied.GetValueOrDefault(r.Index)))
+                .ToList();
+        }
+    }
+
+    private string? _rungsFor;
+    private IReadOnlyList<(RarityRung Rung, int Wanted, int Satisfied)> _rungs = [];
+
+    /// <summary>A tier's progress as a percentage, for the bar width. Zero wanted reads as full.</summary>
+    private static int Pct(int satisfied, int wanted) =>
+        wanted <= 0 ? 100 : (int)Math.Round(100.0 * satisfied / wanted);
 
     private double Progress(string set)
     {

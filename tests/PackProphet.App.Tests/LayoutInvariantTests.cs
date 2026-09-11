@@ -67,6 +67,9 @@ public class LayoutInvariantTests
     [InlineData("grid-toolbar")]
     [InlineData("card-tile")]
     [InlineData("palette-item")]
+    [InlineData("page-rail")]
+    [InlineData("rail-group")]
+    [InlineData("rail-seg")]
     public void AnInventedClass_IsNotOneBootstrapAlreadyStyles(string className)
     {
         Assert.False(BootstrapStylesBareClass(className),

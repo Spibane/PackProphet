@@ -93,6 +93,66 @@ public class GridFilterTests : AppHost
     }
 
     [Fact]
+    public async Task The_controls_are_one_set_in_the_page_not_two_copies_by_width()
+    {
+        // The rail is a column beside the grid above the fold width and a sheet over it below,
+        // and it is ONE element carrying popover with the stylesheet deciding which. Rendering it
+        // twice and hiding one by width would mean two of every select, two of every generated id,
+        // and two controls on one handler -- a pair that agrees until it does not.
+        var page = await PageAsync();
+
+        var rails = page.FindAll(".page-rail").ToArray();
+        Assert.Single(rails);
+        Assert.True(rails[0].HasAttribute("popover"),
+            "the rail must carry popover; without it the phone has no sheet to open");
+
+        // And the button that opens it points at that one element.
+        var opener = page.Find(".rail-fab.filters");
+        Assert.Equal(rails[0].Id, opener.GetAttribute("popovertarget"));
+    }
+
+    [Fact]
+    public async Task The_add_remove_mode_is_never_inside_the_sheet()
+    {
+        // The only control in the app that can take a card away. A destructive mode you have to
+        // open a sheet to check is a mode you will be wrong about, so on a phone it is a floating
+        // button that is on screen the whole time -- outside the rail, not within it.
+        var page = await PageAsync();
+
+        var fab = page.Find(".rail-fab.mode");
+        Assert.Null(fab.Closest(".page-rail"));
+
+        // The rail's own copy is marked so the sheet can leave it out at that width.
+        Assert.NotNull(page.Find(".page-rail .rail-group.mode"));
+    }
+
+    [Fact]
+    public async Task The_page_bar_says_what_the_filters_are_set_to()
+    {
+        // The half of the phone treatment that keeps the rest honest. The controls fold into a
+        // sheet, and a count whose filters are out of sight is a lie: "110 cards" means something
+        // else with "missing only" on. A badge reading "2" says there are filters without saying
+        // what they are, which is not the same thing.
+        var page = await PageAsync();
+
+        // Nothing applied, nothing claimed.
+        Assert.Empty(page.FindAll(".page-head .subtitle .filters"));
+        Assert.DoesNotContain("Filters", page.Find(".rail-fab.filters").QuerySelectorAll(".n")
+            .Select(n => n.TextContent));
+
+        await page.InvokeAsync(() => page.Find(".page-rail select").Change("missing"));
+
+        page.WaitForAssertion(() =>
+        {
+            var said = page.Find(".page-head .subtitle .filters").TextContent;
+            Assert.Contains("missing only", said);
+        });
+
+        // And the count on the button agrees with the words, being built from the same state.
+        Assert.Equal("1", page.Find(".rail-fab.filters .n").TextContent.Trim());
+    }
+
+    [Fact]
     public async Task The_layout_switch_is_not_behind_a_disclosure()
     {
         // List mode is not a preference among equals: it is the only view carrying a count per

@@ -16,7 +16,7 @@ else
 
         <span class="actions">
             <a class="btn btn-sm btn-outline-primary" href="decks/import">Import</a>
-            <a class="btn btn-sm btn-primary" href="decks/new">New Deck</a>
+            <a class="btn btn-sm btn-primary" href="decks/new">New deck</a>
         </span>
     </div>
 
@@ -105,7 +105,7 @@ else
                                 else if (deck.Report is { FullyVerified: false })
                                 {
                                     <span class="badge text-bg-secondary"
-                                          title="Some rules could not be checked — card detail is missing for this set">
+                                          title="Some rules could not be checked: card detail is missing for this set">
                                         Unverified
                                     </span>
                                 }
@@ -191,7 +191,7 @@ else
                                 else if (!deck.Report.FullyVerified)
                                 {
                                     <span class="badge text-bg-secondary"
-                                          title="Some rules could not be checked — card detail is missing for this set">
+                                          title="Some rules could not be checked: card detail is missing for this set">
                                         Unverified
                                     </span>
                                 }

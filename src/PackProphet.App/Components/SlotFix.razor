@@ -21,10 +21,20 @@
     {
         @* A button, not a bare image, and that is about the zoom rather than about the click. A
            hover cannot happen on the phone this page is used on, so the enlargement is bound to
-           focus as well — and only something focusable can be focused, by a tap or by a keyboard.
-           It has no action of its own: the press that focuses it is the whole of what it does. *@
-        <button type="button" class="slot-shot flex-shrink-0"
-                aria-label="@($"Show the card at {Where} larger")">
+           focus as well, and only something focusable can be focused, by a tap or by a keyboard.
+
+           It used to stop there: no handler, the press that focuses it being the whole of what it
+           did. That works for a pointer and lies to everyone else. The button announced that it
+           would enlarge the card, and pressing Enter on it did nothing, because focus had already
+           happened on the way in. So the press toggles the enlargement outright, the state is
+           carried in aria-pressed rather than implied, and the label says which way the next
+           press goes. Hover and focus keep their own enlargement: this is the third way in, not
+           a replacement for them. *@
+        <button type="button" class="slot-shot flex-shrink-0 @(_zoom ? "zoom" : "")"
+                aria-pressed="@Aria.Flag(_zoom)" @onclick="() => _zoom = !_zoom"
+                aria-label="@(_zoom
+                    ? $"Hide the enlarged card at {Where}"
+                    : $"Show the card at {Where} larger")">
             <img src="@Slot.Thumb" alt="@($"The unrecognised card at {Where}")" />
         </button>
     }
@@ -43,7 +53,7 @@
                 <span class="slot-pick" style="--art:url('@card.ArtUrl')" role="img" aria-label=""></span>
                 <span>
                     <a href="card/@card.Key">@card.Name</a>
-                    <span class="d-block small text-body-secondary">@card.Key &mdash; you said so</span>
+                    <span class="d-block small text-body-secondary">@card.Key, you said so</span>
                 </span>
                 <button type="button" class="btn btn-sm btn-outline-secondary ms-auto"
                         @onclick="Clear">
@@ -79,7 +89,7 @@
                 @if (_more > 0)
                 {
                     <p class="small text-body-secondary mb-0 mt-1">
-                        @_more.ToString("N0") more &mdash; type a little more of the name.
+                        @_more.ToString("N0") more. Type a little more of the name.
                     </p>
                 }
             }
@@ -128,6 +138,10 @@
 
     private string _id = "slot";
     private string _text = "";
+
+    /// <summary>Held open by a press, as against the hover and focus that end when they end.</summary>
+    private bool _zoom;
+
     private bool _searched;
     private int _more;
     private IReadOnlyList<PocketCard> _results = [];

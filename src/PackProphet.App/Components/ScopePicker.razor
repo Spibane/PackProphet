@@ -55,7 +55,7 @@
                 @foreach (var set in Session.SetsInSeries(series))
                 {
                     <option value="@set" selected="@(Scope == set)">
-                        @set &mdash; @Session.Sets.DisplayName(set)
+                        @set: @Session.Sets.DisplayName(set)
                     </option>
                 }
             </optgroup>

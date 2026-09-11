@@ -32,7 +32,7 @@ public class TradeTextTests : AppHost
 
     private static string TextOf(IRenderedComponent<ChaseLists> page)
     {
-        page.FindAll("button").First(b => b.TextContent.Contains("Copy as Text")).Click();
+        page.FindAll("button").First(b => b.TextContent.Contains("Copy as text")).Click();
         return page.Find(".trade-text").TextContent;
     }
 

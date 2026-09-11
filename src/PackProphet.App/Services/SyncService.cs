@@ -407,7 +407,7 @@ public sealed class SyncService : IAsyncDisposable
             {
                 // Offline is the common case, not a fault: the app works without this, and the
                 // next launch will sync. Nothing local changes.
-                Fail("Offline — nothing was synced. Your collection here is unaffected.");
+                Fail("Offline. Nothing was synced. Your collection here is unaffected.");
                 return;
             }
 
@@ -610,7 +610,7 @@ public sealed class SyncService : IAsyncDisposable
         PushOutcome.TooLarge =>
             "This collection is too large to sync. Export a backup instead.",
         PushOutcome.Gone =>
-            "The stored copy is gone — an unused pairing expires. Set sync up again to make a new code.",
+            "The stored copy is gone: an unused pairing expires. Set sync up again to make a new code.",
         PushOutcome.Refused =>
             "The server refused that code.",
         PushOutcome.Superseded =>

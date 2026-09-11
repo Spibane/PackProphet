@@ -17,7 +17,7 @@ else if (Id is null)
         <h1 class="title">Chase lists</h1>
         <span class="subtitle">@Session.ChaseLists.Count saved</span>
         <span class="actions">
-            <button class="btn btn-sm btn-primary" @onclick="NewList">New Chase List</button>
+            <button class="btn btn-sm btn-primary" @onclick="NewList">New chase list</button>
         </span>
     </div>
 
@@ -43,13 +43,24 @@ else if (Id is null)
         <p class="text-body-secondary small mb-3">
             Any set of cards you want, for any reason. The pack ranking prices a chase list exactly
             as it prices a rarity target. Unlike a deck, a chase list wants a particular
-            <strong>printing</strong> &mdash; the alternate art is not satisfied by the plain
+            <strong>printing</strong>: the alternate art is not satisfied by the plain
             one.
         </p>
 
+        @* The action as well as the fact. The decks page next door answers both questions an
+           empty list raises -- what is missing, and what fills it -- and this one answered only
+           the first, leaving the way out to a button in the header that a reader who has just
+           been told there is nothing here has no particular reason to look back up at. *@
         @if (_lists.Count == 0)
         {
-            <p class="text-body-secondary">No chase lists yet.</p>
+            <EmptyState>
+                <ChildContent>No chase lists yet.</ChildContent>
+                <Action>
+                    <button class="btn btn-sm btn-primary" @onclick="NewList">
+                        Start your first list
+                    </button>
+                </Action>
+            </EmptyState>
         }
         else if (Session.ChaseGrid)
         {
@@ -105,7 +116,7 @@ else if (Id is null)
                                 @if (list.Unobtainable > 0)
                                 {
                                     <span class="badge text-bg-secondary"
-                                          title="No pack on sale can give these — a promo, or a set with no published pull rates">
+                                          title="No pack on sale can give these: a promo, or a set with no published pull rates">
                                         @list.Unobtainable unobtainable
                                     </span>
                                 }
@@ -236,14 +247,14 @@ else
                 Rank packs for this list
             </a>
             <button class="btn btn-sm btn-outline-secondary" @onclick="MakeShareLink">
-                Share This List
+                Share this list
             </button>
             @* The link is the better artefact and the wrong shape for where these trades actually
                happen. A Discord thread or a subreddit comment takes a few lines of text: nobody
                opens a stranger's link, and a reader on a phone with the game open cannot follow
                one and come back. Same list, in the form the conversation is already in. *@
             <button class="btn btn-sm btn-outline-secondary" @onclick="MakeTradeText">
-                Copy as Text
+                Copy as text
             </button>
             @* Two taps, like the deck editor's delete: the list took work to build and there
                is no undo prompt after the fact. *@
@@ -261,7 +272,7 @@ else
                    onfocus="this.select()" aria-label="Shareable read-only link for this chase list" />
             <p class="small text-body-secondary mt-1 mb-0">
                 Tap the field to select it, then copy. Shows only what is wanted, not what you
-                already own &mdash; nothing is uploaded, the whole list travels inside the link.
+                already own. Nothing is uploaded, the whole list travels inside the link.
             </p>
             @* A want-list nobody can act on is half a share: the reader learns exactly what to
                send and has no way to find you. Said here, where the link is made, rather than
@@ -296,7 +307,7 @@ else
                       aria-label="Your wanted cards as plain text">@_tradeText</textarea>
             <p class="small text-body-secondary mt-1 mb-0">
                 Tap the box to select it all, then copy. Only what is still missing, with the
-                rarity beside each card &mdash; which is what decides whether a trade is allowed.
+                rarity beside each card, which is what decides whether a trade is allowed.
             </p>
             @if (string.IsNullOrWhiteSpace(Session.Profile.InGameName))
             {
@@ -328,7 +339,7 @@ else
                 @if (_unreachable > 0)
                 {
                     <span>
-                        Covers @(_missing - _unreachable) of @_missing &mdash; @_unreachable
+                        Covers @(_missing - _unreachable) of @_missing, and @_unreachable
                         cannot be pulled right now
                     </span>
                 }
@@ -520,7 +531,7 @@ else
     {
         if (_list is null) return;
 
-        var lines = new List<string> { $"Looking for — {_list.Name}" };
+        var lines = new List<string> { $"Looking for: {_list.Name}" };
 
         if (Session.Profile.InGameName is { Length: > 0 } ign)
             lines.Add($"Find me in-game as {ign}");
@@ -536,12 +547,12 @@ else
                       + (need > 1 ? $" x{need}" : ""));
         }
 
-        if (short_.Length == 0) lines.Add("(nothing outstanding — this list is complete)");
+        if (short_.Length == 0) lines.Add("(nothing outstanding, this list is complete)");
 
         // Named rather than anonymous, so anyone who wants the same list can find the tool. One
         // line, at the end, where it does not get in the way of the part being read.
         lines.Add("");
-        lines.Add("— made with PackProphet");
+        lines.Add("Made with PackProphet");
 
         _tradeText = string.Join('\n', lines);
     }

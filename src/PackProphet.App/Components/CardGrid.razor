@@ -152,7 +152,7 @@
         <div class="btn-group btn-group-sm" role="group" aria-label="Row height">
             <button class="btn @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
                     @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
-                    title="Short rows — most cards per screen">Compact</button>
+                    title="Short rows, most cards per screen">Compact</button>
             <button class="btn @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
                     @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
                     title="Taller rows with attack and ability text shown in full">Roomy</button>
@@ -224,7 +224,7 @@
    the single tab stop for however many thousand cards are in scope. *@
 <div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(PickedOf is null ? "" : "picking") @(OnWant.HasDelegate ? "wanting" : "")"
      id="@_gridId" role="grid"
-     aria-label="@(ListView ? "Card list" : "Card grid") — arrow keys to move, digits to set a count"
+     aria-label="@(ListView ? "Card list" : "Card grid"): arrow keys to move, digits to set a count"
      @ref="_gridEl">
     @* Named by the cursor as it moves, and after every count change. Outside the virtualised
        region so scrolling never destroys it mid-announcement. *@

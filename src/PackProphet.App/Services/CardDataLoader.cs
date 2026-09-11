@@ -283,7 +283,6 @@ public sealed class CardDataLoader
     /// render a collection.
     ///
     /// The vendored snapshot, then whatever it is missing.
-    /// ==========================================================================================
     /// This used to be a list of two sources returning the first that answered — the local copy
     /// and then the CDN — with a comment saying the CDN was "the reason a brand-new set still gets
     /// detail without a redeploy". It could not do that, and never had: the local read succeeds on

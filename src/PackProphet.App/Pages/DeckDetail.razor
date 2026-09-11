@@ -62,7 +62,7 @@ else
 
             <button class="btn btn-sm btn-primary" @onclick="Save" disabled="@(!Dirty)">Save</button>
             <button class="btn btn-sm btn-outline-secondary" @onclick="Discard" disabled="@(!Dirty)">
-                @(IsNew ? "Start Over" : "Discard")
+                @(IsNew ? "Start over" : "Discard")
             </button>
 
             @if (!IsNew)
@@ -79,9 +79,9 @@ else
         <Notice Severity="Notice.Level.Warning" Class="m-3">
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <strong>This deck has unsaved changes.</strong>
-                <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">Save and Leave</button>
-                <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">Discard and Leave</button>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">Stay Here</button>
+                <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">Save and leave</button>
+                <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">Discard and leave</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">Stay here</button>
             </div>
         </Notice>
     }
@@ -140,7 +140,7 @@ else
                                     <button class="face-pick @(IsFace(entry.Nr) ? "on" : "")"
                                             @onclick="() => SetFace(entry.Nr)"
                                             aria-pressed="@Aria.Flag(IsFace(entry.Nr))"
-                                            title="@(IsFace(entry.Nr) ? "This is the deck's face card — tap to unset" : "Use as the deck's face card")">
+                                            title="@(IsFace(entry.Nr) ? "This is the deck's face card. Tap to unset" : "Use as the deck's face card")">
                                         ★
                                     </button>
                                 </td>
@@ -190,7 +190,7 @@ else
             @if (_shareSvg is null)
             {
                 <p class="small text-body-secondary">
-                    A code needs a legal 20-card deck &mdash; the game will not scan a partial one.
+                    A code needs a legal 20-card deck: the game will not scan a partial one.
                 </p>
             }
             else
@@ -263,7 +263,7 @@ else
                                 <th scope="col">Pack</th>
                                 <th scope="col" class="num">Chance of a hit</th>
                                 <th scope="col" class="num"
-                                    title="1 / the chance of a hit — how many packs, on average, before this one gives you something for the deck">
+                                    title="1 / the chance of a hit: how many packs, on average, before this one gives you something for the deck">
                                     Packs per new card
                                 </th>
                                 <th scope="col" class="num">Cards it can give</th>
@@ -628,7 +628,7 @@ else
         var cheapest = routes.Cheapest;
         if (cheapest is null)
         {
-            parts.Add("no pack route — this card cannot be bought or pulled");
+            parts.Add("no pack route: this card cannot be bought or pulled");
         }
         else if (cheapest.Route == AcquisitionRoute.PackPoints)
         {
@@ -645,7 +645,7 @@ else
         var share = routes.Options.FirstOrDefault(o => o.Route == AcquisitionRoute.Share);
         if (share is { Available: true })
         {
-            parts.Add("or ask a friend to share it — free, nothing back");
+            parts.Add("or ask a friend to share it, free and nothing back");
         }
         else
         {

@@ -12,7 +12,7 @@
     var want = Plan.Copies(rung.Index);
     <button class="rarity-chip @(want > 0 ? "on" : "")"
             aria-pressed="@Aria.Flag(want > 0)"
-            title="@(want == 0 ? $"Not collecting {rung.Symbol}" : $"Collecting {want} of each {rung.Symbol}") — tap to change"
+            title="@(want == 0 ? $"Not collecting {rung.Symbol}" : $"Collecting {want} of each {rung.Symbol}"). Tap to change"
             @onclick="() => OnCycle.InvokeAsync(rung.Index)">
         <span class="glyphs @rung.GlyphClass">@rung.Symbol</span>@(want > 1 ? $" x{want}" : "")
     </button>
@@ -31,7 +31,7 @@
             aria-pressed="@Aria.Flag(Session.FoilCopies > 0)"
             @onclick="() => OnCycleFoils.InvokeAsync()"
             title="@(Session.FoilCopies == 0
-                ? "Parallel foils are not counted. There are 139 of them — the Deluxe set's second printings of its 1-3 diamond cards — and they come only from a limited-time pack. Tap to collect them."
+                ? "Parallel foils are not counted. There are 139 of them (the Deluxe set's second printings of its 1-3 diamond cards) and they come only from a limited-time pack. Tap to collect them."
                 : $"Collecting {Session.FoilCopies} of each parallel foil, counted separately from the diamond rungs. Tap to change.")">
         @* A mark of its own, like every rung has. The word alone was the only chip in the row
            with nothing to scan for, and it is the longest label of the eleven. *@

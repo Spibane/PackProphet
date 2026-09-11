@@ -20,7 +20,7 @@
     @if (Focus.Available)
     {
         <button class="skip-link visually-hidden-focusable" @onclick="() => Focus.FocusAsync()">
-            Skip to the cards &mdash; arrow keys move, digits set a count
+            Skip to the cards: arrow keys move, digits set a count
         </button>
     }
 
@@ -36,7 +36,7 @@
                 <strong>Your changes are not being saved.</strong>
                 <span>
                     The browser refused the write, which usually means its storage for this site is
-                    full. Export a backup now &mdash; anything you do until this clears will be lost
+                    full. Export a backup now. Anything you do until this clears will be lost
                     on reload.
                 </span>
             }
@@ -54,11 +54,11 @@
                 <span>
                     The app has started empty rather than refuse to open. The unreadable text has
                     been set aside untouched under <code>packprophet.state.unreadable</code> in
-                    this site's local storage, so it can still be recovered by hand &mdash;
-                    importing a backup or entering cards will not overwrite it.
+                    this site's local storage, so it can still be recovered by hand.
+                    Importing a backup or entering cards will not overwrite it.
                 </span>
             }
-            <a href="settings">Open Settings</a>
+            <a href="settings">Open settings</a>
         </div>
     }
 

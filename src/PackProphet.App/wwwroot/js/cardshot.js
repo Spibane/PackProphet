@@ -187,7 +187,6 @@ export async function scan(dataUrl) {
     };
 }
 
-// ---------------------------------------------------------------------------------------------
 // Getting at the pixels
 
 function imageFrom(src) {
@@ -252,7 +251,6 @@ function grayscale({ w, h, rgba }) {
     return { w, h, g };
 }
 
-// ---------------------------------------------------------------------------------------------
 // Finding the cards
 //
 // This is the third approach in this file's history and the first that survives contact with a real
@@ -777,7 +775,6 @@ function slots(gray, pixels, found) {
     return out;
 }
 
-// ---------------------------------------------------------------------------------------------
 // The copy-count badge
 //
 // The three-across card list prints how many copies of each card you hold, on a dark ribbon across

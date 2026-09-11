@@ -77,7 +77,7 @@ else
         else if (_plan.Slots.Count == 0)
         {
             <p class="text-body-secondary">
-                Nothing in this scope can go on the board &mdash; either it is complete, or
+                Nothing in this scope can go on the board: either it is complete, or
                 everything left in it is untradeable.
                 @if (_floor > 0)
                 {
@@ -138,7 +138,7 @@ else
                         <th scope="col" data-pri="1">Card</th>
                         <th scope="col" data-pri="1">Set</th>
                         <th scope="col" data-pri="2">Rarity</th>
-                        <th scope="col" class="num" data-pri="2" title="On average, how many packs before you get it — or the packs' worth of points to buy it outright, whichever is fewer">Packs to get it</th>
+                        <th scope="col" class="num" data-pri="2" title="On average, how many packs before you get it, or the packs' worth of points to buy it outright, whichever is fewer">Packs to get it</th>
                         <th scope="col" data-pri="3" title="A pull figure is an average you could beat or miss badly; a points figure is a guarantee after that many packs of the set">How</th>
                         <th scope="col" class="num" data-pri="3">Dust to Trade</th>
                         <th scope="col" data-pri="3">A card to give?</th>
@@ -159,7 +159,7 @@ else
                                 @if (slot.Band == BoardBand.Liquid)
                                 {
                                     <span class="badge text-bg-secondary ms-1"
-                                          title="Estimated from the card's drop rate and how long its set has been on sale — so more copies exist in other people's collections. It says nothing about whether anyone will part with one.">
+                                          title="Estimated from the card's drop rate and how long its set has been on sale, so more copies exist in other people's collections. It says nothing about whether anyone will part with one.">
                                         Widely Held
                                     </span>
                                 }
@@ -187,7 +187,7 @@ else
                                        cards at the same rarity, one of which the trade would cost
                                        you. A bare count next to a rarity glyph read as neither. *@
                                     <span title="You hold @slot.SparesAtRarity surplus @Session.Index.Symbol(slot.Card) card(s), and a trade would cost you one of them">
-                                        Yes &mdash; @slot.SparesAtRarity spare
+                                        Yes, @slot.SparesAtRarity spare
                                         @Session.Index.Symbol(slot.Card) to give
                                     </span>
                                 }
@@ -235,7 +235,7 @@ else
                 <p class="small text-body-secondary">
                     <strong>About the @_plan.Slots.Count(s => s.Band == BoardBand.Liquid)
                     &ldquo;widely held&rdquo; slots.</strong>
-                    Some slots go to cards more copies of which likely exist &mdash; drop rate
+                    Some slots go to cards more copies of which likely exist: drop rate
                     times how long the set has been on sale. It is a weak guess: it cannot know who
                     still needs the card or would part with one. Set the reserve to
                     <strong>0</strong> above to rank purely by what a card costs you.
@@ -246,7 +246,7 @@ else
             {
                 <p class="small text-body-secondary">
                     A trade needs a card of the same rarity to give back, so <em>no spare to
-                    give</em> means you could not honour the request today. Kept anyway &mdash; a
+                    give</em> means you could not honour the request today. Kept anyway, since a
                     spare may turn up first.
                 </p>
             }
@@ -264,7 +264,7 @@ else
                            line or two, and a truncated one would not say which cards are
                            affected. *@
                         <li>
-                            <strong>@group.Count() card(s)</strong> &mdash; @group.Key
+                            <strong>@group.Count() card(s)</strong>: @group.Key
                             <div class="text-body-tertiary">
                                 @string.Join(", ", group.Select(x => x.Card.Name)
                                                         .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase))

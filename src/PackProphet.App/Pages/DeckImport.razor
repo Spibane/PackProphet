@@ -50,7 +50,7 @@ else
         {
             <ul class="small text-body-secondary">
                 <li>Crop closer to the code, so it fills more of the picture.</li>
-                <li>Avoid a photo of a screen if you can &mdash; a screenshot is much cleaner.</li>
+                <li>Avoid a photo of a screen if you can: a screenshot is much cleaner.</li>
                 <li>Make sure the whole code including its border is in frame.</li>
             </ul>
         }
@@ -67,7 +67,7 @@ else
                           placeholder="Paste the share code"
                           @bind="_codeText" @bind:event="oninput"></textarea>
                 <button class="btn btn-sm btn-outline-primary" @onclick="ImportCode"
-                        disabled="@string.IsNullOrWhiteSpace(_codeText)">Import Code</button>
+                        disabled="@string.IsNullOrWhiteSpace(_codeText)">Import code</button>
             </div>
         </details>
 

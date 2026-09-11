@@ -99,7 +99,7 @@
                    parsed as one and the file stops compiling. *@
                 @foreach (var setCode in Session.Sets.SetsIn(series))
                 {
-                    <option value="@setCode">@setCode &mdash; @Session.Sets.DisplayName(setCode)</option>
+                    <option value="@setCode">@setCode: @Session.Sets.DisplayName(setCode)</option>
                 }
             </optgroup>
         }
@@ -183,10 +183,10 @@ else if (_results.Count == 0)
     @if (_ownedOnly && _elsewhere > 0)
     {
         <Notice Severity="Notice.Level.Info">
-            None of the cards <strong>you own</strong> match &mdash; but
+            None of the cards <strong>you own</strong> match, but
             <strong>@_elsewhere</strong> card(s) in the game do.
             <button class="btn btn-sm btn-outline-primary ms-1 py-0"
-                    @onclick="() => SetPool(false)">Search All Cards</button>
+                    @onclick="() => SetPool(false)">Search all cards</button>
         </Notice>
     }
     else
@@ -272,14 +272,19 @@ else
                     }
 
                     @* Ability first and as a word: "has an ability" changes how a card plays more
-                       than its damage does. *@
+                       than its damage does.
+
+                       The tip fires on pointer events only, so the same text is the accessible
+                       name as well. Without it the row announces the word "Ability", or a bare
+                       damage number, and what either means is reachable by mouse alone. *@
                     @if (fact?.HasAbility == true)
                     {
-                        <span class="abl" data-tip="@AbilityTip(fact)">Ability</span>
+                        <span class="abl" data-tip="@AbilityTip(fact)"
+                              aria-label="@AbilityLabel(fact)">Ability</span>
                     }
                     @foreach (var atk in fact?.AttackList ?? [])
                     {
-                        <span class="atk" data-tip="@AttackTip(atk)">
+                        <span class="atk" data-tip="@AttackTip(atk)" aria-label="@AttackLabel(atk)">
                             @foreach (var sym in atk.CostSymbols)
                             {
                                 <EnergyPip Type="@sym" />
@@ -313,7 +318,8 @@ else
                        beside it would read as three copies of that printing. *@
                     @if (spread.Count > 1)
                     {
-                        <span class="arts" data-tip="@SpreadTip(spread)">@spread.Count arts</span>
+                        <span class="arts" data-tip="@SpreadTip(spread)"
+                              aria-label="@SpreadTip(spread)">@spread.Count arts</span>
                     }
                 </span>
                 <span class="ind">
@@ -358,7 +364,7 @@ else
     private static string OwnedTip(int owned, IReadOnlyList<(PocketCard Card, int Count)> spread) =>
         owned == 0 ? "you own none of this card"
         : spread.Count > 1
-            ? $"you own {owned} copies across {spread.Count} different arts — any of them " +
+            ? $"you own {owned} copies across {spread.Count} different arts, and any of them " +
               "fills the deck slot"
             : owned == 1 ? "you own 1 copy" : $"you own {owned} copies";
 
@@ -784,5 +790,25 @@ else
         var name = fact.Ability?.Name ?? "Ability";
         var effect = fact.Ability?.Effect;
         return string.IsNullOrWhiteSpace(effect) ? name : $"{name}\n{effect}";
+    }
+
+    /// <summary>
+    /// The same facts the hover tip carries, written as an accessible name.
+    ///
+    /// A name is heard once, out of the context the tip has: no column, no position in the row,
+    /// and no second chance to look. So it says which kind of thing it is, and it restates what
+    /// the visible content shows, because a name on a container replaces its children rather than
+    /// adding to them. Leaving the pips and the damage out of these strings would silence the
+    /// only two parts of the attack a screen reader could already reach.
+    /// </summary>
+    private static string AbilityLabel(CardFact fact) => $"Ability. {AbilityTip(fact)}";
+
+    private static string AttackLabel(CardAttack atk)
+    {
+        var cost = atk.CostSymbols.Count > 0
+            ? $" Costs {string.Join(", ", atk.CostSymbols)}."
+            : "";
+        var damage = atk.DamageLabel is { Length: > 0 } d ? $" {d} damage." : "";
+        return $"Attack. {AttackTip(atk)}{damage}{cost}";
     }
 }

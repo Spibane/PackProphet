@@ -4,7 +4,6 @@ namespace PackProphet.Vision;
 /// A Pokémon's energy type, read off the badge the game prints in a card's top-right corner.
 ///
 /// Why the badge and not the card's colour
-/// ==============================================================================================
 /// This exists as a fallback for a set whose card DETAIL has not been published yet: the card data
 /// arrives from a CDN within days of a release and the detail table can be weeks behind it, so a
 /// new set's type column is blank while its art is already on screen. The art is the only thing
@@ -215,9 +214,7 @@ public static class TypeBadge
         return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
     }
 
-    // ==============================================================================================
     // Dual types, and why only one badge is read
-    // ==============================================================================================
     //
     // Dual-typed Pokémon arrive in October and they print TWO badges, side by side, right-aligned
     // after the HP -- confirmed against promotional art of Mega Mewtwo X ex, which shows Psychic

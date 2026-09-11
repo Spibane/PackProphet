@@ -58,12 +58,36 @@ function currentGroup(grid, edge) {
 ///
 /// The toolbar's own sticky offset is included: on the log-a-pack screen it sits under a pinned
 /// header rather than at the top of the viewport.
+///
+/// A railed page has no toolbar at all -- its controls are in a column beside the grid rather than
+/// on a bar above it -- so there the only thing above the grid is the page's own bar, and that is
+/// what the strip has to park under. Measured the same way and from the same place, because the
+/// answer this returns is "how far down the viewport is the grid's first visible pixel" and which
+/// element is responsible for that is the shell's business rather than this function's.
+///
+/// Falls through to 0 when neither is there, which is the unmeasured case and the old behaviour.
 function barsBottom(label) {
-    const bar = label.parentElement?.querySelector('.grid-toolbar');
+    const bar = label.parentElement?.querySelector('.grid-toolbar')
+        ?? stickyBarAbove(label);
     if (!bar) return 0;
 
     const own = parseFloat(getComputedStyle(bar).top) || 0;
     return own + bar.getBoundingClientRect().height;
+}
+
+/// The page's own pinned bar, for a shell that has no toolbar between it and the grid.
+///
+/// Scoped to the document rather than to the strip's parent: the page head is a sibling of the
+/// page body the grid lives in, not a child of it, so the query barsBottom uses cannot see it.
+/// Only a PINNED one counts -- a bar that scrolls away stops covering anything, and parking the
+/// strip below where it used to be would leave a gap the height of a bar that is no longer there.
+function stickyBarAbove(label) {
+    if (!label.closest('.railed')) return null;
+
+    const head = document.querySelector('.page-head');
+    if (!head) return null;
+
+    return getComputedStyle(head).position === 'sticky' ? head : null;
 }
 
 /// The pinned page header's height, for the toolbar below it to sit under.

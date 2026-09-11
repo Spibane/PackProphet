@@ -6,7 +6,7 @@
    between comment markers, which silently deleted every card-grid rule when two markers were
    the wrong way round. */
 
-/* ================================================================= framework chrome
+/* framework chrome
    Elements the Blazor template puts in index.html. #blazor-error-ui MUST be fixed and hidden
    until Blazor unhides it, or it renders inline on every page and adds a second scrollbar. */
 
@@ -44,7 +44,7 @@
     color: var(--bs-danger-text-emphasis, #7a1420);
 }
 
-/* ================================================================= page body
+/* page body
 
    One container for every page below its bars, and three named reading measures instead of the
    fifteen inline max-width values that were there before. A page says what its content is; the
@@ -125,7 +125,7 @@
 .page-body.measure-text { max-inline-size: var(--measure-text); }
 .page-body.measure-wide { max-inline-size: var(--measure-wide); }
 
-/* ================================================================= breakpoints
+/* breakpoints
 
    Three named widths. Everything new uses these; the older rules below still sit on nine ad hoc
    widths (560, 640, 700, 760, 800, 820, 900, 1000, 1100) and are migrated rule by rule rather than
@@ -143,7 +143,7 @@
    Conditions are written in range syntax — (width <= 700px) rather than (max-width: 700px). Same
    semantics, and a min/max pair cannot leave a 0.02px hole between them. */
 
-/* ================================================================= layout
+/* layout
    The document scrolls. Everything above the content is ordinary page content and scrolls away
    with it, rather than being pinned by a flex chain that hands the leftover height to one box.
 
@@ -208,7 +208,7 @@ main {
    own class rule (.grid-wrap), which outranks this. */
 main > * { flex-shrink: 0; }
 
-/* ================================================================= nav and bars */
+/* nav and bars */
 
 /* Named, because the desktop More menu hangs off the bottom of this bar and a popover is in the
    top layer -- it is positioned against the viewport, so it cannot ask its opener how tall the bar
@@ -324,7 +324,7 @@ main > * { flex-shrink: 0; }
    entire page when it receives focus programmatically. */
 main:focus { outline: none; }
 
-/* ================================================================= storage alarm
+/* storage alarm
 
    Deliberately the loudest thing in the app, and not dismissible. Every other warning here is
    about the game; this one is about the app failing to keep your work, and the cost of missing it
@@ -338,7 +338,7 @@ main:focus { outline: none; }
 }
 .storage-alarm code { font-size: .88rem; }
 
-/* ================================================================= evolution gaps
+/* evolution gaps
 
    One line by default. The Collection page already carries a header, a series picker, a row of
    set tabs and the grid's own toolbar, so a permanently expanded panel here would push the first
@@ -382,7 +382,7 @@ main:focus { outline: none; }
 }
 .gap-list .badge { vertical-align: baseline; }
 
-/* ================================================================= light-mode structure
+/* light-mode structure
 
    Bootstrap's light palette draws every line in #dee2e6 on a #fff body — about 1.3:1, which is
    visible on a calibrated monitor in a dark room and essentially invisible on a phone outdoors.
@@ -415,7 +415,7 @@ main:focus { outline: none; }
     --bs-secondary-bg: #e2e7ec;
 }
 
-/* ---------------------------------------------------------------- outline buttons
+/* outline buttons
 
    Bootstrap draws an outline button in its theme colour on a transparent background, which is a
    contrast failure in BOTH themes and worse in dark. Measured with getComputedStyle against the
@@ -437,7 +437,7 @@ main:focus { outline: none; }
 
    Border as well as text: the outline IS the control's boundary, so it carries WCAG 1.4.11's
    3:1 for non-text contrast, and it would look detached from the label if only one moved. */
-/* ---------------------------------------------------------------- de-emphasised text
+/* de-emphasised text
 
    `text-body-tertiary` is the app's quietest copy — the sentence under a destructive button, the
    trademark notice. Bootstrap makes it the body colour at 50% alpha, which composites to a
@@ -451,7 +451,6 @@ main:focus { outline: none; }
    Worth saying which text this is NOT: `text-body-secondary` is the ordinary explanatory copy and
    already passes. Only the tertiary rung was under. */
 /* A red that clears the contrast floor as a MARK rather than as text.
-   ==========================================================================================
    The filled heart on a card tile is a graphic that carries meaning -- it is the only thing saying
    "this is on your want list" -- so WCAG 1.4.11 asks 3:1 of it against what it sits on. Raw
    --bs-danger measures 2.94:1 on the dark caption, which is the same failure the outline buttons
@@ -505,7 +504,7 @@ main:focus { outline: none; }
     --bs-btn-border-color: #599cfe;
 }
 
-/* ================================================================= skins
+/* skins
 
    A SECOND appearance axis, independent of light/dark.
 
@@ -662,7 +661,7 @@ main:focus { outline: none; }
     --pp-lift: 0 1px 2px rgba(0, 0, 0, .5), 0 2px 10px rgba(0, 0, 0, .35);
 }
 
-/* ---------------------------------------------------------------- softer corners
+/* softer corners
 
    Part of what dated the app was geometry rather than colour: .2-.4rem is the radius of a 2013
    control. The three tokens carry the app's own values and this skin raises them together, which
@@ -689,7 +688,7 @@ main:focus { outline: none; }
     --bs-border-radius-xl: 1.25rem;
 }
 
-/* ---------------------------------------------------------------- skinned buttons
+/* skinned buttons
 
    Bootstrap compiles the filled variants to literal hex -- .btn-primary sets --bs-btn-bg to
    #0d6efd, not to var(--bs-primary) -- so a skin that only moved the tokens would leave every
@@ -857,7 +856,7 @@ main:focus { outline: none; }
     --bs-btn-disabled-border-color: #f0a5aa;
 }
 
-/* ---------------------------------------------------------------- skinned form focus
+/* skinned form focus
 
    The focus ring and the checked box are the last two hardcoded blues in Bootstrap's compiled
    output that the app actually shows. Left alone they put #0d6efd rings and #0d6efd checkboxes on
@@ -881,7 +880,7 @@ main:focus { outline: none; }
     box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .25);
 }
 
-/* ---------------------------------------------------------------- the accent as ink
+/* the accent as ink
 
    --bs-primary is a fill in nine rules and a text or icon colour in six, and one value cannot be
    both in the dark form: fill-safe under white means 3.4:1 as text on the raised surface, which is
@@ -895,7 +894,7 @@ main:focus { outline: none; }
 [data-pp-skin="paper"] .step:hover:not(:disabled),
 [data-pp-skin="paper"] .to-top:hover { color: var(--pp-accent-ink); }
 
-/* ---------------------------------------------------------------- depth instead of lines
+/* depth instead of lines
 
    The top bar and the tab bar are the two places the app's separation was doing three jobs at
    once: a fill DIFFERENT from the body, a hard 3.4:1 line, and (on the tab bar) a fixed position
@@ -947,7 +946,7 @@ main:focus { outline: none; }
     block-size: 1.3rem;
 }
 
-/* ================================================================= page chrome
+/* page chrome
 
    One contract, because the headers had drifted into ten different shapes: some pages opened
    with a title, some with a dropdown, some with nothing at all, and each bar was as tall as
@@ -973,7 +972,6 @@ main:focus { outline: none; }
    keeps the header's height fixed: a single bar holding a title and six controls cannot be one
    row at every width, and the moment it wraps it is a different height. */
 /* One control height per bar.
-   ==========================================================================================
    Every bar in this app mixes buttons, selects, text fields and chips, and each of those
    arrives with a height of its own: Bootstrap's -sm controls land on 31px, a set tab carrying
    two lines on 40, and the filter chips were built to a 44px touch target. Three heights in one
@@ -989,7 +987,6 @@ main:focus { outline: none; }
    Buttons need the flex centring as well as the height. Bootstrap's .btn is inline-block with
    padding, so a min-height alone would leave the label sitting at the top of a taller box. */
 /* Corner radius, as three tokens rather than as sixty numbers.
-   ==========================================================================================
    These carry exactly the values the file already used -- .2rem on the small marks, .3rem on
    controls, .4rem on panels -- so declaring them changed nothing. They exist so a skin can raise
    all three together: a page where the panels got rounder and the chips did not looks broken
@@ -997,7 +994,14 @@ main:focus { outline: none; }
 
    Not every radius in the file: 50% circles, pill shapes, the one-off .75rem sheet corner and the
    handful of pixel values are shapes rather than a scale, and folding them in would flatten
-   distinctions that are deliberate. */
+   distinctions that are deliberate.
+
+   That carve-out was read too widely once. Seventeen rem literals on this very scale -- .15 and
+   .25 on thumbnails and small marks, .35 on controls, .5 on panels -- sat outside the tokens and
+   therefore outside the skin, so under paper a .25rem corner stood beside one that had just gone
+   from .3 to .5. They are snapped to the nearest token here, which moves the slate skin by under
+   two pixels in each case and gives paper the corners it was always meant to have. A pixel value
+   or a pill is a shape; a rem value near .2, .3 or .4 is this scale, and belongs on it. */
 :root {
     --pp-r-xs: .2rem;
     --pp-r-sm: .3rem;
@@ -1008,7 +1012,7 @@ main:focus { outline: none; }
 @media (pointer: coarse) { :root { --ctl-h: 2.75rem; } }
 
 .page-tools .btn, .grid-toolbar .btn, .toolbar-more-body .btn,
-.set-picker-body .btn, .rarity-plan .btn,
+.set-picker-body .btn, .rarity-plan .btn, .page-head .btn,
 .page-tools .form-select, .grid-toolbar .form-select,
 .toolbar-more-body .form-select, .set-picker-body .form-select, .rarity-plan .form-select,
 .page-tools .form-control, .grid-toolbar .form-control,
@@ -1017,8 +1021,21 @@ main:focus { outline: none; }
     min-height: var(--ctl-h);
 }
 .page-tools .btn, .grid-toolbar .btn, .toolbar-more-body .btn,
-.set-picker-body .btn, .rarity-plan .btn, .rarity-chip {
+.set-picker-body .btn, .rarity-plan .btn, .page-head .btn, .rarity-chip {
     display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* The header's own buttons were the one bar the token had never covered, so on a phone the undo
+   and redo pair measured 30 x 31 against a 44px floor everywhere else on the same screen.
+
+   They are glyphs rather than words, so height alone does not fix them: a 44px-tall button 30px
+   wide is still a 30px-wide thumb target. The square minimum applies to the action cluster only,
+   where the labels are single characters; a header button carrying a word is already past it and
+   a min-width cannot shrink one.
+
+   The padding half of this lives further down, next to the rule it has to outrank. */
+@media (pointer: coarse) {
+    .page-head .actions .btn { min-width: var(--ctl-h); }
 }
 
 /* 16px on touch for anything you can type into or open. Bootstrap's small controls are .875rem,
@@ -1083,6 +1100,17 @@ main:focus { outline: none; }
     overflow: hidden;
 }
 .page-tools, .grid-toolbar { flex-wrap: wrap; }
+
+/* The header gives up most of its vertical padding on a touch screen, where its buttons are
+   44px rather than 31. .page-head is a 3rem contract the sticky toolbar below is positioned
+   against, and 44 plus two lots of .35rem is 56 -- a touch header standing 7px taller than the
+   title-only one on the next page, which is the drift the contract exists to prevent. At .15rem
+   it lands within a pixel of where it always was.
+
+   Below the shorthand above rather than up with the rest of the touch sizing: both selectors are
+   one class, so this is settled on source order, and declared any earlier the shorthand simply
+   overwrites it. */
+@media (pointer: coarse) { .page-head { padding-block: .15rem; } }
 
 /* A header that stays put. Opt-in per page, because it is only worth the top of the screen where
    the header carries the control that finishes the job and the task is long enough to scroll —
@@ -1261,7 +1289,7 @@ main:focus { outline: none; }
 .pack-pick {
     display: inline-flex; align-items: center; gap: .35rem;
     padding: .15rem .5rem .15rem .3rem;
-    border: 1px solid var(--bs-border-color); border-radius: .35rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r-sm);
     background: var(--bs-body-bg); color: var(--bs-body-color);
     font-size: .9rem; line-height: 1.2; white-space: nowrap;
 }
@@ -1371,7 +1399,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .rarity-plan > summary::-webkit-details-marker,
 .board-tuning > summary::-webkit-details-marker { display: none; }
 
-/* ================================================================= rarity selection */
+/* rarity selection */
 
 .rarity-chips { display: flex; gap: .2rem; flex-wrap: wrap; }
 .rarity-chip {
@@ -1443,7 +1471,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
     border-radius: var(--pp-r-sm); padding: .15rem .4rem;
 }
 
-/* ================================================================= steppers
+/* steppers
 
    The -/+ control that adjusts a count appears in four places: the collection list, a card's own
    page, a deck's card table and a wishlist row. Each had grown its own spelling, and two of them
@@ -1477,7 +1505,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .step.remove { color: var(--bs-secondary-color); }
 .step.remove:hover { border-color: var(--bs-danger); color: var(--bs-danger); }
 
-/* ================================================================= card grid (tiles) */
+/* card grid (tiles) */
 
 /* No longer a scroller. overscroll-behavior went with it: it existed to stop a scroll gesture
    inside the grid chaining out to the page behind it, and there is no longer an inside. The
@@ -1537,7 +1565,6 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-row { display: grid; gap: 4px; padding: 2px calc(4px + var(--safe-r)) 2px calc(4px + var(--safe-l)); }
 
 /* A tile is the art plus a caption strip under it.
-   ==========================================================================================
    The count, the info button and the heart were all badges over the artwork. One was fine; three
    covered three corners of the only thing this layout exists to show. They sit below it now.
 
@@ -1640,7 +1667,6 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-tile img { width: 100%; height: 100%; display: block; object-fit: cover; background: #333; }
 
 /* Waiting for art.
-   ==========================================================================================
    An <img> with an alt but no src yet is drawn by the browser as its broken-image marker beside
    the alt text — which is what a fast scroll showed on every tile it had not reached, because the
    loader deliberately holds the src back until a slot is free (see js/imgloader.js). "Not loaded
@@ -1663,7 +1689,6 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-line .thumb[data-state="loading"] { visibility: hidden; }
 
 /* The weave is on the art box, not on the overlay drawn in it.
-   ==========================================================================================
    It marks out the whole area the picture would have occupied, so it belongs to the box that IS
    that area rather than to an absolutely-positioned child of it, which only covers the same
    ground as long as nothing rounds differently. Keeping it here also leaves the overlay a
@@ -1673,7 +1698,6 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .card-tile .art:has(img.img-failed) { background-image: var(--pp-art-weave); }
 
 /* Art that failed.
-   ==========================================================================================
    This used to be left at opacity .25, on the reasoning that the broken marker plus the alt text
    was the most useful thing a tile with no art could show, and that it SHOULD look like a fault.
 
@@ -1703,7 +1727,7 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
     background-position: center, center;
     background-repeat: no-repeat, repeat;
     background-size: 78% auto, auto;
-    border-radius: .15rem;
+    border-radius: var(--pp-r-xs);
 }
 
 .art-none { display: none; }
@@ -1745,7 +1769,6 @@ img[data-state="error"] ~ .art-none {
 }
 
 /* The name, on the tiles wide enough to read one on.
-   ------------------------------------------------------------------------------------------
    The id says WHICH card; the name says which card it IS, and on a set whose art has not been
    scanned yet that is the difference between a numbered grey box and a card you recognise. The
    caption under the tile carries the name too, but it is one clipped line — and on a phone the
@@ -1911,7 +1934,6 @@ img[data-state="loading"] ~ .art-wait {
 }
 
 /* On a phone the caption would be a strip holding one number.
-   ==========================================================================================
    The heart and the info button are both gone on a touch screen -- the long press opens the card,
    and wanting one is a deliberate act on the card's own page -- so a caption there would cost every
    tile a row of vertical space to show a count that only about one card in ten has. The count goes
@@ -2065,7 +2087,7 @@ img[data-state="loading"] ~ .art-wait {
     pointer-events: none;
 }
 
-/* ================================================================= card list (rows)
+/* card list (rows)
    A CSS grid, not flex. Alignment is then guaranteed by construction: header and data rows
    share one column definition, so they cannot drift. With flex they DID drift, because
    `flex: 1 1 auto` sizes from content and a header label is not as wide as a card name.
@@ -2191,12 +2213,33 @@ img[data-state="loading"] ~ .art-wait {
     font-size: .84rem; text-transform: uppercase; letter-spacing: .03em;
     color: var(--bs-secondary-color);
 }
+/* The sort controls fill the header row rather than sitting inside it as a line of text. They
+   were as tall as their own words -- 17px for "type", 20px for the rest -- inside a 38px row, so
+   two thirds of the only band on the screen that changes the sort order did nothing when tapped.
+   Stretching costs no layout: the row's height is already declared, and the words stay where they
+   were. */
 .card-line.head > button {
     background: none; border: 0; padding: 0;
+    align-self: stretch;
     text-align: left; font: inherit; color: inherit; cursor: pointer;
 }
+/* The centring is worth one selector of its own, at no specificity at all.
+   `.card-line.head > button` outranks the `.card-line .c-hp` rules that drop a column on a narrow
+   screen, so declaring the display up there quietly un-hid Set, Stage and HP in the header while
+   the rows below still dropped them: eleven headings over eight tracks, and the last three wrapped
+   onto a second line. :where() keeps this at zero, so a `display: none` two hundred lines down
+   still wins. */
+:where(.card-line.head) > button { display: flex; align-items: center; }
+/* A stretched button is still only as tall as the row, and 38px is a mouse target. The row gives
+   up the last 6px to the thumb on a touch screen, and its 4px of vertical padding with it: the
+   labels are centred either way, and the padding was the difference between a 35px target and the
+   44 this is for. */
+@media (pointer: coarse) {
+    .card-line.head { height: 2.75rem; padding-block: 0; }
+}
 .card-line.head > button:hover { color: var(--bs-body-color); }
-.card-line.head .c-hp, .card-line.head .c-ct { text-align: right; }
+/* Right-aligned as buttons now, so the flex line has to be told as well as the text. */
+.card-line.head .c-hp, .card-line.head .c-ct { text-align: right; justify-content: flex-end; }
 
 /* Rarity as the game draws it. Colour carries the family, the glyph count the tier. */
 .card-line .glyphs { font-size: 1.05rem; letter-spacing: -.04em; white-space: nowrap; }
@@ -2226,7 +2269,7 @@ img[data-state="loading"] ~ .art-wait {
    text while unselected, and the mark is the part that has to stay scannable either way. */
 .glyphs.foil { color: var(--bs-body-color); }
 
-/* ---- row density -------------------------------------------------------------------
+/* row density
    Two heights, and the number MUST agree with Virtualize's ItemSize in CardGrid.razor or the
    scrollbar mis-sizes and the list jumps while scrolling:
 
@@ -2347,7 +2390,6 @@ img[data-state="loading"] ~ .art-wait {
 @media (width <= 700px) { .card-line .ty-name { display: none; } }
 
 /* Two types, stacked like a fraction.
-   ==============================================================================================
    Dual-typed Pokémon arrive in October and the type column is the one that has to hold them. Side
    by side they do not fit: the column is 5.4rem because one pip plus one word needs that much, and
    two of each in a row needs about eleven. Widening it takes the width from the card name, which
@@ -2385,7 +2427,7 @@ img[data-state="loading"] ~ .art-wait {
 .card-line.roomy:not(.head) .ty-stack.dual .e { width: 1.05rem; height: 1.05rem; }
 .card-line.roomy:not(.head) .ty-stack.dual .ty-name { font-size: .8rem; }
 
-/* ================================================================= pack picker and table */
+/* pack picker and table */
 
 /* Column count is chosen by the user, as in the collection grid, rather than fixed by an
    auto-fill guess — a booster is worth seeing at a decent size.
@@ -2412,7 +2454,7 @@ img[data-state="loading"] ~ .art-wait {
     position: absolute; top: .2rem; left: .2rem; z-index: 1;
     width: 1.6rem; height: 1.6rem;
     display: flex; align-items: center; justify-content: center;
-    border: none; border-radius: .25rem;
+    border: none; border-radius: var(--pp-r-xs);
     background: color-mix(in srgb, var(--bs-body-bg) 72%, transparent);
     color: var(--bs-secondary-color);
     font-size: 1rem; line-height: 1;
@@ -2455,7 +2497,6 @@ img[data-state="loading"] ~ .art-wait {
 }
 
 /* The set's name, where its logo is not published yet.
-   ------------------------------------------------------------------------------------------
    A new set is loggable the day it goes live and the CDN can be days behind on its logo, which
    left the strip above the booster simply blank -- and blank on a tile whose neighbours are all
    wordmarks reads as something missing rather than as the set it is.
@@ -2473,7 +2514,7 @@ img[data-state="loading"] ~ .art-wait {
 .pack-choice .logo::before {
     content: "";
     position: absolute; inset: 0;
-    border-radius: .2rem;
+    border-radius: var(--pp-r-xs);
     background: var(--bs-secondary-bg);
 }
 .pack-choice .logo::after {
@@ -2504,7 +2545,7 @@ img[data-state="loading"] ~ .art-wait {
     position: relative;
     width: 100%;
     aspect-ratio: 258 / 500;
-    border-radius: .25rem;
+    border-radius: var(--pp-r-xs);
     overflow: hidden;
 
     /* Drawn placeholder, visible only when no art loads on top of it: a faint booster
@@ -2591,10 +2632,17 @@ tr.row-best {
    never wrapping: a two-line row would break the alignment of every figure beside it. */
 .pack-table .act { text-align: right; white-space: nowrap; width: 1%; }
 .pack-table th.num { text-align: right; }
+/* The pack's marker and its name, side by side and staying that way. The name column carries
+   everything that can wrap -- the name, its set code, the badges -- and min-width: 0 is what lets
+   it: a flex item's floor is its longest word, so without it "Extradimensional" pushes the row
+   wider than the phone rather than wrapping inside it. */
+.pack-cell { display: flex; align-items: center; }
+.pack-cell .pack-name { min-width: 0; }
+
 .pack-thumb {
     display: inline-block;
     width: 1.6rem; height: 2.2rem;
-    vertical-align: middle; margin-right: .4rem; border-radius: .15rem;
+    vertical-align: middle; margin-right: .4rem; border-radius: var(--pp-r-xs);
     background-color: var(--bs-secondary-bg);
     background-size: contain; background-position: center; background-repeat: no-repeat;
 }
@@ -2651,7 +2699,7 @@ tr.row-best {
     .table-responsive.bleed thead th.num { min-width: 3.8rem; }
 }
 
-/* ================================================================= column priority
+/* column priority
 
    Which columns survive a narrow screen, said once for every table in the app rather than per
    table. A cell is tagged with how important it is — 1 carries the decision the page exists to
@@ -2723,7 +2771,7 @@ tr.row-best {
     .table-responsive .table.align-middle > :not(caption) > * > * { vertical-align: top; }
 }
 
-/* ================================================================= page sections
+/* page sections
 
    Each section is fenced by a rule above its heading. Without it a long page was one continuous
    run of tables and headings at nearly the same weight, and "Packs per set" read as a caption on
@@ -2764,7 +2812,7 @@ tr.row-best {
    table below. */
 .sections > h2 + p { margin-bottom: .7rem; }
 
-/* ================================================================= hits
+/* hits
 
    The one part of History that is not accounting. It shows the card rather than a count, so it
    is laid out like a display case: the chosen hit large on the left, the numbers beside it, and
@@ -2776,7 +2824,7 @@ tr.row-best {
     gap: .9rem;
     padding: .9rem;
     border: 1px solid var(--bs-border-color);
-    border-radius: .5rem;
+    border-radius: var(--pp-r);
     /* A faint warm wash, so the section reads as the celebratory one without shouting. */
     background:
         linear-gradient(135deg,
@@ -2830,7 +2878,7 @@ tr.row-best {
 .hits-empty .value { font-size: 1.2rem; font-weight: 600; }
 .hits-empty .sub { font-size: .86rem; color: var(--bs-secondary-color); }
 
-/* ================================================================= history
+/* history
 
    Bars drawn in CSS rather than with a charting library. The shapes needed here are a daily
    count and a per-set count; Chart.js would add weight to the first paint of every page for two
@@ -2845,7 +2893,7 @@ tr.row-best {
     /* On the shared border token, so tuning structure tunes the chart with it. */
     padding: .5rem .5rem 0;
     border: 1px solid var(--bs-border-color);
-    border-radius: .35rem;
+    border-radius: var(--pp-r-sm);
     background: var(--bs-body-bg);
 }
 /* A day with nothing logged still occupies its slot, so a gap reads as a gap. */
@@ -2886,7 +2934,7 @@ tr.row-best {
 
 .logged-card:not(:last-child)::after { content: " · "; color: var(--bs-secondary-color); }
 
-/* ================================================================= card detail
+/* card detail
 
    Three columns on a wide screen: the art with its ownership control, the printed card, and how
    to get it. Collapses to one column on a phone, art first. */
@@ -2911,7 +2959,7 @@ tr.row-best {
 .card-detail .big-art {
     width: 100%;
     aspect-ratio: 367 / 512;
-    border-radius: .5rem;
+    border-radius: var(--pp-r);
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center; background-repeat: no-repeat;
 }
@@ -2953,7 +3001,7 @@ tr.row-best {
 .pack-links { display: flex; flex-direction: column; gap: .3rem; }
 .pack-link { display: flex; align-items: center; gap: .4rem; font-size: .95rem; }
 
-/* ================================================================= deck grid
+/* deck grid
 
    Showcase cards, the same idea as the hits panel: the deck's face card large, its details
    beside it, and a few more of its cards as a strip. Auto-fill rather than a fixed column count
@@ -2978,7 +3026,7 @@ tr.row-best {
     gap: .7rem;
     padding: .7rem;
     border: 1px solid var(--bs-border-color);
-    border-radius: .5rem;
+    border-radius: var(--pp-r);
     background: var(--bs-tertiary-bg);
 }
 /* A deck you can build today is marked on the container rather than only by a badge in the
@@ -3028,7 +3076,7 @@ tr.row-best {
 .showcase .strip .thumb {
     flex: none;
     width: 1.6rem; aspect-ratio: 367 / 512;
-    border-radius: .15rem;
+    border-radius: var(--pp-r-xs);
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center;
     opacity: .85;
@@ -3040,7 +3088,7 @@ tr.row-best {
     margin-top: auto; padding-top: .2rem;
 }
 
-/* ================================================================= decks
+/* decks
 
    Two columns on a wide screen: the deck itself on the left, the things you do TO it on the
    right (search, what is missing, which packs help). One column below 1000px, deck first —
@@ -3223,7 +3271,7 @@ tr.row-best {
    black-on-white polarity, so the SVG paints its own white ground. */
 .share-row { display: flex; gap: .75rem; align-items: flex-start; flex-wrap: wrap; }
 .share-row .qr { width: 11rem; flex: none; }
-.share-row .qr svg { display: block; width: 100%; height: auto; border-radius: .25rem; }
+.share-row .qr svg { display: block; width: 100%; height: auto; border-radius: var(--pp-r-xs); }
 .share-row > div:last-child { flex: 1 1 14rem; min-width: 0; }
 
 .picked-strip {
@@ -3241,7 +3289,7 @@ tr.row-best {
    the mark carries its family colour a 60% wash only makes that colour hard to name. */
 .picked-chip .rar { font-size: .82rem; }
 
-/* ================================================================= busy overlay */
+/* busy overlay */
 
 .busy-veil {
     position: fixed; inset: 0; z-index: 3000;
@@ -3255,7 +3303,7 @@ tr.row-best {
     padding: .6rem 1rem;
     background: var(--bs-body-bg);
     border: 1px solid var(--bs-border-color);
-    border-radius: .5rem;
+    border-radius: var(--pp-r);
     box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .18);
     font-size: 1rem;
 }
@@ -3269,7 +3317,7 @@ tr.row-best {
 @keyframes busy-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .busy-spinner { animation-duration: 2s; } }
 
-/* ================================================================= diagnostics
+/* diagnostics
    A phone has no console, and Blazor's own banner discards the exception detail. */
 
 #diag {
@@ -3301,7 +3349,7 @@ tr.row-best {
     border: 1px solid #521;
 }
 
-/* ================================================================= narrow screens
+/* narrow screens
    Hiding a cell in a grid requires restating the template, or the remaining cells keep the
    old track sizes. Attacks, ability and HP go first: they are reference detail, not what you
    scan a collection by. Type and rarity survive to the smallest size. */
@@ -3341,7 +3389,7 @@ tr.row-best {
     .card-line .c-id, .card-line .c-st { display: none; }
 }
 
-/* ================================================================= hover detail
+/* hover detail
    One shared tooltip element, appended to <body> so a row's `overflow: hidden` cannot clip
    it. Fixed image height rather than a max: the element is measured to position it, and an
    image that has not loaded yet would measure as zero and place the tooltip wrongly. */
@@ -3365,7 +3413,7 @@ tr.row-best {
     height: 22rem;
     width: auto;
     max-width: 100%;
-    border-radius: .25rem;
+    border-radius: var(--pp-r-xs);
     background: #333;
 }
 #tip .tip-text {
@@ -3386,7 +3434,7 @@ tr.row-best {
    73px. It keeps the column WIDTH and nothing else. */
 .card-line.head .c-thumb { height: 0; background: none; }
 
-/* ---- wishlists -------------------------------------------------------------------------
+/* wishlists
    A grid for the same reason every other row list here is one: the columns have to line up
    down the list, and flex sizes each cell from its own content.
 
@@ -3442,7 +3490,7 @@ tr.row-best {
     font-weight: 600; font-variant-numeric: tabular-nums;
 }
 
-/* ---- command palette ------------------------------------------------------------------- */
+/* command palette */
 .app-nav .palette-btn {
     display: inline-flex; align-items: center; gap: .35rem;
     padding: .35rem .55rem; border-radius: var(--pp-r-sm);
@@ -3476,7 +3524,7 @@ tr.row-best {
     margin: 0; padding: 0;
     display: flex; flex-direction: column;
     background: var(--bs-body-bg); color: var(--bs-body-color);
-    border: 1px solid var(--bs-border-color); border-radius: .5rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r);
     box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, .35);
     overflow: hidden;
 }
@@ -3655,7 +3703,7 @@ tr.row-best {
 }
 .lead-note > .x:hover { color: var(--bs-body-color); }
 
-/* ================================================================= wonder pick
+/* wonder pick
 
    The offer: five card slots, filled by tapping the search below. Empty slots are drawn rather
    than absent, so the screen says how many more cards it is waiting for. */
@@ -3687,7 +3735,7 @@ tr.row-best {
    still be the wrong thing to spend a capped, slow-refilling pool on, and the colour has to
    agree with the sentence rather than with the number. */
 .verdict {
-    padding: .6rem .8rem; border-radius: .5rem; margin-bottom: .6rem;
+    padding: .6rem .8rem; border-radius: var(--pp-r); margin-bottom: .6rem;
     border: 1px solid var(--bs-border-color);
 }
 .verdict .head {
@@ -3706,7 +3754,7 @@ tr.row-best {
     background: color-mix(in srgb, var(--bs-warning) 8%, transparent);
 }
 
-/* ================================================================= gold flair
+/* gold flair
 
    Ten copies of a diamond-rarity card earns its gold flair, granted automatically — the only
    reason to keep pulling something you already own, so it is a real collecting goal and worth
@@ -3821,7 +3869,7 @@ tr.row-best {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--bs-primary) 35%, transparent);
 }
 
-/* ================================================================= resource pools
+/* resource pools
 
    Three panels side by side, deliberately equal in weight: they are three separate systems with
    no exchange rate between them, and giving one visual priority would suggest a hierarchy the
@@ -3880,7 +3928,7 @@ tr.row-best {
 }
 .board-tuning-body .form-select { inline-size: auto; max-inline-size: 100%; }
 
-/* ================================================================= trades
+/* trades
 
    A blocked row is dimmed rather than hidden: naming the gate is the answer, and a target that
    vanished would read as a bug. Dimmed, though, because the page is asking "what next" and the
@@ -3890,7 +3938,7 @@ tr.row-best {
 .trade-blocked .glyphs { opacity: .8; }
 
 
-/* ================================================================= in-game wishlist
+/* in-game wishlist
 
    The transcription table. A row being ADDED is marked, because the board is retyped by hand and
    the only rows that need attention are the changed ones. */
@@ -3899,7 +3947,7 @@ tr.row-best {
 
 
 
-/* ================================================================= bottom tab bar
+/* bottom tab bar
 
    Twelve equal links in a wrapping flex row cost 160px and four rows on a phone, and the row needs
    1057px to fit on one line — so it wraps on a laptop and in any half-width window too, not only on
@@ -4129,7 +4177,7 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 .card-line .ty-key svg { width: 100%; height: 100%; display: block; }
 .card-line.head .c-ty { display: flex; align-items: center; gap: .3rem; }
 
-/* ================================================================= toolbar disclosure
+/* toolbar disclosure
 
    The one strip that is pinned back after unpinning everything else. It carries only what may not
    hide: the search box, the add/remove mode, a chip per active filter, and the count. Sticky
@@ -4254,7 +4302,6 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 }
 
 /* Back to the top of the list.
-   ==========================================================================================
    Fixed rather than sticky: it belongs to the viewport, not to a place in the list, and a sticky
    element inside a virtualised scroller has nothing stable to stick to.
 
@@ -4287,7 +4334,6 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 }
 
 /* The same thing on the toolbar, for a pointer rather than a thumb.
-   ==========================================================================================
    An ordinary button in the bar, so its height, border and hover come from the controls beside
    it rather than being restated here. When it shows is the only part of it this rule owns.
 
@@ -4349,7 +4395,7 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
        from --ctl-h with everything else in the bar. */
     min-width: var(--ctl-h);
     padding: .1rem .35rem;
-    border: 1px solid var(--bs-border-color); border-radius: .35rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r-sm);
     background: var(--bs-body-bg); color: var(--bs-body-color);
     line-height: 1;
 }
@@ -4366,7 +4412,7 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 /* Same size as a list row draws them, so a chip and a card agree on what a rarity looks like. */
 .chip-tog .glyphs { font-size: 1.05rem; letter-spacing: -.04em; white-space: nowrap; }
 
-/* ---------------------------------------------------------------- rarity colour, everywhere
+/* rarity colour, everywhere
 
    The four family colours were defined for the list row and then used by whatever happened to be
    built next, so a rarity was coloured on the collection's filter chips and in a card row and
@@ -4437,7 +4483,6 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 .chip-filter:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
 
 /* Art that never arrived, everywhere it is a background.
-   ==============================================================================================
    Two ways to show a card: an <img>, which the managed loader watches and can mark failed (see
    the .art-none rules above), and a background-image, which reports nothing at all — a failed
    background is simply not painted, and the box was left empty. That is most of the app: every
@@ -4497,7 +4542,7 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
 /* Room for the detailed one only where the box is big. */
 .big-art, .hit-art, .offer-card, .showcase .face { --pp-art-mark-size: 46%; }
 
-/* ================================================================= unrecognised slots
+/* unrecognised slots
    The screenshot import's loose ends: a picture of one card slot the reader could not name,
    beside the box for naming it.
 
@@ -4548,7 +4593,8 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
    the picture open after the pointer moves away, which is closer to a feature: click to keep it up,
    click off to put it down. The ring below stays on focus-visible, where it belongs. */
 .slot-shot:hover img,
-.slot-shot:focus img {
+.slot-shot:focus img,
+.slot-shot.zoom img {
     /* Bounded by the crop's own resolution rather than by how big a picture would be nice. The
        thumbnail is 176px across at most, the resting frame is 86, and this lands the enlargement at
        about 190 — a shade over life size, where 2.6 would have been blowing 162 pixels up to 225 and

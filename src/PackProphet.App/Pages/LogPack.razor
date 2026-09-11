@@ -40,7 +40,7 @@ else if (_pack is null)
                     var on = Session.IsLimitedPackAvailable(pack);
                     <button class="avail-chip @(on ? "on" : "off")"
                             @onclick="() => Session.SetLimitedPackAvailable(pack, !on)"
-                            title="@(pack.Split(':')[1]) packs come and go. This only affects which packs get RECOMMENDED on the Which pack page — you can log one either way.">
+                            title="@(pack.Split(':')[1]) packs come and go. This only affects which packs the Which pack page recommends. You can log one either way.">
                         <span class="nm">@pack.Split(':')[1]</span>
                         <span class="st">@(on ? "on sale" : "off sale")</span>
                     </button>
@@ -148,7 +148,7 @@ else if (_pack is null)
                                     <Notice Severity="Notice.Level.Warning" Dense="true">
                                         @plan.Unidentified of these pictures
                                         @(plan.Unidentified == 1 ? "does" : "do") not say which pack
-                                        @(plan.Unidentified == 1 ? "it is" : "they are") &mdash; too few
+                                        @(plan.Unidentified == 1 ? "it is" : "they are"): too few
                                         cards named, or cards that fit more than one pack. Use that
                                         picture's own button above, or name its slots first.
                                     </Notice>
@@ -170,7 +170,7 @@ else if (_pack is null)
                                     <button id="log-all" class="btn btn-primary" disabled="@Busy.IsBusy"
                                             @onclick="() => LogAll(plan)">
                                         Log @plan.Ready.Count @Fmt.S(plan.Ready.Count, "pack")
-                                        &mdash; @plan.Cards @Fmt.S(plan.Cards, "card") in all
+                                        (@plan.Cards @Fmt.S(plan.Cards, "card") in all)
                                     </button>
 
                                     @* Named so it can be checked before it is pressed. Twelve packs
@@ -225,7 +225,7 @@ else if (_pack is null)
                    by dropping one of them. *@
                 <div class="pack-cell @(pinned ? "pinned" : "")">
                     <button class="pack-choice" @onclick="() => Choose(pack)" disabled="@Busy.IsBusy"
-                            title="@name — @set @Session.Sets.DisplayName(set)">
+                            title="@name, @set @Session.Sets.DisplayName(set)">
                         @* Stacked, not layered. Set logo above, booster below. Layering them in
                            one box looked wrong because the art is sized to `contain`, so the logo
                            bled out around its edges.
@@ -346,7 +346,7 @@ else
             @if (_justLogged.Value.capped)
             {
                 <span class="text-danger-emphasis">
-                    &mdash; at the @GameRules.PackPointsCap cap, so further packs of this set earn nothing. Spend before opening.
+                    (at the @GameRules.PackPointsCap cap, so further packs of this set earn nothing). Spend before opening.
                 </span>
             }
 
@@ -568,7 +568,7 @@ else
 
     private string AdoptWarning =>
         AdoptCostsTheRest
-            ? "Opening one pack clears the other pictures — they are not logged, and you would have "
+            ? "Opening one pack clears the other pictures. They are not logged, and you would have "
               + "to choose them again. Log them all at once with the button below instead."
             : "";
 
@@ -681,7 +681,7 @@ else
                 : string.Join(" or ", counts.OrderBy(n => n)) + " cards";
 
             return $"A {set} pack holds {sizes}, and you have picked {_picked.Count}. " +
-                   "Log it anyway if that is what you meant — but the odds check on History " +
+                   "Log it anyway if that is what you meant, but the odds check on History " +
                    "compares what you record against what the model predicted, so a miscount " +
                    "there looks like the model being wrong.";
         }
@@ -841,7 +841,7 @@ else
             _bulkMiscount =
                 $"{plan.Short} of these {Fmt.S(plan.Short, "picture")} "
                 + $"{(plan.Short == 1 ? "holds" : "hold")} a number of cards that pack cannot. "
-                + "Log them anyway if that is what you meant — but the odds check on History "
+                + "Log them anyway if that is what you meant, but the odds check on History "
                 + "compares what you record against what the model predicted, so a miscount there "
                 + "looks like the model being wrong.";
             return Task.CompletedTask;

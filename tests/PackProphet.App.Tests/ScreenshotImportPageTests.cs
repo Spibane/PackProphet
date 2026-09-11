@@ -182,6 +182,41 @@ public class ScreenshotImportPageTests : AppHost
     }
 
     [Fact]
+    public async Task The_slots_picture_enlarges_on_a_press_as_well_as_on_a_hover()
+    {
+        // The enlargement used to be a hover and a focus, and the button existed only to be
+        // focusable. A pointer got the picture; a keyboard got a control that announced it would
+        // show the card larger and then did nothing when pressed, because the focus that would
+        // have enlarged it had already happened on the way in.
+        //
+        // So the press toggles it outright. What is worth holding here is the pair that says so to
+        // somebody not looking at the screen: aria-pressed, and a label that names the next press
+        // rather than the last one.
+        var scan = MeasuredScan();
+        scan.Cells[2].Hash = new string('0', 31) + "1";
+        scan.Cells[2].Thumb = "data:image/png;base64,iVBORw0KGgo=";
+
+        JSInterop.SetupModule("./js/cardshot.js").Setup<ShotScan>("scan", _ => true).SetResult(scan);
+        var page = await PageAsync();
+        page.FindComponent<InputFile>()
+            .UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "cards.png"));
+
+        var shot = page.Find("button.slot-shot");
+        Assert.Equal("false", shot.GetAttribute("aria-pressed"));
+        Assert.Contains("larger", shot.GetAttribute("aria-label"));
+
+        shot.Click();
+
+        shot = page.Find("button.slot-shot");
+        Assert.Equal("true", shot.GetAttribute("aria-pressed"));
+        Assert.Contains("zoom", shot.ClassList);
+        Assert.Contains("Hide", shot.GetAttribute("aria-label"));
+
+        shot.Click();
+        Assert.DoesNotContain("zoom", page.Find("button.slot-shot").ClassList);
+    }
+
+    [Fact]
     public async Task A_slot_named_by_hand_is_applied_like_any_other_card()
     {
         // The end of the manual fix, and the only part of it worth a page test: what the user picks
@@ -331,7 +366,7 @@ public class ScreenshotImportPageTests : AppHost
 
         Assert.DoesNotContain("Ctrl", page.Markup);
 
-        page.Find("button:contains('Undo That')").Click();
+        page.Find("button:contains('Undo that')").Click();
 
         Assert.Equal(0, Session.Owned.DistinctOwned);
         Assert.DoesNotContain("Recorded 13 cards", page.Markup);

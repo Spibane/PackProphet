@@ -23,7 +23,7 @@ else
         @* The file never leaves the browser, and that is the first thing someone handing over
            their whole collection wants to know. *@
         <p class="text-body-secondary">
-            Export your collection from your other tracker and pick the file here &mdash; a CSV
+            Export your collection from your other tracker and pick the file here: a CSV
             or an Excel workbook, whichever it gives you. It is read
             <strong>in this browser</strong> and never uploaded.
         </p>
@@ -47,8 +47,8 @@ else
                 <summary class="small text-body-secondary">Which files work</summary>
                 <div class="pt-2 small text-body-secondary">
                     <p>
-                        Any CSV or <code>.xlsx</code> with a column naming the card &mdash;
-                        <code>Id</code>, <code>card_id</code> or <code>card number</code> &mdash;
+                        Any CSV or <code>.xlsx</code> with a column naming the card
+                        (<code>Id</code>, <code>card_id</code> or <code>card number</code>)
                         and a column counting copies, such as <code>NumberOwned</code> or
                         <code>quantity</code>. A file recording only whether a card is held
                         imports as one copy each.
@@ -187,9 +187,9 @@ else
                             <span class="d-block small text-body-secondary">
                                 @* Said plainly, with the number, because this is the one option
                                    that throws work away. *@
-                                Everything currently in it is discarded &mdash;
+                                Everything currently in it is discarded,
                                 @Session.Owned.DistinctOwned.ToString("N0")
-                                @Fmt.S(Session.Owned.DistinctOwned, "card") &mdash; and the file
+                                @Fmt.S(Session.Owned.DistinctOwned, "card"), and the file
                                 becomes the whole collection.
                             </span>
                         </label>
@@ -228,8 +228,8 @@ else
         <p class="small text-body-secondary">
             A plain CSV, aimed at no site in particular: one row per card with
             <code>set</code>, <code>number</code>, <code>card_id</code>, <code>name</code>,
-            <code>rarity</code> and <code>quantity</code>. The card is named both ways &mdash;
-            <code>A1-1</code> and <code>A1</code> plus <code>1</code> &mdash; so a tracker
+            <code>rarity</code> and <code>quantity</code>. The card is named both ways
+            (<code>A1-1</code> and <code>A1</code> plus <code>1</code>), so a tracker
             expecting either will find it.
         </p>
         <p class="small text-body-secondary">
@@ -258,7 +258,7 @@ else
                     @if (Session.CanUndo)
                     {
                         <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoImport">
-                            Undo That
+                            Undo that
                         </button>
                     }
                     <a class="btn btn-sm btn-outline-primary py-0" href="collection">

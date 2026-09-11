@@ -61,7 +61,7 @@ else
                     <span class="fail">&middot; @_artFailed art failed</span>
                 }
             </span>
-            <span class="fold-hint">Change Set</span>
+            <span class="fold-hint">Change set</span>
         </summary>
 
         <div class="set-picker-body">
@@ -137,8 +137,8 @@ else
                 <strong>@gaps.BlockedCards</strong>
                 @(gaps.BlockedCards == 1 ? "card you own cannot evolve" : "cards you own cannot evolve")
                 <span class="text-body-secondary">
-                    &mdash; @gaps.Gaps.Count missing
-                    @(gaps.Gaps.Count == 1 ? "link" : "links"), across every set
+                    (@gaps.Gaps.Count missing
+                    @(gaps.Gaps.Count == 1 ? "link" : "links"), across every set)
                 </span>
             </button>
 
@@ -152,7 +152,7 @@ else
             @if (_showGaps)
             {
                 <p class="small text-body-secondary mb-2">
-                    Any printing works &mdash; the game evolves on the printed name.
+                    Any printing works: the game evolves on the printed name.
                     @if (_own != "gaps")
                     {
                         <button class="btn btn-sm btn-outline-primary py-0 ms-1"
@@ -184,7 +184,7 @@ else
                             }
 
                             <span class="text-body-secondary">
-                                &mdash; blocks @string.Join(", ", gap.Blocks.Select(b => b.Name))
+                                (blocks @string.Join(", ", gap.Blocks.Select(b => b.Name)))
                             </span>
 
                             @if (gap.Requires is { } deeper)
@@ -313,7 +313,7 @@ else
                             @onclick="() => ToggleType(type)"
                             aria-pressed="@Aria.Flag(_types.Contains(type))"
                             disabled="@(!Session.FactsReady)"
-                            title="@(Session.FactsReady ? type : $"{type} — still loading card detail")">
+                            title="@(Session.FactsReady ? type : $"{type}, still loading card detail")">
                         <EnergyPip Type="@type" />
                         <span class="visually-hidden">@type</span>
                     </button>
@@ -373,12 +373,12 @@ else
                 <button class="btn btn-sm btn-outline-secondary" @onclick="MarkTargetOwned"
                         disabled="@Busy.IsBusy"
                         title="Mark every card this set's plan wants as owned">
-                    Fill Target
+                    Fill target
                 </button>
                 <button class="btn btn-sm btn-outline-danger" @onclick="ClearSet"
                         disabled="@Busy.IsBusy" aria-live="polite"
                         title="Set every card in this set back to zero. Undo works.">
-                    @(_confirmClear ? "Clear — sure?" : "Clear Set")
+                    @(_confirmClear ? "Clear. Sure?" : "Clear set")
                 </button>
             }
         </ToolbarExtras>
@@ -434,7 +434,7 @@ else
     {
         AllSets => "every set",
         SeriesAll => $"all of series {_series}",
-        _ => $"{_set} — {Session.Sets.DisplayName(_set)}",
+        _ => $"{_set}: {Session.Sets.DisplayName(_set)}",
     };
 
     private double CurrentProgress => _set switch
@@ -569,7 +569,7 @@ else
     /// What the sticky strip calls the set a card belongs to, in the same words as the set picker's
     /// summary: the code is what the tabs are labelled with, the name is what anyone would call it.
     /// </summary>
-    private string GroupLabel(PocketCard card) => $"{card.Set} — {Session.Sets.DisplayName(card.Set)}";
+    private string GroupLabel(PocketCard card) => $"{card.Set}: {Session.Sets.DisplayName(card.Set)}";
 
     /// <summary>
     /// The set's own expansion logo, which is what the strip shows beside its name — and what the

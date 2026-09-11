@@ -66,7 +66,7 @@ else
                 }
                 @if (_pending)
                 {
-                    <span class="chip-pending" title="Applying shortly — keep tapping to make more changes">
+                    <span class="chip-pending" title="Applying shortly, keep tapping to make more changes">
                         Updating&hellip;
                     </span>
                 }
@@ -159,14 +159,14 @@ else
             @if (!IsChaseScope)
             {
                 <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@Aria.Flag(_advisorOpen)"
-                        @onclick="ToggleAdvisor">Cost per Rarity</button>
+                        @onclick="ToggleAdvisor">Cost per rarity</button>
             }
             <button class="btn btn-sm @Toggled(_batchOpen)" aria-pressed="@Aria.Flag(_batchOpen)"
                     @onclick="ToggleBatch">Buying @GameRules.PacksPerBatch at once</button>
             <button class="btn btn-sm @Toggled(_allocateOpen)" aria-pressed="@Aria.Flag(_allocateOpen)"
-                    @onclick="ToggleAllocate">Splitting a Budget</button>
+                    @onclick="ToggleAllocate">Splitting a budget</button>
             <button class="btn btn-sm @Toggled(_pointsOpen)" aria-pressed="@Aria.Flag(_pointsOpen)"
-                    @onclick="TogglePoints">Pack Points</button>
+                    @onclick="TogglePoints">Pack points</button>
         </div>
 
         @if (_advisorOpen && !IsChaseScope)
@@ -201,7 +201,7 @@ else
                    rather than being left to intuition. *@
                 <p class="small text-body-secondary">
                     Ten packs of a set is the same ten draws as ten singles of it, so a batch
-                    cannot do better &mdash; what it decides is <em>which</em> set gets them.
+                    cannot do better. What it decides is <em>which</em> set gets them.
                     Figures below cover the whole batch.
                 </p>
 
@@ -341,7 +341,7 @@ else
                                 @if (warning.AtCap)
                                 {
                                     <span>
-                                        is at the cap &mdash; every further pack of this set earns
+                                        is at the cap: every further pack of this set earns
                                         <strong>nothing</strong>. Spend before you open.
                                     </span>
                                 }
@@ -388,7 +388,7 @@ else
                                     {
                                         <span>@row.AffordableNow.Count card(s)</span>
                                         <span class="text-body-secondary">
-                                            &mdash; dearest: @row.AffordableNow[0].Name
+                                            (dearest: @row.AffordableNow[0].Name)
                                         </span>
                                     }
                                 </td>
@@ -476,12 +476,24 @@ else
                        up as "the best". *@
                     <tr class="@(row.Best ? "row-best" : "") @(row.Mark is null ? "" : "pack-row-muted") pack-row-click"
                         @onclick="() => ToggleExpanded(row.PackKey)">
+                        @* Three inline things in one cell is fine until the cell is 190px wide,
+                           which is what a phone leaves after the three figures beside it. Then a
+                           long name wraps back under the expander and the thumbnail, and its set
+                           code lands on a third line, so the row is 130px tall and the code no
+                           longer reads as belonging to the name above it.
+
+                           Marker and text as two flex items instead, the text free to wrap inside
+                           its own column. Inside the cell rather than on it, because a `td` told
+                           to be a flex container leaves the table formatting context and takes
+                           the column alignment with it. *@
                         <td>
+                          <span class="pack-cell">
                             <span class="expander" aria-hidden="true">@(_expanded == row.PackKey ? "▾" : "▸")</span>
                             @* Background, not <img>: a failed load reveals the placeholder
                                instead of leaving a broken-image gap, with no error handling. *@
                             <span class="pack-thumb"
                                   style="--art:url('@Session.PackArtUrl(row.PackKey)')"></span>
+                            <span class="pack-name">
                             <strong>@row.PackName</strong>
                             <span class="text-body-secondary small">@row.Set</span>
                             @* The top row is tinted, and a tint with nothing to explain it reads
@@ -525,6 +537,8 @@ else
                                     Guaranteed 4&#9670;
                                 </span>
                             }
+                            </span>
+                          </span>
                         </td>
                         @* Dashes rather than zeroes where a pack has no published rates. A zero
                            would say "this pack cannot help", when the truth is that nobody knows
@@ -555,7 +569,7 @@ else
                                 @if (supplied.Count == 0)
                                 {
                                     <p class="small text-body-secondary mb-0">
-                                        Nothing outstanding &mdash; the ranking is stale, reopen the page.
+                                        Nothing outstanding. The ranking is stale, reopen the page.
                                     </p>
                                 }
                                 else
@@ -771,7 +785,7 @@ else
             ? Session.ChaseListById(_scope[5..])?.Name ?? "a chase list"
         : _scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {_scope[7..]}"
         : _scope == "everything" ? "everything you collect"
-        : $"{_scope} — {Session.Sets.DisplayName(_scope)}";
+        : $"{_scope}: {Session.Sets.DisplayName(_scope)}";
 
     /// <summary>
     /// Which plan the chips edit: one set's, or the default that the rest follow. A set only
@@ -1141,8 +1155,8 @@ else
                 x.PackKey, null, false,
                 x.Released ? "Rates Unknown" : "Not Out Yet",
                 x.Released
-                    ? $"{x.PackKey.Split(':')[0]} is out, but nobody has published its pull rates yet — the cards drop, the odds are simply unknown, so it cannot be counted in the estimate"
-                    : $"{x.PackKey.Split(':')[0]} has not been released{(x.ReleasesOn is { } d ? $" — due {d:d MMM yyyy}" : "")}, so nothing in it can be pulled yet",
+                    ? $"{x.PackKey.Split(':')[0]} is out, but nobody has published its pull rates yet. The cards drop, the odds are simply unknown, so it cannot be counted in the estimate"
+                    : $"{x.PackKey.Split(':')[0]} has not been released{(x.ReleasesOn is { } d ? $", due {d:d MMM yyyy}" : "")}, so nothing in it can be pulled yet",
                 x.Cards, CanAssume: x.Released)),
         ];
 

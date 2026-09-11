@@ -29,7 +29,7 @@ else
 
     <div class="page-head">
         <button class="btn btn-sm btn-outline-secondary" @onclick="Back"
-                title="Back to @History.LastListPage — or press Escape">&larr; back</button>
+                title="Back to @History.LastListPage, or press Escape">&larr; back</button>
         <h1 class="title">@_card.Name</h1>
         <span class="subtitle">@_card.Set&thinsp;@_card.Number</span>
         <span class="actions">
@@ -58,7 +58,7 @@ else
             @if (Session.HasGoldFlair(_card))
             {
                 <p class="small mb-0 flair-note">
-                    Gold flair earned &mdash; @_owned copies.
+                    Gold flair earned: @_owned copies.
                 </p>
             }
             @* Same rule as the flair itself, so the hint does not promise gold to a four-diamond
@@ -94,7 +94,7 @@ else
                 <button class="btn btn-sm want-heart @(hearted ? "on" : "")"
                         @onclick="() => Session.ToggleWanted(_card.OwnershipKey)"
                         aria-pressed="@Aria.Flag(hearted)"
-                        title="@(hearted ? $"On your {AppSession.WantListName} list — tap to take it off" : $"Add to your {AppSession.WantListName} list")">
+                        title="@(hearted ? $"On your {AppSession.WantListName} list. Tap to take it off" : $"Add to your {AppSession.WantListName} list")">
                     <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false">
                         <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
                               fill="@(hearted ? "currentColor" : "none")"
@@ -119,7 +119,7 @@ else
                         <span class="want-pair">
                             <button class="btn btn-sm @(wanted > 0 ? "btn-primary" : "btn-outline-secondary")"
                                     @onclick="() => Session.BumpWanted(list.Id, _card.OwnershipKey, 1)"
-                                    title="@(wanted == 0 ? $"Add to {list.Name}" : $"Wanting {wanted} on {list.Name} — tap for one more")">
+                                    title="@(wanted == 0 ? $"Add to {list.Name}" : $"Wanting {wanted} on {list.Name}. Tap for one more")">
                                 @list.Name@(wanted > 0 ? $" ×{wanted}" : "")
                             </button>
                             @if (wanted > 0)
@@ -196,13 +196,13 @@ else
                                     @stage
                                     @if (_fact.EvolvesFrom is { Length: > 0 } from)
                                     {
-                                        <span class="text-body-secondary">&mdash; evolves from @from</span>
+                                        <span class="text-body-secondary">(evolves from @from)</span>
                                         @* An evolution you cannot evolve is dead weight in a deck,
                                            and nothing else on the page would say so. *@
                                         @if (!OwnsAnyNamed(from))
                                         {
                                             <span class="badge text-bg-warning ms-1"
-                                                  title="You own none. Any printing of it will do — the game evolves on the printed name.">
+                                                  title="You own none. Any printing of it will do: the game evolves on the printed name.">
                                                 You Own None
                                             </span>
                                         }
@@ -231,7 +231,7 @@ else
 
                 @if (_fact.HasAbility)
                 {
-                    <h2 class="h6">Ability &mdash; @_fact.Ability!.Name</h2>
+                    <h2 class="h6">Ability: @_fact.Ability!.Name</h2>
                     <p class="small">@(_fact.Ability.Effect ?? "")</p>
                 }
 
@@ -326,7 +326,7 @@ else
             @if (_packs.Count == 0)
             {
                 <p class="small text-body-secondary">
-                    None &mdash; @(_card.IsPromo ? "promos come from events, not packs." : "this card is not sold in packs.")
+                    None: @(_card.IsPromo ? "promos come from events, not packs." : "this card is not sold in packs.")
                 </p>
             }
             else

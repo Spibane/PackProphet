@@ -5,7 +5,6 @@ namespace PackProphet.Vision;
 /// to wwwroot beside the art fingerprints.
 ///
 /// Why a committed table and not a read at runtime
-/// ==============================================================================================
 /// The browser already has the art on screen, so it could sample the badge itself and skip this
 /// file entirely. Two things decided against it.
 ///

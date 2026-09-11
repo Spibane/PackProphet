@@ -74,8 +74,8 @@
         <label class="form-check-label" for="wonderintro">
             Explain what Wonder Pick decides
             <span class="d-block small text-body-secondary">
-                A paragraph on the Wonder Pick page separating what it works out &mdash; the bar an
-                offer has to clear to be worth a stamina &mdash; from what the game's own offer
+                A paragraph on the Wonder Pick page separating what it works out (the bar an
+                offer has to clear to be worth a stamina) from what the game's own offer
                 screen already shows you. Worth reading once.
             </span>
         </label>
@@ -146,7 +146,7 @@
             <input type="number" min="0" class="form-control form-control-sm"
                    style="width:8rem" value="@_wonder" @onchange="OnWonder" />
         </label>
-        <button class="btn btn-sm btn-primary" @onclick="SaveLifetime">Save Totals</button>
+        <button class="btn btn-sm btn-primary" @onclick="SaveLifetime">Save totals</button>
         @if (Session.Lifetime is not null)
         {
             <button class="btn btn-sm btn-outline-secondary" @onclick="ClearLifetime">Clear</button>
@@ -155,7 +155,7 @@
     @if (Session.Lifetime is { } lt)
     {
         <p class="small text-body-secondary mb-4">
-            Read on @lt.At.ToLocalTime().ToString("d MMM yyyy, HH:mm") &mdash;
+            Read on @lt.At.ToLocalTime().ToString("d MMM yyyy, HH:mm"):
             @lt.PacksOpened packs and @lt.WonderPicks Wonder Picks. Logging since then brings the
             totals to <strong>@Session.LifetimePacks</strong> packs and
             <strong>@Session.LifetimeWonderPicks</strong> Wonder Picks.
@@ -232,7 +232,7 @@
                             @if (!active)
                             {
                                 <button class="btn btn-sm btn-primary"
-                                        @onclick="() => Switch(profile.Id)">Switch To</button>
+                                        @onclick="() => Switch(profile.Id)">Switch to</button>
                             }
                             <button class="btn btn-sm btn-outline-secondary"
                                     @onclick="() => StartRename(profile)">Rename</button>
@@ -284,13 +284,13 @@
        the answer for someone who owns two devices. *@
     @if (Sync.Available)
     {
-        <h2>Sync Across Devices</h2>
+        <h2>Sync across devices</h2>
 
         @if (!Sync.Paired)
         {
             <p class="small text-body-secondary">
                 No account. One device makes a code, the other types it. That code is the
-                encryption key, applied before anything leaves this browser &mdash; the server
+                encryption key, applied before anything leaves this browser, so the server
                 stores what it cannot read.
             </p>
             <p class="small text-body-secondary">
@@ -299,11 +299,11 @@
 
             <div class="d-flex gap-2 flex-wrap mb-3">
                 <button class="btn btn-sm btn-primary" disabled="@Busy" @onclick="StartSync">
-                    Set Up Sync
+                    Set up sync
                 </button>
                 <button class="btn btn-sm btn-outline-primary" disabled="@Busy"
                         @onclick="() => _joining = !_joining">
-                    I Have A Code
+                    I have a code
                 </button>
             </div>
 
@@ -331,17 +331,17 @@
                 <code class="fs-5 user-select-all">@PairingCode.Format(Sync.Code!)</code>
             </p>
             <p class="small text-body-secondary">
-                Treat it like a password &mdash; anyone with it can read and change your
+                Treat it like a password: anyone with it can read and change your
                 collection. Losing it costs you the stored copy, not this device's.
             </p>
 
             <div class="d-flex gap-2 flex-wrap mb-3">
                 <button class="btn btn-sm btn-primary" disabled="@Busy" @onclick="SyncNow">
-                    @(Busy ? "Syncing…" : "Sync Now")
+                    @(Busy ? "Syncing…" : "Sync now")
                 </button>
                 <button class="btn btn-sm btn-outline-secondary" disabled="@Busy"
                         @onclick="() => _unpairing = !_unpairing">
-                    Stop Syncing
+                    Stop syncing
                 </button>
             </div>
 
@@ -354,7 +354,7 @@
                     <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-sm btn-outline-secondary"
                                 @onclick="() => Unpair(false)">
-                            Stop On This Device
+                            Stop on this device
                         </button>
                         <button class="btn btn-sm btn-outline-danger"
                                 @onclick="() => Unpair(true)">
@@ -399,7 +399,7 @@
         }
 
         <p class="small text-body-secondary mb-4">
-            Syncs on open, and a few seconds after any change. Press <strong>Sync Now</strong> to
+            Syncs on open, and a few seconds after any change. Press <strong>Sync now</strong> to
             pull in a device someone is using right now.
         </p>
     }
@@ -409,14 +409,14 @@
     {
         <p class="small text-body-secondary">
             This browser holds your collection, and sync keeps an encrypted copy on the server.
-            There is still no account, and the server still cannot read it &mdash; so an export is
+            There is still no account, and the server still cannot read it, so an export is
             the only backup that survives losing the code.
         </p>
     }
     else
     {
         <p class="small text-body-secondary">
-            Everything is stored in this browser only &mdash; nothing is uploaded and no account
+            Everything is stored in this browser only: nothing is uploaded and no account
             exists. That also means clearing site data erases it, so export a backup.
         </p>
     }
@@ -425,9 +425,9 @@
         page. The last @AppSession.UndoDepth changes are kept, for this session only.
     </p>
     <div class="d-flex gap-2 flex-wrap mb-4">
-        <button class="btn btn-sm btn-primary" @onclick="Export">Export Backup</button>
+        <button class="btn btn-sm btn-primary" @onclick="Export">Export backup</button>
         <label class="btn btn-sm btn-outline-primary mb-0">
-            Import Backup
+            Import backup
             <InputFile OnChange="Import" style="display:none" accept=".json" />
         </label>
         <a class="btn btn-sm btn-outline-primary" href="collection/screenshot">
@@ -444,7 +444,7 @@
                of three reads as all of them, and it only ever erases the active one. *@
             @(_confirmingReset
                 ? $"Really erase {(Session.MultipleProfiles ? Session.Profile.Name : "everything")}?"
-                : Session.MultipleProfiles ? $"Erase {Session.Profile.Name}" : "Erase Collection")
+                : Session.MultipleProfiles ? $"Erase {Session.Profile.Name}" : "Erase collection")
         </button>
     </div>
 
@@ -458,7 +458,7 @@
                 @if (_offerUndo && Session.CanUndo)
                 {
                     <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoLast">
-                        Undo That
+                        Undo that
                     </button>
                 }
             </div>
@@ -480,7 +480,7 @@
                     <td>
                         @Session.Odds!.UnpriceablePacks.Count()
                         <span class="text-body-secondary small">
-                            &mdash; no published pull rates yet
+                            (no published pull rates yet)
                         </span>
                     </td>
                 </tr>
@@ -515,7 +515,7 @@
                                 </div>
                             }
                             <div class="text-body-secondary small">
-                                Only the slot shape is borrowed &mdash; per-card odds come from
+                                Only the slot shape is borrowed: per-card odds come from
                                 each set's own card counts.
                             </div>
                         </td>
@@ -780,7 +780,7 @@
 
     private string SourceLabel => Session.Data!.Source == DataSource.Cdn
         ? "Live community database"
-        : $"Bundled snapshot{(Session.Data.Version is { } v ? $" (v{v})" : "")} — CDN unreachable";
+        : $"Bundled snapshot{(Session.Data.Version is { } v ? $" (v{v})" : "")}, CDN unreachable";
 
     private async Task Export()
     {

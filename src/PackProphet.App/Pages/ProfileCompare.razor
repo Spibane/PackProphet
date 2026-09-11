@@ -85,7 +85,7 @@ else
                         <span class="call">
                             @ShareTotal @Card(ShareTotal) can just be sent
                         </span>
-                        <span class="cost">Free &mdash; no card back, no dust, no stamina</span>
+                        <span class="cost">Free: no card back, no dust, no stamina</span>
                     </div>
                     <span class="why">
                         @if (_swaps.IncomingShares.Count > 0)
@@ -98,7 +98,7 @@ else
                         }
                         <span>
                             One a day per account, so moving all of them takes about
-                            @_swaps.AllSharesDays @Day(_swaps.AllSharesDays) &mdash; the two
+                            @_swaps.AllSharesDays @Day(_swaps.AllSharesDays), because the two
                             directions run at the same time.
                         </span>
                     </span>
@@ -167,7 +167,7 @@ else
                         @if (best.Mutual)
                         {
                             <span>
-                                Both accounts gain something they wanted &mdash; about
+                                Both accounts gain something they wanted: about
                                 @Fmt.PacksPhrase(best.IncomingSaves) saved here and
                                 @Fmt.PacksPhrase(best.OutgoingSaves) there.
                             </span>
@@ -177,7 +177,7 @@ else
                             <span>
                                 Saves about @Fmt.PacksPhrase(best.IncomingSaves) here.
                                 @_swaps.Theirs.Name gets @best.Outgoing.Name, which it did not ask
-                                for &mdash; it is there because the game demands a card back.
+                                for. It is there because the game demands a card back.
                             </span>
                         }
                         @if (!best.Ready)
@@ -226,7 +226,7 @@ else
                                     else
                                     {
                                         <span class="badge text-bg-secondary ms-2"
-                                              title="Not wanted there — it is the payment, sent only because the game requires a card back">
+                                              title="Not wanted there: it is the payment, sent only because the game requires a card back">
                                             Payment
                                         </span>
                                     }
@@ -272,7 +272,7 @@ else
                 <p class="small text-body-secondary">
                     @_swaps.Theirs.Name holds these spare and @_swaps.Mine.Name wants them, but
                     they are above 4 diamonds and there is no spare at that rarity to send back.
-                    Any spare at that rung unlocks the swap &mdash; it need not be one anyone
+                    Any spare at that rung unlocks the swap, and it need not be one anyone
                     wants.
                 </p>
                 <DataTable Label="Wanted, with nothing to pay with" Fit="true">

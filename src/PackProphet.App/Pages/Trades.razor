@@ -54,7 +54,7 @@ else
         }
         @if (_readyOnly)
         {
-            <button class="chip-filter" @onclick="ResetReady" aria-label="Show all rows">Doable Only &times;</button>
+            <button class="chip-filter" @onclick="ResetReady" aria-label="Show all rows">Doable only &times;</button>
         }
     </div>
 
@@ -108,7 +108,7 @@ else
         <button class="btn btn-sm @(_readyOnly ? "btn-secondary" : "btn-outline-secondary")"
                 @onclick="() => SetReadyOnly(!_readyOnly)" aria-pressed="@Aria.Flag(_readyOnly)"
                 title="Hide trades you cannot make today">
-            @(_readyOnly ? "Doable Only" : "All Rows")
+            @(_readyOnly ? "Doable only" : "All Rows")
         </button>
         </div>
     </details>
@@ -156,7 +156,7 @@ else
                         @if (_shown[0].Candidate.Shareable)
                         {
                             <span>
-                                &mdash; or better, <strong>ask for it as a Share</strong>. It is
+                                Or better, <strong>ask for it as a Share</strong>. It is
                                 @Session.Index.Symbol(_shown[0].Candidate.Want), so a friend can send it for
                                 nothing: no card back, no dust, no stamina, one a day. Trade only if
                                 nobody will.
@@ -218,7 +218,7 @@ else
             @if (_view != "all")
             {
                 <p class="small text-body-secondary">
-                    One row per @(_view == "rarity" ? "rarity" : _view) &mdash; the best trade
+                    One row per @(_view == "rarity" ? "rarity" : _view): the best trade
                     available in each, by the measure chosen above. A group is absent when nothing
                     in it is outstanding and tradeable.
                 </p>
@@ -271,7 +271,7 @@ else
                                 @if (row.Candidate.Shareable)
                                 {
                                     <span class="text-success-emphasis"
-                                          title="A friend sends it and gets nothing back — no card at this rarity, no dust, no stamina. One a day. Ask before spending on a trade.">
+                                          title="A friend sends it and gets nothing back: no card at this rarity, no dust, no stamina. One a day. Ask before spending on a trade.">
                                         Ask Instead
                                     </span>
                                 }
@@ -328,13 +328,13 @@ else
            answer, not an explanation of it. *@
         <p class="small text-body-secondary">
             Every trade costs <strong>1 stamina</strong> whatever the rarity, and stamina
-            regenerates one per 12 hours &mdash; so stamina is the scarce thing, not dust. Value
+            regenerates one per 12 hours, so stamina is the scarce thing, not dust. Value
             below is <strong>expected packs saved</strong>.
         </p>
 
             <p class="small text-body-secondary">
                 <strong>share?</strong> says whether a friend could just send the card instead
-                &mdash; 1 to 4 diamonds, one a day, nothing back. The rows saying <em>no</em> are
+                (1 to 4 diamonds, one a day, nothing back). The rows saying <em>no</em> are
                 the ones a trade is for.
             </p>
         }
@@ -573,13 +573,13 @@ else
     {
         TradeGate.None => "ready",
         TradeGate.NotTradeable =>
-            $"{Session.Index.Symbol(row.Want)} cannot be traded — packs and points are the only routes",
+            $"{Session.Index.Symbol(row.Want)} cannot be traded: packs and points are the only routes",
         TradeGate.NoSpareAtRarity =>
             $"needs a spare {Session.Index.Symbol(row.Want)} to offer, and you have none going free",
         TradeGate.NotEnoughDust =>
             $"{(row.Dust - Session.Profile.Resources.Shinedust).ToString("N0")} more dust needed",
         TradeGate.NoStamina => _stamina.UntilNext is { } t
-            ? $"out of stamina — next one in {Fmt.Span(t)}"
+            ? $"out of stamina, next one in {Fmt.Span(t)}"
             : "out of stamina",
         _ => ""
     };

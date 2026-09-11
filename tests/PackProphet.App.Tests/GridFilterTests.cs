@@ -282,7 +282,7 @@ public class GridFilterTests : AppHost
             .ToArray();
 
         Assert.NotEmpty(groups);
-        Assert.All(groups, g => Assert.Contains("—", g!));
+        Assert.All(groups, g => Assert.Contains(": ", g!));
     }
 
     [Fact]

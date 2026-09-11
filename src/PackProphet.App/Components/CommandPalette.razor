@@ -218,9 +218,9 @@
     [
         ("Log", "log", "Log a pack you just opened"),
         ("Collection", "collection", "Browse and mark what you own"),
-        ("Packs", "packs", "Which pack to open next — the ranking"),
+        ("Packs", "packs", "Which pack to open next: the ranking"),
         ("Decks", "decks", "Saved decks and the builder"),
-        ("Chases", "chase", "Your chase lists — cards you want, for any reason"),
+        ("Chases", "chase", "Your chase lists: cards you want, for any reason"),
         ("Wonder Pick", "wonder", "Take it or skip it"),
         ("Trades", "trades", "Which trade deserves your next stamina"),
         ("Wishlist", "board", "What to put in the game's 20 trade slots"),
@@ -308,7 +308,7 @@
             .Where(set => Matches(set, q) || Matches(Session.Sets.DisplayName(set), q))
             .OrderBy(set => set, StringComparer.Ordinal)
             .Take(MaxPerGroup)
-            .Select(set => new Item("Set", $"{set} — {Session.Sets.DisplayName(set)}",
+            .Select(set => new Item("Set", $"{set}: {Session.Sets.DisplayName(set)}",
                 $"{Session.Index.BySet[set].Count} cards", $"collection?set={set}"));
 
     private IEnumerable<Item> Decks(string q) =>

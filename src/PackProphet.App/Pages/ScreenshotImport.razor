@@ -24,7 +24,7 @@ else
         <ShotImport Group="cards" Choices="@Layouts" ChoiceLegend="Which card list">
             <Intro>
                 In the game: the <strong>My Cards</strong> screen, in either layout. The list runs
-                past one screenful, so scroll and shoot it in several goes &mdash; they are read
+                past one screenful, so scroll and shoot it in several goes. They are read
                 separately and applied as one.
             </Intro>
             @* Together rather than Actions: the collection is one thing, not one thing per picture.
@@ -70,7 +70,7 @@ else
                                destroy something: every other outcome adds a card, and this one
                                removes counts the user typed in by hand. *@
                             <span class="d-block small text-body-secondary">
-                                Off by default &mdash; it deletes counts. A card that could not be
+                                Off by default: it deletes counts. A card that could not be
                                 read looks missing too.
                             </span>
                         </label>
@@ -100,7 +100,7 @@ else
                     @if (Session.CanUndo)
                     {
                         <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoApply">
-                            Undo That
+                            Undo that
                         </button>
                     }
                     <a href="collection">Back to the collection</a>

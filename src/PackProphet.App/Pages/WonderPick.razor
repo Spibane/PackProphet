@@ -45,14 +45,14 @@ else
                     from @_history.Count logged offer(s)
                     @if (Session.WonderStamina >= GameRules.StaminaCap)
                     {
-                        <span class="text-warning-emphasis"> &mdash; lowered, you are at the cap</span>
+                        <span class="text-warning-emphasis"> (lowered, you are at the cap)</span>
                     }
                 </span>
             }
             else
             {
                 <span>
-                    @_history.Count of @MinSamplesForThreshold logged offers &mdash; taking
+                    @_history.Count of @MinSamplesForThreshold logged offers, so taking
                     anything useful until there is a distribution worth trusting
                 </span>
             }
@@ -76,7 +76,7 @@ else
                     The game already shows the @GameRules.WonderPickCardsShown cards and how many
                     of each you hold. What it cannot show is <strong>the bar</strong>: how good an
                     offer has to be before it is worth one of your @GameRules.StaminaCap stamina.
-                    That depends on the offers you have been getting, not on this one &mdash; so
+                    That depends on the offers you have been getting, not on this one, so
                     log every offer, taken or skipped, and the bar comes from your own
                     distribution.
                     <button class="x" @onclick="() => Session.SetShowWonderIntro(false)"
@@ -216,7 +216,7 @@ else
                         </select>
                         <button class="btn btn-sm btn-success" disabled="@(_received.Length == 0)"
                                 @onclick="LogTaken">
-                            Took It
+                            Took it
                         </button>
                     </span>
                 </div>
@@ -241,7 +241,7 @@ else
                     <ShotImport @ref="_shots" Group="wonder" Choices="@ShotChoices">
                         <Intro>
                             Screenshot the <strong>Wonder Pick</strong> screen. One offer per picture
-                            &mdash; @GameRules.WonderPickCardsShown cards.
+                            (@GameRules.WonderPickCardsShown cards).
                         </Intro>
                         <Actions Context="reading">
                             <button class="btn btn-primary" aria-live="polite"
@@ -269,7 +269,7 @@ else
                                 <p class="small text-warning-emphasis mt-2 mb-0">
                                     That is more than @GameRules.WonderPickCardsShown cards, so the
                                     picture probably holds more than one offer. Crop to the offer you
-                                    are deciding about and try again &mdash; only the first
+                                    are deciding about and try again: only the first
                                     @GameRules.WonderPickCardsShown would be used.
                                 </p>
                             }
@@ -412,7 +412,7 @@ else
 
     private string AdoptWarning =>
         AdoptCostsTheRest
-            ? "Appraising one offer clears the other pictures — nothing is recorded either way, but "
+            ? "Appraising one offer clears the other pictures. Nothing is recorded either way, but "
               + "you would have to choose them again. Appraise them one at a time from a fresh "
               + "upload, or start with the one you are deciding about."
             : "";
@@ -491,9 +491,9 @@ else
 
     private static string Call(OfferVerdict verdict) => verdict switch
     {
-        OfferVerdict.NothingWanted => "Skip — nothing here you need",
-        OfferVerdict.Overpriced => "Skip — you are paying for the wrong card",
-        OfferVerdict.BelowThreshold => "Skip — better offers come along",
+        OfferVerdict.NothingWanted => "Skip: nothing here you need",
+        OfferVerdict.Overpriced => "Skip: you are paying for the wrong card",
+        OfferVerdict.BelowThreshold => "Skip: better offers come along",
         _ => "Take it"
     };
 
@@ -508,7 +508,7 @@ else
 
         OfferVerdict.Overpriced =>
             $"It costs {a.StaminaCost} of your {GameRules.StaminaCap} stamina because it "
-            + $"contains {a.CostDriver} — and you do not need {a.CostDriver}. The price is set "
+            + $"contains {a.CostDriver}, and you do not need {a.CostDriver}. The price is set "
             + "by the offer's highest rarity, not by what it is worth to you, so you would be "
             + $"paying near the maximum for the rest: about {Fmt(a.ExpectedValue)} packs' worth.",
 
@@ -520,7 +520,7 @@ else
             + "better offer later.",
 
         _ => Session.WonderStamina >= GameRules.StaminaCap
-            ? $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina — and you "
+            ? $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina, and you "
               + "are at the cap, so that stamina is not regenerating. Waiting has a cost right "
               + "now, which is why the bar is lower than usual."
             : $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina, above "

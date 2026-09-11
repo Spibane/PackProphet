@@ -79,7 +79,7 @@ else
                        without all their pulls, and every number on this page derived from cards is
                        understated. *@
                     <span class="sub @(_perPack < 4 && _log.Count > 2 ? "text-warning-emphasis" : "")">
-                        @(_perPack < 4 && _log.Count > 2 ? "below 4 — some pulls look unlogged" : "4 to 6 is normal")
+                        @(_perPack < 4 && _log.Count > 2 ? "below 4, so some pulls look unlogged" : "4 to 6 is normal")
                     </span>
                 </div>
                 <div class="stat">
@@ -155,7 +155,7 @@ else
                                page under the reader, and re-rolling on every render would make it
                                flicker on unrelated updates. *@
                             <button class="btn btn-sm btn-outline-secondary align-self-start"
-                                    @onclick="Shuffle">Show Me Another</button>
+                                    @onclick="Shuffle">Show me another</button>
                         }
                     </div>
 
@@ -167,7 +167,7 @@ else
                                 <a class="thumb @(hit == _showcase ? "on" : "")"
                                    href="card/@hit.Card.Key"
                                    style="--art:url('@hit.Card.ArtUrl')"
-                                   title="@hit.Card.Name — @hit.Rung.Symbol"
+                                   title="@hit.Card.Name, @hit.Rung.Symbol"
                                    aria-label="@hit.Card.Name"></a>
                             }
                             @if (_hitList.Count > StripShown)
@@ -366,7 +366,7 @@ else
                 </p>
                 <ul class="small text-body-secondary">
                     <li>
-                        <strong>Held</strong> is your collection, not your pulls &mdash; the only
+                        <strong>Held</strong> is your collection, not your pulls, and the only
                         record of an unlogged pack that exists. It counts cards from trades,
                         Wonder Picks and the points shop and misses ones you traded away, so it
                         runs high on the tradeable rungs. Promos and sets with no published rates
@@ -374,7 +374,7 @@ else
                     </li>
                     <li>
                         Deluxe packs are estimated only from the cards <em>only they</em> can give
-                        &mdash; the foils and their own new cards. Everything else in one is a
+                        (the foils and their own new cards). Everything else in one is a
                         reprint credited to its own set.
                     </li>
                 </ul>

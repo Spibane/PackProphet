@@ -2282,16 +2282,24 @@ main:focus { outline: none; }
        or for prose, not both. */
     .page-head .subtitle { display: none; }
 
-    /* Except on a railed page, where it is not explanatory. With the controls folded into a sheet
-       this line is the only thing on screen saying what they are set to, and a count whose filters
-       are out of sight is a lie -- "110 cards" means something else with "missing only" on. So the
-       bar stacks instead: title over subtitle, the buttons keeping the end of the first row.
+    /* Except where the page's controls are FOLDED AWAY, marked by the page. There the line is not
+       explanatory: it is the only thing on screen saying what those controls are set to, and a
+       count whose filters are out of sight is a lie -- "110 cards" means something else with
+       "missing only" on. So the bar stacks instead: title over subtitle, the buttons keeping the
+       end of the first row.
 
        Which is not the bar wrapping to two rows in the sense the two-bar rule forbids. That rule
        is about strips of controls; this is one bar that is two lines tall, and it is the trade the
-       sheet makes -- the row it costs here is the row the filter toolbar used to cost, and the
-       toolbar could not say this. */
-    main:has(> .page-body.railed) > .page-head {
+       fold makes -- the row it costs here is the row the filter toolbar used to cost, and the
+       toolbar could not say this.
+
+       This asked `main:has(> .page-body.railed)` before, which is a different question: it tested
+       for a rail. The four pages that fold their controls into a page-bar sheet rather than a rail
+       -- Which pack, Trades, Wonder Pick, Compare -- have no rail, so they answered no and spent a
+       phone header saying "Which pack" and nothing else, while the verdict underneath them counted
+       packs against a target the page had stopped naming. Those are the pages the rule is MOST
+       for: a rail at least leaves a badge on screen, and a bar sheet leaves nothing. */
+    .page-head.folded {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         grid-template-areas:
@@ -2301,9 +2309,9 @@ main:focus { outline: none; }
         row-gap: 1px;
         block-size: auto;
     }
-    main:has(> .page-body.railed) > .page-head > .title { grid-area: title; }
-    main:has(> .page-body.railed) > .page-head > .actions { grid-area: actions; }
-    main:has(> .page-body.railed) > .page-head > .subtitle {
+    .page-head.folded > .title { grid-area: title; }
+    .page-head.folded > .actions { grid-area: actions; }
+    .page-head.folded > .subtitle {
         grid-area: subtitle;
         display: block;
         font-size: .76rem;

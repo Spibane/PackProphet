@@ -169,6 +169,15 @@ else
 
            Everything under it is unchanged and still says what it always said. This is a heading
            for a page that had none, not a replacement for what it heads. *@
+        @* Two columns on a wide screen: the answer on the left, everything else ranked on the
+           right.
+           ==================================================================================
+           The ranking is not supporting material -- it is the second half of the answer. "Open
+           Charizard" means one thing on its own and another beside "and the next one is 4% behind",
+           and reading the two as one thought is what the pair of columns is for. Below the desk
+           width they stack, verdict first, because on a phone you are asking one question. *@
+        <div class="answer-cols">
+        <div class="answer-lead">
         @if (Verdict is { Standing: not null } lead)
         {
             var st = lead.Standing!;
@@ -248,6 +257,40 @@ else
                 </div>
             </div>
         }
+        </div>
+
+        @* The ranked list, as a summary rather than as the table. One row per pack: the picture,
+           the name, what it can give, a bar and the chance. The table below keeps every column it
+           had -- this is the shape you read the shortlist in, and that is the shape you read one
+           pack's detail in. *@
+        <div class="answer-ranked">
+            <span class="micro">Everything else, ranked</span>
+            <div class="ranked-rows">
+                @foreach (var row in _rows.Where(r => r.Standing is not null).Take(RankedShown))
+                {
+                    var rs = row.Standing!;
+                    <button class="ranked-row @(row.PackKey == Verdict?.PackKey ? "current" : "")"
+                            @onclick="() => SelectPack(row.PackKey)"
+                            title="Read the verdict for @row.PackName">
+                        <span class="art" aria-hidden="true"
+                              style="--art:url('@Session.PackArtUrl(row.PackKey)')"></span>
+                        <span class="nm">
+                            <strong>@row.PackName</strong>
+                            <span class="sub">@row.Set &middot; @CardCount(rs.DemandsServed) it can give</span>
+                        </span>
+                        <span class="bar" aria-hidden="true">
+                            <span style="inline-size:@((Math.Clamp(rs.ChanceUseful, 0, 1) * 100).ToString("F0"))%"></span>
+                        </span>
+                        <span class="pct">@rs.ChanceUseful.ToString("P1")</span>
+                    </button>
+                }
+            </div>
+            <p class="note">
+                Chance a pack gives you something you need. Tap a row to swap the verdict above to
+                that pack; the full table is below.
+            </p>
+        </div>
+        </div>
 
         @* Every extra breakdown lives behind a button in one row here, at the top of the page,
            rather than below the ranking table &mdash; that table runs to dozens of rows across
@@ -1396,6 +1439,15 @@ else
     /// Falling back to the best one also means a pack that drops out of the ranking entirely --
     /// a set left out by a new scope -- resolves to the new answer rather than to nothing.
     /// </summary>
+    /// <summary>
+    /// How many packs the shortlist beside the verdict shows.
+    ///
+    /// A shortlist, not the ranking: the table below is the ranking and runs to every priceable
+    /// pack. This is the handful you would actually weigh against the one being recommended, and
+    /// past about six the column is taller than the verdict it sits beside.
+    /// </summary>
+    private const int RankedShown = 6;
+
     private string? _verdictPack;
 
     private PackRow? Verdict =>

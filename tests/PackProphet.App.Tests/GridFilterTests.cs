@@ -141,6 +141,42 @@ public class GridFilterTests : AppHost
     }
 
     [Fact]
+    public async Task A_tap_changes_nothing_until_you_say_it_should()
+    {
+        // The grid's whole surface is a control: every tile is a button that silently changes a
+        // number read as fact later, with no confirmation and no feedback beyond a badge on a card
+        // you have probably scrolled past. Undo does not help, because you have to know it
+        // happened. So every visit starts in the state where nothing happens.
+        var page = await PageAsync();
+
+        var before = Session.CountOf(Session.Index.All.First(c => c.Set == "A1"));
+
+        var tile = page.Find(".card-tile");
+        var key = tile.GetAttribute("id");
+        await page.InvokeAsync(() => page.Find($"#{key}").Click());
+
+        Assert.Equal(before, Session.CountOf(Session.Index.All.First(c => c.Set == "A1")));
+
+        // And the grid says so rather than looking armed.
+        Assert.Contains("tap-off", page.Find(".grid-wrap").ClassList);
+    }
+
+    [Fact]
+    public async Task Arming_the_mode_makes_a_tap_count_again()
+    {
+        // The off state is a default, not a cage: one press and the grid works as it did.
+        var page = await PageAsync();
+
+        var adds = page.FindAll(".page-rail .rail-group.mode .btn").ToArray()[1];
+        Assert.Equal("Adds", adds.TextContent.Trim());
+
+        await page.InvokeAsync(() => adds.Click());
+
+        page.WaitForAssertion(() =>
+            Assert.DoesNotContain("tap-off", page.Find(".grid-wrap").ClassList));
+    }
+
+    [Fact]
     public async Task The_add_remove_mode_is_never_inside_the_sheet()
     {
         // The only control in the app that can take a card away. A destructive mode you have to

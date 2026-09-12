@@ -46,10 +46,12 @@
                destructive mode is how a user loses cards. *@
             @if (AllowRemove && (!ListView || Sweeping))
             {
-                <button class="rail-fab mode @(Removing ? "removing" : "adding")"
-                        @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
-                        title="@(Removing ? $"{GestureVerb} removes a copy. Press to switch back to adding." : $"{GestureVerb} adds a copy. Press to switch to removing.")">
-                    @(Removing ? "Tap removes" : "Tap adds")
+                @* One button rather than three, because on a phone this has to be readable at a
+                   glance and pressable without aiming. It says which state it is in and cycles;
+                   the rail is where the three are laid out side by side. *@
+                <button class="rail-fab mode @ModeClass" @onclick="CycleMode"
+                        title="@ModeTitle">
+                    @ModeLabel
                 </button>
             }
         </Fabs>
@@ -70,14 +72,21 @@
                 <div class="rail-group mode">
                     <span class="ttl" id="@(_gridId)-mode">Tapping a card</span>
                     <div class="rail-seg" role="group" aria-labelledby="@(_gridId)-mode">
-                        <button class="btn btn-sm @(Removing ? "btn-outline-secondary" : "btn-success")"
-                                @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(!Removing)"
-                                title="@(Removing ? $"Switch back to adding a copy per {Gesture}" : $"{GestureVerb} adds a copy")">
+                        @* Nothing, first and selected on arrival. Every visit to this page starts
+                           in the state where the grid cannot change a count by being touched. *@
+                        <button class="btn btn-sm @(Mode == Tap.Off ? "btn-secondary" : "btn-outline-secondary")"
+                                @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)"
+                                title="@($"A {Gesture} changes nothing. Right-click or shift-click still removes one.")">
+                            Nothing
+                        </button>
+                        <button class="btn btn-sm @(Mode == Tap.Add ? "btn-success" : "btn-outline-secondary")"
+                                @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)"
+                                title="@($"{GestureVerb} adds a copy")">
                             Adds
                         </button>
-                        <button class="btn btn-sm @(Removing ? "btn-danger" : "btn-outline-secondary")"
-                                @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
-                                title="@(Removing ? $"{GestureVerb} removes a copy" : $"Switch to removing a copy per {Gesture}")">
+                        <button class="btn btn-sm @(Mode == Tap.Remove ? "btn-danger" : "btn-outline-secondary")"
+                                @onclick="() => SetMode(Tap.Remove)" aria-pressed="@Aria.Flag(Mode == Tap.Remove)"
+                                title="@($"{GestureVerb} removes a copy")">
                             Removes
                         </button>
                     </div>
@@ -188,17 +197,24 @@ else
            The label follows suit, because in list mode the thing it governs is the drag, not the tap. *@
         @if (AllowRemove && (!ListView || Sweeping))
         {
-            @* Either half flips it, so a tap on the side already chosen still does something. With two
-               states, "the other one" is unambiguous. *@
+            @* Three states now, and the first is the one every visit starts in. It used to be two,
+               on the reasoning that "the other one" is unambiguous with two -- which was true and
+               was answering the wrong question. The one that matters is whether a stray tap on a
+               grid of three thousand buttons can change a number you will read as fact later. *@
             <div class="btn-group btn-group-sm" role="group" aria-label="@Gesture action">
-                <button class="btn @(Removing ? "btn-outline-secondary" : "btn-success")"
-                        @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(!Removing)"
-                        title="@(Removing ? $"Switch back to adding a copy per {Gesture}" : $"{GestureVerb} adds a copy")">
+                <button class="btn @(Mode == Tap.Off ? "btn-secondary" : "btn-outline-secondary")"
+                        @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)"
+                        title="@($"A {Gesture} changes nothing")">
+                    Nothing
+                </button>
+                <button class="btn @(Mode == Tap.Add ? "btn-success" : "btn-outline-secondary")"
+                        @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)"
+                        title="@($"{GestureVerb} adds a copy")">
                     Add
                 </button>
-                <button class="btn @(Removing ? "btn-danger" : "btn-outline-secondary")"
-                        @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
-                        title="@(Removing ? $"{GestureVerb} removes a copy" : $"Switch to removing a copy per {Gesture}")">
+                <button class="btn @(Mode == Tap.Remove ? "btn-danger" : "btn-outline-secondary")"
+                        @onclick="() => SetMode(Tap.Remove)" aria-pressed="@Aria.Flag(Mode == Tap.Remove)"
+                        title="@($"{GestureVerb} removes a copy")">
                     Remove
                 </button>
             </div>
@@ -375,7 +391,7 @@ else
 @* tabindex, role and aria-activedescendant are set from js/gridkeys.js, which owns the cursor —
    see the note there on why a roving tabindex does not suit a virtualised grid. The container is
    the single tab stop for however many thousand cards are in scope. *@
-<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(PickedOf is null ? "" : "picking") @(OnWant.HasDelegate ? "wanting" : "")"
+<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(Mode == Tap.Off ? "tap-off" : "") @(PickedOf is null ? "" : "picking") @(OnWant.HasDelegate ? "wanting" : "")"
      id="@_gridId" role="grid"
      aria-label="@(ListView ? "Card list" : "Card grid"): arrow keys to move, digits to set a count"
      @ref="_gridEl">
@@ -811,6 +827,13 @@ else
     /// </summary>
     private const float PhoneGridPx = 600f;
 
+    /// <summary>
+    /// The gutter between cards, matching --grid-gap in the stylesheet. Used only for the row
+    /// height ESTIMATE that stands in until a row has been laid out and measured, so a drift
+    /// between the two costs a slightly wrong scrollbar for one frame rather than a wrong layout.
+    /// </summary>
+    private float GridGap => _gridPx > 0 && _gridPx <= PhoneGridPx ? 8f : 14f;
+
     /// <summary>Most columns a phone gets, whatever the setting says. The mock's figure.</summary>
     private const int PhoneColumns = 3;
 
@@ -972,8 +995,72 @@ else
 
     private bool Sweeping { get; set; }
 
-    /// <summary>When set, a tap or sweep removes a copy instead of adding one.</summary>
-    private bool Removing { get; set; }
+    /// <summary>
+    /// What a tap on a card does. Three states, and OFF IS THE DEFAULT.
+    ///
+    /// The grid's whole surface is a control: every tile is a button that silently changes a
+    /// number you will read as fact later. There is no confirmation, the change is one of
+    /// thousands on screen, and the only feedback is a small badge on the card you are probably
+    /// no longer looking at -- so a mis-tap while scrolling is a wrong count discovered weeks
+    /// later, when the thing it is wrong about is which pack to open.
+    ///
+    /// Undo exists and does not help: you have to know it happened. This is the state where
+    /// nothing happens, and it is where every visit starts.
+    ///
+    /// Not persisted, deliberately. A mode that can destroy something should not be armed by a
+    /// decision you made on Tuesday.
+    /// </summary>
+    private enum Tap { Off, Add, Remove }
+
+    private Tap _tap = Tap.Off;
+
+    /// <summary>
+    /// The mode in effect. A grid that cannot remove has nothing to be off about -- on the log
+    /// screen a tap means "this came out of the pack", which is the page's entire interaction, and
+    /// an off state there would be a page that does nothing.
+    /// </summary>
+    private Tap Mode => AllowRemove ? _tap : Tap.Add;
+
+    /// <summary>Whether a tap currently changes anything, for the markup that has to say so.</summary>
+    private bool Removing => Mode == Tap.Remove;
+
+    private void SetMode(Tap mode)
+    {
+        _tap = mode;
+
+        // A sweep armed toward a direction that no longer exists would either do nothing on drag
+        // or, worse, do the opposite of what the control now says.
+        if (mode == Tap.Off && Sweeping) _ = ToggleSweep();
+    }
+
+    /// <summary>Off, add, remove, off. The phone has one button where the rail has three.</summary>
+    private void CycleMode() => SetMode(Mode switch
+    {
+        Tap.Off => Tap.Add,
+        Tap.Add => Tap.Remove,
+        _ => Tap.Off,
+    });
+
+    private string ModeClass => Mode switch
+    {
+        Tap.Add => "adding",
+        Tap.Remove => "removing",
+        _ => "off",
+    };
+
+    private string ModeLabel => Mode switch
+    {
+        Tap.Add => "Tap adds",
+        Tap.Remove => "Tap removes",
+        _ => "Tap does nothing",
+    };
+
+    private string ModeTitle => Mode switch
+    {
+        Tap.Add => $"{GestureVerb} adds a copy. Press for removing.",
+        Tap.Remove => $"{GestureVerb} removes a copy. Press to switch it off.",
+        _ => $"A {Gesture} changes nothing. Press to start adding.",
+    };
 
     /// <summary>
     /// What the add/remove mode governs here. In the tile grid it is the tap; in list mode a tap
@@ -989,7 +1076,21 @@ else
     /// Shift-click and right-click are one-off inversions of the current mode, so a single
     /// mistaken count can be fixed without switching the whole grid to remove and back.
     /// </summary>
-    private int DeltaFor(bool invert) => Removing ^ invert ? -1 : +1;
+    /// <param name="invert">
+    /// Shift-click or right-click: a one-off inversion, so a single mistaken count can be fixed
+    /// without switching the whole grid to remove and back.
+    /// </param>
+    /// <returns>The change to make, or null where the gesture means nothing.</returns>
+    private int? DeltaFor(bool invert) => Mode switch
+    {
+        Tap.Add => invert ? -1 : +1,
+        Tap.Remove => invert ? +1 : -1,
+
+        // Off. A plain tap does nothing at all, which is the point -- but an inverting gesture
+        // still removes, because right-click has always meant remove and it is deliberate enough
+        // that nobody does it by accident while scrolling.
+        _ => invert ? -1 : null,
+    };
 
     /// <summary>
     /// The height of one row of tiles, as laid out. Measured from the DOM after the first paint
@@ -1024,10 +1125,13 @@ else
         get
         {
             var cols = EffectiveColumns;
-            if (_gridPx <= 0) return 1000f / cols * 1.42f + 8f;
+            if (_gridPx <= 0) return 1000f / cols * 1.42f + GridGap;
 
-            var tile = (_gridPx - 8f - 4f * (cols - 1)) / cols;
-            return tile <= 0 ? 1f : tile * (512f / 367f) + 4f;
+            // The same gutter the stylesheet draws, named in both places because neither can read
+            // the other. Only an estimate either way: gridmetrics.js measures the real row as soon
+            // as one is laid out and this is what the scrollbar uses until then.
+            var tile = (_gridPx - GridGap * 2 - GridGap * (cols - 1)) / cols;
+            return tile <= 0 ? 1f : tile * (512f / 367f) + GridGap;
         }
     }
 
@@ -1526,7 +1630,11 @@ else
     /// </summary>
     private bool _touchCapable = true;
 
-    private bool ShowSweepToggle => ListView || _touchCapable;
+    /// <summary>
+    /// A bulk edit needs a direction, so it is not offered while the mode is off. Arming a sweep
+    /// that could not do anything is a control that lies about being available.
+    /// </summary>
+    private bool ShowSweepToggle => Mode != Tap.Off && (ListView || _touchCapable);
 
     private async Task ToggleSweep()
     {
@@ -1535,8 +1643,8 @@ else
     }
 
     private Task Activate((int Index, bool Invert) a) =>
-        a.Index >= 0 && a.Index < Cards.Count
-            ? OnAdjust.InvokeAsync((Cards[a.Index], DeltaFor(a.Invert)))
+        a.Index >= 0 && a.Index < Cards.Count && DeltaFor(a.Invert) is { } delta
+            ? OnAdjust.InvokeAsync((Cards[a.Index], delta))
             : Task.CompletedTask;
 
     // ---- keyboard, from js/gridkeys.js ---------------------------------------------
@@ -1602,7 +1710,12 @@ else
         var swept = new List<PocketCard>(hi - lo + 1);
         for (var i = lo; i <= hi; i++) swept.Add(Cards[i]);
 
-        await OnSweep.InvokeAsync((swept, DeltaFor(false)));
+        // Nothing to sweep toward with the mode off. Unreachable while the toggle below refuses
+        // to arm in that state, and here anyway because a drag that has already been captured
+        // should not fall through to a default direction.
+        if (DeltaFor(false) is not { } delta) return;
+
+        await OnSweep.InvokeAsync((swept, delta));
         StateHasChanged();   // interop callback runs outside the render loop
     }
 

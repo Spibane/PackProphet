@@ -1,0 +1,25 @@
+@* The button on the page bar that opens a <see cref="PageSheet"/>.
+
+   Its own component for the wording. Four pages wrote this by hand and between them produced
+   "Change target" / "Target" three times and "Change pairing" / "Pair" once -- each with a
+   wide-only label, a narrow-only label and an aria-label to keep in step, which is three chances
+   to say a slightly different thing about one act.
+
+   One word, at every width. The long forms existed because the bar drops words on a phone, and a
+   verb that has to be dropped was a verb the button did not need: the sheet says what it is for
+   when it opens. The word is also the one the bar's own sentence leads with -- the subtitle reads
+   "Target: everything", so the reading and the control that changes it are named the same thing
+   and a reader does not have to work out which button governs which line. *@
+
+<button class="btn btn-sm btn-outline-secondary" popovertarget="@For">@Label</button>
+
+@code {
+    /// <summary>The id of the sheet this opens.</summary>
+    [Parameter, EditorRequired] public string For { get; set; } = "";
+
+    /// <summary>
+    /// One word, and the same word the bar's sentence uses for what is behind it. Short enough
+    /// for 375px, because there is no second form to fall back on.
+    /// </summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+}

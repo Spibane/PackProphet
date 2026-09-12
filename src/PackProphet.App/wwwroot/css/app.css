@@ -130,6 +130,15 @@
    control. */
 .page-head .subtitle .short { color: var(--bs-primary); }
 
+/* The word that names what the reading after it IS, and the same word as the button that changes
+   it: the bar says "Target: everything" and the control beside it says "Target". Quiet, because it
+   is a label on a value rather than part of the sentence -- the value is what someone is reading
+   for.
+
+   The four ranking pages each led with the bare value instead, so the bar said "everything you
+   collect" and left a reader to work out which of the buttons beside it governed that. */
+.page-head .subtitle .lbl { color: var(--bs-secondary-color); }
+
 /* The separator is drawn rather than written, because Razor collapses the whitespace between an
    element and the markup before it and the clause arrived welded to the word in front of it --
    "53 short of target· showing missing only". Generated content keeps its spaces.
@@ -300,6 +309,9 @@ main:has(> .page-body.railed) > .page-head {
 .sheet:popover-open {
     display: flex;
     flex-direction: column;
+    /* The rail sets this on itself at every width; a bar sheet had none at all, so four pages
+       opened onto controls with nothing between them. One rule covers both shells. */
+    gap: 18px;
     position: fixed;
     inset: auto 0 0 0;
     inline-size: auto;

@@ -33,7 +33,7 @@ else
         </span>
     </div>
 
-    <PageShell Measure="PageShell.Width.Wide" Class="railed sections">
+    <PageShell Measure="PageShell.Width.Wide" Class="railed">
 
     <PageRail Id="board-rail" OpenLabel="Tuning" Count="@TuningCount">
         <div class="rail-group">
@@ -99,7 +99,13 @@ else
         </div>
     </PageRail>
 
-    <div class="board-main">
+    @* One element for everything beside the rail, because .railed puts every child of the shell
+       in the same grid cell -- so the content has to be one child or it stacks on top of itself.
+
+       It carries `sections`, not the shell. The shell had it, and `.sections > h2` is a CHILD
+       selector: with the headings a level further down inside this wrapper the rule matched
+       nothing, and this page declared a heading style it was not getting. *@
+    <div class="rail-main sections">
 
 
         @if (_plan is null)

@@ -12,20 +12,19 @@ else
 {
     <div class="page-head folded">
         <h1 class="title">Wonder Pick</h1>
-        @* The game already shows the five cards and how many of each you hold. What it cannot show
-           is whether spending one of a capped, slowly-refilling stamina on THIS offer beats holding
-           it for the next one -- which depends on the offers you have been seeing, not on this one.
-           That is the whole of what this page adds, so it is what the page says it does. *@
-        <span class="subtitle">Is this offer worth a stamina, or is a better one coming?</span>
+        @* What the verdict is worked out against. This said "Is this offer worth a stamina, or is
+           a better one coming?" -- which is what the page is FOR, and belongs where someone
+           arriving with no offer typed will read it. That reader gets it from the lead below,
+           which is on screen exactly when there is nothing else to show. The bar's job is the
+           setting: what counts as wanted decides every figure here, and it is folded away. *@
+        <span class="subtitle">
+            <span class="lbl">Target:</span> @Session.ScopeLabel(_scope)
+        </span>
 
         <span class="actions">
             @* One control group, so it folds behind a button rather than standing up a bar --
                the same sheet the other Answer pages open. *@
-            <button class="btn btn-sm btn-outline-secondary" popovertarget="wonder-target"
-                    aria-label="Change target">
-                <span class="wide-only">Change target</span>
-                <span class="narrow-only" aria-hidden="true">Target</span>
-            </button>
+            <SheetOpener For="wonder-target" Label="Target" />
 
             @* The pool the whole decision turns on, entered here rather than on a settings page:
                the threshold changes with it, and at the cap the advice inverts. It stays ON the bar
@@ -42,15 +41,13 @@ else
         </span>
     </div>
 
-    <div class="target-sheet sheet" popover id="wonder-target">
-        <div class="rail-handle">
-            <button class="btn btn-sm btn-outline-secondary" popovertarget="wonder-target"
-                    popovertargetaction="hide">Done</button>
+    <PageSheet Id="wonder-target">
+        <div class="rail-group">
+            <span class="ttl">What counts as wanted</span>
+            <ScopePicker Label="What counts as wanted"
+                         Grouped="true" Scope="@_scope" OnScope="OnScope" />
         </div>
-
-    <ScopePicker Label="What counts as wanted" Everything="Valued against everything I collect"
-                 Grouped="true" Scope="@_scope" OnScope="OnScope" />
-    </div>
+    </PageSheet>
 
     <PageShell Measure="PageShell.Width.Wide">
         @if (_offer.Count == 0)

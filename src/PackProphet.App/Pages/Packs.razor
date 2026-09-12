@@ -16,9 +16,12 @@ else
         @* What the ranking is OF, said in words, because every figure below means something
            different once it changes. It was "Ranked for <scope>" with the plan itself a line
            further down inside the bar that set it -- so the page named half of its own premise and
-           kept the other half folded away under the control that changes it. *@
+           kept the other half folded away under the control that changes it.
+
+           Led by the word on the button that changes it, so the reading and its control are named
+           the same thing. *@
         <span class="subtitle">
-            @ScopeLabel
+            <span class="lbl">Target:</span> @Session.ScopeLabel(_scope)
             @if (!IsChaseScope)
             {
                 <text> &middot; </text>
@@ -41,26 +44,16 @@ else
         </span>
 
         <span class="actions">
-            @* The same sheet the collection opens for its set and its filters. An Answer page gets
-               no rail -- it leads with a verdict, not with content to browse -- so the one control
-               group it has folds behind a button rather than standing up a second bar for itself. *@
-            <button class="btn btn-sm btn-outline-secondary" popovertarget="target-sheet"
-                    aria-label="Change target">
-                <span class="wide-only">Change target</span>
-                <span class="narrow-only" aria-hidden="true">Target</span>
-            </button>
+            @* An Answer page gets no rail -- it leads with a verdict, not with content to browse --
+               so its controls fold behind a button rather than standing up a second bar. *@
+            <SheetOpener For="target-sheet" Label="Target" />
         </span>
     </div>
 
     @* What the ranking is of: the scope, the rarity plan, and which limited packs are on sale.
        Three controls of one kind -- each changes what is being ranked, so each changes every
        figure on the page -- and between them they were a bar plus a disclosure inside it. *@
-    <div class="target-sheet sheet" popover id="target-sheet">
-        <div class="rail-handle">
-            <button class="btn btn-sm btn-outline-secondary" popovertarget="target-sheet"
-                    popovertargetaction="hide">Done</button>
-        </div>
-
+    <PageSheet Id="target-sheet">
         @* Everything that sets what the ranking is OF, and nothing else. Scope, target and
            availability are one kind of control -- each changes what is being ranked, so each
            changes every figure on the page -- and between them they were a bar plus a disclosure
@@ -75,8 +68,11 @@ else
            the hourglass balance it is read against, which is where the arithmetic it changes is. *@
 
         @* Grouped by series so this stays usable as sets accumulate. *@
-        <ScopePicker Label="What to rank packs against" Everything="Everything"
-                     Grouped="true" Merged="true" Scope="@_scope" OnScope="OnScope" />
+        <div class="rail-group">
+            <span class="ttl">Ranking for</span>
+            <ScopePicker Label="What to rank packs against"
+                         Grouped="true" Merged="true" Scope="@_scope" OnScope="OnScope" />
+        </div>
 
         @* One chip per rarity, carrying its own copy count. Selection and quantity are the same
            fact — a rarity you want zero of is one you ignore — so a single control says both, and
@@ -86,6 +82,8 @@ else
            a chase list scope they are hidden rather than shown doing nothing. *@
         @if (!IsChaseScope)
         {
+            <div class="rail-group">
+            <span class="ttl">Copies wanted</span>
             <span class="rarity-chips">
                 <RarityChips Plan="Draft" OnCycle="CycleTier"
                              ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
@@ -118,6 +116,7 @@ else
                     </span>
                 }
             </p>
+            </div>
         }
 
         @* Availability is a live fact no dataset records. The app assumes off sale, and a
@@ -127,8 +126,9 @@ else
            the same kind of thing: what the ranking is allowed to consider. *@
         @if (Session.LimitedPacks.Count > 0)
         {
+            <div class="rail-group">
+            <span class="ttl">On sale now</span>
             <span class="avail">
-                <span class="ttl">Limited-time</span>
                 @foreach (var pack in Session.LimitedPacks)
                 {
                     var on = Session.IsLimitedPackAvailable(pack);
@@ -142,8 +142,9 @@ else
                     </button>
                 }
             </span>
+            </div>
         }
-    </div>
+    </PageSheet>
 
     <PageShell>
 
@@ -646,7 +647,7 @@ else
                             @if (row.Best)
                             {
                                 <span class="badge text-bg-primary ms-1"
-                                      title="Best pack for @ScopeLabel right now">Open This</span>
+                                      title="Best pack for @Session.ScopeLabel(_scope) right now">Open This</span>
                             }
                             @if (row.Mark is { Length: > 0 } mark)
                             {
@@ -917,19 +918,6 @@ else
     /// </summary>
     private bool IsChaseScope =>
         _scope == "chases" || _scope.StartsWith("chase:", StringComparison.Ordinal);
-
-    /// <summary>
-    /// What the header says the page is ranking for. The scope control moved down to the tools
-    /// bar, so the header has to name the choice — otherwise the page's own subject would only
-    /// be legible from a dropdown further down.
-    /// </summary>
-    private string ScopeLabel =>
-        _scope == "chases" ? "all chase lists"
-        : _scope.StartsWith("chase:", StringComparison.Ordinal)
-            ? Session.ChaseListById(_scope[6..])?.Name ?? "a chase list"
-        : _scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {_scope[7..]}"
-        : _scope == "everything" ? "everything you collect"
-        : $"{_scope}: {Session.Sets.DisplayName(_scope)}";
 
     /// <summary>
     /// Which plan the chips edit: one set's, or the default that the rest follow. A set only

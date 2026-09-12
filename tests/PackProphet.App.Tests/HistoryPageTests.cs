@@ -88,15 +88,39 @@ public class HistoryPageTests : AppHost
     }
 
     [Fact]
-    public async Task The_odds_check_names_the_sample_it_rests_on()
+    public async Task The_odds_check_never_hedges_about_a_comparison_it_has_not_made()
     {
         // "Small samples swing wildly" is true of every sample ever taken and says nothing about
-        // this one. The number is what decides whether a row a fifth out is worth a second look.
+        // this one, so the caveat names its own figure. Which means it must not appear when there
+        // is no figure: "0 packs is a small sample" over a section that already says nothing here
+        // is priceable is the page apologising for arithmetic it did not do.
         var page = await PageAsync(30);
 
         var markup = Flat(page.Markup);
-        Assert.Contains("is a small sample", markup);
-        Assert.Contains("ordinary variance rather than evidence the model is wrong", markup);
+        Assert.DoesNotContain("0 packs is a small sample", markup);
+
+        // And when it does appear, it appears with a number in it.
+        if (markup.Contains("is a small sample", StringComparison.Ordinal))
+            Assert.Contains("ordinary variance rather than evidence the model is wrong", markup);
+    }
+
+    [Fact]
+    public void The_caveat_says_something_different_as_the_sample_grows()
+    {
+        // The whole point of naming the figure: a hundred packs and a thousand do not deserve the
+        // same sentence, and the old wording gave them one.
+        var small = History.CaveatFor(30);
+        var mid = History.CaveatFor(200);
+        var large = History.CaveatFor(900);
+
+        Assert.Contains("30 packs", small);
+        Assert.Contains("small sample", small);
+
+        Assert.NotEqual(small, mid);
+        Assert.NotEqual(mid, large);
+
+        // All three stay a check on the model rather than on the user's luck.
+        Assert.All(new[] { mid, large }, c => Assert.Contains("model", c));
     }
 
     [Fact]

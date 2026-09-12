@@ -69,31 +69,30 @@ else
     @* Two mechanics, and the split between them is what the page is for. A Share is one-way and
        free but stops at 4 diamonds; a trade is a same-rarity swap that costs both accounts dust
        and a stamina. So "what does my alt have that my main needs" is not one list. *@
-    <PageShell Measure="PageShell.Width.Wide" Class="pb-0">
-    <p class="small text-body-secondary mb-0">
+    @* One shell for the page. Four of them stacked here, the first wearing `pb-0` to close the
+       seam its own padding opened between it and the next -- which is the shell being used as a
+       wrapper for a paragraph rather than as the page's body. *@
+    <PageShell Measure="PageShell.Width.Wide" Class="sections">
+    <p class="small text-body-secondary">
         Rarity decides which applies. <strong>Shares</strong> carry 1 to 4 diamonds one way, free,
         @GameRules.SharesReceivedPerDay received a day. Above that it is a <strong>trade</strong>:
         both cards must be the same rarity, and both sides pay that rarity's shinedust and one
         stamina. Balances come from each collection's own Resources page.
     </p>
-    </PageShell>
 
     @if (_swaps is null)
     {
-        <PageShell Measure="PageShell.Width.Wide"><Loading /></PageShell>
+        <Loading />
     }
     else if (_swaps.Nothing)
     {
-        <PageShell Measure="PageShell.Width.Wide">
-            <EmptyState>
-                Nothing to move: neither collection holds a spare the other still wants at a
-                rarity that can be shared or traded.
-            </EmptyState>
-        </PageShell>
+        <EmptyState>
+            Nothing to move: neither collection holds a spare the other still wants at a rarity
+            that can be shared or traded.
+        </EmptyState>
     }
     else
     {
-        <PageShell Measure="PageShell.Width.Wide" Class="sections">
             @* Shares first: one costs nothing, so there is no reason to trade before taking one.
                Both directions are listed because each account has its own daily allowance, so they
                do not compete. *@
@@ -352,8 +351,8 @@ else
                     </p>
                 }
             }
-        </PageShell>
     }
+    </PageShell>
 }
 
 @code {

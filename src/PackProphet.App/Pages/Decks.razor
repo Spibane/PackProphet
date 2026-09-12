@@ -30,7 +30,7 @@ else
         </span>
     </div>
 
-    <PageShell Class="@(_decks.Count > 0 ? "railed" : null)">
+    <PageShell Measure="PageShell.Width.Wide" Class="@(_decks.Count > 0 ? "railed" : null)">
 
     @if (_decks.Count > 0)
     {

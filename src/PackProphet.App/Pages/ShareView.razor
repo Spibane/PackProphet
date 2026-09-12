@@ -44,24 +44,23 @@ else
     @* Said plainly rather than assumed: the whole list arrived inside the link itself, so nothing
        about opening this page sent anything anywhere. What the owner already has is deliberately
        not part of it — this is a want-list, not their collection. *@
-    <PageShell Class="pb-0">
+    @* One shell for the page, not one per block. Three of them stacked here, and the first wore
+       `pb-0` to close the seam its own padding had opened between it and the next -- which is the
+       shell being used as a wrapper for a paragraph rather than as the page's body. *@
+    <PageShell>
     <Notice Severity="Notice.Level.Info">
         Read-only, and decoded entirely in your browser. Opening the link contacted no
         server. Only the wanted cards travelled in it, not @_shared.OwnerName's collection.
     </Notice>
-    </PageShell>
 
     @if (_rows.Count == 0)
     {
-        <PageShell>
-            <p class="text-body-secondary">
-                Nothing in this list is a card the current card data knows about.
-            </p>
-        </PageShell>
+        <EmptyState>
+            Nothing in this list is a card the current card data knows about.
+        </EmptyState>
     }
     else
     {
-        <PageShell>
         <div class="summary">
             <div class="stat">
                 <span class="label">Cards Wanted</span>
@@ -110,8 +109,8 @@ else
         <p class="small text-body-secondary">
             Rows you own at least one of are highlighted: those are what you have to offer.
         </p>
-        </PageShell>
     }
+    </PageShell>
 }
 
 @code {

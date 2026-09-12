@@ -86,6 +86,29 @@ else
         </Notice>
     }
 
+    @* The Record job's signature, on the one deck screen that is recording rather than browsing.
+       ==================================================================================
+       A new deck is being filled in, and it can be saved short -- twenty is the legal size and
+       nothing stops you keeping a draft of nine. So the page says what is left, in the same strip
+       and the same words the pack log uses, and nothing about it is a warning: a deck you are
+       halfway through is not a mistake.
+
+       Not on an existing deck. Opening one you already made is browsing, and a strip telling you
+       it is eleven cards short every time you look at it is the live-warning problem the log
+       screen already solved.
+
+       The three import pages get no strip at all, and that is the same precondition working: you
+       cannot import a file you have not picked, so "still to do: pick a file" would be a strip
+       restating the only control on the page. It belongs where committing early is possible AND
+       consequential. *@
+    @if (IsNew && _draft.DeckBuilderNrs.Count < GameRules.DeckSize)
+    {
+        <div class="todo-strip">
+            <span class="micro">Still to do</span>
+            <span class="say">@DeckTodo</span>
+        </div>
+    }
+
     <PageShell>
     <div class="edit-cols">
         <div>
@@ -304,6 +327,25 @@ else
 
     private static readonly EnergyType[] AllEnergies = Enum.GetValues<EnergyType>();
     private static readonly string[] Stages = ["Basic", "Stage 1", "Stage 2"];
+
+    /// <summary>
+    /// What is left before the deck is a legal twenty, in words.
+    ///
+    /// Progress rather than alarm, as on the pack log: "eleven more cards" is a fact about the
+    /// job, and a deck half built is not a mistake. The legality of what you have is the badge's
+    /// business and the linter's below; this line only counts.
+    /// </summary>
+    private string DeckTodo
+    {
+        get
+        {
+            var left = GameRules.DeckSize - (_draft?.DeckBuilderNrs.Count ?? 0);
+
+            return left == GameRules.DeckSize
+                ? $"Pick the {GameRules.DeckSize} cards this deck is made of."
+                : left == 1 ? "One more card." : $"{left} more cards.";
+        }
+    }
 
     /// <summary>The working copy. Nothing is persisted until Save.</summary>
     private SavedDeck? _draft;

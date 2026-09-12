@@ -324,7 +324,7 @@ else
             <div class="check-cols">
             <div class="check-odds">
             <div class="section-head">
-                <h3 class="mb-0 h6">Did the odds hold up?</h3>
+                <h3 class="sub-head">Did the odds hold up?</h3>
                 @* Only offered once there is a baseline to scale to and logged packs to scale
                    from. Without both, the option is a button that cannot answer. *@
                 @* One slice at a time. Series and sets sit in the same dropdown under their own
@@ -504,7 +504,7 @@ else
             </div>
 
             <div class="section-head">
-                <h3 class="mb-0 h6">Recent packs</h3>
+                <h3 class="sub-head">Recent packs</h3>
                 <button class="btn btn-sm @(_clearingAll ? "btn-danger" : "btn-outline-danger") ms-auto"
                         @onclick="ClearAll">
                     @(_clearingAll ? $"Really delete all {_log.Count}?" : "Delete All")

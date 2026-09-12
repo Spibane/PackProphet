@@ -112,7 +112,7 @@ else
     <PageShell>
     <div class="edit-cols">
         <div>
-            <h2 class="h6">Energy <span class="small fw-normal text-body-secondary">at most @GameRules.MaxEnergyTypes</span></h2>
+            <h2 class="sub-head">Energy <span class="small fw-normal text-body-secondary">at most @GameRules.MaxEnergyTypes</span></h2>
             <div class="energy-chips mb-3">
                 @foreach (var energy in AllEnergies)
                 {
@@ -126,7 +126,7 @@ else
                 }
             </div>
 
-            <h2 class="h6">Cards</h2>
+            <h2 class="sub-head">Cards</h2>
             @if (_draft.DeckBuilderNrs.Count > 0)
             {
                 <p class="small text-body-secondary mb-1">
@@ -190,7 +190,7 @@ else
                 </DataTable>
             }
 
-            <h2 class="mt-3 h6">Legality</h2>
+            <h2 class="sub-head">Legality</h2>
             @if (_report is null || _draft.DeckBuilderNrs.Count == 0)
             {
                 <p class="small text-body-secondary">Nothing to check yet.</p>
@@ -209,7 +209,7 @@ else
                 }
             }
 
-            <h2 class="mt-3 h6">Share</h2>
+            <h2 class="sub-head">Share</h2>
             @if (_shareSvg is null)
             {
                 <p class="small text-body-secondary">
@@ -242,7 +242,7 @@ else
 
             @if (_missingCount > 0)
             {
-                <h2 class="mt-3 h6">What you still need</h2>
+                <h2 class="sub-head">What you still need</h2>
                 <p class="small text-body-secondary">
                     Cheapest route per card. Trade and Wonder Pick are priced in their own
                     currencies, which do not convert into packs.
@@ -266,7 +266,7 @@ else
                     </tbody>
                 </DataTable>
 
-                <h2 class="mt-3 h6">Best packs for this deck</h2>
+                <h2 class="sub-head">Best packs for this deck</h2>
                 @if (_ranked.Count == 0)
                 {
                     <p class="small text-body-secondary">

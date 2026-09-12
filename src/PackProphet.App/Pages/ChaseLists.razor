@@ -15,29 +15,65 @@ else if (Id is null)
 {
     <div class="page-head">
         <h1 class="title">Chase lists</h1>
-        <span class="subtitle">@Session.ChaseLists.Count saved</span>
+        @* The useful count rather than the saved one, as on the decks shelf beside it: how many
+           are finished is what you came to find out, and it is the figure that moves when you open
+           a pack. *@
+        <span class="subtitle">
+            @Session.ChaseLists.Count saved
+            @if (_lists.Count > 0)
+            {
+                <text>&middot; </text>
+                <strong>@Complete complete</strong>
+            }
+        </span>
         <span class="actions">
             <button class="btn btn-sm btn-primary" @onclick="NewList">New chase list</button>
         </span>
     </div>
 
-    @* Same pair of views as the decks page: the table compares lists against each other, the grid
-       is how you recognise one. *@
-    @if (Session.ChaseLists.Count > 0)
+    <PageShell Measure="PageShell.Width.Wide" Class="@(_lists.Count > 0 ? "railed" : null)">
+
+    @if (_lists.Count > 0)
     {
-        <div class="grid-toolbar">
-            <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
-                <button class="btn @(Session.ChaseGrid ? "btn-outline-secondary" : "btn-secondary")"
-                        @onclick="() => Session.SetChaseGrid(!Session.ChaseGrid)"
-                        aria-pressed="@Aria.Flag(!Session.ChaseGrid)" title="A table, for comparing">List</button>
-                <button class="btn @(Session.ChaseGrid ? "btn-secondary" : "btn-outline-secondary")"
-                        @onclick="() => Session.SetChaseGrid(!Session.ChaseGrid)"
-                        aria-pressed="@Aria.Flag(Session.ChaseGrid)" title="Cards, for recognising">Grid</button>
+        @* The same two groups the decks shelf has, in the same order, because they are the same
+           shelf with different things on it. *@
+        <PageRail Id="chase-rail" OpenLabel="View" Count="@(_order == ListOrder.Closest ? 0 : 1)">
+            <div class="rail-group">
+                <span class="ttl" id="chase-layout">Layout</span>
+                @* Two views because they answer different questions: the table compares lists
+                   against each other, the grid is how you recognise one. *@
+                <div class="rail-seg" role="group" aria-labelledby="chase-layout">
+                    <button class="btn btn-sm @(Session.ChaseGrid ? "btn-outline-secondary" : "btn-secondary")"
+                            @onclick="() => Session.SetChaseGrid(false)"
+                            aria-pressed="@Aria.Flag(!Session.ChaseGrid)"
+                            title="A table, for comparing">List</button>
+                    <button class="btn btn-sm @(Session.ChaseGrid ? "btn-secondary" : "btn-outline-secondary")"
+                            @onclick="() => Session.SetChaseGrid(true)"
+                            aria-pressed="@Aria.Flag(Session.ChaseGrid)"
+                            title="Cards, for recognising">Grid</button>
+                </div>
             </div>
-        </div>
+
+            <div class="rail-group">
+                <span class="ttl">Order</span>
+                <select class="form-select form-select-sm" aria-label="Order the chase lists"
+                        @onchange="OnOrder">
+                    <option value="@ListOrder.Closest" selected="@(_order == ListOrder.Closest)">
+                        Closest to complete
+                    </option>
+                    <option value="@ListOrder.Name" selected="@(_order == ListOrder.Name)">
+                        By name
+                    </option>
+                    <option value="@ListOrder.Size" selected="@(_order == ListOrder.Size)">
+                        Biggest first
+                    </option>
+                </select>
+            </div>
+        </PageRail>
     }
 
-    <PageShell Measure="PageShell.Width.Wide">
+    <div class="shelf-main">
+
         @* A chase list is the one target the app cannot derive, so the empty state says what it is
            for rather than only that there is nothing here. *@
         <p class="text-body-secondary small mb-3">
@@ -222,6 +258,7 @@ else if (Id is null)
                 </tbody>
             </DataTable>
         }
+    </div>
     </PageShell>
 }
 else if (_list is null)
@@ -491,6 +528,24 @@ else
         string Id, string Name, int Wanted, int Missing, int Unobtainable,
         PocketCard? Face, IReadOnlyList<PocketCard> Strip);
 
+    /// <summary>
+    /// How the shelf is ordered. Closest-to-complete answers "what am I nearly done with"; it
+    /// cannot answer "where is the one I made last week", and a shelf nobody can sort is fine at
+    /// six lists and useless at thirty.
+    /// </summary>
+    private enum ListOrder { Closest, Name, Size }
+
+    private ListOrder _order = ListOrder.Closest;
+
+    private void OnOrder(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<ListOrder>(e.Value?.ToString(), out var order)) _order = order;
+        BuildRows();
+    }
+
+    /// <summary>Lists with nothing outstanding, for the bar.</summary>
+    private int Complete => _lists.Count(l => l.Wanted > 0 && l.Missing == 0);
+
     private IReadOnlyList<Row> _lists = [];
 
     /// <summary>Which list's delete button is armed, if any.</summary>
@@ -687,6 +742,24 @@ else
                 pool.FirstOrDefault(),
                 pool.Skip(1).Take(StripSize).ToArray());
         }).ToArray();
+
+        @* Sorted after building rather than before: two of the three keys -- how much is missing,
+           and how big the list is -- are computed above, so ordering the sources first would mean
+           computing them twice. *@
+        _lists = _order switch
+        {
+            ListOrder.Name => _lists
+                .OrderBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToArray(),
+            ListOrder.Size => _lists
+                .OrderByDescending(l => l.Wanted)
+                .ThenBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToArray(),
+            _ => _lists
+                .OrderBy(l => l.Missing)
+                .ThenBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToArray(),
+        };
     }
 
     /// <summary>

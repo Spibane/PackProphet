@@ -593,73 +593,90 @@ main:has(> .page-body.railed) > .page-head {
     text-wrap: pretty;
 }
 
-/* the slot strip
+/* the box strip
    ----------------------------------------------------------------------------------
-   Five boxes, one per card position, because a pack has five cards and that set is fixed, short
-   and on screen anyway. A strip is only honest where the boxes enumerate something real; this is
-   the case it was designed for. */
-.slot-strip {
+   A labelled row of boxes enumerating where an answer comes from. Legal only where the set is
+   literal -- see the note in BoxStrip.razor, which is where the precondition is written down,
+   because it is a rule about when to reach for this rather than about how it looks. */
+.box-strip {
     margin-block-start: 22px;
     padding-block-start: 18px;
     border-top: 1px solid var(--pp-hairline, var(--bs-border-color));
 }
-.slot-strip .micro { display: flex; flex-wrap: wrap; gap: .2rem .75rem; }
-.slot-strip .clause {
+.box-strip .micro { display: flex; flex-wrap: wrap; gap: .2rem .75rem; }
+.box-strip .clause {
     font-size: .8rem;
     letter-spacing: 0;
     text-transform: none;
     color: var(--bs-tertiary-color);
 }
-.slot-strip .slots {
+.box-strip .boxes {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 8px;
     margin-block-start: 10px;
 }
-.slot {
+.box {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    min-inline-size: 0;
     padding: 10px 8px;
     border-radius: var(--pp-r-sm);
 }
-.slot.live {
+.box.live {
     border: 1px solid var(--bs-border-color);
     background: var(--bs-tertiary-bg);
 }
-/* Dashed, and that is the information. A position that can only ever hand you a duplicate is a
-   fact about this pack, and an empty box reads as data that failed to arrive. */
-.slot.dead {
+/* The one to act on. A tint and an accent edge, because it has to be findable without reading all
+   four -- which is the only reason to rank them side by side rather than list them. */
+.box.best {
+    border: 1px solid var(--bs-primary);
+    background: color-mix(in srgb, var(--bs-primary) 14%, transparent);
+}
+/* Dashed, and that is the information. A route that does not exist for this rarity, or a position
+   that can only ever hand you a duplicate, is a fact -- and an empty box reads as data that failed
+   to arrive rather than as an answer. */
+.box.dead {
     border: 1px dashed var(--pp-hairline, var(--bs-border-color));
     background: var(--bs-body-bg);
     color: var(--bs-tertiary-color);
 }
-.slot .ord { font-size: .78rem; color: var(--bs-secondary-color); }
-.slot .fig {
+.box .lbl {
+    font-size: .78rem;
+    color: var(--bs-secondary-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.box .fig {
     font-size: 1.15rem;
     font-weight: 700;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
 }
-/* The bar area keeps its height whether or not there is a bar in it, so the five boxes are one
-   row of the same shape rather than a stagger that implies an order they do not have. */
-.slot .bar {
+.box .unit { font-size: .75rem; color: var(--bs-secondary-color); }
+.box .note {
+    font-size: .75rem;
+    line-height: 1.35;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
+}
+/* The bar area keeps its height whether or not there is a bar in it, so the row is one shape
+   rather than a stagger that implies an order the boxes do not have. */
+.box .bar {
     display: flex;
     align-items: flex-end;
     block-size: 52px;
     margin-block-start: 6px;
 }
-.slot.live .bar > span {
+.box .bar > span {
     inline-size: 100%;
     border-radius: var(--pp-r-xs);
     background: linear-gradient(var(--bs-primary), color-mix(in srgb, var(--bs-primary) 62%, #000));
 }
 /* A rule where the bar would be, so a dead box is visibly the same object as a live one with
    nothing in it rather than a different, emptier thing. */
-.slot.dead .bar {
-    align-items: flex-end;
-    border-bottom: 2px solid var(--pp-hairline, var(--bs-border-color));
-}
+.box.dead .bar { border-bottom: 2px solid var(--pp-hairline, var(--bs-border-color)); }
 
 .verdict-lead .lead-actions {
     display: flex;
@@ -678,12 +695,26 @@ main:has(> .page-body.railed) > .page-head {
     .verdict-lead .art { inline-size: 72px; block-size: 100px; }
     .verdict-lead .name { font-size: 1.5rem; line-height: 1.15; }
     .verdict-lead .says { font-size: .98rem; }
-    .slot-strip .slots { gap: 5px; }
-    .slot { padding: 7px 5px; }
-    .slot .ord { font-size: .7rem; }
-    .slot .fig { font-size: .92rem; }
-    .slot .bar { block-size: 34px; }
+    .box-strip .boxes { gap: 5px; }
+    .box { padding: 7px 5px; }
+    .box .lbl { font-size: .7rem; }
+    .box .fig { font-size: .92rem; }
+    .box .bar { block-size: 34px; }
 }
+
+/* The prose under a box strip: what each route's figure actually means. A definition list because
+   that is what it is -- a term and its explanation -- and the route names line up down the left so
+   a reader can find the one box they are asking about. */
+.route-notes {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: .2rem .75rem;
+    margin: 12px 0 0;
+    font-size: .82rem;
+    line-height: 1.5;
+}
+.route-notes dt { font-weight: 600; white-space: nowrap; }
+.route-notes dd { margin: 0; color: var(--bs-secondary-color); text-wrap: pretty; }
 
 /* One rarity tier of the target: its glyphs, how far along it is, and how many copies are left.
    A three-track grid rather than flex, so the bars line up down the column whether a tier's mark

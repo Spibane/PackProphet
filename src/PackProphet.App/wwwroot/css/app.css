@@ -707,6 +707,114 @@ main:has(> .page-body.railed) > .page-head {
     .box .bar { block-size: 34px; }
 }
 
+/* A verdict headline that is a call rather than a figure carries the call's colour. The other
+   Answer pages put a number here and leave it in the body ink; "Take it" and "Skip it" are the
+   answer itself, and reading them at a glance is the point of a five-second page. */
+.verdict-lead .name.take { color: var(--bs-success-text-emphasis); }
+.verdict-lead .name.skip { color: var(--bs-secondary-color); }
+
+/* the Wonder Pick offer
+   ----------------------------------------------------------------------------------
+   A card in the strip is a button, because tapping it takes it back out of the offer. */
+.box .offer-card {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 367 / 512;
+    margin-block-start: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--pp-r-xs);
+    background: var(--art) top center / cover no-repeat, var(--bs-secondary-bg);
+}
+/* A card you already hold cannot make this offer worth taking. It recedes rather than going,
+   because it is still one of the five you might receive -- which is exactly why the offer is
+   worth less. */
+.box .offer-card.have { opacity: .5; }
+
+.box .offer-say {
+    display: block;
+    margin-block-start: 4px;
+    font-size: .75rem;
+    line-height: 1.2;
+}
+.box .offer-say .have { color: var(--bs-secondary-color); }
+
+/* The histogram. Sized in the markup rather than here: the threshold line has to land at the same
+   place along the axis as the bucket boundaries, so one number owns the width. */
+.offer-hist {
+    flex: none;
+    margin: 0;
+    inline-size: 200px;
+}
+.offer-hist svg {
+    display: block;
+    margin-block-start: 6px;
+    /* The two axes the bars are read against, and no more: a grid would be furniture over ten
+       bars. */
+    border-inline-start: 1px solid var(--pp-hairline, var(--bs-border-color));
+    border-block-end: 1px solid var(--pp-hairline, var(--bs-border-color));
+}
+.offer-hist rect { fill: var(--bs-secondary-bg); }
+/* This offer's own bucket, which is the whole reason the chart is here. */
+.offer-hist rect.mine { fill: var(--bs-primary); }
+.offer-hist .bar-line {
+    stroke: var(--bs-primary);
+    stroke-width: 1;
+    stroke-dasharray: 3 2;
+}
+.offer-hist .axis {
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-block-start: 3px;
+    font-size: .75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-secondary-color);
+}
+.offer-hist .axis .mine { color: var(--bs-primary); font-weight: 600; }
+
+/* The two outcomes, equally weighted. */
+.offer-commit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-block-start: 20px;
+}
+.offer-commit .took { display: flex; gap: .5rem; align-items: center; }
+.offer-commit .took .form-select { inline-size: auto; min-inline-size: 12rem; }
+.offer-clear {
+    padding: 4px 0 0;
+    font-size: .82rem;
+    text-decoration: none;
+}
+.commit-note {
+    margin: 8px 0 0;
+    font-size: .82rem;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
+}
+
+/* On a phone neither outcome gets the smaller target: both become full-width rows, and the
+   decision is a five-second one made with the game in the other hand.
+
+   Which also means it has to FIT: the whole page, strip through commit, above the tab bar without
+   a scroll. Three full-width rows is 150px of the 812 on its own, so the space around the verdict
+   comes down to pay for them -- measured at 770 against a bar at 755 before this, and the gap is
+   exactly the sort of thing that is invisible until someone is holding a phone. */
+@media (width <= 700px) {
+    .verdict-lead { padding-block-end: 12px; margin-block-end: 12px; }
+    .offer-commit { margin-block-start: 12px; }
+    .commit-note { margin-block-start: 6px; }
+
+    .offer-commit { flex-direction: column; align-items: stretch; gap: .4rem; }
+    .offer-commit .took { flex-direction: column; align-items: stretch; gap: .4rem; }
+    .offer-commit .took .form-select,
+    .offer-commit .btn { inline-size: 100%; min-block-size: 3rem; }
+    .offer-hist { inline-size: 100%; }
+    .offer-hist svg { inline-size: 100%; }
+}
+
 /* A card's art filling a box, for a strip whose boxes are cards rather than figures. Cover, not
    contain: at 30px a whole card is a smudge and the top of the art is the part you recognise. */
 .slot-art {

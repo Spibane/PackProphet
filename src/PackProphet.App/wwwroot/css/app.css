@@ -513,6 +513,178 @@ main:has(> .page-body.railed) > .page-head {
     }
 }
 
+/* the verdict block
+   ==================================================================================
+   What an Answer page leads with: the answer, at display size, with the arithmetic spent in words
+   underneath it and the strip explaining where the figure comes from below that.
+
+   Not a card. It is the page's opening paragraph, not an object sitting on the page, so it takes
+   a rule under it and no border, fill or radius of its own -- those would make it one panel among
+   the several that follow, which is exactly the reading to avoid. */
+.verdict-lead {
+    padding-block-end: 18px;
+    margin-block-end: 18px;
+    border-bottom: 1px solid var(--pp-hairline, var(--bs-border-color));
+}
+
+/* The label above a figure, in the app's quietest voice. Uppercase and tracked because it is read
+   as a category rather than as a sentence, and it has to not compete with the display line it
+   introduces. */
+.micro {
+    display: block;
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+
+.verdict-lead .lead-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-block-start: 12px;
+}
+
+/* The pack, at the size a pack is recognised by. Contain rather than cover: a booster is a tall
+   rounded object on a transparent ground and cropping it to a box cuts the wrapper art that makes
+   it recognisable in the first place. */
+.verdict-lead .art {
+    flex: none;
+    inline-size: 104px;
+    block-size: 144px;
+    border-radius: var(--pp-r-sm);
+    background: var(--art) center / contain no-repeat, var(--bs-secondary-bg);
+}
+
+.verdict-lead .lead-text { min-inline-size: 0; }
+
+.verdict-lead .name {
+    margin: 0;
+    font-size: 2.1rem;
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    text-wrap: balance;
+}
+.verdict-lead .from {
+    margin: 2px 0 0;
+    font-size: .9rem;
+    color: var(--bs-secondary-color);
+}
+
+/* The sentence. Measured, because this is prose and prose read across a 1200px screen is prose
+   nobody finishes. */
+.verdict-lead .says {
+    margin: 14px 0 0;
+    max-inline-size: 32rem;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    text-wrap: pretty;
+}
+/* One figure in accent ink, and only one: it is the answer, and a sentence with four highlighted
+   numbers has none. The others are bold, which is enough to find them again. */
+.verdict-lead .says .key { color: var(--bs-primary); }
+.verdict-lead .then {
+    margin: 8px 0 0;
+    max-inline-size: 32rem;
+    font-size: .85rem;
+    line-height: 1.5;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
+}
+
+/* the slot strip
+   ----------------------------------------------------------------------------------
+   Five boxes, one per card position, because a pack has five cards and that set is fixed, short
+   and on screen anyway. A strip is only honest where the boxes enumerate something real; this is
+   the case it was designed for. */
+.slot-strip {
+    margin-block-start: 22px;
+    padding-block-start: 18px;
+    border-top: 1px solid var(--pp-hairline, var(--bs-border-color));
+}
+.slot-strip .micro { display: flex; flex-wrap: wrap; gap: .2rem .75rem; }
+.slot-strip .clause {
+    font-size: .8rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--bs-tertiary-color);
+}
+.slot-strip .slots {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-block-start: 10px;
+}
+.slot {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 8px;
+    border-radius: var(--pp-r-sm);
+}
+.slot.live {
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+}
+/* Dashed, and that is the information. A position that can only ever hand you a duplicate is a
+   fact about this pack, and an empty box reads as data that failed to arrive. */
+.slot.dead {
+    border: 1px dashed var(--pp-hairline, var(--bs-border-color));
+    background: var(--bs-body-bg);
+    color: var(--bs-tertiary-color);
+}
+.slot .ord { font-size: .78rem; color: var(--bs-secondary-color); }
+.slot .fig {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+/* The bar area keeps its height whether or not there is a bar in it, so the five boxes are one
+   row of the same shape rather than a stagger that implies an order they do not have. */
+.slot .bar {
+    display: flex;
+    align-items: flex-end;
+    block-size: 52px;
+    margin-block-start: 6px;
+}
+.slot.live .bar > span {
+    inline-size: 100%;
+    border-radius: var(--pp-r-xs);
+    background: linear-gradient(var(--bs-primary), color-mix(in srgb, var(--bs-primary) 62%, #000));
+}
+/* A rule where the bar would be, so a dead box is visibly the same object as a live one with
+   nothing in it rather than a different, emptier thing. */
+.slot.dead .bar {
+    align-items: flex-end;
+    border-bottom: 2px solid var(--pp-hairline, var(--bs-border-color));
+}
+
+.verdict-lead .lead-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem .75rem;
+    margin-block-start: 20px;
+}
+.verdict-lead .served { font-size: .85rem; color: var(--bs-secondary-color); }
+
+/* On a phone the block keeps its order and gives up its scale: the art shrinks, the answer comes
+   down to something that fits a 375px line, and the five boxes lose the bar height that was there
+   to be compared across a wide screen. */
+@media (width <= 700px) {
+    .verdict-lead .lead-head { gap: 12px; }
+    .verdict-lead .art { inline-size: 72px; block-size: 100px; }
+    .verdict-lead .name { font-size: 1.5rem; line-height: 1.15; }
+    .verdict-lead .says { font-size: .98rem; }
+    .slot-strip .slots { gap: 5px; }
+    .slot { padding: 7px 5px; }
+    .slot .ord { font-size: .7rem; }
+    .slot .fig { font-size: .92rem; }
+    .slot .bar { block-size: 34px; }
+}
+
 /* One rarity tier of the target: its glyphs, how far along it is, and how many copies are left.
    A three-track grid rather than flex, so the bars line up down the column whether a tier's mark
    is one diamond or four -- the whole point of the row is comparing the lengths. */

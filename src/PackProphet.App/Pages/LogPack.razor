@@ -304,9 +304,8 @@ else
            full label here and "picked N" beside the button, a 375px header left the title about
            ten pixels and "Mega Altaria" rendered as "M.". The arrow is still the same control and
            still the same size to tap -- the aria-label carries the wording the eye loses. *@
-        <button class="btn btn-sm btn-outline-secondary" @onclick="Reset" aria-label="Change pack">
-            &larr; <span class="wide-only">Change Pack</span>
-        </button>
+        <BackLink Label="Change pack" OnBack="Reset" Compact="true"
+                  Title="Pick a different pack. Nothing typed here is kept." />
         <h1 class="title">@_pack.Split(':')[1]</h1>
         @* The instruction has to match the view. In the tile grid a tap on a card picks it; in
            list mode a tap on a row does nothing and the row's own + is what picks. Telling

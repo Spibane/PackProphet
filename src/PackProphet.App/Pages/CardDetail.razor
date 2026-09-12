@@ -28,8 +28,8 @@ else
     <div class="detail-keys" tabindex="-1" @ref="_root" @onkeydown="OnKey">
 
     <div class="page-head">
-        <button class="btn btn-sm btn-outline-secondary" @onclick="Back"
-                title="Back to @History.LastListPage, or press Escape">&larr; back</button>
+        <BackLink Label="Back" OnBack="Back"
+                  Title="@($"Back to {History.LastListPage}, or press Escape")" />
         <h1 class="title">@_card.Name</h1>
         <span class="subtitle">@_card.Set&thinsp;@_card.Number</span>
         <span class="actions">

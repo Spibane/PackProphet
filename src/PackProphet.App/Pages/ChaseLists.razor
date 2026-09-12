@@ -271,6 +271,10 @@ else if (_list is null)
 else
 {
     <div class="page-head">
+        @* The visible title doubles as an editable field, which leaves no plain heading for a
+           screen reader to land on when navigating by headings. The deck editor has carried a
+           hidden one for this since it was written; this page has the same bar and had none. *@
+        <h1 class="visually-hidden">@_list.Name</h1>
         <BackLink To="chase" Label="Chase lists" />
 
         @* Renaming in place, saved on blur rather than per keystroke: the name is persisted state,

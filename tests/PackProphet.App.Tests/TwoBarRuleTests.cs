@@ -209,4 +209,20 @@ public class TwoBarRuleTests : AppHost
                 "Use BackLink, which decides the arrow, the element and how the label is worded.");
         }
     }
+
+    [Theory]
+    [MemberData(nameof(ParameterlessPages))]
+    public async Task Every_page_has_exactly_one_h1(string typeName)
+    {
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        // Two pages use an editable field as their title, because the title is the thing being
+        // renamed. The deck editor kept a visually-hidden h1 beside it so the page still has a
+        // heading to land on; the chase list, with the same bar, had none -- so navigating by
+        // headings went straight past the page's own name.
+        Assert.Equal(1, page.FindAll("h1").Count);
+    }
 }

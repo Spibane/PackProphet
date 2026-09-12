@@ -67,4 +67,34 @@ public class TwoBarRuleTests : AppHost
         Assert.True(page.FindAll(".page-head").Count <= 1,
             $"{type.Name} renders {page.FindAll(".page-head").Count} page bars at once");
     }
+
+    [Theory]
+    [MemberData(nameof(ParameterlessPages))]
+    public async Task A_page_that_folds_its_controls_away_says_so_on_its_bar(string typeName)
+    {
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        // A sheet is the app's one way of putting controls out of sight, whether it opens from a
+        // floating button or from the page bar. Below 600px the subtitle is hidden as explanatory
+        // prose -- which it is not on these pages, where it is the only statement of what the
+        // hidden controls are set to. `folded` is the page saying so, and the stylesheet stacks
+        // the bar into two lines rather than dropping the sentence.
+        if (page.FindAll(".sheet").Count == 0) return;
+
+        var heads = page.FindAll(".page-head").ToArray();
+        foreach (var head in heads)
+        {
+            // A bar with nothing to say is not covered by this: the rule is about a sentence worth
+            // keeping, not about every bar on a page that happens to own a sheet.
+            if (head.QuerySelector(".subtitle") is null) continue;
+
+            Assert.True(head.ClassList.Contains("folded"),
+                $"{type.Name} folds its controls into a sheet but its bar is not marked `folded`, " +
+                "so its subtitle -- the only thing saying what those controls are set to -- is " +
+                "hidden below 600px.");
+        }
+    }
 }

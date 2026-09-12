@@ -11,7 +11,7 @@
 }
 else
 {
-    <div class="page-head">
+    <div class="page-head folded">
         <h1 class="title">Which pack</h1>
         @* What the ranking is OF, said in words, because every figure below means something
            different once it changes. It was "Ranked for <scope>" with the plan itself a line
@@ -21,7 +21,7 @@ else
             @ScopeLabel
             @if (!IsChaseScope)
             {
-                <text>&middot; </text>
+                <text> &middot; </text>
                 <PlanSummary Plan="Draft" Foils="@(ScopeHasFoils ? Session.FoilCopies : 0)" />
                 @if (PlanScope is not null)
                 {
@@ -30,7 +30,7 @@ else
             }
             @if (OnSaleNow is { Length: > 0 } onSale)
             {
-                <text>&middot; @onSale on sale</text>
+                <text> &middot; @onSale on sale</text>
             }
             @if (_pending)
             {

@@ -369,17 +369,48 @@ else
         </div>
     }
 
-    @if (_picked.Count > 0)
-    {
-        <div class="picked-strip">
-            @foreach (var card in _picked)
+    @* The pack's cards, as the pack's cards.
+       ==================================================================================
+       This was a row of name chips, which is a list of what you have typed. Five slots is a
+       picture of the pack: how many came out, how many you have named, and which one is next --
+       the same shape as the thing on the table in front of you, which is what you are copying
+       from.
+
+       The set is literal, which is the precondition: a pack holds five or six cards and the number
+       is published. One empty slot is accented, because it is the next action; the rest are plain,
+       because a row where every gap shouts says "five things to do" and the truth is "do this one
+       next".
+
+       Tapping a filled slot takes that card back out -- the chips' one job, kept. *@
+    <div class="pack-slots">
+        <BoxStrip Label="@($"The {SlotCount} cards")"
+                  Clause="@(_picked.Count > 0 ? "tap one to take it back out" : null)"
+                  Columns="@SlotCount">
+            @for (var i = 0; i < SlotCount; i++)
             {
-                <button class="picked-chip" @onclick="() => Unpick(card)" title="Remove">
-                    @card.Name <span class="rar glyphs @Session.Index.GlyphClass(card)">@Session.Index.Symbol(card)</span> &times;
-                </button>
+                var slot = i;
+                if (slot < _picked.Count)
+                {
+                    var card = _picked[slot];
+                    <Box State="Box.Kind.Live" Label="@((slot + 1).ToString())">
+                        <button class="slot-card" @onclick="() => Unpick(card)"
+                                title="Take @card.Name back out"
+                                style="--art:url('@card.ArtUrl')"></button>
+                        <span class="slot-cap">
+                            <span class="nm">@card.Name</span>
+                            <span class="rr glyphs @Session.Index.GlyphClass(card)">@Session.Index.Symbol(card)</span>
+                        </span>
+                    </Box>
+                }
+                else
+                {
+                    <Box State="@(slot == _picked.Count ? Box.Kind.Todo : Box.Kind.Dead)"
+                         Label="@((slot + 1).ToString())"
+                         Note="@(slot == _picked.Count ? "next" : null)" />
+                }
             }
-        </div>
-    }
+        </BoxStrip>
+    </div>
 
     @if (_justLogged is not null)
     {
@@ -468,6 +499,24 @@ else
 
     /// <summary>Name search over the pack in front of you. Never touches what has been picked.</summary>
     private string _find = "";
+
+    /// <summary>
+    /// How many slots the strip draws: what this pack holds, or what has been picked if that is
+    /// somehow more.
+    ///
+    /// The smallest published size where a set has two. A five-slot strip that grows a sixth when
+    /// you name a sixth card is honest about both: five is what you expect, and the strip does not
+    /// pretend the sixth has nowhere to go.
+    /// </summary>
+    private int SlotCount
+    {
+        get
+        {
+            var sizes = PackSizes;
+            var target = sizes.Count == 0 ? 5 : sizes.Min();
+            return Math.Max(target, _picked.Count);
+        }
+    }
 
     private readonly List<PocketCard> _picked = [];
     private (int cards, string set, int points, bool capped)? _justLogged;

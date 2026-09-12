@@ -22,9 +22,14 @@
     {
         @* The dash is drawn for a dead box whatever the page passed, so "unavailable" cannot come
            out as an empty line in one place and a dash in another. *@
-        <span class="fig">@(State == Kind.Dead ? "—" : Figure)</span>
+        <span class="fig">@(State switch
+        {
+            Kind.Dead => "—",
+            Kind.Todo => "+",
+            _ => Figure,
+        })</span>
 
-        @if (State != Kind.Dead && Unit is { Length: > 0 })
+        @if (State is not (Kind.Dead or Kind.Todo) && Unit is { Length: > 0 })
         {
             <span class="unit">@Unit</span>
         }
@@ -59,6 +64,15 @@
         Dead,
         /// <summary>The one to act on. Tinted, and there should be at most one per strip.</summary>
         Best,
+
+        /// <summary>
+        /// Empty, and the next thing to fill. Dashed like Dead but in the accent, because it is
+        /// not an absence being reported -- it is the action.
+        ///
+        /// At most one per strip, for the same reason: a row where every gap is accented says
+        /// "five things to do" where the truth is "do this one next".
+        /// </summary>
+        Todo,
     }
 
     [Parameter] public Kind State { get; set; } = Kind.Live;
@@ -88,6 +102,7 @@
     {
         Kind.Dead => "dead",
         Kind.Best => "best",
+        Kind.Todo => "todo",
         _ => "live",
     };
 }

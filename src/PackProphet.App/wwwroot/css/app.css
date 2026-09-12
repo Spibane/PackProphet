@@ -780,6 +780,21 @@ main:has(> .page-body.railed) > .page-head {
     border-radius: var(--pp-r-xs);
     background: linear-gradient(var(--bs-primary), color-mix(in srgb, var(--bs-primary) 62%, #000));
 }
+/* Empty and next. Dashed like dead, but in the accent and hatched, because it is not an absence
+   being reported -- it is where your finger goes. At most one per strip: a row where every gap is
+   accented says "five things to do" where the truth is "do this one next". */
+.box.todo {
+    border: 1px dashed var(--bs-primary);
+    background:
+        repeating-linear-gradient(45deg,
+            color-mix(in srgb, var(--bs-primary) 10%, transparent) 0 4px,
+            transparent 4px 8px),
+        color-mix(in srgb, var(--bs-primary) 8%, transparent);
+    color: var(--bs-primary);
+}
+.box.todo .fig { font-size: 1.6rem; font-weight: 400; line-height: 1; }
+.box.todo .note { color: var(--bs-primary); font-weight: 600; }
+
 /* A rule where the bar would be, so a dead box is visibly the same object as a live one with
    nothing in it rather than a different, emptier thing. */
 .box.dead .bar { border-bottom: 2px solid var(--pp-hairline, var(--bs-border-color)); }
@@ -861,6 +876,37 @@ main:has(> .page-body.railed) > .page-head {
 }
 .commit-foot .again { margin-inline-start: auto; padding: 0; font-size: inherit; }
 .commit-foot kbd { font-size: .78em; }
+
+/* A pack's card in its slot: the art, and a caption naming it. Tapping takes it back out, which
+   is what the name chips this replaced were for. */
+.pack-slots .slot-card {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 367 / 512;
+    margin-block-start: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--pp-r-xs);
+    background: var(--art) top center / cover no-repeat, var(--bs-secondary-bg);
+}
+.pack-slots .slot-cap {
+    display: flex;
+    align-items: baseline;
+    gap: .3rem;
+    margin-block-start: 4px;
+    font-size: .78rem;
+    line-height: 1.2;
+}
+.pack-slots .slot-cap .nm { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pack-slots .slot-cap .rr { flex: none; margin-inline-start: auto; }
+
+/* The strip sits in the page's own padding rather than the box strip's default top rule: on this
+   page it follows a bar, not a paragraph. */
+.pack-slots .box-strip {
+    margin-block-start: 0;
+    padding: 14px calc(.75rem + var(--safe-r)) 0 calc(.75rem + var(--safe-l));
+    border-top: 0;
+}
 
 /* the Wonder Pick offer
    ----------------------------------------------------------------------------------

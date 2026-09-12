@@ -108,7 +108,7 @@ else if (Id is null)
                            card you have not got yet represents it. A finished list falls back to
                            its rarest card. *@
                         <a class="face" href="chase/@list.Id"
-                           style="--art:url('@(list.Face?.ArtUrl)')"
+                           style="@(list.Face?.ArtVars)"
                            aria-label="Open @list.Name">
                             @if (list.Face is null)
                             {
@@ -165,7 +165,7 @@ else if (Id is null)
                                 <div class="strip">
                                     @foreach (var card in list.Strip)
                                     {
-                                        <span class="thumb" style="--art:url('@card.ArtUrl')"
+                                        <span class="thumb" style="@card.ArtVars"
                                               data-tip="@card.Name"></span>
                                     }
                                 </div>
@@ -237,7 +237,7 @@ else if (Id is null)
                                 {
                                     <span class="pack-thumb deck-thumb"
                                           data-tip-img="@list.Face.ArtUrl" data-tip="@list.Face.Name"
-                                          style="--art:url('@list.Face.ArtUrl')"></span>
+                                          style="@list.Face.ArtVars"></span>
                                     <span>@list.Face.Name</span>
                                     <span class="small text-body-secondary ms-1">@list.Face.Set</span>
                                 }
@@ -425,7 +425,7 @@ else
                         <td class="thumb"><a class="pack-thumb deck-thumb @(Session.HasGoldFlair(card) ? "gold-flair" : "")"
                            href="card/@card.Key"
                            data-tip-img="@card.ArtUrl" data-tip="@card.Name"
-                           style="--art:url('@card.ArtUrl')"
+                           style="@card.ArtVars"
                            aria-label="@card.Name"></a></td>
 
                         <td class="nm">@card.Name</td>

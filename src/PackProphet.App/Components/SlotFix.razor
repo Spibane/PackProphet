@@ -50,7 +50,7 @@
         @if (Picked is { } card)
         {
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span class="slot-pick" style="--art:url('@card.ArtUrl')" role="img" aria-label=""></span>
+                <span class="slot-pick" style="@card.ArtVars" role="img" aria-label=""></span>
                 <span>
                     <a href="card/@card.Key">@card.Name</a>
                     <span class="d-block small text-body-secondary">@card.Key, you said so</span>

@@ -186,7 +186,7 @@ else
                                 @if (slot is not null)
                                 {
                                     <span class="slot-art @(IsNew(slot, _plan) ? "new" : "")"
-                                          style="--art:url('@slot.Card.ArtUrl')"
+                                          style="@slot.Card.ArtVars"
                                           title="@slot.Card.Name" aria-hidden="true"></span>
                                     <span class="visually-hidden">@slot.Card.Name</span>
                                 }

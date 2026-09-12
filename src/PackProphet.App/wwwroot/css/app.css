@@ -581,7 +581,10 @@ main:has(> .page-body.railed) > .page-head {
     inline-size: 26px;
     block-size: 36px;
     border-radius: var(--pp-r-xs);
-    background: var(--art) center / contain no-repeat, var(--bs-secondary-bg);
+    /* The image layers come from the shared [style*="--art"] rule, which stacks the candidate
+       chain over the placeholder. This says only how this box wants them fitted. */
+    --art-fit: contain;
+    background-color: var(--bs-secondary-bg);
 }
 .ranked-row .nm { min-inline-size: 0; font-size: .92rem; line-height: 1.25; }
 .ranked-row .nm strong { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -659,7 +662,10 @@ main:has(> .page-body.railed) > .page-head {
     inline-size: 104px;
     block-size: 144px;
     border-radius: var(--pp-r-sm);
-    background: var(--art) center / contain no-repeat, var(--bs-secondary-bg);
+    /* The image layers come from the shared [style*="--art"] rule, which stacks the candidate
+       chain over the placeholder. This says only how this box wants them fitted. */
+    --art-fit: contain;
+    background-color: var(--bs-secondary-bg);
 }
 
 .verdict-lead .lead-text { min-inline-size: 0; }
@@ -887,7 +893,9 @@ main:has(> .page-body.railed) > .page-head {
     padding: 0;
     border: 0;
     border-radius: var(--pp-r-xs);
-    background: var(--art) top center / cover no-repeat, var(--bs-secondary-bg);
+    /* Image layers from the shared [style*="--art"] rule; this says only how they are fitted. */
+    --art-fit: cover;
+    background-color: var(--bs-secondary-bg);
 }
 .pack-slots .slot-cap {
     display: flex;
@@ -919,7 +927,9 @@ main:has(> .page-body.railed) > .page-head {
     padding: 0;
     border: 0;
     border-radius: var(--pp-r-xs);
-    background: var(--art) top center / cover no-repeat, var(--bs-secondary-bg);
+    /* Image layers from the shared [style*="--art"] rule; this says only how they are fitted. */
+    --art-fit: cover;
+    background-color: var(--bs-secondary-bg);
 }
 /* A card you already hold cannot make this offer worth taking. It recedes rather than going,
    because it is still one of the five you might receive -- which is exactly why the offer is
@@ -1018,7 +1028,9 @@ main:has(> .page-body.railed) > .page-head {
     aspect-ratio: 367 / 512;
     margin-block-start: 4px;
     border-radius: var(--pp-r-xs);
-    background: var(--art) top center / cover no-repeat, var(--bs-secondary-bg);
+    /* Image layers from the shared [style*="--art"] rule; this says only how they are fitted. */
+    --art-fit: cover;
+    background-color: var(--bs-secondary-bg);
 }
 /* The ones being added, so the strip shows which part of itself is the work. */
 .slot-art.new { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
@@ -5663,10 +5675,21 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
    on order. --art-fit is what a box says instead. */
 [style*="--art"][style*="--art"][style*="--art"] {
     background-color: var(--bs-secondary-bg);
-    background-image: var(--art), var(--pp-art-mark), var(--pp-art-weave);
-    background-position: center, center, center;
-    background-repeat: no-repeat, no-repeat, repeat;
-    background-size: var(--art-fit, cover), var(--pp-art-mark-size, 62%) auto, auto;
+
+    /* Five layers, fixed. The first three are the card's art candidates, front to back: a layer
+       that fails to load is not painted and the next one shows through, which is how a background
+       gets the fallback chain an <img> gets from js/imgloader.js. A card with fewer candidates
+       passes `none` for the rest, because these lists are per-layer and a variable-length one
+       could not line up with the three below it. Behind them, the placeholder that was already
+       here for when none of them arrive. */
+    background-image:
+        var(--art), var(--art2, none), var(--art3, none),
+        var(--pp-art-mark), var(--pp-art-weave);
+    background-position: center, center, center, center, center;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    background-size:
+        var(--art-fit, cover), var(--art-fit, cover), var(--art-fit, cover),
+        var(--pp-art-mark-size, 62%) auto, auto;
 }
 
 /* Packs are drawn whole; card art is cropped to the box. */

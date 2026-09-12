@@ -99,14 +99,14 @@ else
                do not compete. *@
             @if (_swaps.IncomingShares.Count > 0 || _swaps.OutgoingShares.Count > 0)
             {
-                <div class="verdict take" aria-live="polite">
-                    <div class="head">
-                        <span class="call">
-                            @ShareTotal @Card(ShareTotal) can just be sent
-                        </span>
-                        <span class="cost">Free: no card back, no dust, no stamina</span>
-                    </div>
-                    <span class="why">
+                <div class="verdict-lead" aria-live="polite">
+                    <span class="micro">The call</span>
+
+                    <div class="lead-head">
+                      <div class="lead-text">
+                        <h2 class="name take">@ShareTotal @Card(ShareTotal) can just be sent</h2>
+                        <p class="then">No card back, no dust, no stamina</p>
+                        <p class="says">
                         @if (_swaps.IncomingShares.Count > 0)
                         {
                             <span>
@@ -120,7 +120,9 @@ else
                             @_swaps.AllSharesDays @Day(_swaps.AllSharesDays), because the two
                             directions run at the same time.
                         </span>
-                    </span>
+                        </p>
+                      </div>
+                    </div>
                 </div>
 
                 <h2>Free to send</h2>
@@ -154,14 +156,18 @@ else
 
             @if (_swaps.Swaps.Count == 0 && _swaps.Unpayable.Count > 0)
             {
-                <div class="verdict skip" aria-live="polite">
-                    <div class="head"><span class="call">No trade is possible yet</span></div>
-                    <span class="why">
-                        @_swaps.Unpayable.Count @Card(_swaps.Unpayable.Count) in
-                        @_swaps.Theirs.Name would fill a gap here, but they are above the diamonds
-                        so a Share cannot carry them, and @_swaps.Mine.Name holds no spare at those
-                        rarities to trade back.
-                    </span>
+                <div class="verdict-lead" aria-live="polite">
+                    <div class="lead-head">
+                      <div class="lead-text">
+                        <h2 class="name skip">No trade is possible yet</h2>
+                        <p class="says">
+                            @_swaps.Unpayable.Count @Card(_swaps.Unpayable.Count) in
+                            @_swaps.Theirs.Name would fill a gap here, but they are above the
+                            diamonds so a Share cannot carry them, and @_swaps.Mine.Name holds no
+                            spare at those rarities to trade back.
+                        </p>
+                      </div>
+                    </div>
                 </div>
             }
             @* Explicit rather than a bare else. Narrowing the branch above to "no trade and
@@ -171,18 +177,18 @@ else
             else if (_swaps.Swaps.Count > 0)
             {
                 var best = _swaps.Swaps[0];
-                <div class="verdict @(best.Ready ? "take" : "skip")" aria-live="polite">
-                    <div class="head">
-                        <span class="call">
+                <div class="verdict-lead" aria-live="polite">
+                    <div class="lead-head">
+                      <div class="lead-text">
+                        <h2 class="name @(best.Ready ? "take" : "skip")">
                             @(best.Ready ? "Swap" : "Best swap once you can pay for it:")
                             @best.Incoming.Name for @best.Outgoing.Name
-                        </span>
-                        <span class="cost">
+                        </h2>
+                        <p class="then">
                             1 stamina each side &middot;
                             @(best.Dust > 0 ? $"{best.Dust:N0} dust each side" : "no dust")
-                        </span>
-                    </div>
-                    <span class="why">
+                        </p>
+                        <p class="says">
                         @if (best.Mutual)
                         {
                             <span>
@@ -203,7 +209,9 @@ else
                         {
                             <span>@Blocked(best)</span>
                         }
-                    </span>
+                        </p>
+                      </div>
+                    </div>
                 </div>
 
                 <p class="small text-body-secondary">

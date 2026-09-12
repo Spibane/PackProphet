@@ -4937,28 +4937,15 @@ tr.row-best {
     color: var(--bs-secondary-color); font-size: 1.1rem;
 }
 
-/* The verdict. Coloured by the CALL, not by the value: an offer can be worth a lot in packs and
-   still be the wrong thing to spend a capped, slow-refilling pool on, and the colour has to
-   agree with the sentence rather than with the number. */
-.verdict {
-    padding: .6rem .8rem; border-radius: var(--pp-r); margin-bottom: .6rem;
-    border: 1px solid var(--bs-border-color);
-}
-.verdict .head {
-    display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
-    margin-bottom: .25rem;
-}
-.verdict .call { font-size: 1.15rem; font-weight: 700; }
-.verdict .cost { font-size: .9rem; color: var(--bs-secondary-color); }
-.verdict .why { font-size: .92rem; }
-.verdict.take {
-    border-color: color-mix(in srgb, var(--bs-success) 55%, transparent);
-    background: color-mix(in srgb, var(--bs-success) 8%, transparent);
-}
-.verdict.skip {
-    border-color: color-mix(in srgb, var(--bs-warning) 55%, transparent);
-    background: color-mix(in srgb, var(--bs-warning) 8%, transparent);
-}
+/* The tinted verdict box -- a 1.15rem call over a bordered, green-or-amber panel -- is gone. It
+   was the app's second verdict component, and the wishlist drew it when its answer was "nothing to
+   change" and .verdict-lead when there was something, so one page had two shapes for one slot.
+   Compare had three of them and never converted at all.
+
+   What it knew that was worth keeping is the colouring rule, which .verdict-lead carries on the
+   name: colour by the CALL, not by the value. An offer can be worth a lot in packs and still be
+   the wrong thing to spend a capped, slow-refilling pool on, so the colour has to agree with the
+   sentence rather than with the number. */
 
 /* gold flair
 

@@ -141,4 +141,20 @@ public class TwoBarRuleTests : AppHost
         // the duplication without carrying any of it. Nothing should reach for it again.
         Assert.Empty(page.FindAll(".target-sheet"));
     }
+
+    [Theory]
+    [MemberData(nameof(ParameterlessPages))]
+    public async Task A_page_has_one_shape_for_a_verdict(string typeName)
+    {
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        // There were two: `verdict-lead`, which every Answer page leads with, and a tinted box
+        // called `verdict`. The wishlist drew the box when its answer was "nothing to change" and
+        // the lead when there was something -- two shapes for one slot on one page -- and Compare
+        // had three boxes and no lead at all.
+        Assert.Empty(page.FindAll(".verdict"));
+    }
 }

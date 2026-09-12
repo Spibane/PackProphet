@@ -157,9 +157,20 @@
    has two. A sidebar of a fixed height would have to pad the short one, which is the argument for
    this over a sidebar.
 
-   It scrolls with the page rather than pinning. Pinned, it would need its own scroller as soon as
-   the collection's five groups outgrew a laptop, and a second scrollbar beside a virtualised grid
-   is two things that scroll where the user meant one.
+   It pins. The first pass had it scroll with the page, on the argument that a pinned rail needs
+   its own scroller as soon as its groups outgrow a laptop, and that a second scrollbar beside a
+   virtualised grid is two things that scroll where the user meant one. That is true and it is the
+   smaller cost: fifty cards down a scrolling rail has taken the search box, the filters and the
+   mode switch off the screen, and the grid below it is thousands of rows long, so "scroll back up
+   to change what you are looking at" is the state the page is in almost all of the time. The
+   controls for a list you cannot see the end of have to stay with you.
+
+   The scroller only appears when the rail actually overflows, which on the decks shelf's two
+   groups is never.
+
+   Pinned under the page bar rather than at the viewport top, using the same measurement the strip
+   below it parks on -- gridspy publishes --bars-h on this container, and the rail reads it from
+   the same place.
 
    Placement is explicit rather than by flow order, because three of this container's four
    children go in the second column and the fourth is fixed and in no column at all. */
@@ -237,17 +248,24 @@ main:has(> .page-body.railed) > .page-head {
 @media (width > 900px) {
     .page-rail {
         display: flex;
-        position: static;
-        inset: auto;
+        /* sticky, not static: see the note above on why this pins. The grid item is content-height
+           inside a row as tall as the grid beside it -- which is what .railed's align-items: start
+           gives it -- so there is room for it to travel. */
+        position: sticky;
+        top: var(--bars-h, 0px);
+        inset-inline: auto;
+        bottom: auto;
         inline-size: auto;
         block-size: auto;
-        max-block-size: none;
+        max-block-size: calc(100dvh - var(--bars-h, 0px));
         margin: 0;
         padding: 16px 14px 20px;
         border: 0;
         border-right: 1px solid var(--pp-hairline, var(--bs-border-color));
         border-radius: 0;
-        overflow: visible;
+        /* Only when it has to. A rail that fits shows no scrollbar at all. */
+        overflow-y: auto;
+        overscroll-behavior: contain;
     }
 }
 

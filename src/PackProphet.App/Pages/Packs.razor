@@ -156,6 +156,110 @@ else
     else
     {
 
+        @* The answer, before anything that supports it.
+           ==================================================================================
+           This page ranks packs, and a ranking's first row IS the answer -- but it was arriving as
+           a tinted row in a table of a dozen, with the figure that matters in a column headed
+           "Chance of a hit" and the arithmetic left for the reader to do. An Answer page leads
+           with the verdict and spends the arithmetic in words.
+
+           Which pack the block is about follows the ranking by default and follows your finger
+           after that: tapping any row in the table below promotes that pack up here, so comparing
+           two is reading one sentence twice rather than reading across five columns.
+
+           Everything under it is unchanged and still says what it always said. This is a heading
+           for a page that had none, not a replacement for what it heads. *@
+        @if (Verdict is { Standing: not null } lead)
+        {
+            var st = lead.Standing!;
+            var chance = ChanceWords(st.ChanceUseful);
+            <div class="verdict-lead">
+                <span class="micro">@(lead.Best ? "Open this next" : "If you open this")</span>
+
+                <div class="lead-head">
+                    @* Background rather than <img>, as the table's thumbnails are: a failed load
+                       shows the placeholder instead of a broken-image gap, with nothing to
+                       handle. *@
+                    <span class="art" style="--art:url('@Session.PackArtUrl(lead.PackKey)')"
+                          aria-hidden="true"></span>
+
+                    <div class="lead-text">
+                        <h2 class="name">@lead.PackName</h2>
+                        <p class="from">@Session.Sets.DisplayName(lead.Set)</p>
+
+                        @* The figure in words, then the two that follow from it. "34.2%" is a
+                           number you have to convert before you can act on it; "about 1 pack in 3"
+                           is the same fact already converted. *@
+                        <p class="says">
+                            @chance.Lead<strong class="key">@chance.Figure</strong> gives you a
+                            card you still need &mdash; roughly
+                            <strong>@PackCount(st.PacksToNextUseful)</strong> between new cards, and
+                            <strong>@MorePacks(st.PacksToFinishItsShare)</strong> to finish its
+                            share of your target.
+                        </p>
+
+                        @* The same figure as calendar time, which is the one that changes a
+                           decision: nobody plans in packs, they plan in days. *@
+                        <p class="then">
+                            At @GameRules.PacksPerDay(Premium) free packs a day that is about
+                            <strong>@Days(st.PacksToFinishItsShare, Premium)</strong>@if (!Premium)
+                            {
+                                <text>, or @Days(st.PacksToFinishItsShare, true) with premium</text>
+                            }.
+                        </p>
+                    </div>
+                </div>
+
+                @* Where in the pack the chance actually is.
+                   ==========================================================================
+                   Five positions, and they are not alike: the first three come from the common
+                   pool, so once you have finished the commons they can only ever give you a
+                   duplicate. A single "chance of a hit" hides that entirely, and it is the whole
+                   reason one pack beats another once a set is half done.
+
+                   A dashed box says that position is dead, which an empty cell cannot -- blank
+                   reads as missing data rather than as a fact.
+
+                   The strip is legal here because the set of boxes is literal: a pack has five
+                   cards, always, and they are on screen because the page has to explain itself
+                   rather than because a chart seemed nice. *@
+                @if (SlotStrip(lead.PackKey) is { Count: > 0 } slots)
+                {
+                    <div class="slot-strip">
+                        <span class="micro">
+                            Where the chance is
+                            <span class="clause">@SlotClause(slots)</span>
+                        </span>
+
+                        <div class="slots">
+                            @foreach (var slot in slots)
+                            {
+                                <div class="slot @(slot.Chance > 0 ? "live" : "dead")">
+                                    <span class="ord">@Ordinal(slot.Position)</span>
+                                    <span class="fig">
+                                        @(slot.Chance > 0 ? slot.Chance.ToString("P1") : "\u2014")
+                                    </span>
+                                    <span class="bar" aria-hidden="true">
+                                        @if (slot.Chance > 0)
+                                        {
+                                            <span style="block-size:@((slot.Chance * 100).ToString("F0"))%"></span>
+                                        }
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="lead-actions">
+                    <a class="btn btn-sm btn-primary" href="log?pack=@Uri.EscapeDataString(lead.PackKey)">
+                        Log a @lead.PackName pack
+                    </a>
+                    <span class="served">@CardCount(st.DemandsServed) it can give</span>
+                </div>
+            </div>
+        }
+
         @* Every extra breakdown lives behind a button in one row here, at the top of the page,
            rather than below the ranking table &mdash; that table runs to dozens of rows across
            every priceable pack, and a button only reachable by scrolling past all of them may as
@@ -483,7 +587,7 @@ else
                        of their contents — would both compare equal to the winner and both light
                        up as "the best". *@
                     <tr class="@(row.Best ? "row-best" : "") @(row.Mark is null ? "" : "pack-row-muted") pack-row-click"
-                        @onclick="() => ToggleExpanded(row.PackKey)">
+                        @onclick="() => SelectPack(row.PackKey)">
                         @* Three inline things in one cell is fine until the cell is 190px wide,
                            which is what a phone leaves after the three figures beside it. Then a
                            long name wraps back under the expander and the thumbnail, and its set
@@ -979,6 +1083,24 @@ else
         _pointsShop = Session.Routes.PointsShopRanking(outstanding, Session.Owned);
     }
 
+    /// <summary>
+    /// A tap on a ranked row: promote that pack into the verdict block, and open its detail.
+    ///
+    /// Both, from one tap, because they are the same intent said at two levels of detail --
+    /// "tell me about this one". Comparing two packs is then reading one sentence twice rather
+    /// than reading across five columns, which is the whole reason the verdict block is worth
+    /// having on a page that already ranks them.
+    ///
+    /// The promotion is not undone by tapping again. Collapsing the detail of the pack the verdict
+    /// is about should not also throw the verdict back to a different pack -- the reading you were
+    /// left looking at would change under a gesture that meant "I am done with the detail".
+    /// </summary>
+    private void SelectPack(string packKey)
+    {
+        _verdictPack = packKey;
+        ToggleExpanded(packKey);
+    }
+
     /// <summary>One row open at a time: two open expanders push the ranking off the screen.</summary>
     private void ToggleExpanded(string packKey) =>
         _expanded = _expanded == packKey ? null : packKey;
@@ -1247,6 +1369,142 @@ else
     private static string LogHref(string packKey) => $"log?pack={Uri.EscapeDataString(packKey)}";
 
     private static string Fmt(double packs) => Text.Fmt.Packs(packs);
+
+    /// <summary>
+    /// A pack count with its noun agreed. Fmt formats the number and knows nothing about the word
+    /// after it, which is how the sentence came out reading "roughly 1 packs between new cards".
+    /// </summary>
+    private static string PackCount(double packs) =>
+        Fmt(packs) == "1" ? "1 pack" : $"{Fmt(packs)} packs";
+
+    /// <summary>The same agreement for the card count beside the action.</summary>
+    private static string CardCount(int cards) => cards == 1 ? "1 card" : $"{cards} cards";
+
+    /// <summary>
+    /// "149 more packs", with the adjective inside the phrase rather than bolted onto the end of
+    /// it. Built separately from <see cref="PackCount"/> because "149 packs more" is what you get
+    /// when the count and the word after it are assembled in the markup.
+    /// </summary>
+    private static string MorePacks(double packs) =>
+        Fmt(packs) == "1" ? "1 more pack" : $"{Fmt(packs)} more packs";
+
+    /// <summary>
+    /// The chance as the phrase that opens the sentence, split from the words that lead into it.
+    ///
+    /// Two parts because only one of them is the answer: the accent ink goes on the figure, and
+    /// "About" is a hedge rather than a figure. Splitting it also settles the case that reads
+    /// worst -- a pack every card of which can serve the target is "Every pack", and "About every
+    /// pack" is not a sentence anyone would write.
+    /// </summary>
+    private static (string Lead, string Figure) ChanceWords(double chance) =>
+        chance >= .995 ? ("", "Every pack") : ("About ", InWords(chance));
+
+    /// <summary>
+    /// Which pack the verdict block is about. The ranking's own answer until you point at another.
+    ///
+    /// Held as a key rather than as a row, because the rows are rebuilt whenever the scope or the
+    /// plan changes and a held row would go stale pointing at a ranking that no longer exists.
+    /// Falling back to the best one also means a pack that drops out of the ranking entirely --
+    /// a set left out by a new scope -- resolves to the new answer rather than to nothing.
+    /// </summary>
+    private string? _verdictPack;
+
+    private PackRow? Verdict =>
+        _rows.FirstOrDefault(r => r.PackKey == _verdictPack && r.Standing is not null)
+        ?? _rows.FirstOrDefault(r => r.Best && r.Standing is not null)
+        ?? _rows.FirstOrDefault(r => r.Standing is not null);
+
+    /// <summary>
+    /// A probability as the phrase a player would use. "About 1 pack in 3" is the same fact as
+    /// "34.2%" with the division already done, and the division is the part that decides whether
+    /// to open one.
+    ///
+    /// Only down to one in twenty; below that "1 in 34" is not a number anyone holds in their head
+    /// and the percentage reads better. Above a half it inverts -- "2 packs in 3" rather than
+    /// "1 pack in 1.5" -- because a fraction with a decimal in it is not a phrase.
+    /// </summary>
+    private static string InWords(double chance)
+    {
+        if (chance <= 0) return "no pack";
+
+        // The near-certain case is ChanceWords' -- it needs the whole phrase, not just the figure,
+        // because "About every pack" is not a sentence. The guard stays here so this is safe to
+        // call on its own: without it a .99998 chance comes out as "1 pack in 1".
+        if (chance >= .995) return "every pack";
+
+        var one = 1 / chance;
+        if (one > 20) return chance.ToString("P1");
+
+        // Near a whole number, say it as one in N.
+        var rounded = Math.Round(one);
+        if (Math.Abs(one - rounded) < .12) return $"1 pack in {rounded:N0}";
+
+        // Otherwise the other way up, in thirds, quarters or fifths -- whichever lands closest.
+        foreach (var den in new[] { 3, 4, 5 })
+        {
+            var num = Math.Round(chance * den);
+            if (num >= 1 && num < den && Math.Abs(chance - num / den) < .04)
+                return $"{num:N0} packs in {den}";
+        }
+
+        return chance.ToString("P1");
+    }
+
+    /// <summary>One box per card position in the pack, expanded from the grouped odds.</summary>
+    private sealed record Slot(int Position, double Chance);
+
+    /// <summary>
+    /// The five positions, each carrying its group's chance.
+    ///
+    /// The engine groups adjacent positions that share a distribution -- "1st-3rd card" is one
+    /// entry -- because that is how the rates are published. The strip shows five boxes anyway:
+    /// the set being literal is the whole precondition for a strip, and a pack has five cards
+    /// whatever the arithmetic groups them into.
+    /// </summary>
+    private IReadOnlyList<Slot> SlotStrip(string packKey)
+    {
+        var groups = SlotOddsFor(packKey);
+        if (groups.Count == 0) return [];
+
+        // Sized from the groups rather than from a constant: the engine's last position is what a
+        // pack of this set actually holds, and there is no rule in GameRules claiming otherwise.
+        var slots = new List<Slot>(groups[^1].Last);
+        foreach (var g in groups)
+            for (var i = g.First; i <= g.Last; i++)
+                slots.Add(new Slot(i, g.Chance));
+
+        return slots.OrderBy(s => s.Position).ToList();
+    }
+
+    /// <summary>
+    /// Why the dead boxes are dead, said once rather than per box.
+    ///
+    /// Only where there is something to explain. A strip with a live figure in every box needs no
+    /// clause, and a sentence appearing and disappearing is less confusing than one that is
+    /// sometimes vacuous.
+    /// </summary>
+    private static string? SlotClause(IReadOnlyList<Slot> slots)
+    {
+        var dead = slots.Where(s => s.Chance <= 0).Select(s => s.Position).ToList();
+        if (dead.Count == 0 || dead.Count == slots.Count) return null;
+
+        // Contiguous from the first card is the common case by far: the first three come from the
+        // common pool, and a collection past its commons kills exactly those.
+        var run = dead.Count == dead[^1] && dead[0] == 1;
+        return run
+            ? $"the first {Words(dead.Count)} cards come from the common pool, and you have finished those"
+            : "some positions can only give you a card you already have";
+    }
+
+    private static string Words(int n) => n switch
+    {
+        1 => "one", 2 => "two", 3 => "three", 4 => "four", 5 => "five", _ => n.ToString()
+    };
+
+    private static string Ordinal(int n) => n switch
+    {
+        1 => "1st", 2 => "2nd", 3 => "3rd", 4 => "4th", 5 => "5th", _ => $"{n}th"
+    };
 
     /// <summary>Expected packs as calendar time, which is the number that changes decisions.</summary>
     private static string Days(double packs, bool premium)

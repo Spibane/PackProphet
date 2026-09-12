@@ -40,160 +40,136 @@
        Above the fold width the stylesheet overrides the UA popover rules and it is an ordinary
        grid item, so the attribute costs a desktop nothing but the two buttons below being
        hidden. *@
-    <div class="page-rail sheet" popover id="@(_gridId)-rail">
-        @* Sheet only. The bar it is dragged and tapped shut by; on a column there is nothing to
-           dismiss. *@
-        <div class="rail-handle">
-            <button class="btn btn-sm btn-outline-secondary" popovertarget="@(_gridId)-rail"
-                    popovertargetaction="hide">Done</button>
-        </div>
+    <PageRail Id="@($"{_gridId}-rail")" OpenLabel="Filters" Count="@ActiveFilters">
+        <Fabs>
+            @* Never folded, never behind a summary, never in a sheet, at any width. A concealed
+               destructive mode is how a user loses cards. *@
+            @if (AllowRemove && (!ListView || Sweeping))
+            {
+                <button class="rail-fab mode @(Removing ? "removing" : "adding")"
+                        @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
+                        title="@(Removing ? $"{GestureVerb} removes a copy. Press to switch back to adding." : $"{GestureVerb} adds a copy. Press to switch to removing.")">
+                    @(Removing ? "Tap removes" : "Tap adds")
+                </button>
+            }
+        </Fabs>
 
-        @* In a group of its own, like everything else here, so it is not a bare flex child of the
-           column with a bar's sizing still on it. *@
-        @if (Search is not null)
-        {
-            <div class="rail-group">@Search</div>
-        }
+        <ChildContent>
+            @* In a group of its own, like everything else here, so it is not a bare flex child of the
+               column with a bar's sizing still on it. *@
+            @if (Search is not null)
+            {
+                <div class="rail-group">@Search</div>
+            }
 
-        @* Never folded, never behind a summary, never in a sheet, at any width. A concealed
-           destructive mode is how a user loses cards -- and unlike the bar, a rail has room to
-           say what the two states are rather than leaving a green button to imply it. *@
-        @if (AllowRemove && (!ListView || Sweeping))
-        {
-            <div class="rail-group mode">
-                <span class="ttl" id="@(_gridId)-mode">Tapping a card</span>
-                <div class="rail-seg" role="group" aria-labelledby="@(_gridId)-mode">
-                    <button class="btn btn-sm @(Removing ? "btn-outline-secondary" : "btn-success")"
-                            @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(!Removing)"
-                            title="@(Removing ? $"Switch back to adding a copy per {Gesture}" : $"{GestureVerb} adds a copy")">
-                        Adds
-                    </button>
-                    <button class="btn btn-sm @(Removing ? "btn-danger" : "btn-outline-secondary")"
-                            @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
-                            title="@(Removing ? $"{GestureVerb} removes a copy" : $"Switch to removing a copy per {Gesture}")">
-                        Removes
-                    </button>
+            @* Never folded, never behind a summary, never in a sheet, at any width. A concealed
+               destructive mode is how a user loses cards -- and unlike the bar, a rail has room to
+               say what the two states are rather than leaving a green button to imply it. *@
+            @if (AllowRemove && (!ListView || Sweeping))
+            {
+                <div class="rail-group mode">
+                    <span class="ttl" id="@(_gridId)-mode">Tapping a card</span>
+                    <div class="rail-seg" role="group" aria-labelledby="@(_gridId)-mode">
+                        <button class="btn btn-sm @(Removing ? "btn-outline-secondary" : "btn-success")"
+                                @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(!Removing)"
+                                title="@(Removing ? $"Switch back to adding a copy per {Gesture}" : $"{GestureVerb} adds a copy")">
+                            Adds
+                        </button>
+                        <button class="btn btn-sm @(Removing ? "btn-danger" : "btn-outline-secondary")"
+                                @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
+                                title="@(Removing ? $"{GestureVerb} removes a copy" : $"Switch to removing a copy per {Gesture}")">
+                            Removes
+                        </button>
+                    </div>
                 </div>
-            </div>
-        }
+            }
 
-        @* The count sits in the group heading rather than over the grid: it is a reading of what
-           the controls below it have done, so it belongs with them. Chips first, because a chip
-           is an active filter and the selects under it are only the way to set one. *@
-        @if (Filters is not null || FilterChips is not null)
-        {
+            @* The count sits in the group heading rather than over the grid: it is a reading of what
+               the controls below it have done, so it belongs with them. Chips first, because a chip
+               is an active filter and the selects under it are only the way to set one. *@
+            @if (Filters is not null || FilterChips is not null)
+            {
+                <div class="rail-group">
+                    @* The count is unconditional here, where ShowCount governs only the bar. A page
+                       turns that off because some OTHER bar of its own already says the total -- and
+                       the rail exists to retire those bars, so in this shell there is nowhere else for
+                       it to be. It also belongs to this group specifically: the filters below it are
+                       what make the number mean something. *@
+                    <span class="ttl">
+                        Showing
+                        <span class="cnt">@Cards.Count</span>
+                    </span>
+                    @FilterChips
+                    @Filters
+                </div>
+            }
+
             <div class="rail-group">
-                @* The count is unconditional here, where ShowCount governs only the bar. A page
-                   turns that off because some OTHER bar of its own already says the total -- and
-                   the rail exists to retire those bars, so in this shell there is nowhere else for
-                   it to be. It also belongs to this group specifically: the filters below it are
-                   what make the number mean something. *@
-                <span class="ttl">
-                    Showing
-                    <span class="cnt">@Cards.Count</span>
-                </span>
-                @FilterChips
-                @Filters
-            </div>
-        }
-
-        <div class="rail-group">
-            <span class="ttl" id="@(_gridId)-layout">Layout</span>
-            <div class="rail-seg" role="group" aria-labelledby="@(_gridId)-layout">
-                <button class="btn btn-sm @(ListView ? "btn-outline-secondary" : "btn-secondary")"
-                        @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
-                        title="Card images in a grid">Grid</button>
-                <button class="btn btn-sm @(ListView ? "btn-secondary" : "btn-outline-secondary")"
-                        @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
-                        title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
-                    List
-                </button>
-            </div>
-
-            @* Density only means anything once you are in list mode, which is why it follows the
-               switch that gets you there rather than sitting beside it. *@
-            @if (ListView)
-            {
-                <div class="rail-seg" role="group" aria-label="Row height">
-                    <button class="btn btn-sm @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
-                            @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
-                            title="Short rows, most cards per screen">Compact</button>
-                    <button class="btn btn-sm @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
-                            @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
-                            title="Taller rows with attack and ability text shown in full">Roomy</button>
+                <span class="ttl" id="@(_gridId)-layout">Layout</span>
+                <div class="rail-seg" role="group" aria-labelledby="@(_gridId)-layout">
+                    <button class="btn btn-sm @(ListView ? "btn-outline-secondary" : "btn-secondary")"
+                            @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
+                            title="Card images in a grid">Grid</button>
+                    <button class="btn btn-sm @(ListView ? "btn-secondary" : "btn-outline-secondary")"
+                            @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
+                            title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
+                        List
+                    </button>
                 </div>
-            }
 
-            @ToolbarExtras
+                @* Density only means anything once you are in list mode, which is why it follows the
+                   switch that gets you there rather than sitting beside it. *@
+                @if (ListView)
+                {
+                    <div class="rail-seg" role="group" aria-label="Row height">
+                        <button class="btn btn-sm @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
+                                @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
+                                title="Short rows, most cards per screen">Compact</button>
+                        <button class="btn btn-sm @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
+                                @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
+                                title="Taller rows with attack and ability text shown in full">Roomy</button>
+                    </div>
+                }
 
-            @* The setting stays the user's, and a select reading "6 Cols" over a three-column grid
-               is the same kind of lie as a count with its filters hidden. So the override says so
-               where the control that it overrides is. *@
-            @if (ColumnsClamped)
-            {
-                <p class="rail-note">
-                    Showing @EffectiveColumns on a screen this narrow. Your setting is kept for
-                    wider ones.
-                </p>
-            }
-        </div>
+                @ToolbarExtras
 
-        @* Kept out of the way of the four groups above, because neither is a setting: both arm a
-           way of working on the cards, and a user who wants neither should not have to read past
-           them to reach the target figures. Still visible rather than revealed on focus -- the
-           keyboard route has to be findable by someone who does not already know it is there. *@
-        <div class="rail-group">
-            <span class="ttl">Selecting</span>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
-                    title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
-                Keyboard
-            </button>
-            @if (ShowSweepToggle)
-            {
-                <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
-                        @onclick="ToggleSweep"
-                        title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
-                    Sweep @(Sweeping ? "On" : "Off")
+                @* The setting stays the user's, and a select reading "6 Cols" over a three-column grid
+                   is the same kind of lie as a count with its filters hidden. So the override says so
+                   where the control that it overrides is. *@
+                @if (ColumnsClamped)
+                {
+                    <p class="rail-note">
+                        Showing @EffectiveColumns on a screen this narrow. Your setting is kept for
+                        wider ones.
+                    </p>
+                }
+            </div>
+
+            @* Kept out of the way of the four groups above, because neither is a setting: both arm a
+               way of working on the cards, and a user who wants neither should not have to read past
+               them to reach the target figures. Still visible rather than revealed on focus -- the
+               keyboard route has to be findable by someone who does not already know it is there. *@
+            <div class="rail-group">
+                <span class="ttl">Selecting</span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
+                        title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
+                    Keyboard
                 </button>
-            }
-        </div>
+                @if (ShowSweepToggle)
+                {
+                    <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
+                            @onclick="ToggleSweep"
+                            title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
+                        Sweep @(Sweeping ? "On" : "Off")
+                    </button>
+                }
+            </div>
 
-        @* Last, and the reason a rail beats a bar: what goes here is different on every page that
-           has one, and is sized to the page rather than to the room a bar happened to have. *@
-        @Rail
-    </div>
-
-    @* The phone's controls. Two buttons rather than a bar, because a bar here is the third one and
-       the rule is two -- and because twelve cards fit on screen beside these where six fit under a
-       bar carrying the same controls.
-
-       The mode first and always, never inside the sheet: it is the only control in the app that
-       can take a card away, and its state has to be readable without opening anything. It is also
-       the smaller of the two, since it is read far more often than it is pressed.
-
-       The filter button carries its own count, because that is the number that says whether the
-       sheet is worth opening. What the filters actually ARE is said in words in the page bar's
-       subtitle -- a count with its filters out of sight is a lie, and a badge saying "2" does not
-       fix that on its own. *@
-    <div class="rail-fabs">
-        @if (AllowRemove && (!ListView || Sweeping))
-        {
-            <button class="rail-fab mode @(Removing ? "removing" : "adding")"
-                    @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
-                    title="@(Removing ? $"{GestureVerb} removes a copy. Press to switch back to adding." : $"{GestureVerb} adds a copy. Press to switch to removing.")">
-                @(Removing ? "Tap removes" : "Tap adds")
-            </button>
-        }
-
-        <button class="rail-fab filters" popovertarget="@(_gridId)-rail"
-                aria-label="@(ActiveFilters == 1 ? "Filters, 1 applied" : $"Filters, {ActiveFilters} applied")">
-            Filters
-            @if (ActiveFilters > 0)
-            {
-                <span class="n">@ActiveFilters</span>
-            }
-        </button>
-    </div>
+            @* Last, and the reason a rail beats a bar: what goes here is different on every page that
+               has one, and is sized to the page rather than to the room a bar happened to have. *@
+            @Rail
+        </ChildContent>
+    </PageRail>
 }
 else
 {

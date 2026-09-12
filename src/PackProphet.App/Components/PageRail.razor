@@ -1,0 +1,83 @@
+@* A page's controls in a column beside its content, and a sheet over it on a phone.
+
+   ONE ELEMENT, TWO SHELLS
+   ==================================================================================
+   The element carries the popover attribute. Above the fold width the stylesheet overrides the UA
+   popover rules and it is an ordinary grid item; below, it is a bottom sheet opened from a
+   floating button. The sections are the same sections in the same order either way, which is the
+   point: a control someone learned to find in the rail is in the same place in the sheet.
+
+   Not two copies hidden by width. Two would mean two of every select, two of every generated id,
+   and two controls bound to one handler -- a pair that agrees right up until it does not.
+
+   WHY A COLUMN
+   ----------------------------------------------------------------------------------
+   A bar has room for a chip, so a filter arrives as "Missing only" with no indication of what it
+   is one of, and the row of chips explaining the filters becomes a strip of its own. A column has
+   room for the heading, so the control says what it sets and the reading it produces sits in the
+   heading of the group that decides it.
+
+   It is sized to its page rather than to a fixed set of controls -- the collection's rail has
+   seven groups and the wishlist's has three -- which is the argument for this over a sidebar.
+
+   The page still has to say in its own bar what the controls are set to. A count whose filters are
+   out of sight is a lie, and on a phone they are all out of sight. *@
+
+<div class="page-rail sheet" popover id="@Id">
+    @* Sheet only, by the stylesheet: on a column there is nothing to dismiss. *@
+    <div class="rail-handle">
+        <button class="btn btn-sm btn-outline-secondary" popovertarget="@Id"
+                popovertargetaction="hide">Done</button>
+    </div>
+
+    @ChildContent
+</div>
+
+@* The phone's way in. Two buttons at most, bottom-right, clear of the tab bar -- a bar here would
+   be the third one, and the rule is two.
+
+   Anything the page wants permanently on screen goes in Fabs, before the opener: the card grid
+   puts its add/remove mode there, because it is the only control in the app that can destroy
+   something and a destructive mode you have to open a sheet to check is a mode you will be wrong
+   about. *@
+<div class="rail-fabs">
+    @Fabs
+
+    <button class="rail-fab filters" popovertarget="@Id"
+            aria-label="@(Count == 1 ? $"{OpenLabel}, 1 applied" : $"{OpenLabel}, {Count} applied")">
+        @OpenLabel
+        @* The count is what says whether opening it is worth doing. What the controls are actually
+           SET to is words in the page bar -- a badge reading "2" reports that there are settings
+           without reporting what they are, which is not the same thing. *@
+        @if (Count > 0)
+        {
+            <span class="n">@Count</span>
+        }
+    </button>
+</div>
+
+@code {
+    /// <summary>
+    /// DOM id, which the opening buttons point at. Unique per page: two popovers sharing one id
+    /// means popovertarget resolves to the first and the second can never be opened.
+    /// </summary>
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+
+    /// <summary>What the floating button says — "Filters", "Tuning".</summary>
+    [Parameter] public string OpenLabel { get; set; } = "Filters";
+
+    /// <summary>
+    /// How many of this page's controls are currently doing something, for the button's badge.
+    ///
+    /// Supplied rather than counted here, because the rail does not know what its groups mean. The
+    /// page owns the settings, so the page owns the number — and it should be the same number the
+    /// page's own subtitle spells out in words, so the two cannot disagree.
+    /// </summary>
+    [Parameter] public int Count { get; set; }
+
+    /// <summary>Buttons that stay on screen on a phone rather than folding into the sheet.</summary>
+    [Parameter] public RenderFragment? Fabs { get; set; }
+
+    /// <summary>The groups themselves, in the order both shells present them.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

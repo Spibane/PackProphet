@@ -251,65 +251,90 @@ main:has(> .page-body.railed) > .page-head {
     }
 }
 
-/* The sheet. Bottom-anchored rather than centred, because it is opened by a thumb at the bottom
-   of the screen and a dialog that appears in the middle asks the eye to go and find it.
+/* The sheet, shared by everything in the app that opens as one.
+   ==================================================================================
+   Bottom-anchored rather than centred, because it is opened by a thumb at the bottom of the screen
+   and a dialog that appears in the middle asks the eye to go and find it.
 
-   82% rather than full height: what it is filtering has to stay visible behind it, so the count
-   moving is something you can watch rather than something you discover on closing. */
+   82% rather than full height: what it is filtering or picking from has to stay visible behind it,
+   so a count moving is something you can watch rather than something you discover on closing.
+
+   The rail carries this class too and is a sheet at no width above the fold, which needs no
+   override to arrange: this rule only applies while the popover is OPEN, and above that width the
+   button that opens the rail is not displayed, so it never is. */
+.sheet:popover-open {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: auto 0 0 0;
+    inline-size: auto;
+    block-size: auto;
+    max-block-size: 82%;
+    margin: 0;
+    padding: 0 14px calc(18px + env(safe-area-inset-bottom));
+    border: 0;
+    border-start-start-radius: 1rem;
+    border-start-end-radius: 1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--pp-deep, var(--bs-tertiary-bg));
+    color: var(--bs-body-color);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, .45);
+}
+.sheet::backdrop { background: rgba(13, 12, 15, .55); }
+
 @media (width <= 900px) {
-    .page-rail:popover-open {
-        display: flex;
-        position: fixed;
-        inset: auto 0 0 0;
-        inline-size: auto;
-        block-size: auto;
-        max-block-size: 82%;
-        margin: 0;
-        padding: 0 14px calc(18px + env(safe-area-inset-bottom));
-        border: 0;
-        border-start-start-radius: 1rem;
-        border-start-end-radius: 1rem;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        box-shadow: 0 -6px 18px rgba(0, 0, 0, .45);
-    }
-    .page-rail::backdrop { background: rgba(13, 12, 15, .55); }
-
-    /* The mode is the one control that never comes in here. It is the only one that can destroy
-       something, and a destructive mode you have to open a sheet to check is a mode you will be
-       wrong about. It is a floating button instead, on screen the whole time. */
+    /* The mode is the one control that never comes into the rail's sheet. It is the only one that
+       can destroy something, and a destructive mode you have to open a sheet to check is a mode
+       you will be wrong about. It is a floating button instead, on screen the whole time. */
     .page-rail > .rail-group.mode { display: none; }
 }
 
-/* The grabber, and the handle row it sits in. Sticky rather than scrolling away, because it is
-   also what the sheet is dragged and tapped shut by, and a dismiss that scrolls off is a sheet
-   with no way out but the system back gesture. Desktop has no sheet to dismiss. */
-.rail-handle { display: none; }
-@media (width <= 900px) {
-    .rail-handle {
-        display: grid;
-        /* Three tracks so the grabber is centred on the SHEET rather than on the space left over
-           beside the button -- an off-centre grabber reads as a layout fault rather than a handle.
-           The first track is empty and mirrors the third. */
-        grid-template-columns: 1fr auto 1fr;
-        align-items: center;
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        margin-inline: -14px;
-        padding: 10px 14px;
-        background: var(--pp-deep, var(--bs-tertiary-bg));
-    }
-    .rail-handle::before {
-        content: "";
-        grid-column: 2;
-        inline-size: 2.2rem;
-        block-size: 4px;
-        border-radius: 2px;
-        background: var(--bs-border-color);
-    }
-    .rail-handle > .btn { grid-column: 3; justify-self: end; }
+/* The set picker, as a sheet. It was a bar of its own -- the third on the page, under a header and
+   over the grid's toolbar -- to answer a question asked about once a session: which set am I in.
+   The answer stays on screen, in the page bar's own sentence; only the choosing folds away, which
+   is what the bar's disclosure was already doing and what it was spending a whole row on.
+
+   Opened from the page bar rather than from a floating button, because unlike the filters it is
+   not something you reach for with a thumb mid-scroll, and it is the same sheet at every width --
+   one component, one set of sections, one way in. */
+.set-sheet .set-picker-body {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+    padding-block: .5rem 0;
 }
+
+/* The grabber, and the handle row it sits in. Sticky rather than scrolling away, because it is
+   also what the sheet is tapped shut by, and a dismiss that scrolls off is a sheet with no way out
+   but Escape.
+
+   Keyed to the sheet being OPEN rather than to a width. The filter sheet exists only below the
+   fold width, but the set sheet is a sheet at every width, and gating this on the phone breakpoint
+   left a desktop one with no Done button on it. A rail that is a column is never an open popover,
+   so it never picks this up. */
+.rail-handle { display: none; }
+.sheet:popover-open > .rail-handle {
+    display: grid;
+    /* Three tracks so the grabber is centred on the SHEET rather than on the space left over
+       beside the button -- an off-centre grabber reads as a layout fault rather than a handle.
+       The first track is empty and mirrors the third. */
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin-inline: -14px;
+    padding: 10px 14px;
+    background: var(--pp-deep, var(--bs-tertiary-bg));
+}
+.sheet:popover-open > .rail-handle::before {
+    content: "";
+    grid-column: 2;
+    inline-size: 2.2rem;
+    block-size: 4px;
+    border-radius: 2px;
+    background: var(--bs-border-color);
+}
+.sheet:popover-open > .rail-handle > .btn { grid-column: 3; justify-self: end; }
 
 .rail-group {
     display: flex;
@@ -336,6 +361,15 @@ main:has(> .page-body.railed) > .page-head {
     letter-spacing: 0;
     color: var(--bs-body-color);
     font-weight: 600;
+}
+
+/* A note under the control it qualifies. Quiet: it explains a setting rather than being one. */
+.rail-note {
+    margin: 0;
+    font-size: .78rem;
+    line-height: 1.35;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
 }
 
 /* A segmented pair, filling the rail's width. Bootstrap's own btn-group would do this, but it
@@ -1607,6 +1641,15 @@ main:focus { outline: none; }
 .page-head .actions {
     display: flex; align-items: center; gap: .4rem; flex: none; margin-left: auto;
 }
+/* A word that appears only where the long one is dropped, the counterpart to .wide-only below.
+   The bar's buttons still have to say what they do at 375px, and a label that merely vanishes
+   leaves a control that does not.
+
+   Declared BEFORE the rule that turns it on. The two selectors weigh the same, so whichever comes
+   last wins, and written after the media query this default quietly beat it -- the button rendered
+   as an empty box. */
+.page-head .narrow-only { display: none; }
+
 @media (width < 600px) {
     /* The subtitle is explanatory, and a phone header has room for the title and the buttons
        or for prose, not both. */
@@ -1656,62 +1699,17 @@ main:focus { outline: none; }
        guessed at here, because only the page knows which of its words are the spare ones. The
        title is never one of them -- it is what the bar is for. */
     .page-head .wide-only { display: none; }
+    .page-head .narrow-only { display: inline; }
 }
 
 /* No inset of its own: this sits inside .page-tools, which already carries one, and adding a
    second would push the tabs a cutout's width further in again. Only a band that reaches the
    physical edge needs to inset its contents. */
-/* The set row, now behind a disclosure. Collapsed it is one line naming the set you are in; open
-   it is the row it always was. What changed is that the row is no longer the price of arriving on
-   the page. */
-.set-picker {
-    border-bottom: 1px solid var(--bs-border-color);
-    background: var(--bs-tertiary-bg);
-}
-.set-picker > summary {
-    display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem;
-    padding: .35rem calc(.75rem + var(--safe-r)) .35rem calc(.75rem + var(--safe-l));
-    cursor: pointer; user-select: none;
-    font-size: .9rem;
-}
-.set-picker > summary:hover .fold-hint { color: var(--bs-body-color); }
-.set-picker > summary:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
-.set-picker > summary .cur { font-weight: 600; }
-.set-picker > summary .pct {
-    color: var(--bs-secondary-color); font-variant-numeric: tabular-nums;
-    /* Three characters, and it broke between the number and the sign the moment the row was told
-       not to wrap: "0" on one line and "%" under it, which made the bar two lines tall by way of
-       the one thing on it that could not be misread. */
-    white-space: nowrap;
-}
-/* How many cards the filters left, moved here off the grid's own bar. Quiet like the percentage
-   beside it -- this bar is read, not scanned for -- and never wrapped: "233" on one line and
-   "cards" on the next reads as two figures. */
-.set-picker > summary .tally {
-    color: var(--bs-secondary-color);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-.set-picker > summary .tally .fail { color: var(--bs-danger-text-emphasis); }
-/* With the total on it, this bar holds four things at 375px and the set's own name is the long
-   one, so the name shortens rather than wrapping the row -- the same contract .page-head keeps,
-   for the same reason: a bar that is one line at some widths and two at others moves everything
-   under it. Wrapping had to be turned off for the name to shorten at all: flex decides where to
-   break from each item's base size, so a full-length name breaks the line before anything is
-   given the chance to shrink. The set code leads the label, so what survives the ellipsis is the
-   half that identifies the set. */
-@media (width < 600px) {
-    .set-picker > summary { flex-wrap: nowrap; }
-    .set-picker > summary .cur {
-        min-inline-size: 0;
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    /* The three short ones keep their width: the name is what gives, and a figure squeezed to
-       fewer characters than it has is not a figure. */
-    .set-picker > summary .pct,
-    .set-picker > summary .tally,
-    .set-picker > summary .fold-hint { flex: none; }
-}
+/* The set row was a bar under the header: one line naming the set you are in, opening into the
+   row of set tabs. Both halves have moved -- the naming into the page bar's own sentence, the
+   choosing into a sheet -- so the bar, its summary and everything that kept its four items on one
+   line at 375px are gone with it. What survives is .set-picker-body, the row of tabs itself,
+   which the sheet now holds. */
 /* Pushed to the far edge only where there is an edge to push to. At 375px `margin-left: auto`
    consumed the last of the line and dropped the pill onto a row of its own, which is the row the
    fold was meant to save. Below the phone breakpoint it just follows the text. */

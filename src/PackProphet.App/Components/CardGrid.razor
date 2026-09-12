@@ -40,7 +40,7 @@
        Above the fold width the stylesheet overrides the UA popover rules and it is an ordinary
        grid item, so the attribute costs a desktop nothing but the two buttons below being
        hidden. *@
-    <div class="page-rail" popover id="@(_gridId)-rail">
+    <div class="page-rail sheet" popover id="@(_gridId)-rail">
         @* Sheet only. The bar it is dragged and tapped shut by; on a column there is nothing to
            dismiss. *@
         <div class="rail-handle">
@@ -125,6 +125,17 @@
             }
 
             @ToolbarExtras
+
+            @* The setting stays the user's, and a select reading "6 Cols" over a three-column grid
+               is the same kind of lie as a count with its filters hidden. So the override says so
+               where the control that it overrides is. *@
+            @if (ColumnsClamped)
+            {
+                <p class="rail-note">
+                    Showing @EffectiveColumns on a screen this narrow. Your setting is kept for
+                    wider ones.
+                </p>
+            }
         </div>
 
         @* Kept out of the way of the four groups above, because neither is a setting: both arm a
@@ -668,7 +679,7 @@ else
             @* Guarded like the attributes below it: a row is never empty by construction, and
                the key must not be the thing that discovers otherwise. *@
             <div @key="@(row.Count > 0 ? (object)row[0].Card.Key : row)"
-                 class="card-row" style="grid-template-columns:repeat(@Columns,minmax(0,1fr))" role="row"
+                 class="card-row" style="grid-template-columns:repeat(@EffectiveColumns,minmax(0,1fr))" role="row"
                  data-group="@(row.Count > 0 ? GroupLabelOf(row[0].Card) : null)"
                  data-group-art="@(row.Count > 0 ? GroupArtFor(row[0].Card) : null)">
                 @foreach (var (card, idx) in row)
@@ -816,6 +827,38 @@ else
     [Parameter] public bool FactsReady { get; set; }
 
     [Parameter] public int Columns { get; set; } = 6;
+
+    /// <summary>
+    /// The grid is a phone's at or under this width. The app's own phone breakpoint, measured on
+    /// the GRID rather than on the window because in the rail layout the two differ by the rail --
+    /// and it is the grid's width that decides how wide a tile comes out.
+    /// </summary>
+    private const float PhoneGridPx = 600f;
+
+    /// <summary>Most columns a phone gets, whatever the setting says. The mock's figure.</summary>
+    private const int PhoneColumns = 3;
+
+    /// <summary>
+    /// Columns actually laid out: the page's setting, clamped on a phone.
+    ///
+    /// The setting is one number shared with the desktop and persisted, so a phone inherited
+    /// whatever was last chosen on a laptop -- six columns of a 375px screen is a 58px card, which
+    /// is not a card you can recognise and is the layout the tile grid exists for. The setting is
+    /// still the user's and still what a wide screen gets; this only stops it being applied where
+    /// it cannot be read.
+    ///
+    /// Off the measured width rather than a media query, because this number is needed in C# --
+    /// the rows are chunked here, not by CSS -- and the measurement already exists and already
+    /// follows a resize. Unmeasured means not laid out yet, and then the setting stands: a first
+    /// paint reflows once when the measurement lands, as the row height already does.
+    /// </summary>
+    private int EffectiveColumns =>
+        _gridPx > 0 && _gridPx <= PhoneGridPx
+            ? Math.Min(Math.Max(1, Columns), PhoneColumns)
+            : Math.Max(1, Columns);
+
+    /// <summary>Whether the setting is currently being overridden, so the rail can say so.</summary>
+    private bool ColumnsClamped => EffectiveColumns < Math.Max(1, Columns);
     [Parameter] public RenderFragment? ToolbarExtras { get; set; }
 
     /// <summary>
@@ -1004,7 +1047,7 @@ else
     {
         get
         {
-            var cols = Math.Max(1, Columns);
+            var cols = EffectiveColumns;
             if (_gridPx <= 0) return 1000f / cols * 1.42f + 8f;
 
             var tile = (_gridPx - 8f - 4f * (cols - 1)) / cols;
@@ -1170,8 +1213,12 @@ else
 
     private Task Bump(PocketCard card, int delta) => OnAdjust.InvokeAsync((card, delta));
 
+    /// <summary>The column count the current rows were chunked at, so a change of it re-chunks.</summary>
+    private int _chunkedCols;
+
     private void Rechunk()
     {
+        _chunkedCols = EffectiveColumns;
         _flat = Sorted();
 
         // Whether the strip is worth a row at all. Stops at the second distinct value rather than
@@ -1192,7 +1239,7 @@ else
         _indexOf = new Dictionary<string, int>(_flat.Count);
         for (var i = 0; i < _flat.Count; i++) _indexOf[_flat[i].Key] = i;
 
-        var cols = Math.Max(1, Columns);
+        var cols = EffectiveColumns;
         var rows = new List<List<(PocketCard, int)>>((_flat.Count / cols) + 1);
         for (var i = 0; i < _flat.Count; i += cols)
         {
@@ -1274,7 +1321,7 @@ else
         _keys = await JS.InvokeAsync<IJSObjectReference>("import", "./js/gridkeys.js");
         if (_disposed) { await ReleaseModulesAsync(); return; }
 
-        await _keys.InvokeVoidAsync("attach", _gridEl, _self, ListView ? 1 : Columns);
+        await _keys.InvokeVoidAsync("attach", _gridEl, _self, ListView ? 1 : EffectiveColumns);
         if (_disposed) { await ReleaseModulesAsync(); return; }
 
         // So the command palette can hand focus here from anywhere on the page.
@@ -1399,7 +1446,7 @@ else
     private async Task SyncKeyColumnsAsync()
     {
         if (_keys is null) return;
-        try { await _keys.InvokeVoidAsync("setColumns", _gridEl, ListView ? 1 : Columns); }
+        try { await _keys.InvokeVoidAsync("setColumns", _gridEl, ListView ? 1 : EffectiveColumns); }
         catch (JSDisconnectedException) { }
         catch (JSException) { }
     }
@@ -1423,7 +1470,6 @@ else
         // Null where there is no browser to answer — a bUnit render, or interop stubbed out.
         if (m is null || _disposed) return;
 
-        var shape = $"{Columns}";
         var was = RowHeight;
 
         _gridPx = m.width;
@@ -1432,6 +1478,19 @@ else
         // to rendering no rows at all, and letting that drop the height back to the estimate would
         // have the two take turns, each change of ItemSize prompting the render that undoes it.
         if (m.row > 0) _rowPx = m.row;
+
+        // After the width lands, not before it. The column clamp reads that width, so a shape
+        // taken first describes the layout being replaced -- on a phone's first measure it would
+        // record "6" for a grid that had just become three columns wide, and cost a second pass to
+        // notice.
+        var shape = $"{EffectiveColumns}";
+
+        // The rows are chunked to a column count, and until the clamp existed that count could
+        // only change through a parameter -- so OnParametersSet was the only place that had to
+        // re-chunk. It can now change here instead, when a resize carries the grid across the
+        // phone width with every parameter identical, and rows chunked three wide stayed three
+        // wide on a screen that had just become a desktop.
+        if (_chunkedCols != EffectiveColumns) Rechunk();
 
         if (_measuredFor == shape && Math.Abs(RowHeight - was) < 0.5f) return;
 

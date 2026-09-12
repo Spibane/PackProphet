@@ -298,31 +298,57 @@ else
             @(Session.ListView ? "add each card that came out" : "tap each card that came out")
         </span>
         <span class="actions">
-            @* Dropped on a phone rather than shortened: the button next to it already reads
-               "add N to collection", so this is the one thing on the bar that is said twice. *@
-            <span class="small wide-only">Picked @_picked.Count</span>
+            @* Progress against what a pack holds, rather than a bare count. "Picked 3" is a fact
+               about your typing; "3 of 5 named" is how far through the job you are, which is what
+               a Record page's bar is for. Dropped on a phone, where the strip below says the same
+               thing in the words that matter. *@
+            <span class="small wide-only">@ProgressLabel</span>
             <button class="btn btn-sm btn-success" disabled="@(_picked.Count == 0 || Busy.IsBusy)" @onclick="Commit">
-                Add @_picked.Count to collection
+                Add to collection
             </button>
         </span>
     </div>
 
-    @* Raised on the way out rather than while picking. The count is wrong for the whole time you
-       are tapping -- one card into a five-card pack it is already "not five" -- so a live warning
-       fires immediately, pushes the card list down, and is on screen for the entire task while
-       being about none of it. It is a question about saving, so it is asked when you save.
+    @* What is still to do, which is what a Record page leads with. Nothing on this page is true
+       until the commit, so there is no figure to headline -- what there is instead is the gap
+       between what you have typed and what a pack holds.
 
-       Not a block. A partial log is sometimes what you meant, so the second press goes through. *@
+       ONE ELEMENT, TWO STATES, and the second state is the only one that warns.
+       ==================================================================================
+       The repo's existing finding stands and this keeps it: a live warning about the count is
+       wrong for the whole time you are tapping, because one card into a five-card pack it is
+       already "not five". So while you are picking this states progress and nothing else -- "one
+       more card" is a fact about the job, not an alarm about it.
+
+       It turns accent and names the consequence only when you press commit on a short pack, which
+       is the moment the question is actually being asked. That was a separate warning strip that
+       appeared then; making it the same element means the place you look for "how am I doing"
+       is the place that answers "and what happens if I stop here".
+
+       Not a block either way. A partial log is sometimes what you meant, so the second press goes
+       through. *@
     @if (_miscount is { } warning)
     {
-        <PageShell Class="py-2">
-            <Notice Severity="Notice.Level.Warning" Dense="true" Class="mb-0">
+        <div class="todo-strip short">
+            <span class="micro">Still to do</span>
+            <span class="say">
                 @warning
-                <button class="btn btn-sm btn-warning ms-2 py-0" @onclick="CommitAnyway">
-                    Log @_picked.Count Anyway
-                </button>
-            </Notice>
-        </PageShell>
+            </span>
+            <button class="btn btn-sm btn-warning" @onclick="CommitAnyway">
+                Log @_picked.Count anyway
+            </button>
+        </div>
+    }
+    else if (!PackFull)
+    {
+        <div class="todo-strip">
+            <span class="micro">Still to do</span>
+            <span class="say">@TodoSay</span>
+            @if (_picked.Count == 0)
+            {
+                <a class="escape" href="collection/screenshot">Read it off a screenshot</a>
+            }
+        </div>
     }
 
     @if (_picked.Count > 0)
@@ -398,6 +424,22 @@ else
             }
         </FilterChips>
     </CardGrid>
+
+    @* What committing will do, at the bottom, where you are when you decide to.
+       ==================================================================================
+       Everything above this is about getting the five cards right. This is the only thing on the
+       page about the act of saving them, and all three parts of it are things a user would
+       otherwise find out afterwards: what the pack points become, that there is exactly one undo,
+       and that logging another pack is a click rather than a journey back through the picker.
+
+       A Record page cannot headline a figure -- nothing here is true until the commit -- but it
+       can say what the figure will BE, which is a statement about the future rather than a reading
+       of the present. *@
+    <div class="commit-foot">
+        <span>@PointsAfter</span>
+        <span>One undo step, <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</span>
+        <button class="btn btn-sm btn-link again" @onclick="Reset">Log another after this</button>
+    </div>
 }
 
 @code {
@@ -651,6 +693,86 @@ else
     /// "picked 3 of 5", or just "picked 3" where the set has no published rates to say what a pack
     /// holds. A set with two pack sizes says both rather than picking one, since either is right.
     /// </summary>
+    /// <summary>
+    /// How far through the job you are, for the page bar. "3 of 5 named" rather than "picked 3":
+    /// the second is a fact about your typing and the first is a fact about the pack, and a Record
+    /// page's bar reports the job.
+    /// </summary>
+    private string ProgressLabel
+    {
+        get
+        {
+            var sizes = PackSizes;
+            return sizes.Count == 0
+                ? $"{_picked.Count} named"
+                : $"{_picked.Count} of {string.Join(" or ", sizes.OrderBy(n => n))} named";
+        }
+    }
+
+    /// <summary>
+    /// What is left, in words, while the pack is still being typed.
+    ///
+    /// Deliberately not a warning. It is on screen for the whole of the task, so it says what
+    /// remains rather than what is wrong -- "one more card" is a fact about the job and "you have
+    /// picked four of five" is an accusation about it. The consequence of stopping early belongs
+    /// to the moment you try to stop, which is the strip's other state.
+    ///
+    /// A set with no published rates has nothing to count toward, so it gets the instruction
+    /// instead of a figure.
+    /// </summary>
+    private string TodoSay
+    {
+        get
+        {
+            var sizes = PackSizes;
+            if (sizes.Count == 0)
+                return _picked.Count == 0
+                    ? "Name each card that came out of the pack."
+                    : "Name the rest of the cards that came out.";
+
+            var target = sizes.Min();
+            var left = target - _picked.Count;
+
+            if (_picked.Count == 0)
+                return sizes.Count == 1
+                    ? $"Name the {Words(target)} cards that came out."
+                    : "Name the cards that came out.";
+
+            return left <= 0
+                ? "Name the rest of the cards that came out."
+                : left == 1 ? "One more card." : $"{Words(left)} more cards.";
+        }
+    }
+
+    private static string Words(int n) => n switch
+    {
+        1 => "one", 2 => "two", 3 => "three", 4 => "four", 5 => "five", _ => n.ToString()
+    };
+
+    /// <summary>
+    /// Where this set's pack points land once the pack is logged, and whether that matters.
+    ///
+    /// Points accrue per set and stop dead at the cap, so a pack opened while capped earns
+    /// nothing at all -- which is worth knowing BEFORE the commit rather than discovering as a
+    /// figure that did not move. Said as a destination rather than as a delta: "takes A4 to 1,175"
+    /// is what you check against a price, where "+5" is arithmetic you then have to do.
+    /// </summary>
+    private string PointsAfter
+    {
+        get
+        {
+            if (_pack is null) return "";
+
+            var set = _pack.Split(':')[0];
+            var before = Session.Profile.Resources.PackPointsBySet.TryGetValue(set, out var p) ? p : 0;
+            var after = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
+
+            return after == before
+                ? $"{set} is at the {GameRules.PackPointsCap:N0}-point cap, so this pack earns none."
+                : $"Committing takes {set} points to {after:N0} of {GameRules.PackPointsCap:N0}.";
+        }
+    }
+
     private string PickedLabel
     {
         get

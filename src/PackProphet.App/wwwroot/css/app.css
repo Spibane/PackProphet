@@ -713,6 +713,54 @@ main:has(> .page-body.railed) > .page-head {
 .verdict-lead .name.take { color: var(--bs-success-text-emphasis); }
 .verdict-lead .name.skip { color: var(--bs-secondary-color); }
 
+/* the Record job's signature
+   ==================================================================================
+   What is still missing before this page can commit, on every page whose job is recording
+   something: logging a pack, reading one off a screenshot, importing a collection or a deck.
+
+   Two states, and only the second one warns. While the thing is being filled in this states
+   progress -- "one more card" -- because it is on screen for the whole task and a live alarm about
+   a count is wrong for nearly all of it. The accent form appears only at the moment the question
+   is actually asked, which is when you press commit on something short. */
+.todo-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .3rem .75rem;
+    padding: .4rem calc(.75rem + var(--safe-r)) .4rem calc(.75rem + var(--safe-l));
+    border-bottom: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+    font-size: .85rem;
+}
+.todo-strip .micro { flex: none; }
+.todo-strip .say { min-inline-size: 0; text-wrap: pretty; }
+/* The way out of doing it by hand, and it belongs to this strip because this strip is the one
+   saying how much by-hand work is left. */
+.todo-strip .escape { margin-inline-start: auto; flex: none; }
+
+/* The state that warns. Tinted rather than bordered: it is a bar the page already had, saying
+   something more urgent, not a new object arriving. */
+.todo-strip.short {
+    background: color-mix(in srgb, var(--bs-primary) 12%, transparent);
+    border-bottom-color: var(--bs-primary);
+}
+.todo-strip.short .btn { flex: none; margin-inline-start: auto; }
+
+/* What committing will do, at the foot of the page, where you are when you decide to. */
+.commit-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .3rem 1rem;
+    padding: .45rem calc(.75rem + var(--safe-r)) .45rem calc(.75rem + var(--safe-l));
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--pp-deep, var(--bs-tertiary-bg));
+    font-size: .82rem;
+    color: var(--bs-secondary-color);
+}
+.commit-foot .again { margin-inline-start: auto; padding: 0; font-size: inherit; }
+.commit-foot kbd { font-size: .78em; }
+
 /* the Wonder Pick offer
    ----------------------------------------------------------------------------------
    A card in the strip is a button, because tapping it takes it back out of the offer. */

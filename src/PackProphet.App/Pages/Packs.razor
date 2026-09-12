@@ -150,9 +150,14 @@ else
 
     @if (_outstanding == 0)
     {
-        <Notice Severity="Notice.Level.Success">
-            Nothing outstanding for this target. Raise the rarity or copies to aim higher.
-        </Notice>
+        @* An empty, not a success. It was a green alert, which is the app's voice for "something
+           you did worked" -- and nothing was done here; the ranking simply has nothing to rank. *@
+        <EmptyState>
+            <ChildContent>Nothing outstanding for this target.</ChildContent>
+            <Action>
+                <SheetOpener For="target-sheet" Label="Aim higher" />
+            </Action>
+        </EmptyState>
     }
     else
     {

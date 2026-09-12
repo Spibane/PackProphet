@@ -108,20 +108,34 @@ else
     <div class="rail-main sections">
 
 
+        @* Null is the plan not worked out yet, not an empty board. It said "Nothing to recommend
+           yet", which reports an answer the page has not finished asking for. *@
         @if (_plan is null)
         {
-            <p class="text-body-secondary">Nothing to recommend yet.</p>
+            <Loading />
+        }
+        else if (_plan.Slots.Count == 0 && _floor > 0)
+        {
+            @* An empty state that names the setting excluding everything and offers no way to
+               change it is a dead end that knows the answer. *@
+            <EmptyState>
+                <ChildContent>
+                    Nothing in this scope can go on the board. The @_floor-pack floor may be
+                    excluding all of it.
+                </ChildContent>
+                <Action>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => SetFloor(0)">
+                        Drop the floor
+                    </button>
+                </Action>
+            </EmptyState>
         }
         else if (_plan.Slots.Count == 0)
         {
-            <p class="text-body-secondary">
-                Nothing in this scope can go on the board: either it is complete, or
-                everything left in it is untradeable.
-                @if (_floor > 0)
-                {
-                    <span>The @_floor-pack floor may also be excluding everything; try "no floor".</span>
-                }
-            </p>
+            <EmptyState>
+                Nothing in this scope can go on the board: either it is complete, or everything
+                left in it is untradeable.
+            </EmptyState>
         }
         else
         {
@@ -513,9 +527,17 @@ else
     /// </summary>
     private Task Rerun() => Busy.RunAsync("Choosing slots\u2026", Rebuild);
 
-    private Task OnFloor(ChangeEventArgs e)
+    private Task OnFloor(ChangeEventArgs e) =>
+        double.TryParse(e.Value?.ToString(), out var n) ? SetFloor(n) : Busy.RunAsync("Choosing slots…", Rebuild);
+
+    /// <summary>
+    /// Set the floor and work the board out again. Its own method because the empty board offers
+    /// to drop the floor: an empty state that names the setting excluding everything and gives no
+    /// way to change it is a dead end that knows the answer.
+    /// </summary>
+    private Task SetFloor(double cost)
     {
-        if (double.TryParse(e.Value?.ToString(), out var n)) Session.SetBoardSettings(minimumCost: n);
+        Session.SetBoardSettings(minimumCost: cost);
         return Busy.RunAsync("Choosing slots…", Rebuild);
     }
 

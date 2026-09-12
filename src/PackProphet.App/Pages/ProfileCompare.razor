@@ -80,15 +80,15 @@ else
 
     @if (_swaps is null)
     {
-        <PageShell Measure="PageShell.Width.Wide"><p class="mb-0">Working&hellip;</p></PageShell>
+        <PageShell Measure="PageShell.Width.Wide"><Loading /></PageShell>
     }
     else if (_swaps.Nothing)
     {
         <PageShell Measure="PageShell.Width.Wide">
-            <p class="mb-0">
-                Nothing to move. Neither collection holds a spare the other still wants at a
+            <EmptyState>
+                Nothing to move: neither collection holds a spare the other still wants at a
                 rarity that can be shared or traded.
-            </p>
+            </EmptyState>
         </PageShell>
     }
     else
@@ -364,7 +364,7 @@ else
         @<text>
             @if (gifts.Count == 0)
             {
-                <p class="small text-body-secondary">Nothing this way.</p>
+                <EmptyState>Nothing this way.</EmptyState>
             }
             else
             {

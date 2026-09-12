@@ -155,10 +155,15 @@ else
 
         @if (_shown.Count == 0)
         {
-            <p class="text-body-secondary">
-                Nothing outstanding to trade for in this scope. Either it is complete, or
+            @* No action button: the control that fixes this is the rail's own target picker, in
+               the column beside this at a desk and behind the rail's button on a phone. A second
+               opener here would also be one the rail cannot survive -- `.sheet:popover-open` beats
+               the rule that makes the rail a column, so opening it by button at a desk would drop
+               the whole rail to the bottom of the screen as a sheet. *@
+            <EmptyState>
+                Nothing outstanding to trade for at this target: either it is complete, or
                 everything left in it is a rarity that cannot be traded.
-            </p>
+            </EmptyState>
         }
         else
         {

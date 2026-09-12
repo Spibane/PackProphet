@@ -193,7 +193,7 @@ else
             <h2 class="sub-head">Legality</h2>
             @if (_report is null || _draft.DeckBuilderNrs.Count == 0)
             {
-                <p class="small text-body-secondary">Nothing to check yet.</p>
+                <EmptyState>Add cards and the deck rules run here.</EmptyState>
             }
             else
             {

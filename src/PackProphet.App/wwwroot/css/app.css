@@ -2300,10 +2300,21 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 
 .rarity-chips { display: flex; gap: .2rem; flex-wrap: wrap; }
 .rarity-chip {
+    /* Height from --ctl-h, like every other control in the app, rather than from its own padding.
+       It came out 36px square, which is under the 44px floor this project already adopted for
+       touch -- and it is one of the most-tapped things here: setting a plan is eleven taps, and it
+       is the whole of what the Settings page is for.
+
+       Width stays its own. A chip holding four diamonds is wider than one holding a single pip,
+       and forcing them square would either crop the glyphs or pad the small ones to nothing. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--ctl-h);
     border: 1px solid var(--bs-border-color);
     background: var(--bs-body-bg);
     color: var(--bs-secondary-color);
-    border-radius: var(--pp-r-sm); padding: .15rem .4rem;
+    border-radius: var(--pp-r-sm); padding: .15rem .8rem;
     font-size: .9rem; line-height: 1.2; white-space: nowrap;
 }
 /* A tint rather than a solid fill, matching .chip-tog.on. A solid primary needs white text, and
@@ -4818,6 +4829,12 @@ tr.row-best {
     padding: .7rem .8rem;
     background: var(--bs-tertiary-bg);
 }
+/* Full, and therefore no longer regenerating: the one state on this page that is actively costing
+   something. A border rather than a fill, so the panel still reads as the same object as the ones
+   beside it -- these are parallel panels and a tinted one would rank itself above the others,
+   which is the thing a Ledger page must not do. */
+.pool.at-cap { border-color: var(--bs-danger-border-subtle, var(--bs-danger)); }
+
 .pool-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .35rem; }
 .pool-head .nm { font-weight: 700; }
 .pool-head .rate { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--bs-secondary-color); }

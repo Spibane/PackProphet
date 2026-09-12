@@ -26,26 +26,51 @@ else
 {
     <div class="page-head">
         <h1 class="title">Compare collections</h1>
-        <span class="subtitle">@Session.Profile.Name against your other collections</span>
-    </div>
-
-    <div class="page-tools">
-        <label class="small text-body-secondary">Compare With</label>
-        <select class="form-select form-select-sm" style="max-width:14rem" aria-label="Collection to compare with" @onchange="OnPick">
-            @foreach (var profile in Others)
+        @* Which two, and what is currently narrowing the answer. The page compares one pair at a
+           time and the filter changes which rows exist, so a reader who cannot see either is
+           reading a list that means something other than what it says. *@
+        <span class="subtitle">
+            @Session.Profile.Name against @(Others.FirstOrDefault(o => o.Id == _otherId)?.Name ?? "your other collections")
+            @if (_readyOnly)
             {
-                <option value="@profile.Id" selected="@(profile.Id == _otherId)">@profile.Name</option>
+                <span class="filters">affordable today only</span>
             }
-        </select>
+        </span>
 
-        <span class="bar-sep" aria-hidden="true"></span>
-
-        <label class="small">
-            <input type="checkbox" class="form-check-input me-1" checked="@_readyOnly"
-                   @onchange="e => _readyOnly = (bool)(e.Value ?? false)" />
-            only the ones both accounts can afford today
-        </label>
+        <span class="actions">
+            <button class="btn btn-sm btn-outline-secondary" popovertarget="compare-target"
+                    aria-label="Change what is compared">
+                <span class="wide-only">Change pairing</span>
+                <span class="narrow-only" aria-hidden="true">Pair</span>
+            </button>
+        </span>
     </div>
+
+    @* The pairing and the filter, behind the button rather than on a bar of their own. Two
+       controls do not earn a strip across a page whose answer is two verdicts and two lists. *@
+    <div class="target-sheet sheet" popover id="compare-target">
+        <div class="rail-handle">
+            <button class="btn btn-sm btn-outline-secondary" popovertarget="compare-target"
+                    popovertargetaction="hide">Done</button>
+        </div>
+
+    <label class="small text-body-secondary">Compare With</label>
+    <select class="form-select form-select-sm" style="max-width:14rem" aria-label="Collection to compare with" @onchange="OnPick">
+        @foreach (var profile in Others)
+        {
+            <option value="@profile.Id" selected="@(profile.Id == _otherId)">@profile.Name</option>
+        }
+    </select>
+
+    <span class="bar-sep" aria-hidden="true"></span>
+
+    <label class="small">
+        <input type="checkbox" class="form-check-input me-1" checked="@_readyOnly"
+               @onchange="e => _readyOnly = (bool)(e.Value ?? false)" />
+        only the ones both accounts can afford today
+    </label>
+    </div>
+
 
     @* Two mechanics, and the split between them is what the page is for. A Share is one-way and
        free but stops at 4 diamonds; a trade is a same-rarity swap that costs both accounts dust

@@ -16,51 +16,67 @@ else if (_pack is null)
         <span class="subtitle">Which pack did you open?</span>
     </div>
 
-    @* Grouped by series, then by set. A flat list of every pack ever sold is already long and only
-       grows, and a set heading answers "which set is this pack from", which a pack name like
-       "Mewtwo" does not. Defaults to the newest series, where packs are usually being opened. *@
-    <div class="page-tools">
-        <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Series" @onchange="OnSeries">
-            @foreach (var series in Session.Sets.Series)
-            {
-                <option value="@series" selected="@(_series == series)">Series @series</option>
-            }
-        </select>
 
-        @* The same setting as on the Packs page — there is one answer to "is Deluxe on sale" — and
-           it is repeated here because this is the page you are on when you find out. It never
-           filters the picker: you can log a pack you opened whatever the app assumed about the
-           shelf. *@
-        @if (Session.LimitedPacks.Count > 0)
-        {
-            <span class="avail ms-auto">
-                <span class="ttl">Limited-time</span>
-                @foreach (var pack in Session.LimitedPacks)
+    @* Choosing a pack is browsing -- a grid of every pack ever sold, narrowed by series -- so it
+       gets the shell browsing gets. It was two bars for three controls: the series above, the
+       column count below, and the availability chips sharing the first one with a select they have
+       nothing to do with.
+
+       The screen after this one, where the cards are picked, is a Record screen and has the strip
+       instead. Same route, two jobs, and the shell says which one you are in. *@
+    <PageRail Id="log-rail" OpenLabel="Packs">
+        <div class="rail-group">
+            <span class="ttl">Series</span>
+            @* Grouped by series, then by set. A flat list of every pack ever sold is already long
+               and only grows, and a set heading answers "which set is this pack from", which a pack
+               name like "Mewtwo" does not. Defaults to the newest series, where packs are usually
+               being opened. *@
+            <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Series" @onchange="OnSeries">
+                @foreach (var series in Session.Sets.Series)
                 {
-                    var on = Session.IsLimitedPackAvailable(pack);
-                    <button class="avail-chip @(on ? "on" : "off")"
-                            @onclick="() => Session.SetLimitedPackAvailable(pack, !on)"
-                            title="@(pack.Split(':')[1]) packs come and go. This only affects which packs the Which pack page recommends. You can log one either way.">
-                        <span class="nm">@pack.Split(':')[1]</span>
-                        <span class="st">@(on ? "on sale" : "off sale")</span>
-                    </button>
+                    <option value="@series" selected="@(_series == series)">Series @series</option>
                 }
-            </span>
-        }
-    </div>
+            </select>
 
-    @* Column count sits with the grid it lays out, as it does over the card grid. It changes
-       nothing about which packs are shown. *@
-    <div class="grid-toolbar">
-        <select class="form-select form-select-sm" style="max-width:7rem" aria-label="Columns in the grid" @onchange="OnCols">
-            @foreach (var n in new[] { 2, 3, 4, 5, 6, 8 })
+        </div>
+
+        <div class="rail-group">
+            <span class="ttl">Limited-time</span>
+            @* The same setting as on the Packs page — there is one answer to "is Deluxe on sale" — and
+               it is repeated here because this is the page you are on when you find out. It never
+               filters the picker: you can log a pack you opened whatever the app assumed about the
+               shelf. *@
+            @if (Session.LimitedPacks.Count > 0)
             {
-                <option value="@n" selected="@(n == Session.PackColumns)">@n Cols</option>
+                <span class="avail">
+                    @foreach (var pack in Session.LimitedPacks)
+                    {
+                        var on = Session.IsLimitedPackAvailable(pack);
+                        <button class="avail-chip @(on ? "on" : "off")"
+                                @onclick="() => Session.SetLimitedPackAvailable(pack, !on)"
+                                title="@(pack.Split(':')[1]) packs come and go. This only affects which packs the Which pack page recommends. You can log one either way.">
+                            <span class="nm">@pack.Split(':')[1]</span>
+                            <span class="st">@(on ? "on sale" : "off sale")</span>
+                        </button>
+                    }
+                </span>
             }
-        </select>
-    </div>
+        </div>
 
-    <PageShell>
+        <div class="rail-group">
+            <span class="ttl">Layout</span>
+            <select class="form-select form-select-sm" style="max-width:7rem" aria-label="Columns in the grid" @onchange="OnCols">
+                @foreach (var n in new[] { 2, 3, 4, 5, 6, 8 })
+                {
+                    <option value="@n" selected="@(n == Session.PackColumns)">@n Cols</option>
+                }
+            </select>
+        </div>
+    </PageRail>
+
+    <PageShell Class="railed">
+
+    <div class="chooser-main">
 
         @* Reading the pack off a screenshot, before the picker, because it is the faster route when
            it works: the game has just shown you the five cards, and the cards themselves say which
@@ -272,6 +288,7 @@ else if (_pack is null)
                 </div>
             }
         </div>
+    </div>
     </PageShell>
 }
 else

@@ -265,13 +265,13 @@ else if (_list is null)
 {
     <PageShell Measure="PageShell.Width.Text">
         <p>That chase list no longer exists.</p>
-        <a class="btn btn-sm btn-outline-secondary" href="chase">&larr; all chase lists</a>
+        <BackLink To="chase" Label="Chase lists" />
     </PageShell>
 }
 else
 {
     <div class="page-head">
-        <a class="btn btn-sm btn-outline-secondary" href="chase">&larr; chase lists</a>
+        <BackLink To="chase" Label="Chase lists" />
 
         @* Renaming in place, saved on blur rather than per keystroke: the name is persisted state,
            and a save per character would serialise the whole profile as you type. The input is this

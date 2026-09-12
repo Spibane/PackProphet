@@ -186,4 +186,27 @@ public class TwoBarRuleTests : AppHost
                 "`sections` shell.");
         }
     }
+
+    [Theory]
+    [MemberData(nameof(ParameterlessPages))]
+    public async Task The_way_out_of_a_page_is_written_one_way(string typeName)
+    {
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        // Nine hand-written back links produced eight sentences -- "back", "decks", "chase lists",
+        // "all chase lists", "settings", "collection", "go to your collection", "Change Pack" --
+        // with two of them in one file pointing at the same page. One was a button where the rest
+        // were links, so open-in-new-tab worked on eight of nine.
+        foreach (var control in page.FindAll("a, button").ToArray())
+        {
+            if (!control.TextContent.TrimStart().StartsWith('\u2190')) continue;
+
+            Assert.True(control.ClassList.Contains("back"),
+                $"{type.Name} writes its own back control (\"{control.TextContent.Trim()}\"). " +
+                "Use BackLink, which decides the arrow, the element and how the label is worded.");
+        }
+    }
 }

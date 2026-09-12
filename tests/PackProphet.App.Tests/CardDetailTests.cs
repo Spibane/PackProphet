@@ -127,7 +127,7 @@ public class CardDetailTests : AppHost
         var card = Session.Index.All.First(c => !c.IsPromo);
 
         var page = Open(card.Key);
-        var back = page.FindAll("button").First(b => b.TextContent.Contains("back"));
+        var back = page.Find("button.back");
 
         Assert.Contains("Escape", back.GetAttribute("title")!);
     }

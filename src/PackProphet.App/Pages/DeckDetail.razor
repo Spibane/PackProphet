@@ -24,7 +24,7 @@ else
            screen reader to land on when navigating by headings — every other page opens with an
            h1, this one otherwise wouldn't. *@
         <h1 class="visually-hidden">@_draft.Name</h1>
-        <a class="btn btn-sm btn-outline-secondary" href="decks">&larr; decks</a>
+        <BackLink To="decks" Label="Decks" />
         <input class="form-control form-control-sm" style="max-width:16rem"
                value="@_draft.Name" @onchange="Rename" aria-label="Deck name" />
 

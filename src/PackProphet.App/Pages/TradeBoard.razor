@@ -129,11 +129,21 @@ else
                the useful output is a couple of edits rather than twenty rows to transcribe. *@
             @if (_plan.Unchanged)
             {
-                <div class="verdict take">
-                    <div class="head"><span class="call">Your board is already right</span></div>
-                    <span class="why">
-                        All @_plan.Keep.Count slots still earn their place. Nothing to retype.
-                    </span>
+                @* The same block as the branch below, because it fills the same slot: this is the
+                   verdict when the answer is "nothing". It was the app's other verdict component,
+                   so the page drew one shape when there were edits to make and a different one
+                   when there were not. *@
+                <div class="verdict-lead">
+                    <span class="micro">What to change</span>
+
+                    <div class="lead-head">
+                        <div class="lead-text">
+                            <h2 class="name take">Your board is already right</h2>
+                            <p class="says">
+                                All @_plan.Keep.Count slots still earn their place. Nothing to retype.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             }
             else

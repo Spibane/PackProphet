@@ -198,8 +198,13 @@ main:has(> .page-body.railed) > .page-head {
     align-items: start;
 }
 
+/* The rail takes the first column and everything else takes the second, rather than each content
+   element being named here. Named placement meant this rule knew what a railed page contains --
+   .grid-wrap, .grid-spy -- and the first page to put something else beside a rail had to come back
+   and edit it. The fixed children (.to-top, .rail-fabs) are out of flow and are not grid items at
+   all, so they need no exemption. */
+.page-body.railed > * { grid-area: 1 / 2; }
 .page-body.railed > .page-rail { grid-area: 1 / 1; }
-.page-body.railed > .grid-wrap { grid-area: 1 / 2; }
 
 /* The strip naming the set under your thumb shares the grid's cell instead of taking a row above
    it. A third bar is the thing the rail exists to remove, and "which set am I in" is worth an
@@ -702,6 +707,34 @@ main:has(> .page-body.railed) > .page-head {
     .box .bar { block-size: 34px; }
 }
 
+/* A card's art filling a box, for a strip whose boxes are cards rather than figures. Cover, not
+   contain: at 30px a whole card is a smudge and the top of the art is the part you recognise. */
+.slot-art {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 367 / 512;
+    margin-block-start: 4px;
+    border-radius: var(--pp-r-xs);
+    background: var(--art) top center / cover no-repeat, var(--bs-secondary-bg);
+}
+/* The ones being added, so the strip shows which part of itself is the work. */
+.slot-art.new { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+
+/* Two readings at the foot of a rail: a pool and its number. Not a control, so no border and no
+   fill -- it is the same kind of thing as the target figures on the collection's rail. */
+.pool-read {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .5rem;
+    font-size: .82rem;
+}
+.pool-read .fig {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-body-color);
+}
+
 /* The prose under a box strip: what each route's figure actually means. A definition list because
    that is what it is -- a term and its explanation -- and the route names line up down the left so
    a reader can find the one box they are asking about. */
@@ -780,8 +813,7 @@ main:has(> .page-body.railed) > .page-head {
         border-right: 0;
         border-bottom: 1px solid var(--pp-hairline, var(--bs-border-color));
     }
-    .page-body.railed > .grid-wrap,
-    .page-body.railed > .grid-spy { grid-area: auto; }
+    .page-body.railed > * { grid-area: auto; }
     .page-body.railed > .grid-spy {
         margin: 0;
         border-inline: 0;

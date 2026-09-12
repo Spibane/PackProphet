@@ -13,128 +13,136 @@ else
 {
     <div class="page-head">
         <h1 class="title">Which pack</h1>
-        <span class="subtitle">Ranked for @ScopeLabel</span>
+        @* What the ranking is OF, said in words, because every figure below means something
+           different once it changes. It was "Ranked for <scope>" with the plan itself a line
+           further down inside the bar that set it -- so the page named half of its own premise and
+           kept the other half folded away under the control that changes it. *@
+        <span class="subtitle">
+            @ScopeLabel
+            @if (!IsChaseScope)
+            {
+                <text>&middot; </text>
+                <PlanSummary Plan="Draft" Foils="@(ScopeHasFoils ? Session.FoilCopies : 0)" />
+                @if (PlanScope is not null)
+                {
+                    <text>, </text><span>@ScopedSet only</span>
+                }
+            }
+            @if (OnSaleNow is { Length: > 0 } onSale)
+            {
+                <text>&middot; @onSale on sale</text>
+            }
+            @if (_pending)
+            {
+                <span class="chip-pending" title="Applying shortly, keep tapping to make more changes">
+                    Updating&hellip;
+                </span>
+            }
+        </span>
+
+        <span class="actions">
+            @* The same sheet the collection opens for its set and its filters. An Answer page gets
+               no rail -- it leads with a verdict, not with content to browse -- so the one control
+               group it has folds behind a button rather than standing up a second bar for itself. *@
+            <button class="btn btn-sm btn-outline-secondary" popovertarget="target-sheet"
+                    aria-label="Change target">
+                <span class="wide-only">Change target</span>
+                <span class="narrow-only" aria-hidden="true">Target</span>
+            </button>
+        </span>
     </div>
 
-    <div class="page-tools">
-        @* Scope, target and availability sit together because they are the same kind of control:
-           each changes what the ranking is of, so every figure below means something different
-           afterwards. *@
+    @* What the ranking is of: the scope, the rarity plan, and which limited packs are on sale.
+       Three controls of one kind -- each changes what is being ranked, so each changes every
+       figure on the page -- and between them they were a bar plus a disclosure inside it. *@
+    <div class="target-sheet sheet" popover id="target-sheet">
+        <div class="rail-handle">
+            <button class="btn btn-sm btn-outline-secondary" popovertarget="target-sheet"
+                    popovertargetaction="hide">Done</button>
+        </div>
+
+        @* Everything that sets what the ranking is OF, and nothing else. Scope, target and
+           availability are one kind of control -- each changes what is being ranked, so each
+           changes every figure on the page -- and between them they were a bar plus a disclosure
+           folded inside it. Eleven chips alone wrapped to three lines at 375px, which is what put
+           them behind that fold; a fold inside a sheet would be two doors on one room, so the
+           sheet is the only one now. What the settings ARE is said in the page bar, so opening
+           this is for changing them.
+
+           No premium switch. It is a subscription -- set once, changed almost never -- and a
+           control that permanent does not earn a place in something you pass through every time
+           you ask which pack to open. It lives on Resources, beside the pack rate it modifies and
+           the hourglass balance it is read against, which is where the arithmetic it changes is. *@
+
         @* Grouped by series so this stays usable as sets accumulate. *@
         <ScopePicker Label="What to rank packs against" Everything="Everything"
                      Grouped="true" Merged="true" Scope="@_scope" OnScope="OnScope" />
 
-        @* No premium switch here. It is a subscription -- set once, changed almost never -- and a
-           control that permanent does not earn a place in a bar you pass through every time you
-           ask which pack to open. It lives on Resources, beside the pack rate it modifies and the
-           hourglass balance it is read against, which is where the arithmetic it changes is. *@
+        @* One chip per rarity, carrying its own copy count. Selection and quantity are the same
+           fact — a rarity you want zero of is one you ignore — so a single control says both, and
+           "two of each diamond, one of the stars" is a few taps. Tap to cycle none / 1 / 2.
 
-        @* One chip per rarity, carrying its own copy count. Selection and quantity are the
-           same fact — a rarity you want zero of is one you ignore — so a single control says
-           both, and "two of each diamond, one of the stars" is a few taps. Tap to cycle
-           none / 1 / 2. *@
-        @* The rarity chips edit the completion plan, which a chase list target does not consult, so
-           under a chase list scope they are hidden rather than shown doing nothing. *@
-        @* One panel for everything that sets what the ranking is OF, rather than a row of chips
-           and a row of availability toggles above the ranking they configure. Eleven chips alone
-           wrapped to three lines at 375px. The summary carries the settings themselves, so folding
-           them costs no information -- it is the reading that stays out and the changing that
-           folds away. *@
-        <details class="rarity-plan">
-            <summary>
-                @if (IsChaseScope)
+           The chips edit the completion plan, which a chase list target does not consult, so under
+           a chase list scope they are hidden rather than shown doing nothing. *@
+        @if (!IsChaseScope)
+        {
+            <span class="rarity-chips">
+                <RarityChips Plan="Draft" OnCycle="CycleTier"
+                             ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
+            </span>
+
+            @* Which plan the chips are editing, and how to reach the other one. This used to be
+               a label reading "default" with no route to a per-set plan unless a single set was
+               already scoped — so the word promised a distinction the page never offered. It
+               now says what to do at every scope. *@
+            <p class="plan-scope">
+                @if (PlanScope is not null)
                 {
-                    <span class="cur">A chase list decides what counts</span>
+                    <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
+                    <button class="chip-link" @onclick="ClearOverride"
+                            title="Follow the default plan again">Use the default here</button>
+                }
+                else if (ScopedSet is not null)
+                {
+                    <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
+                    <button class="chip-link" @onclick="StartOverride"
+                            title="Give @ScopedSet its own plan, starting from the default">
+                        Give @ScopedSet its own
+                    </button>
                 }
                 else
                 {
-                    <span class="ttl">Collecting</span>
-                    <span class="cur"><PlanSummary Plan="Draft" Foils="@(ScopeHasFoils ? Session.FoilCopies : 0)" /></span>
-                    @* Only when it is not the default. "every set" is what a plan does unless told
-                       otherwise, so saying it spends a line on a phone reporting the absence of a
-                       decision; "A1 only" is a decision and is worth the room. *@
-                    @if (PlanScope is not null)
-                    {
-                        <span class="scope">@ScopedSet only</span>
-                    }
-                }
-                @* Likewise: the app assumes limited-time packs are off sale, so only the other
-                   answer is worth a word here. *@
-                @if (OnSaleNow is { Length: > 0 } onSale)
-                {
-                    <span class="scope">@onSale on sale</span>
-                }
-                @if (_pending)
-                {
-                    <span class="chip-pending" title="Applying shortly, keep tapping to make more changes">
-                        Updating&hellip;
+                    <span>
+                        This is the <strong>default</strong>, used by every set without a plan
+                        of its own. Pick a single set above to give it one.
                     </span>
                 }
-                <span class="fold-hint">Change</span>
-            </summary>
+            </p>
+        }
 
-            @* The rarity chips edit the completion plan, which a chase list target does not consult,
-               so under a chase list scope they are hidden rather than shown doing nothing. *@
-            @if (!IsChaseScope)
-            {
-                <span class="rarity-chips">
-                    <RarityChips Plan="Draft" OnCycle="CycleTier"
-                                 ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
-                </span>
-
-                @* Which plan the chips are editing, and how to reach the other one. This used to be
-                   a label reading "default" with no route to a per-set plan unless a single set was
-                   already scoped — so the word promised a distinction the page never offered. It
-                   now says what to do at every scope. *@
-                <p class="plan-scope">
-                    @if (PlanScope is not null)
-                    {
-                        <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
-                        <button class="chip-link" @onclick="ClearOverride"
-                                title="Follow the default plan again">Use the default here</button>
-                    }
-                    else if (ScopedSet is not null)
-                    {
-                        <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
-                        <button class="chip-link" @onclick="StartOverride"
-                                title="Give @ScopedSet its own plan, starting from the default">
-                            Give @ScopedSet its own
-                        </button>
-                    }
-                    else
-                    {
-                        <span>
-                            This is the <strong>default</strong>, used by every set without a plan
-                            of its own. Pick a single set above to give it one.
-                        </span>
-                    }
-                </p>
-            }
-
-            @* Availability is a live fact no dataset records. The app assumes off sale, and a
-               Deluxe pack is otherwise the standout pick for a 4-diamond target, so the assumption
-               changes every figure on the page — which is why it is a labelled control saying
-               which way it is set rather than a bare switch. In here with the plan because it is
-               the same kind of thing: what the ranking is allowed to consider. *@
-            @if (Session.LimitedPacks.Count > 0)
-            {
-                <span class="avail">
-                    <span class="ttl">Limited-time</span>
-                    @foreach (var pack in Session.LimitedPacks)
-                    {
-                        var on = Session.IsLimitedPackAvailable(pack);
-                        <button class="avail-chip @(on ? "on" : "off")"
-                                @onclick="() => ToggleLimited(pack, !on)"
-                                title="@(pack.Split(':')[1]) packs come and go. @(on
-                                    ? "Counted in the ranking. Tap if they are not on sale."
-                                    : "Left out of the ranking, and their exclusive cards count as unobtainable. Tap when they are on sale.")">
-                            <span class="nm">@pack.Split(':')[1]</span>
-                            <span class="st">@(on ? "on sale" : "off sale")</span>
-                        </button>
-                    }
-                </span>
-            }
-        </details>
+        @* Availability is a live fact no dataset records. The app assumes off sale, and a
+           Deluxe pack is otherwise the standout pick for a 4-diamond target, so the assumption
+           changes every figure on the page — which is why it is a labelled control saying
+           which way it is set rather than a bare switch. In here with the plan because it is
+           the same kind of thing: what the ranking is allowed to consider. *@
+        @if (Session.LimitedPacks.Count > 0)
+        {
+            <span class="avail">
+                <span class="ttl">Limited-time</span>
+                @foreach (var pack in Session.LimitedPacks)
+                {
+                    var on = Session.IsLimitedPackAvailable(pack);
+                    <button class="avail-chip @(on ? "on" : "off")"
+                            @onclick="() => ToggleLimited(pack, !on)"
+                            title="@(pack.Split(':')[1]) packs come and go. @(on
+                                ? "Counted in the ranking. Tap if they are not on sale."
+                                : "Left out of the ranking, and their exclusive cards count as unobtainable. Tap when they are on sale.")">
+                        <span class="nm">@pack.Split(':')[1]</span>
+                        <span class="st">@(on ? "on sale" : "off sale")</span>
+                    </button>
+                }
+            </span>
+        }
     </div>
 
     <PageShell>

@@ -188,14 +188,26 @@
    bar, and no reason for them to park at different heights. */
 main:has(> .page-body.railed) > .page-head {
     position: sticky;
-    top: 0;
+    top: var(--nav-h);
     z-index: 25;
 }
+@media (width <= 1056px) { main:has(> .page-body.railed) > .page-head { top: 0; } }
 
 .page-body.railed {
     display: grid;
     grid-template-columns: var(--rail-w) minmax(0, 1fr);
     align-items: start;
+
+    /* No reading measure on a railed page, whatever the page asked for.
+       ------------------------------------------------------------------------------
+       A measure caps CONTENT, and the rail is not content -- it is 216px of chrome. Capping the
+       two together at 64rem left the shelves' table about 48rem wide with a third of a 1280px
+       screen empty beside it, which reads as a page that failed to load rather than as a
+       considered measure.
+
+       Prose inside a railed page still gets one: the verdict block caps its own sentence at 32rem,
+       which is where the cap belongs -- on the paragraph rather than on the column it sits in. */
+    max-inline-size: none;
 }
 
 /* The rail takes the first column and everything else takes the second, rather than each content
@@ -399,6 +411,7 @@ main:has(> .page-body.railed) > .page-head {
    sizes to its content and a two-state control whose halves are "Adds" and "Removes" reads as a
    toggle only when the two halves are the same width. */
 .rail-seg { display: flex; min-inline-size: 0; }
+/* Three segments fit where two did, so each gets less width and the labels are one word. */
 .rail-seg > .btn {
     flex: 1 1 0;
     min-inline-size: 0;
@@ -496,6 +509,13 @@ main:has(> .page-body.railed) > .page-head {
         border-radius: 1.25rem;
         font-size: .85rem;
     }
+    /* The safe state, and it looks like one: no colour, because nothing is armed. A grey pill
+       among coloured ones is the state you want to be able to recognise without reading. */
+    .rail-fab.mode.off {
+        background: var(--bs-secondary-bg);
+        color: var(--bs-body-color);
+        border: 1px solid var(--bs-border-color);
+    }
     .rail-fab.mode.adding { background: var(--bs-success); }
     /* Danger, not the accent: this is the state in which a tap takes a card away, and it should
        not look like the ordinary one in a different hue. */
@@ -515,6 +535,87 @@ main:has(> .page-body.railed) > .page-head {
         border-radius: .7rem;
         background: rgba(13, 12, 15, .35);
         font-variant-numeric: tabular-nums;
+    }
+}
+
+/* the Answer page's two columns
+   ==================================================================================
+   The verdict on the left and the shortlist on the right, divided by a hairline. The ranking is
+   not supporting material: "open Charizard" means one thing alone and another beside "the next one
+   is 4% behind", and the pair of columns is what lets the two be read as one thought.
+
+   1.55fr against 1fr, because the left column holds a sentence and the right holds six rows of
+   figures -- equal halves would give the prose a measure it does not want and the figures room
+   they cannot use. */
+.answer-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+}
+.answer-ranked {
+    padding-inline-start: 22px;
+    border-inline-start: 1px solid var(--pp-hairline, var(--bs-border-color));
+}
+.ranked-rows { display: flex; flex-direction: column; margin-block-start: 8px; }
+
+/* A row is a button, because tapping it is what swaps the verdict. Bordered only between rows:
+   six boxes would be six objects, and this is one list. */
+.ranked-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) 92px auto;
+    align-items: center;
+    gap: .55rem;
+    padding: 9px 0;
+    border: 0;
+    border-block-end: 1px solid var(--pp-hairline, var(--bs-border-color));
+    background: none;
+    color: inherit;
+    text-align: start;
+}
+.ranked-row:last-child { border-block-end: 0; }
+.ranked-row:hover { background: var(--bs-tertiary-bg); }
+/* The one the verdict is currently about, so tapping down the list never loses your place. */
+.ranked-row.current { background: color-mix(in srgb, var(--bs-primary) 12%, transparent); }
+.ranked-row > .art {
+    inline-size: 26px;
+    block-size: 36px;
+    border-radius: var(--pp-r-xs);
+    background: var(--art) center / contain no-repeat, var(--bs-secondary-bg);
+}
+.ranked-row .nm { min-inline-size: 0; font-size: .92rem; line-height: 1.25; }
+.ranked-row .nm strong { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranked-row .nm .sub { font-size: .78rem; color: var(--bs-secondary-color); }
+.ranked-row .bar {
+    block-size: 6px;
+    border-radius: var(--pp-r-xs);
+    background: color-mix(in srgb, var(--bs-body-color) 16%, transparent);
+    overflow: hidden;
+}
+.ranked-row .bar > span { display: block; block-size: 100%; background: var(--bs-primary); }
+.ranked-row .pct {
+    font-size: .95rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+}
+.answer-ranked .note {
+    margin: 10px 0 0;
+    font-size: .8rem;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
+}
+
+/* Below the desk width they stack, verdict first: on a phone you are asking one question, and the
+   shortlist is the follow-up rather than the answer. The divider becomes a rule above it. */
+@media (width <= 900px) {
+    .answer-cols { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .answer-ranked {
+        padding-inline-start: 0;
+        padding-block-start: 18px;
+        margin-block-start: 18px;
+        border-inline-start: 0;
+        border-block-start: 1px solid var(--pp-hairline, var(--bs-border-color));
     }
 }
 
@@ -1071,6 +1172,19 @@ main > * { flex-shrink: 0; }
 :root { --nav-h: 2.95rem; }
 
 .app-nav {
+    /* Pinned, because it is bar one.
+       ------------------------------------------------------------------------------
+       The two-bar rule describes a frame: the global nav and the page's own bar, with the content
+       running under them. A nav that scrolls away is not that frame -- it is a banner, and on a
+       page whose content is three thousand cards it means the only way to reach another page is to
+       scroll all the way back. The phone never had this problem, because the tab bar is fixed;
+       the desktop was the one width where getting anywhere meant going back to the top first.
+
+       47px of permanent chrome is what the frame costs. That is the trade the rule was already
+       making on a phone, where the tab bar takes more. */
+    position: sticky;
+    top: 0;
+    z-index: 30;
     min-block-size: var(--nav-h);
     display: flex; align-items: center; gap: .35rem; flex-wrap: wrap;
     padding: .4rem calc(.75rem + var(--safe-r)) .4rem calc(.75rem + var(--safe-l));
@@ -1991,7 +2105,10 @@ main:focus { outline: none; }
    The toolbar below it is sticky too, so it has to be told where the header ends. That number is
    the header's own fixed height, which is a contract rather than an accident: .page-head is
    always exactly one row, hence a header that can be relied on to be 3rem plus its border. */
-.page-head.sticky-head { position: sticky; top: 0; z-index: 25; }
+/* Under the nav, not at the viewport top: with bar one pinned, a bar two at zero parks behind it.
+   Below the nav's breakpoint there is no nav to sit under and the offset falls back to zero. */
+.page-head.sticky-head { position: sticky; top: var(--nav-h); z-index: 25; }
+@media (width <= 1056px) { .page-head.sticky-head { top: 0; } }
 /* One pixel INSIDE the header rather than one clear of it. The header is min-height: 3rem plus a
    border, and border-box rounding lands its real height a fraction under 49px at some zoom levels
    -- so `3rem + 1px` left a sub-pixel gap between the two pinned bars with the card grid scrolling
@@ -2470,7 +2587,26 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .grid-spy .art.has-art { width: 5.1rem; }
 .grid-spy .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.card-row { display: grid; gap: 4px; padding: 2px calc(4px + var(--safe-r)) 2px calc(4px + var(--safe-l)); }
+/* The gutter between cards.
+   ==================================================================================
+   4px made the grid one continuous sheet of artwork: card edges met card edges, and the eye had
+   to find the boundaries before it could find a card. A gutter is what makes a grid of pictures
+   read as separate objects, and these objects are the point of the layout.
+
+   One variable, because the row's own padding is the vertical half of the same gutter -- gap only
+   separates columns within a row, and each row is its own grid. Getting them from one number is
+   what keeps the spacing square.
+
+   Smaller on a phone, where three columns of a 375px screen cannot spare 14px twice. */
+:root { --grid-gap: 14px; }
+@media (width <= 700px) { :root { --grid-gap: 8px; } }
+
+.card-row {
+    display: grid;
+    gap: var(--grid-gap);
+    padding: calc(var(--grid-gap) / 2) calc(var(--grid-gap) + var(--safe-r))
+             calc(var(--grid-gap) / 2) calc(var(--grid-gap) + var(--safe-l));
+}
 
 /* A tile is the art plus a caption strip under it.
    The count, the info button and the heart were all badges over the artwork. One was fine; three
@@ -3012,6 +3148,9 @@ img[data-state="loading"] ~ .art-wait {
 
 /* Remove mode must be unmistakable: the same tap that was adding a moment ago now subtracts. */
 .grid-wrap.removing { box-shadow: inset 0 0 0 2px var(--bs-danger); }
+/* Nothing armed: the tiles stop looking like buttons, because they are not acting like them. */
+.grid-wrap.tap-off .card-tile { cursor: default; }
+
 .grid-wrap.removing .card-tile.owned:hover { outline: 2px solid var(--bs-danger); }
 .grid-wrap.removing .card-tile .cnt { background: var(--bs-danger); }
 

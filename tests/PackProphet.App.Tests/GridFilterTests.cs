@@ -48,12 +48,15 @@ public class GridFilterTests : AppHost
                                    .QuerySelectorAll(".chip-tog").ToArray()[index].Click());
 
     /// <summary>
-    /// How many cards the bar says are listed. The set bar, with the set name and the percentage —
-    /// the total moved there off the grid's own bar, which wraps as soon as a filter is on.
+    /// How many cards the controls say are listed.
+    ///
+    /// In the rail's "Showing" heading, which is where the count went when the set bar it used to
+    /// sit on was folded into a sheet: it belongs to the group whose filters decide it, and the
+    /// whole argument for the rail is that a control can carry its own label.
     /// </summary>
     private static int Listed(IRenderedComponent<Collection> page)
     {
-        var text = page.Find(".set-picker > summary .tally").TextContent;
+        var text = page.Find(".page-rail .rail-group > .ttl > .cnt").TextContent;
         var digits = new string(text.SkipWhile(c => !char.IsDigit(c)).TakeWhile(char.IsDigit).ToArray());
         return int.Parse(digits);
     }
@@ -90,6 +93,32 @@ public class GridFilterTests : AppHost
         // The chip is the way back, as it is for every other filter.
         await ClickAsync(page, ".chip-filter");
         page.WaitForAssertion(() => Assert.Equal(all, Listed(page)));
+    }
+
+    [Fact]
+    public async Task The_page_stacks_no_more_than_one_bar_of_its_own()
+    {
+        // The rule the whole shell exists for. This page used to stack a header, the set row, the
+        // evolution-gap strip and the grid's toolbar under the global nav -- about 300px before
+        // the first card on a phone. One is what is left: the global nav is bar one and this is
+        // bar two, and everything else that used to be a strip is in the rail, in a sheet, or in
+        // this bar's own sentence.
+        var page = await PageAsync();
+
+        Assert.Single(page.FindAll(".page-head"));
+        Assert.Empty(page.FindAll(".grid-toolbar"));
+        Assert.Empty(page.FindAll(".page-tools"));
+
+        // The set row is a sheet now, opened from the bar rather than sitting under it.
+        Assert.Empty(page.FindAll("details.set-picker"));
+        var opener = page.Find(".page-head .actions [popovertarget='set-sheet']");
+        Assert.Equal("set-sheet", page.Find(".set-sheet").Id);
+        Assert.True(page.Find(".set-sheet").HasAttribute("popover"));
+        Assert.Contains("Change set", opener.TextContent);
+
+        // And the gap strip is in the rail rather than being a strip.
+        var gaps = page.FindAll(".gap-strip").ToArray();
+        if (gaps.Length > 0) Assert.NotNull(gaps[0].Closest(".page-rail"));
     }
 
     [Fact]

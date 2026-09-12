@@ -47,6 +47,14 @@ else
                 <text>target met</text>
             }
 
+            @* Art the CDN did not give us. A caveat on the counts rather than a fact of its own, so
+               it travels with them -- it was on the set bar, next to the same figures, and the set
+               bar is gone. *@
+            @if (_artFailed > 0)
+            {
+                <span class="fail">&middot; @_artFailed art failed</span>
+            }
+
             @* What the filters are set to, once any are. Last, because it is the clause that
                varies -- the three figures before it are on every load and read as one line, and a
                clause that appears and disappears in the middle of them would move them about. *@
@@ -60,38 +68,40 @@ else
                     @onclick="Session.Undo" title="Undo (Ctrl+Z)">&#8630;</button>
             <button class="btn btn-sm btn-outline-secondary" disabled="@(!Session.CanRedo)"
                     @onclick="Session.Redo" title="Redo (Ctrl+Shift+Z)">&#8631;</button>
+
+            @* Which set you are in is said in the sentence to the left; this is only the choosing.
+               It was a bar carrying both, and the two-bar rule has no room for a third strip to
+               hold a question asked once a session. *@
+            @* Shortened rather than dropped on a phone. Three targets in this bar at 375px left
+               the sentence beside them about 180px and clipped it mid-word, and the sentence is
+               the thing the bar is for -- so the button gives up a word instead. The aria label
+               keeps the full one either way. *@
+            <button class="btn btn-sm btn-outline-secondary" popovertarget="set-sheet"
+                    aria-label="Change set" title="@CurrentSetLabel">
+                <span class="wide-only">Change set</span>
+                <span class="narrow-only" aria-hidden="true">Set</span>
+            </button>
         </span>
     </div>
 
-    @* The set tabs are the page's main control, but they are tall — two lines per tab, since each
-       carries its own progress — so they sit below the header rather than making it a different
-       height from every other page's. *@
-    @* Closed by default, showing only which set you are in. Every set ever printed was on screen
-       at all times -- a full row at 375px, and already wrapping past the right edge on a laptop --
-       to answer a question asked once a session. The summary keeps the answer, the row keeps the
-       choosing, and the choosing is what folds away. *@
-    @* Uncontrolled, like the grid's own toolbar disclosure: the browser owns the open state, so
-       there is nothing to keep in sync and it survives a re-render on its own. It also stays open
-       across a pick, which is what you want while comparing percentages across sets. *@
-    <details class="set-picker">
-        <summary>
-            @* Titled as well as shown: below 600px the name is shortened to keep this bar one
-               line, and the full one should still be readable somewhere. *@
-            <span class="cur" title="@CurrentSetLabel">@CurrentSetLabel</span>
-            <span class="pct">@CurrentProgress.ToString("P0")</span>
-            @* How many cards the filters have left, beside the two figures it belongs with: this
-               bar is the one that says what you are looking at, and it is one line at every width,
-               where the grid's bar wraps as soon as a filter is on. Failed art is a caveat on this
-               number rather than a fact of its own, so it travels with it. *@
-            <span class="tally">
-                @Filtered.Count cards
-                @if (_artFailed > 0)
-                {
-                    <span class="fail">&middot; @_artFailed art failed</span>
-                }
-            </span>
-            <span class="fold-hint">Change set</span>
-        </summary>
+    @* The set picker, as a sheet rather than as a bar.
+       ==================================================================================
+       It was a strip under the header holding two things: which set you are in, and the controls
+       for changing it. The first is an answer and the second is a control, and the page bar's
+       sentence already says the answer -- so what is left here is only the choosing, which is what
+       the disclosure inside it was already folding away and what the row was being spent on.
+
+       The same sheet the filters use, at every width. One way in, one set of manners: opens from a
+       button, closes from Done, the scrim or Escape.
+
+       Opened from the page bar and not from a floating button, because unlike the filters this is
+       not reached for mid-scroll with a thumb -- it is a question asked about once a session, and
+       it belongs beside the sentence that answers it. *@
+    <div class="set-sheet sheet" popover id="set-sheet">
+        <div class="rail-handle">
+            <button class="btn btn-sm btn-outline-secondary" popovertarget="set-sheet"
+                    popovertargetaction="hide">Done</button>
+        </div>
 
         <div class="set-picker-body">
         @* A series at a time. One row of every set ever printed already wraps to three lines;
@@ -152,7 +162,8 @@ else
             }
         </div>
         </div>
-    </details>
+    </div>
+
 
     @* railed: the page's controls go in a column beside the grid rather than on bars above it.
        See the note on .page-rail in app.css for what that buys and what it cost to keep doing it
@@ -520,13 +531,6 @@ else
         AllSets => "every set",
         SeriesAll => $"all of series {_series}",
         _ => $"{_set}: {Session.Sets.DisplayName(_set)}",
-    };
-
-    private double CurrentProgress => _set switch
-    {
-        AllSets => ProgressOf(_allCards),
-        SeriesAll => ProgressOf(SeriesCards),
-        _ => Progress(_set),
     };
 
     private string RarityName(PocketCard card) =>

@@ -395,7 +395,7 @@ else
                     <Box State="Box.Kind.Live" Label="@((slot + 1).ToString())">
                         <button class="slot-card" @onclick="() => Unpick(card)"
                                 title="Take @card.Name back out"
-                                style="--art:url('@card.ArtUrl')"></button>
+                                style="@card.ArtVars"></button>
                         <span class="slot-cap">
                             <span class="nm">@card.Name</span>
                             <span class="rr glyphs @Session.Index.GlyphClass(card)">@Session.Index.Symbol(card)</span>

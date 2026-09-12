@@ -131,7 +131,7 @@ else
                 else
                 {
                     <a class="hit-art" href="card/@_showcase.Card.Key"
-                       style="--art:url('@_showcase.Card.ArtUrl')"
+                       style="@_showcase.Card.ArtVars"
                        aria-label="Detail for @_showcase.Card.Name"></a>
 
                     <div class="hit-detail">
@@ -166,7 +166,7 @@ else
                             {
                                 <a class="thumb @(hit == _showcase ? "on" : "")"
                                    href="card/@hit.Card.Key"
-                                   style="--art:url('@hit.Card.ArtUrl')"
+                                   style="@hit.Card.ArtVars"
                                    title="@hit.Card.Name, @hit.Rung.Symbol"
                                    aria-label="@hit.Card.Name"></a>
                             }

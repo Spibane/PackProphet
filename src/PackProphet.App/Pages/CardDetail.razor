@@ -50,7 +50,7 @@ else
             @* Background rather than <img>: a failed load leaves the placeholder instead of a
                broken-image gap, with no error handling needed. *@
             <div class="big-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
-                 style="--art:url('@_card.ArtUrl')"
+                 style="@_card.ArtVars"
                  role="img" aria-label="@_card.Name"></div>
 
             @* Said in words as well as drawn: the ring alone does not explain itself, and being

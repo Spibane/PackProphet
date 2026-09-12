@@ -114,7 +114,7 @@ else
                             <button class="offer-card @(Held(card) > 0 ? "have" : "")"
                                     @onclick="() => Remove(card)"
                                     title="Remove @card.Name from the offer"
-                                    style="--art:url('@card.ArtUrl')">
+                                    style="@card.ArtVars">
                                 <span class="x" aria-hidden="true">&times;</span>
                             </button>
                             <span class="visually-hidden">@card.Name</span>
@@ -285,7 +285,7 @@ else
                                 <td>
                                     <span class="pack-thumb deck-thumb"
                                           data-tip-img="@c.Card.ArtUrl" data-tip="@c.Card.Name"
-                                          style="--art:url('@c.Card.ArtUrl')"></span>
+                                          style="@c.Card.ArtVars"></span>
                                     <strong>@c.Card.Name</strong>
                                     <span class="small text-body-secondary ms-1">@c.Card.Set</span>
                                     @if (Session.Index.Rung(c.Card) is { } rung)

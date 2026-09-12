@@ -89,7 +89,7 @@ else
                         <td>
                             <span class="pack-thumb deck-thumb"
                                   data-tip-img="@row.Card.ArtUrl" data-tip="@row.Card.Name"
-                                  style="--art:url('@row.Card.ArtUrl')"></span>
+                                  style="@row.Card.ArtVars"></span>
                             <strong>@row.Card.Name</strong>
                             <span class="text-body-secondary small">
                                 @row.Card.Set &middot; @Session.Index.Symbol(row.Card)

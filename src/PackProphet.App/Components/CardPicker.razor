@@ -234,7 +234,7 @@ else
                     @onclick="() => Pick(card, nr)" disabled="@(!enabled)"
                     data-tip-img="@card.ArtUrl" data-tip="@card.Name">
                 <span class="pack-thumb deck-thumb @(Session.HasGoldFlair(card) ? "gold-flair" : "")"
-                      style="--art:url('@card.ArtUrl')"></span>
+                      style="@card.ArtVars"></span>
 
                 <span class="nm">@card.Name</span>
 

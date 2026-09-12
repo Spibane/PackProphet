@@ -123,11 +123,11 @@ public class PacksPageTests : AppHost
         // of how the rates are published rather than something a player sees.
         var page = await PageAsync();
 
-        var slots = page.FindAll(".verdict-lead .slot").ToArray();
+        var slots = page.FindAll(".verdict-lead .box").ToArray();
         Assert.Equal(5, slots.Length);
 
         // Each one says which position it is, in order.
-        var ordinals = slots.Select(s => s.QuerySelector(".ord")!.TextContent.Trim()).ToArray();
+        var ordinals = slots.Select(s => s.QuerySelector(".lbl")!.TextContent.Trim()).ToArray();
         Assert.Equal(new[] { "1st", "2nd", "3rd", "4th", "5th" }, ordinals);
 
         // And every box is either live with a figure or dead with a dash — never blank, which

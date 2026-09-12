@@ -225,30 +225,19 @@ else
                    rather than because a chart seemed nice. *@
                 @if (SlotStrip(lead.PackKey) is { Count: > 0 } slots)
                 {
-                    <div class="slot-strip">
-                        <span class="micro">
-                            Where the chance is
-                            <span class="clause">@SlotClause(slots)</span>
-                        </span>
-
-                        <div class="slots">
-                            @foreach (var slot in slots)
-                            {
-                                <div class="slot @(slot.Chance > 0 ? "live" : "dead")">
-                                    <span class="ord">@Ordinal(slot.Position)</span>
-                                    <span class="fig">
-                                        @(slot.Chance > 0 ? slot.Chance.ToString("P1") : "\u2014")
-                                    </span>
-                                    <span class="bar" aria-hidden="true">
-                                        @if (slot.Chance > 0)
-                                        {
-                                            <span style="block-size:@((slot.Chance * 100).ToString("F0"))%"></span>
-                                        }
-                                    </span>
-                                </div>
-                            }
-                        </div>
-                    </div>
+                    @* The set is literal -- a pack has five cards -- which is the precondition
+                       BoxStrip documents. Bars, because these five figures are one quantity and
+                       comparing them across the row is the point. *@
+                    <BoxStrip Label="Where the chance is" Clause="@SlotClause(slots)"
+                              Columns="@slots.Count">
+                        @foreach (var slot in slots)
+                        {
+                            <Box State="@(slot.Chance > 0 ? Box.Kind.Live : Box.Kind.Dead)"
+                                 Label="@Ordinal(slot.Position)"
+                                 Figure="@slot.Chance.ToString("P1")"
+                                 Bar="@slot.Chance" />
+                        }
+                    </BoxStrip>
                 }
 
                 <div class="lead-actions">

@@ -1,0 +1,67 @@
+@* A labelled row of boxes enumerating where an answer comes from.
+
+   WHEN THIS IS ALLOWED
+   ==================================================================================
+   Only where the set of boxes is LITERAL: a fixed, short, enumerable set the page has to show
+   anyway. The five card positions in a pack. The twenty wishlist slots. The four routes to a
+   card. The five cards in an offer.
+
+   Not a general-purpose chart, and specifically not a way to draw a ranking. A ranking of 139
+   parallel foils has no fixed set to enumerate, and a strip of the top five would be a chart that
+   implies the other 134 are not there. Those pages get a verdict, a sentence and a list.
+
+   The test is whether you could name every box before looking at the data. If you could not, this
+   is the wrong component and the page wants a list.
+
+   WHY A STRIP RATHER THAN A TABLE
+   ----------------------------------------------------------------------------------
+   Because a box can be DASHED, and a table cell cannot. "This route does not exist for this
+   rarity" and "this position can only ever give you a duplicate" are facts, and a blank cell
+   reports them as data that failed to arrive. A dashed box with an em dash in it says the thing
+   that is true.
+
+   It also reads as a shape. Seventeen solid boxes and three dashed ones at the end says "nearly
+   right" without anyone counting to twenty, which is the whole job on the wishlist page. *@
+
+<div class="box-strip">
+    @if (Label is { Length: > 0 })
+    {
+        <span class="micro">
+            @Label
+            @* One clause for the whole strip rather than a note per box: what makes the dead boxes
+               dead is almost always one fact about the pack or the rarity, and saying it five
+               times is five chances to read it as five different facts. *@
+            @if (Clause is { Length: > 0 })
+            {
+                <span class="clause">@Clause</span>
+            }
+        </span>
+    }
+
+    @* The column count is the page's, because it is a property of the set being enumerated: five
+       for a pack, four for the routes to a card, ten for a board of twenty in two rows. Inline
+       because it is data rather than a design token -- there is no stylesheet rule that could know
+       how many cards a pack holds. *@
+    <div class="boxes" style="grid-template-columns:repeat(@Columns,minmax(0,1fr))">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    /// <summary>The micro-label above the row. Omitted where the strip follows its own heading.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// Why the dead boxes are dead, in a few words. Left null where none of them are, so the
+    /// strip does not carry a sentence explaining an absence that is not there.
+    /// </summary>
+    [Parameter] public string? Clause { get; set; }
+
+    /// <summary>
+    /// Boxes across. One row unless the page says otherwise — twenty slots go ten across in two
+    /// rows, because twenty in a line is a line nobody reads the shape of.
+    /// </summary>
+    [Parameter] public int Columns { get; set; } = 5;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

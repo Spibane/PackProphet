@@ -271,51 +271,49 @@ else
 
         <div class="routes">
             <h2 class="h6">How to get it</h2>
-            @* All four routes, including the ones that do not exist for this rarity, so the absence
-               of a route is stated rather than left blank. *@
-            <DataTable Label="Ways to get this card">
-                <tbody>
-                    @foreach (var option in _routes?.Options ?? [])
+            @* Every route, including the ones that do not exist for this rarity, because the
+               absence of a route is the answer as often as a price is: "you cannot trade for this"
+               is what you came to find out when the card is a crown.
+
+               A strip rather than the table this was, for exactly the reason BoxStrip exists. A
+               table cell for an impossible route is blank, and blank reads as a figure that failed
+               to load; a dashed box with the reason under it reads as the fact it is. The set is
+               literal -- the game has these routes and no others -- which is the precondition.
+
+               No bars. The four are priced in three currencies that do not exchange, and drawing
+               them at one scale would invent a rate the game does not have. *@
+            <BoxStrip Columns="@(_routes?.Options.Count ?? 4)">
+                @foreach (var option in _routes?.Options ?? [])
+                {
+                    @* Only the closed routes carry a note in the box, and it is the short one this
+                       page writes. The engine's own notes are whole sentences -- they have to be,
+                       they are explaining a price -- and five of them inside five boxes is a wall
+                       of prose in the one place on the page that exists to be compared at a
+                       glance. They are kept, under the strip, where they read as prose. *@
+                    <Box Label="@RouteName(option.Route)"
+                         State="@(!option.Available ? Box.Kind.Dead
+                                  : option == _routes?.Cheapest ? Box.Kind.Best
+                                  : Box.Kind.Live)"
+                         Figure="@RouteFigure(option)"
+                         Unit="@RouteUnit(option)"
+                         Note="@(option.Available ? null : BlockReason(option.Block))" />
+                }
+            </BoxStrip>
+
+            @* The prose the boxes gave up, in full. Every word the table carried, and they are
+               worth keeping: "points accrue while you open, so this is what you give up from a
+               shared per-set budget, not extra packs" is the difference between a figure that
+               means something and one that does not. *@
+            @if ((_routes?.Options ?? []).Any(o => o.Available && o.Note is { Length: > 0 }))
+            {
+                <dl class="route-notes">
+                    @foreach (var option in _routes!.Options.Where(o => o.Available && o.Note is { Length: > 0 }))
                     {
-                        <tr class="@(option == _routes?.Cheapest ? "row-best" : "")">
-                            <td style="width:7rem">
-                                <strong>@RouteName(option.Route)</strong>
-                                @if (option == _routes?.Cheapest)
-                                {
-                                    <span class="badge text-bg-primary ms-1">Cheapest</span>
-                                }
-                            </td>
-                            <td>
-                                @if (!option.Available)
-                                {
-                                    <span class="text-body-secondary">Unavailable</span>
-                                }
-                                else
-                                {
-                                    @if (option.PacksEquivalent is double packs)
-                                    {
-                                        <span class="fw-semibold">@Fmt(packs) packs</span>
-                                    }
-                                    @if (option.Dust is int dust)
-                                    {
-                                        <span class="fw-semibold">@dust.ToString("N0") shinedust</span>
-                                    }
-                                    @if (option.Stamina is int stamina)
-                                    {
-                                        <span class="text-body-secondary">
-                                            @(option.Dust is null ? "" : "+ ")@stamina stamina
-                                        </span>
-                                    }
-                                }
-                                @if (option.Note is { Length: > 0 } note)
-                                {
-                                    <div class="small text-body-secondary">@note</div>
-                                }
-                            </td>
-                        </tr>
+                        <dt>@RouteName(option.Route)</dt>
+                        <dd>@option.Note</dd>
                     }
-                </tbody>
-            </DataTable>
+                </dl>
+            }
 
             <p class="small text-body-secondary">
                 Only <strong>pull</strong> and <strong>pack points</strong> are priced in packs.
@@ -481,6 +479,57 @@ else
         Session.Index.All.Any(c =>
             string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)
             && Session.CountOf(c) > 0);
+
+    /// <summary>
+    /// The figure for a route, in whichever currency prices it.
+    ///
+    /// One figure per box, because a box has one. Where a route costs two things -- a trade is
+    /// shinedust AND a stamina -- the dust leads and the stamina goes in the note: they are not
+    /// addable, so putting both on the figure line would read as a sum.
+    /// </summary>
+    private static string RouteFigure(RouteOption option) => option switch
+    {
+        { Available: false } => "",
+        { PacksEquivalent: double packs } => Fmt(packs),
+        { Dust: int dust } => dust.ToString("N0"),
+        { Stamina: int stamina } => stamina.ToString("N0"),
+        { Points: int points } => points.ToString("N0"),
+        // Available and priced in nothing at all, which is Share: no card back, no dust, no
+        // stamina. It still needs a figure -- a live box with a blank where its number goes is the
+        // exact failure the dashed box exists to avoid, and "free" is what the note already says.
+        _ => "free",
+    };
+
+    private static string RouteUnit(RouteOption option) => option switch
+    {
+        { Available: false } => "",
+        { PacksEquivalent: not null } => "packs",
+        { Dust: not null } => "shinedust",
+        { Stamina: not null } => "stamina",
+        { Points: not null } => "pack points",
+        // "free" is its own unit. What it actually costs is a day's allowance, and that is in the
+        // note rather than here, because a day is not a currency the other boxes are counted in.
+        _ => "but 1 a day",
+    };
+
+    /// <summary>
+    /// Why a route is closed, in the words a player would use.
+    ///
+    /// The engine names the reason rather than just refusing, and this is the whole point of
+    /// spending a box on an unavailable route: "not tradeable" is an answer, and an empty cell is
+    /// not. A trade's stamina rides along here too, since it is a second cost rather than a
+    /// second price.
+    /// </summary>
+    private static string BlockReason(RouteBlock block) => block switch
+    {
+        RouteBlock.NotSoldInPacks => "not sold in packs",
+        RouteBlock.NoPullRates => "no published pull rates",
+        RouteBlock.NotTradeable => "not tradeable at this rarity",
+        RouteBlock.NotShareable => "not shareable at this rarity",
+        RouteBlock.NotInWonderPick => "never offered in a Wonder Pick",
+        RouteBlock.NoDustPrice => "no shinedust price",
+        _ => "unavailable",
+    };
 
     private static string RouteName(AcquisitionRoute route) => route switch
     {

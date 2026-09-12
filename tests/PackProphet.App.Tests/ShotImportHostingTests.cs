@@ -105,11 +105,17 @@ public class ShotImportHostingTests : AppHost
         var page = RenderComponent<LogPack>();
         UploadTwo(page);
 
-        // The per-picture headings, which are the ones named after a file. The batch section below
-        // them is an h2 as well and is not one of these.
-        Assert.Equal(2, page.FindAll("h2.h5").Count);
-        Assert.Contains("one.png", page.Markup);
-        Assert.Contains("two.png", page.Markup);
+        // The per-picture headings, which are the ones named after a file. Identified by that
+        // rather than by their class: the class is the app's smaller heading tier and the page
+        // around this component uses it too, so counting the class counts headings that have
+        // nothing to do with how many pictures were read.
+        var perPicture = page.FindAll("h2")
+            .Where(h => h.TextContent.Contains(".png", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Equal(2, perPicture.Length);
+        Assert.Contains(perPicture, h => h.TextContent.Contains("one.png", StringComparison.Ordinal));
+        Assert.Contains(perPicture, h => h.TextContent.Contains("two.png", StringComparison.Ordinal));
     }
 
     [Fact]

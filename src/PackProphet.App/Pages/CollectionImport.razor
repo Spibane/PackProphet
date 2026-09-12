@@ -18,7 +18,7 @@ else
         <span class="subtitle">Move a collection between trackers</span>
     </div>
 
-    <PageShell Measure="PageShell.Width.Form">
+    <PageShell Measure="PageShell.Width.Form" Class="sections">
 
         @* The file never leaves the browser, and that is the first thing someone handing over
            their whole collection wants to know. *@
@@ -73,7 +73,7 @@ else
             @* The figures come before the destination on purpose. The question the user is being
                asked is not "where should this go" but "is this the right file", and that is
                answered by the counts. *@
-            <h2 class="h5">What this file says</h2>
+            <h2>What this file says</h2>
             <DataTable Label="Import summary" Fit="true" Class="mb-3">
                 <table class="table table-sm mb-0">
                     <tbody>
@@ -138,7 +138,7 @@ else
 
             @if (p.DistinctOwned > 0)
             {
-                <h2 class="h5 mt-4">Where it should go</h2>
+                <h2>Where it should go</h2>
 
                 <fieldset class="mb-3">
                     <legend class="visually-hidden">Import destination</legend>
@@ -222,9 +222,7 @@ else
             }
         }
 
-        <hr class="mt-4" />
-
-        <h2 class="h5">Send this collection somewhere else</h2>
+        <h2>Send this collection somewhere else</h2>
         <p class="small text-body-secondary">
             A plain CSV, aimed at no site in particular: one row per card with
             <code>set</code>, <code>number</code>, <code>card_id</code>, <code>name</code>,

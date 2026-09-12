@@ -157,4 +157,33 @@ public class TwoBarRuleTests : AppHost
         // had three boxes and no lead at all.
         Assert.Empty(page.FindAll(".verdict"));
     }
+
+    [Theory]
+    [MemberData(nameof(ParameterlessPages))]
+    public async Task No_heading_picks_its_level_and_then_undoes_it(string typeName)
+    {
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        // `<h2 class="h6">` is a level chosen for the document outline and then a Bootstrap class
+        // chosen for the SIZE to override it -- which leaves the size decided one heading at a
+        // time, in the markup, where nothing can keep twenty-five of them in step. The app had
+        // exactly that, in two sizes, with the top margin arriving separately as mt-3, or mt-4, or
+        // not at all.
+        //
+        // Two tiers now, both in the stylesheet: a bare h2 inside `sections` for a break between
+        // sections of a page, and `sub-head` for a heading inside a panel or a column.
+        var sizes = new[] { "h1", "h2", "h3", "h4", "h5", "h6" };
+
+        foreach (var head in page.FindAll("h1, h2, h3, h4, h5, h6").ToArray())
+        {
+            var offender = sizes.FirstOrDefault(c => head.ClassList.Contains(c));
+            Assert.True(offender is null,
+                $"{type.Name} has a <{head.TagName.ToLowerInvariant()}> carrying `{offender}`, " +
+                "which sets its size in the markup. Use `sub-head`, or a bare heading inside a " +
+                "`sections` shell.");
+        }
+    }
 }

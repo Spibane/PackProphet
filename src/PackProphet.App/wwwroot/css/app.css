@@ -4009,6 +4009,39 @@ tr.row-best {
     display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
 }
 
+/* The heading inside a .section-head belongs to the section-head, which already sets the size and
+   the weight. Both carried `h6` as well, so Bootstrap's h6 size won and the container's 1.1rem was
+   decorative -- "Did the odds hold up?" rendered a tier smaller than "Packs per set" beside it,
+   for no reason anyone chose. */
+.sections > .section-head > :is(h2, h3, h4) {
+    margin: 0;
+    font: inherit;
+}
+
+/* THE SMALLER TIER
+   ==================================================================================
+   A heading inside a panel or a column rather than a break between sections of a page: "Attacks"
+   within a card's facts, "Legality" within a deck. It gets no rule above it -- the panel it is in
+   is already fenced -- and it does not step up in size, because it is subordinate to the section
+   heading above it rather than a peer of one.
+
+   Twenty-two of these were written as `h2 class="h6"`, which is a heading level picked for its
+   semantics and then a Bootstrap class picked for its SIZE to undo it. The top margin came
+   separately as `mt-3`, or `mt-4`, or not at all -- so on the card page "How to get it" and "Packs
+   that can give it" were siblings with different space above them, and on the deck page four of
+   six carried the margin and two did not.
+
+   :first-child does what those margins were reaching for. A heading that opens its panel needs no
+   space above it; one that follows content does. That is a property of where it lands, which the
+   stylesheet can see and the author writing the markup cannot. */
+.sub-head {
+    margin: 1.35rem 0 .4rem;
+    font-size: .95rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.sub-head:first-child { margin-block-start: 0; }
+
 /* The first section needs no rule above it: on History it follows the hits panel, which is
    already fenced by its own border, and on Settings it is the first thing under the page head. */
 .sections > h2:first-of-type,

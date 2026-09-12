@@ -1392,6 +1392,27 @@ public sealed class AppSession : IAsyncDisposable
         : scope.StartsWith("series:", StringComparison.Ordinal) && SetsInSeries(scope[7..]).Length == 0 ? "everything"
         : scope;
 
+    /// <summary>
+    /// What a scope is called on a page bar. The reading half of <see cref="TargetForScope"/>:
+    /// that turns the string into a target, this turns it into the words that say which target
+    /// the figures below were worked out against.
+    ///
+    /// Here because Which pack and Trades had it written out twice, byte for byte, next to two
+    /// copies of the off-by-one that <c>scope[6..]</c> fixes -- so a scope spelling added to the
+    /// picker had two label lists to be added to and a reader had two places to check which one
+    /// their page used.
+    ///
+    /// Bare words, no verb: a bar reads "Target: everything", and "everything you collect" spent
+    /// three words restating what the page it is on is already about.
+    /// </summary>
+    public string ScopeLabel(string scope) =>
+        scope == "chases" ? "all chases"
+        : scope.StartsWith("chase:", StringComparison.Ordinal)
+            ? ChaseListById(scope[6..])?.Name ?? "a chase"
+        : scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {scope[7..]}"
+        : scope is "everything" or "" ? "everything"
+        : Sets.DisplayName(scope.StartsWith("set:", StringComparison.Ordinal) ? scope[4..] : scope);
+
     /// <summary>The openable sets of one series, in the order the pickers list them.</summary>
     public string[] SetsInSeries(string series) =>
         Sets.SetsIn(series).Where(Index.OpenableSets.Contains).ToArray();

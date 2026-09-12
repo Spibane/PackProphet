@@ -18,110 +18,123 @@ else
            appears to be. The two pools go here too: they are what a trade actually spends, and the
            page cannot be acted on without them. *@
         <span class="subtitle">
-            @ScopeLabel
+            <span class="lbl">Target:</span> @Session.ScopeLabel(_scope)
             &middot; <strong>@_stamina.Balance of @_stamina.Cap</strong> stamina
             &middot; @Session.Profile.Resources.Shinedust.ToString("N0") dust
         </span>
 
         <span class="actions">
             <a class="btn btn-sm btn-outline-secondary" href="resources">Pools</a>
-            <button class="btn btn-sm btn-outline-secondary" popovertarget="trades-target"
-                    aria-label="Change target">
-                <span class="wide-only">Change target</span>
-                <span class="narrow-only" aria-hidden="true">Target</span>
-            </button>
         </span>
     </div>
 
-    @* One sheet for everything that decides what the ranking is OF -- the scope, the grouping, the
-       ordering and the filters. They were a bar plus a disclosure under it, and two full rows of
-       selects sat over this table on every visit: 242px of controls above the page's answer.
+    <PageShell Measure="PageShell.Width.Wide" Class="railed">
+
+    @* A rail rather than the bar sheet the other ranking pages use, because this page is not one
+       answer. It is five hundred rows, and which five hundred depends on four controls; a reader
+       works down the table, decides it is the wrong cut of the data, and changes one. That is the
+       reach-for-it-mid-scroll case a column is for, and the case a sheet answers worst.
+
+       They were a bar plus a disclosure under it -- two full rows of selects, 242px of controls
+       over the page's answer on every visit -- and then a sheet with all five controls in a row
+       and no headings, so "Everything, Ranked" and "Hardest to Pull" sat side by side with nothing
+       saying which was the grouping and which the sort. A column has room for both headings.
 
        A single global ranking is not enough here, which is why the grouping is a control at all.
        Sorted by how hard a card is to pull, the top of the list is always the same handful of
        near-unpullable cards -- the 139 parallel foils swamp it -- which answers "what is rarest"
        rather than "what should I do about each pack, each rarity, each set". *@
-    <div class="target-sheet sheet" popover id="trades-target">
-        <div class="rail-handle">
-            <button class="btn btn-sm btn-outline-secondary" popovertarget="trades-target"
-                    popovertargetaction="hide">Done</button>
+    <PageRail Id="trades-rail" OpenLabel="Filters" Count="@ActiveFilters">
+        <div class="rail-group">
+            <span class="ttl">Trading for</span>
+            <ScopePicker Label="What to trade for" Scope="@_scope" OnScope="OnScope" />
         </div>
 
-        <ScopePicker Label="What to trade for" Scope="@_scope" OnScope="OnScope" />
+        <div class="rail-group">
+            <span class="ttl">Grouped</span>
+            <select class="form-select form-select-sm" aria-label="Group the rows by" @onchange="OnView">
+                <option value="all" selected="@(_view == "all")">Everything, ranked</option>
+                <option value="rarity" selected="@(_view == "rarity")">Best per rarity</option>
+                <option value="pack" selected="@(_view == "pack")">Best per pack</option>
+                <option value="set" selected="@(_view == "set")">Best per set</option>
+            </select>
+        </div>
 
-    <select class="form-select form-select-sm" style="max-width:12rem" aria-label="Group the rows by" @onchange="OnView">
-        <option value="all" selected="@(_view == "all")">Everything, Ranked</option>
-        <option value="rarity" selected="@(_view == "rarity")">Best per Rarity</option>
-        <option value="pack" selected="@(_view == "pack")">Best per Pack</option>
-        <option value="set" selected="@(_view == "set")">Best per Set</option>
-    </select>
+        <div class="rail-group">
+            <span class="ttl">Ranked by</span>
+            <select class="form-select form-select-sm" aria-label="Rank by" @onchange="OnSort">
+                <option value="packs" selected="@(_sort == "packs")">Hardest to pull</option>
+                <option value="points" selected="@(_sort == "points")">Furthest off by points</option>
+                <option value="dust" selected="@(_sort == "dust")">Dearest in dust</option>
+                <option value="cheap" selected="@(_sort == "cheap")">Cheapest in dust</option>
+            </select>
+        </div>
 
-    <select class="form-select form-select-sm" style="max-width:13rem" aria-label="Rank by" @onchange="OnSort">
-        <option value="packs" selected="@(_sort == "packs")">Hardest to Pull</option>
-        <option value="points" selected="@(_sort == "points")">Furthest off by points</option>
-        <option value="dust" selected="@(_sort == "dust")">Dearest in Dust</option>
-        <option value="cheap" selected="@(_sort == "cheap")">Cheapest in Dust</option>
-    </select>
+        @* Count, then the chips that say what made it that number, then the controls that set them
+           -- the collection's rail in the same order, for the same reason: a chip is a filter that
+           IS applied and whose only act is to clear it, and the selects under it are merely how one
+           gets set. These chips were a loose row above the table, outside the page shell entirely,
+           which is a second bar the two-bar rule forbids and the sweep did not catch. *@
+        <div class="rail-group">
+            <span class="ttl">
+                Showing
+                <span class="cnt">@_shown.Count</span>
+            </span>
 
-    <span class="bar-sep" aria-hidden="true"></span>
+            @if (_view != "all")
+            {
+                <button class="chip-filter" @onclick="ResetView" aria-label="Show everything, ranked">@ViewLabel &times;</button>
+            }
+            @if (_sort != "packs")
+            {
+                <button class="chip-filter" @onclick="ResetSort" aria-label="Rank by how hard a card is to pull">@SortLabel &times;</button>
+            }
+            @if (_rarity.Length > 0)
+            {
+                <button class="chip-filter" @onclick="ResetRarity" aria-label="Show any rarity"><span
+                        class="glyphs @RarityClass">@RarityLabel</span> &times;</button>
+            }
+            @if (ShowFoilFilter && _foils != "with")
+            {
+                <button class="chip-filter" @onclick="ResetFoils" aria-label="Include parallel foils">Foils: @_foils &times;</button>
+            }
+            @if (_readyOnly)
+            {
+                <button class="chip-filter" @onclick="ResetReady" aria-label="Show all rows">Doable only &times;</button>
+            }
 
-    <select class="form-select form-select-sm" style="max-width:9rem" aria-label="Filter by rarity" @onchange="OnRarity">
-        <option value="" selected="@(_rarity.Length == 0)">Any Rarity</option>
-        @foreach (var rung in Session.Index.Ladder.Rungs)
-        {
-            <option value="@rung.Index" selected="@(_rarity == rung.Index.ToString())">
-                @rung.Symbol
-            </option>
-        }
-    </select>
+            <select class="form-select form-select-sm" aria-label="Filter by rarity" @onchange="OnRarity">
+                <option value="" selected="@(_rarity.Length == 0)">Any rarity</option>
+                @foreach (var rung in Session.Index.Ladder.Rungs)
+                {
+                    <option value="@rung.Index" selected="@(_rarity == rung.Index.ToString())">
+                        @rung.Symbol
+                    </option>
+                }
+            </select>
 
-    @* Foils are the specific reason this page needed filtering: 139 cards, all at diamond
-       rarities so no rarity filter separates them, and all sold in one limited-time pack that
-       makes them the hardest things in the game to pull. *@
-    @if (ShowFoilFilter)
-    {
-        <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetFoils(NextFoilMode())"
-                title="Parallel foils are diamond-rarity but come only from the limited-time Deluxe pack, so they dominate any ranking by pull difficulty">
-            Parallel Foils: @_foils
-        </button>
-    }
+            @* Foils are the specific reason this page needed filtering: 139 cards, all at diamond
+               rarities so no rarity filter separates them, and all sold in one limited-time pack
+               that makes them the hardest things in the game to pull. *@
+            @if (ShowFoilFilter)
+            {
+                <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
+                        @onclick="() => SetFoils(NextFoilMode())"
+                        title="Parallel foils are diamond-rarity but come only from the limited-time Deluxe pack, so they dominate any ranking by pull difficulty">
+                    Parallel foils: @_foils
+                </button>
+            }
 
-    <button class="btn btn-sm @(_readyOnly ? "btn-secondary" : "btn-outline-secondary")"
-            @onclick="() => SetReadyOnly(!_readyOnly)" aria-pressed="@Aria.Flag(_readyOnly)"
-            title="Hide trades you cannot make today">
-        @(_readyOnly ? "Doable only" : "All Rows")
-    </button>
-    </div>
+            <button class="btn btn-sm @(_readyOnly ? "btn-secondary" : "btn-outline-secondary")"
+                    @onclick="() => SetReadyOnly(!_readyOnly)" aria-pressed="@Aria.Flag(_readyOnly)"
+                    title="Hide trades you cannot make today">
+                @(_readyOnly ? "Doable only" : "All rows")
+            </button>
+        </div>
+    </PageRail>
 
+    <div class="rail-main sections">
 
-        @* What is currently shaping the list, on the bar rather than inside the disclosure that
-           sets it. The rows below are a ranking, and a ranking read without knowing it is filtered
-           to one rarity, or ordered by dust rather than difficulty, is a different answer to the
-           one it appears to be. Each chip puts its own control back to the default. *@
-        @if (_view != "all")
-        {
-            <button class="chip-filter" @onclick="ResetView" aria-label="Show everything, ranked">@ViewLabel &times;</button>
-        }
-        @if (_sort != "packs")
-        {
-            <button class="chip-filter" @onclick="ResetSort" aria-label="Rank by how hard a card is to pull">@SortLabel &times;</button>
-        }
-        @if (_rarity.Length > 0)
-        {
-            <button class="chip-filter" @onclick="ResetRarity" aria-label="Show any rarity"><span
-                    class="glyphs @RarityClass">@RarityLabel</span> &times;</button>
-        }
-        @if (ShowFoilFilter && _foils != "with")
-        {
-            <button class="chip-filter" @onclick="ResetFoils" aria-label="Include parallel foils">Foils: @_foils &times;</button>
-        }
-        @if (_readyOnly)
-        {
-            <button class="chip-filter" @onclick="ResetReady" aria-label="Show all rows">Doable only &times;</button>
-        }
-
-    <PageShell Measure="PageShell.Width.Wide" Class="sections">
         @* Stamina is the scarce resource, so the page opens with how much of it there is. The
            question is not what you can afford but which of the affordable things is worth a slot
            that arrives twice a day. *@
@@ -356,6 +369,7 @@ else
                 the ones a trade is for.
             </p>
         }
+    </div>
     </PageShell>
 }
 
@@ -528,6 +542,18 @@ else
 
     // One per chip on the tool bar. Each puts a single control back to its default, so a chip is
     // both the report that something is applied and the way to remove it.
+    /// <summary>
+    /// How many of this page's controls are narrowing or reordering the table, for the rail
+    /// button's badge on a phone. The same five the chips report, counted once: the badge says
+    /// whether opening the rail is worth doing, and the chips inside say what it would show.
+    /// </summary>
+    private int ActiveFilters =>
+        (_view != "all" ? 1 : 0)
+        + (_sort != "packs" ? 1 : 0)
+        + (_rarity.Length > 0 ? 1 : 0)
+        + (ShowFoilFilter && _foils != "with" ? 1 : 0)
+        + (_readyOnly ? 1 : 0);
+
     private void ResetView() { _view = "all"; Reshape(); }
     private void ResetSort() { _sort = "packs"; Reshape(); }
     private void ResetRarity() { _rarity = ""; Reshape(); }

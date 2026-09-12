@@ -97,4 +97,48 @@ public class TwoBarRuleTests : AppHost
                 "hidden below 600px.");
         }
     }
+
+    [Theory]
+    [MemberData(nameof(ParameterlessPages))]
+    public async Task Folded_controls_arrive_under_a_heading_that_says_what_they_set(string typeName)
+    {
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        // The argument for a column over a bar, and the one the four hand-rolled sheets never got:
+        // a bar has room for the control and not for its name, so a filter arrives as a bare
+        // "Hardest to Pull" with nothing saying it is the sort rather than the grouping. Both
+        // shells group, and a group carries its heading.
+        foreach (var shell in page.FindAll(".page-rail, .page-sheet").ToArray())
+        {
+            var groups = shell.QuerySelectorAll(".rail-group").ToArray();
+            Assert.True(groups.Length > 0,
+                $"{type.Name} folds controls away without grouping them, so nothing on the " +
+                "opened shell says what any of them sets.");
+
+            foreach (var group in groups)
+            {
+                // One control that names itself is exempt, and the exemption is the point rather
+                // than a hole in the rule: the collection's search box carries "Search name" as
+                // its own placeholder, and a SEARCH heading over it would be the label written
+                // twice. What needs the heading is a group -- two selects side by side, where
+                // neither can say which of them is the sort.
+                var named = group.QuerySelectorAll("input, select, textarea").ToArray();
+                if (named.Length == 1
+                    && !string.IsNullOrWhiteSpace(
+                        named[0].GetAttribute("aria-label") ?? named[0].GetAttribute("placeholder")))
+                    continue;
+
+                Assert.False(string.IsNullOrWhiteSpace(group.QuerySelector(".ttl")?.TextContent),
+                    $"{type.Name} has a control group with no heading.");
+            }
+        }
+
+        // `target-sheet` was the class four pages put on a sheet of their own. It never had a
+        // stylesheet rule: everything it appeared to do came from `sheet` beside it, so it marked
+        // the duplication without carrying any of it. Nothing should reach for it again.
+        Assert.Empty(page.FindAll(".target-sheet"));
+    }
 }

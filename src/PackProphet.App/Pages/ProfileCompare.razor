@@ -38,38 +38,32 @@ else
         </span>
 
         <span class="actions">
-            <button class="btn btn-sm btn-outline-secondary" popovertarget="compare-target"
-                    aria-label="Change what is compared">
-                <span class="wide-only">Change pairing</span>
-                <span class="narrow-only" aria-hidden="true">Pair</span>
-            </button>
+            <SheetOpener For="compare-target" Label="Pairing" />
         </span>
     </div>
 
     @* The pairing and the filter, behind the button rather than on a bar of their own. Two
        controls do not earn a strip across a page whose answer is two verdicts and two lists. *@
-    <div class="target-sheet sheet" popover id="compare-target">
-        <div class="rail-handle">
-            <button class="btn btn-sm btn-outline-secondary" popovertarget="compare-target"
-                    popovertargetaction="hide">Done</button>
+    <PageSheet Id="compare-target">
+        <div class="rail-group">
+            <span class="ttl">Compare with</span>
+            <select class="form-select form-select-sm" aria-label="Collection to compare with" @onchange="OnPick">
+                @foreach (var profile in Others)
+                {
+                    <option value="@profile.Id" selected="@(profile.Id == _otherId)">@profile.Name</option>
+                }
+            </select>
         </div>
 
-    <label class="small text-body-secondary">Compare With</label>
-    <select class="form-select form-select-sm" style="max-width:14rem" aria-label="Collection to compare with" @onchange="OnPick">
-        @foreach (var profile in Others)
-        {
-            <option value="@profile.Id" selected="@(profile.Id == _otherId)">@profile.Name</option>
-        }
-    </select>
-
-    <span class="bar-sep" aria-hidden="true"></span>
-
-    <label class="small">
-        <input type="checkbox" class="form-check-input me-1" checked="@_readyOnly"
-               @onchange="e => _readyOnly = (bool)(e.Value ?? false)" />
-        only the ones both accounts can afford today
-    </label>
-    </div>
+        <div class="rail-group">
+            <span class="ttl">Show</span>
+            <label class="small">
+                <input type="checkbox" class="form-check-input me-1" checked="@_readyOnly"
+                       @onchange="e => _readyOnly = (bool)(e.Value ?? false)" />
+                Only what both can afford today
+            </label>
+        </div>
+    </PageSheet>
 
 
     @* Two mechanics, and the split between them is what the page is for. A Share is one-way and

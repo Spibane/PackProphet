@@ -208,10 +208,16 @@ else
             </details>
 
             <h2>Packs per day</h2>
+            @* The caption carries the READING, not the fact. "The free allowance is 2 a day"
+               states a rule and leaves the reader to apply it to thirty bars; saying what a bar of
+               two means is the same rule already applied, which is the only form of it that helps
+               while looking at the picture.
+
+               And it is a reading rather than a verdict, which is the line this page does not
+               cross: it says what a bar of two IS, not whether you should have opened more. *@
             <p class="small text-body-secondary">
-                Last @DaysShown days. The free allowance is
-                @GameRules.PacksPerDay(Session.Profile.Resources.Premium) a day
-                @(Session.Profile.Resources.Premium ? "with premium" : "without premium").
+                Last @DaysShown days. @Allowance a day is the free allowance@(Session.Profile.Resources.Premium ? " with premium" : ""),
+                so a bar of @AllowanceWord is a day you kept up.
             </p>
             @* The label carries the shape of the chart, not just its title. "Packs opened per
                day" names the picture and says nothing about it; a reader who cannot see the bars
@@ -349,10 +355,13 @@ else
             </div>
             @if (!_lifetime)
             {
+                @* The caveat names its own sample. "Small samples swing wildly" is true of every
+                   sample ever taken and tells a reader nothing about THIS one; the number is what
+                   decides whether a row that is a fifth out is worth a second look or is exactly
+                   what a hundred-odd packs would be expected to do. *@
                 <p class="small text-body-secondary">
                     What you pulled against what the engine predicted for the packs you opened.
-                    Small samples swing wildly, so read it as a check on the model, not on your
-                    luck.
+                    @SampleCaveat
                 </p>
             }
             else
@@ -521,6 +530,43 @@ else
 
 @code {
     private const int DaysShown = 30;
+
+    /// <summary>Free packs a day at the current subscription, for the bar chart's reading.</summary>
+    private int Allowance => GameRules.PacksPerDay(Session.Profile.Resources.Premium);
+
+    /// <summary>The same figure as a word, because the caption is a sentence rather than a stat.</summary>
+    private string AllowanceWord => Allowance switch
+    {
+        1 => "one", 2 => "two", 3 => "three", 4 => "four", _ => Allowance.ToString()
+    };
+
+    /// <summary>
+    /// How much weight the odds check can bear, given how many packs are behind it.
+    ///
+    /// The figure decides the sentence. Under a hundred packs a rarity that turns up once instead
+    /// of twice moves the whole row, so the honest reading is that nothing here is evidence yet;
+    /// past a few hundred a persistent gap starts to mean something. Either way it is a check on
+    /// the MODEL rather than on the user's luck, which is the distinction the old wording made and
+    /// this keeps.
+    /// </summary>
+    private string SampleCaveat
+    {
+        get
+        {
+            var packs = (int)Math.Round(_scopePacks);
+
+            if (packs < 100)
+                return $"{packs} packs is a small sample, so a rarity a fifth off is ordinary "
+                     + "variance rather than evidence the model is wrong.";
+
+            if (packs < 500)
+                return $"{packs} packs is enough to notice a persistent gap and not enough to "
+                     + "trust a single row. Read it as a check on the model, not on your luck.";
+
+            return $"{packs} packs is a large enough sample that a gap which does not close is "
+                 + "worth reporting. It is still a check on the model, not on your luck.";
+        }
+    }
     private const int RecentShown = 25;
 
     private IReadOnlyList<PackOpenEvent> _log = [];

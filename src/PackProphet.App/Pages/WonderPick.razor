@@ -12,14 +12,25 @@ else
 {
     <div class="page-head">
         <h1 class="title">Wonder Pick</h1>
-        @* The game shows the five cards and how many of each you hold. What it cannot show is
-           whether spending one of a capped, slowly-refilling stamina on THIS offer beats holding
-           it for the next one -- which depends on the offers you have been seeing, not on this
-           one. That is the whole of what this page adds, so it is what the page says it does. *@
+        @* The game already shows the five cards and how many of each you hold. What it cannot show
+           is whether spending one of a capped, slowly-refilling stamina on THIS offer beats holding
+           it for the next one -- which depends on the offers you have been seeing, not on this one.
+           That is the whole of what this page adds, so it is what the page says it does. *@
         <span class="subtitle">Is this offer worth a stamina, or is a better one coming?</span>
+
         <span class="actions">
+            @* One control group, so it folds behind a button rather than standing up a bar --
+               the same sheet the other Answer pages open. *@
+            <button class="btn btn-sm btn-outline-secondary" popovertarget="wonder-target"
+                    aria-label="Change target">
+                <span class="wide-only">Change target</span>
+                <span class="narrow-only" aria-hidden="true">Target</span>
+            </button>
+
             @* The pool the whole decision turns on, entered here rather than on a settings page:
-               the threshold changes with it, and at the cap the advice inverts. *@
+               the threshold changes with it, and at the cap the advice inverts. It stays ON the bar
+               rather than in the sheet for the same reason -- it is the page's only live input, and
+               the verdict above is wrong the moment it is stale. *@
             <label class="small text-body-secondary" for="stamina">Stamina</label>
             <select id="stamina" class="form-select form-select-sm" style="width:5rem"
                     @onchange="OnStamina">
@@ -31,32 +42,14 @@ else
         </span>
     </div>
 
-    <div class="page-tools">
-        <ScopePicker Label="What counts as wanted" Everything="Valued against everything I collect"
-                     Grouped="true" Scope="@_scope" OnScope="OnScope" />
+    <div class="target-sheet sheet" popover id="wonder-target">
+        <div class="rail-handle">
+            <button class="btn btn-sm btn-outline-secondary" popovertarget="wonder-target"
+                    popovertargetaction="hide">Done</button>
+        </div>
 
-        <span class="bar-sep" aria-hidden="true"></span>
-
-        <span class="small text-body-secondary">
-            @if (_history.Count >= MinSamplesForThreshold)
-            {
-                <span>
-                    Holding out for <strong>@Fmt(_threshold)</strong> packs per stamina,
-                    from @_history.Count logged offer(s)
-                    @if (Session.WonderStamina >= GameRules.StaminaCap)
-                    {
-                        <span class="text-warning-emphasis"> (lowered, you are at the cap)</span>
-                    }
-                </span>
-            }
-            else
-            {
-                <span>
-                    @_history.Count of @MinSamplesForThreshold logged offers, so taking
-                    anything useful until there is a distribution worth trusting
-                </span>
-            }
-        </span>
+    <ScopePicker Label="What counts as wanted" Everything="Valued against everything I collect"
+                 Grouped="true" Scope="@_scope" OnScope="OnScope" />
     </div>
 
     <PageShell Measure="PageShell.Width.Wide">
@@ -96,36 +89,157 @@ else
         }
         else
         {
-            <div class="offer-strip mb-3">
-                @foreach (var card in _offer)
+            @* The strip comes BEFORE the verdict here, which is the reverse of every other Answer
+               page, and it is the one place that reversal is right: you fill these five boxes, and
+               filling them is what produces the verdict. They are an input first and an
+               explanation second, so they go where an input goes.
+
+               The set is as literal as it gets -- the game shows five cards. *@
+            <BoxStrip Label="The five cards you were offered"
+                      Clause="you receive one at random, so the only choice is whether to spend at all"
+                      Columns="@GameRules.WonderPickCardsShown">
+                @for (var i = 0; i < GameRules.WonderPickCardsShown; i++)
                 {
-                    <button class="offer-card" @onclick="() => Remove(card)"
-                            title="Remove @card.Name from the offer"
-                            style="--art:url('@card.ArtUrl')">
-                        <span class="x" aria-hidden="true">&times;</span>
-                    </button>
+                    var card = i < _offer.Count ? _offer[i] : null;
+
+                    <Box State="@(card is null ? Box.Kind.Dead : Box.Kind.Live)"
+                         Label="@((i + 1).ToString())"
+                         Note="@(card is null ? "tap a card below" : null)">
+                        @if (card is not null)
+                        {
+                            @* A card you already hold cannot make this offer worth taking, so it
+                               recedes and says what it is instead: the count is the reason it is
+                               dim. A rarity mark on a card you need, a holding on one you do not
+                               -- one line, saying the thing that decides. *@
+                            <button class="offer-card @(Held(card) > 0 ? "have" : "")"
+                                    @onclick="() => Remove(card)"
+                                    title="Remove @card.Name from the offer"
+                                    style="--art:url('@card.ArtUrl')">
+                                <span class="x" aria-hidden="true">&times;</span>
+                            </button>
+                            <span class="visually-hidden">@card.Name</span>
+
+                            <span class="offer-say">
+                                @if (Held(card) is var held && held > 0)
+                                {
+                                    <span class="have">have @held</span>
+                                }
+                                else if (Session.Index.Rung(card) is { } rung)
+                                {
+                                    <span class="glyphs @rung.GlyphClass" title="@rung.Symbol">@rung.Glyphs</span>
+                                }
+                            </span>
+                        }
+                    </Box>
                 }
-                @for (var i = _offer.Count; i < GameRules.WonderPickCardsShown; i++)
-                {
-                    <span class="offer-card empty">@(i + 1)</span>
-                }
-            </div>
+            </BoxStrip>
+
+            @* With the strip, not with the commit row. Clearing empties the five boxes above it --
+               it is an edit to the input rather than a third way the decision can go, and beside
+               the two outcomes it read as one, on the row where every target has to be a full
+               phone-width row. Which also put the commit row 40px under the tab bar. *@
+            <button class="btn btn-sm btn-link offer-clear" @onclick="Clear">Clear these five</button>
 
             @if (_appraisal is { } a)
             {
-                <div class="verdict @VerdictClass(a.Verdict)" aria-live="polite">
-                    <div class="head">
-                        <span class="call">@Call(a.Verdict)</span>
-                        <span class="cost">
-                            @a.StaminaCost of @GameRules.StaminaCap stamina
-                            @if (a.StaminaCost > Session.WonderStamina)
-                            {
-                                <span class="badge text-bg-danger ms-1">You have @Session.WonderStamina</span>
-                            }
-                        </span>
+                <div class="verdict-lead" aria-live="polite">
+                    <span class="micro">The call</span>
+
+                    <div class="lead-head">
+                        <div class="lead-text">
+                            <h2 class="name @VerdictClass(a.Verdict)">@Call(a.Verdict)</h2>
+
+                            <p class="says">@Why(a)</p>
+
+                            @* Where the bar came from, and why it is where it is.
+                               ==================================================================
+                               The threshold is the page's whole contribution and it is computed
+                               from the user's own logged offers, so a verdict that states it
+                               without sourcing it is asking to be trusted about the one number
+                               nobody else could check. It also moves at the cap, which looks like
+                               a bug unless the page says so first. *@
+                            <p class="then">
+                                @if (_history.Count >= MinSamplesForThreshold)
+                                {
+                                    <text>
+                                        That bar comes from your own @_history.Count logged offers.
+                                    </text>
+                                    @if (Session.WonderStamina >= GameRules.StaminaCap)
+                                    {
+                                        <text>
+                                            It is lowered right now because you are at the cap: the
+                                            fifth regenerates whether you spend or not, so holding
+                                            out costs you one.
+                                        </text>
+                                    }
+                                }
+                                else
+                                {
+                                    <text>
+                                        @_history.Count of @MinSamplesForThreshold logged offers so
+                                        far, so this takes anything useful until there is a
+                                        distribution worth trusting. Log every offer, taken or
+                                        skipped &mdash; the bar is only as good as what is behind it.
+                                    </text>
+                                }
+                            </p>
+
+                            <p class="then">
+                                Costs @a.StaminaCost of @GameRules.StaminaCap stamina.
+                                @if (a.StaminaCost > Session.WonderStamina)
+                                {
+                                    <strong class="key">You have @Session.WonderStamina.</strong>
+                                }
+                            </p>
+                        </div>
+
+                        @Histogram(a)
                     </div>
-                    <p class="why mb-0">@Why(a)</p>
                 </div>
+
+                @* The action, directly under the answer.
+
+                   Everything below this is working: what the offer is worth, how that was arrived
+                   at, what each card contributed. It is all worth keeping and none of it is worth
+                   putting between a verdict and the button that acts on it -- this is a
+                   five-second decision made with the game in the other hand, and on a phone the
+                   stat grid and the contributions table pushed the commit row 1,378px down a
+                   812px screen. *@
+                @* The two outcomes, and they get equal weight.
+                   ==================================================================================
+                   Taking and skipping are equally likely and equally consequential -- the bar is
+                   built from BOTH, and an offer skipped and not logged is a sample the threshold
+                   never sees. The old bar made "Skipped" a small outline button at the end of a row
+                   and "Took it" a green one behind a dropdown, which quietly says one of them is
+                   the real answer.
+
+                   On a phone they become full-width rows rather than a side-by-side pair, for the
+                   same reason: neither gets the smaller target. *@
+                <div class="offer-commit">
+                    <span class="took">
+                        <select class="form-select form-select-sm" @bind="_received"
+                                aria-label="Which card you received">
+                            <option value="">Which card did you get?</option>
+                            @foreach (var c in _offer)
+                            {
+                                <option value="@c.OwnershipKey">@c.Name</option>
+                            }
+                        </select>
+                        <button class="btn btn-primary" disabled="@(_received.Length == 0)"
+                                @onclick="LogTaken">
+                            Took it &mdash; log and spend a stamina
+                        </button>
+                    </span>
+
+                    <button class="btn btn-outline-secondary" @onclick="LogSkipped">
+                        Skipped it &mdash; log anyway
+                    </button>
+                </div>
+
+                <p class="commit-note">
+                    Log every offer, taken or skipped. The bar is only as good as the distribution
+                    behind it.
+                </p>
 
                 <div class="summary">
                     <div class="stat">
@@ -198,28 +312,6 @@ else
 
                 @* Logging is what makes the threshold work, so it is offered on every offer —
                    including the ones skipped. *@
-                <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="Clear">Clear</button>
-
-                    <span class="ms-auto d-flex flex-wrap gap-2 align-items-center">
-                        <span class="small text-body-secondary">Log It As</span>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="LogSkipped">
-                            Skipped
-                        </button>
-                        <select class="form-select form-select-sm" style="max-width:14rem"
-                                @bind="_received">
-                            <option value="">&hellip; or which card you got</option>
-                            @foreach (var c in _offer)
-                            {
-                                <option value="@c.OwnershipKey">@c.Name</option>
-                            }
-                        </select>
-                        <button class="btn btn-sm btn-success" disabled="@(_received.Length == 0)"
-                                @onclick="LogTaken">
-                            Took it
-                        </button>
-                    </span>
-                </div>
 
                 @if (_logged is not null)
                 {
@@ -293,6 +385,105 @@ else
 
 @code {
     private const int MinSamplesForThreshold = 12;
+
+    /// <summary>Copies of this card already held, which is why a card in the strip recedes.</summary>
+    private int Held(PocketCard card) => Session.CountOf(card);
+
+    /// <summary>
+    /// Where this offer sits among the offers you have logged.
+    ///
+    /// THE ONE CHART IN THE APP
+    /// ==================================================================================
+    /// Everything else here is a figure or a sentence, on the rule that a number you can say is a
+    /// number you should say rather than draw. This is the exception, and it earns it: the bar is a
+    /// PERCENTILE of the user's own distribution, and a percentile cannot be said in a sentence.
+    /// "Worth 31 packs per stamina against a bar of 18" tells you this one clears it; it does not
+    /// tell you whether 31 is ordinary or the best offer you have seen in a month, and that is the
+    /// difference between spending a stamina and holding it.
+    ///
+    /// Drawn only once there is a distribution to draw. Ten buckets over four logged offers is not
+    /// a shape, it is four bars and some noise, and the verdict already says so in words.
+    ///
+    /// Inline SVG rather than divs: it is one drawing with a scale, and the threshold line has to
+    /// land at the same place along the axis as the bucket boundaries it is measured against.
+    /// </summary>
+    private RenderFragment? Histogram(OfferAppraisal a) => _history.Count < MinSamplesForThreshold
+        ? null
+        : builder =>
+        {
+            const int buckets = 10;
+            const double w = 200, h = 64;
+
+            var top = Math.Max(_history.Max(), Math.Max(a.ValuePerStamina, a.Threshold));
+            if (top <= 0) return;
+
+            // Counts per bucket, and which bucket this offer falls in. Clamped at the last one so
+            // an offer at exactly the maximum lands inside the chart rather than one past its end.
+            var counts = new int[buckets];
+            foreach (var v in _history)
+                counts[Math.Clamp((int)(v / top * buckets), 0, buckets - 1)]++;
+
+            var mine = Math.Clamp((int)(a.ValuePerStamina / top * buckets), 0, buckets - 1);
+            var tallest = Math.Max(1, counts.Max());
+            var barW = w / buckets;
+
+            builder.OpenElement(0, "figure");
+            builder.AddAttribute(1, "class", "offer-hist");
+
+            builder.OpenElement(2, "figcaption");
+            builder.AddAttribute(3, "class", "micro");
+            builder.AddContent(4, "Against your own offers");
+            builder.CloseElement();
+
+            builder.OpenElement(5, "svg");
+            builder.AddAttribute(6, "viewBox", $"0 0 {w} {h}");
+            builder.AddAttribute(7, "width", w);
+            builder.AddAttribute(8, "height", h);
+            builder.AddAttribute(9, "role", "img");
+            builder.AddAttribute(10, "aria-label",
+                $"This offer is worth {Fmt(a.ValuePerStamina)} packs per stamina, against a bar of "
+                + $"{Fmt(a.Threshold)} and {_history.Count} logged offers.");
+
+            for (var i = 0; i < buckets; i++)
+            {
+                if (counts[i] == 0) continue;
+
+                var bh = counts[i] / (double)tallest * (h - 2);
+                builder.OpenElement(11, "rect");
+                builder.AddAttribute(12, "x", (i * barW + 1).ToString("F1"));
+                builder.AddAttribute(13, "y", (h - bh).ToString("F1"));
+                builder.AddAttribute(14, "width", (barW - 2).ToString("F1"));
+                builder.AddAttribute(15, "height", bh.ToString("F1"));
+                builder.AddAttribute(16, "class", i == mine ? "mine" : "");
+                builder.CloseElement();
+            }
+
+            // The bar itself, across the whole height so it reads as a line rather than as another
+            // bucket.
+            var tx = Math.Clamp(a.Threshold / top * w, 0, w);
+            builder.OpenElement(17, "line");
+            builder.AddAttribute(18, "x1", tx.ToString("F1"));
+            builder.AddAttribute(19, "x2", tx.ToString("F1"));
+            builder.AddAttribute(20, "y1", "0");
+            builder.AddAttribute(21, "y2", h);
+            builder.AddAttribute(22, "class", "bar-line");
+            builder.CloseElement();
+
+            builder.CloseElement();
+
+            builder.OpenElement(23, "div");
+            builder.AddAttribute(24, "class", "axis");
+            builder.OpenElement(25, "span");
+            builder.AddContent(26, $"bar {Fmt(a.Threshold)}");
+            builder.CloseElement();
+            builder.OpenElement(27, "span");
+            builder.AddAttribute(28, "class", "mine");
+            builder.AddContent(29, $"this one {Fmt(a.ValuePerStamina)}");
+            builder.CloseElement();
+            builder.CloseElement();
+
+            builder.CloseElement();
+        };
 
     private readonly List<PocketCard> _offer = [];
     private OfferAppraisal? _appraisal;

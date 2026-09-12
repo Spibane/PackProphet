@@ -883,7 +883,7 @@ else
     private string ScopeLabel =>
         _scope == "chases" ? "all chase lists"
         : _scope.StartsWith("chase:", StringComparison.Ordinal)
-            ? Session.ChaseListById(_scope[5..])?.Name ?? "a chase list"
+            ? Session.ChaseListById(_scope[6..])?.Name ?? "a chase list"
         : _scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {_scope[7..]}"
         : _scope == "everything" ? "everything you collect"
         : $"{_scope}: {Session.Sets.DisplayName(_scope)}";

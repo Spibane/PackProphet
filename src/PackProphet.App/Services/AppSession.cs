@@ -1358,7 +1358,7 @@ public sealed class AppSession : IAsyncDisposable
     public ICompletionTarget TargetForScope(string scope)
     {
         if (scope.StartsWith("chase:", StringComparison.Ordinal))
-            return ChaseListById(scope[5..]) is { } list
+            return ChaseListById(scope[6..]) is { } list
                 ? TargetForChaseList(list)
                 : TargetForEverything();
 
@@ -1387,7 +1387,7 @@ public sealed class AppSession : IAsyncDisposable
     /// results disagreeing about what is being ranked.
     /// </summary>
     public string NormalizeScope(string scope) =>
-        scope.StartsWith("chase:", StringComparison.Ordinal) && ChaseListById(scope[5..]) is null ? "everything"
+        scope.StartsWith("chase:", StringComparison.Ordinal) && ChaseListById(scope[6..]) is null ? "everything"
         : scope == "chases" && ChaseLists.Count == 0 ? "everything"
         : scope.StartsWith("series:", StringComparison.Ordinal) && SetsInSeries(scope[7..]).Length == 0 ? "everything"
         : scope;

@@ -21,6 +21,15 @@ else
             <span class="lbl">Target:</span> @Session.ScopeLabel(_scope)
             &middot; <strong>@_stamina.Balance of @_stamina.Cap</strong> stamina
             &middot; @Session.Profile.Resources.Shinedust.ToString("N0") dust
+
+            @* What the rail is set to, once any of it is off the default. The collection's bar has
+               carried this since the rail went in and this one did not: the rail's badge says how
+               many controls are doing something without saying what, and on a phone the badge is
+               all there is. *@
+            @if (FilterWords is { Length: > 0 } words)
+            {
+                <span class="filters">showing @words</span>
+            }
         </span>
 
         <span class="actions">
@@ -547,6 +556,26 @@ else
 
     // One per chip on the tool bar. Each puts a single control back to its default, so a chip is
     // both the report that something is applied and the way to remove it.
+    /// <summary>
+    /// What the rail is set to, in words, for the page bar. Same labels the chips carry, from the
+    /// same state, so the bar and the chips cannot say different things about one control.
+    /// </summary>
+    private string FilterWords
+    {
+        get
+        {
+            var on = new List<string>(5);
+
+            if (_view != "all") on.Add(ViewLabel);
+            if (_sort != "packs") on.Add(SortLabel);
+            if (_rarity.Length > 0) on.Add(RarityLabel);
+            if (ShowFoilFilter && _foils != "with") on.Add($"foils: {_foils}");
+            if (_readyOnly) on.Add("doable only");
+
+            return string.Join(", ", on);
+        }
+    }
+
     /// <summary>
     /// How many of this page's controls are narrowing or reordering the table, for the rail
     /// button's badge on a phone. The same five the chips report, counted once: the badge says

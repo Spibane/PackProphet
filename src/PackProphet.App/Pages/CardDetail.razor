@@ -71,20 +71,29 @@ else
                 </p>
             }
 
+            @* A box, with the label at one end and the stepper at the other. It was four items in a
+               row that sized themselves, so the count floated wherever the label left it and the
+               control had no edge of its own. *@
             <div class="own-row">
-                <span class="label">You Own</span>
-                <button class="step" @onclick="() => Bump(-1)"
-                        disabled="@(_owned == 0)" aria-label="Remove one">&minus;</button>
-                <span class="count">@_owned</span>
-                <button class="step" @onclick="() => Bump(1)" aria-label="Add one">+</button>
+                <span class="label">You own</span>
+                <span class="steps">
+                    <button class="step" @onclick="() => Bump(-1)"
+                            disabled="@(_owned == 0)" aria-label="Remove one">&minus;</button>
+                    <span class="count">@_owned</span>
+                    <button class="step" @onclick="() => Bump(1)" aria-label="Add one">+</button>
+                </span>
             </div>
 
             @* Wanting a card is a separate fact from owning it, and this is the screen that has
                the card in hand, so the chase lists live here rather than requiring another search
                from the list side. *@
-            <div class="want-row">
-                <span class="label">Want It</span>
+            @* Stacked and full width, each the width of the card above them. They were an inline
+               row that wrapped: "Want It", the heart, one list, then the next list alone on a
+               second line at whatever width its name happened to be.
 
+               No "Want It" label either. The button under it says Want it -- the label was the
+               same two words again, in front of them. *@
+            <div class="want-row">
                 @* The same heart the collection grid has, on the same list, doing the same one
                    thing. It comes first and it is always here, whether or not that list exists yet
                    -- on a phone the tile hearts are hidden, so this is the only route to wanting a
@@ -175,9 +184,14 @@ else
                     </p>
                 </div>
             </div>
-        </div>
 
-        @* Every route, including the ones that do not exist for this rarity, because the absence
+            @* Inside the lead, not after it. Both carry a rule -- the lead a border-bottom, the
+               strip a border-top -- so as siblings they drew two hairlines 22px apart with the
+               caveat stranded between them. Which pack nests it the same way, and for the better
+               reason: the strip is where the figure above it came from, so it belongs to the
+               answer rather than following it. *@
+
+            @* Every route, including the ones that do not exist for this rarity, because the absence
            of a route is the answer as often as a price is: "you cannot trade for this" is what you
            came to find out when the card is a crown.
 
@@ -188,23 +202,24 @@ else
 
            No bars. The four are priced in three currencies that do not exchange, and drawing them
            at one scale would invent a rate the game does not have. *@
-        <BoxStrip Columns="@(_routes?.Options.Count ?? 4)">
-            @foreach (var option in _routes?.Options ?? [])
-            {
+            <BoxStrip Columns="@(_routes?.Options.Count ?? 4)">
+                @foreach (var option in _routes?.Options ?? [])
+                {
                 @* Only the closed routes carry a note in the box, and it is the short one this
                    page writes. The engine's own notes are whole sentences -- they have to be, they
                    are explaining a price -- and five of them inside five boxes is a wall of prose
                    in the one place on the page that exists to be compared at a glance. They are
                    kept, under the strip, where they read as prose. *@
-                <Box Label="@RouteName(option.Route)"
-                     State="@(!option.Available ? Box.Kind.Dead
-                              : option == _routes?.Cheapest ? Box.Kind.Best
-                              : Box.Kind.Live)"
-                     Figure="@RouteFigure(option)"
-                     Unit="@RouteUnit(option)"
-                     Note="@(option.Available ? null : BlockReason(option.Block))" />
+                    <Box Label="@RouteName(option.Route)"
+                         State="@(!option.Available ? Box.Kind.Dead
+                                  : option == _routes?.Cheapest ? Box.Kind.Best
+                                  : Box.Kind.Live)"
+                         Figure="@RouteFigure(option)"
+                         Unit="@RouteUnit(option)"
+                         Note="@(option.Available ? null : BlockReason(option.Block))" />
             }
-        </BoxStrip>
+            </BoxStrip>
+        </div>
 
         @* The prose the boxes gave up, in full. Every word the table carried, and they are worth
            keeping: "points accrue while you open, so this is what you give up from a shared

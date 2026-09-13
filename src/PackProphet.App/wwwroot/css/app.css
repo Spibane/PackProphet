@@ -1282,10 +1282,75 @@ main:has(> .page-body.railed) > .page-head {
     opacity: .62;
 }
 
-/* The word under a box that names an act rather than a slot, in its own colour so the strip can be
-   read at a glance without matching outlines to a key. */
-.box:has(.slot-art.on) > .lbl { color: var(--bs-success-text-emphasis); font-weight: 700; }
-.box:has(.slot-art.off) > .lbl { color: var(--bs-danger-text-emphasis); font-weight: 700; }
+/* The word under a box that names an act, in its own colour so the strip can be read at a glance
+   without matching outlines to a key. Under the card rather than over it: the boxes that merely
+   stay carry no word at all, and a label row that half the row has would stagger the art. */
+.box > .act {
+    margin-block-start: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+.box > .act.on { color: var(--bs-success-text-emphasis); }
+.box > .act.off { color: var(--bs-danger-text-emphasis); }
+
+/* The wishlist's slots, which carry a caption and so have a width they cannot go under. Driven by
+   that width rather than by a column count: the strip is twenty boxes or forty depending on how
+   much is changing, and what has to stay readable is the name, not the length of the row. */
+.board-strip .boxes { grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); }
+@media (width < 560px) {
+    .board-strip .boxes { grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr)); }
+}
+
+/* The three facts a collection tile carries, under a slot's art and for the same reason: the art
+   identifies a card you already recognise and nothing else, and this is the board you are about to
+   check against the game's own list. Same three in the same order -- number, name, rarity. */
+.slot-cap {
+    display: grid;
+    gap: 1px;
+    min-inline-size: 0;
+    margin-block-start: 5px;
+}
+.slot-cap > .no {
+    font-size: .68rem;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-tertiary-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.slot-cap > .nm {
+    font-size: .78rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--bs-body-color);
+    text-decoration: none;
+    /* Two lines, then clipped. Names run from "Mew" to "Aerodactyl ex", and a box whose height
+       follows its longest name would stagger every row it is in. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    /* A clamp ellipsises the last line it shows, not a word too wide for the box: on a phone the
+       boxes are 82px and "Blacephalon" is wider than that, so without this it was cut mid-word
+       with no sign it had been. */
+    overflow-wrap: anywhere;
+    /* Both lines reserved whether or not the name needs them, so the rarity marks under twenty
+       cards sit on one line rather than stepping with the length of each name. */
+    min-block-size: 2.5em;
+}
+.slot-cap > .nm:hover { color: var(--bs-primary); text-decoration: underline; }
+.slot-cap > .rr { font-size: .7rem; line-height: 1.25; }
+
+/* A note in a rail: a line that names something, and the detail under it. Not a control and not a
+   figure -- the wishlist's "cannot be listed" is a footnote about cards that are NOT on the board,
+   which under the board read as part of it. */
+.rail-note { display: grid; gap: 1px; font-size: .78rem; }
+.rail-note > .lbl { color: var(--bs-body-color); }
+.rail-note > .who { font-size: .74rem; line-height: 1.35; color: var(--bs-tertiary-color); }
 
 /* Two readings at the foot of a rail: a pool and its number. Not a control, so no border and no
    fill -- it is the same kind of thing as the target figures on the collection's rail. */

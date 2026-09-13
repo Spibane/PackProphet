@@ -37,13 +37,11 @@ public class TradeBoardPageTests : AppHost
     [Fact]
     public async Task The_strip_has_a_box_for_every_slot_and_for_every_edit()
     {
-        // The literal set this component was written for: the board HAS twenty slots and they are
-        // numbered. Mostly solid with the gaps at the end says "nearly right" without anyone
-        // counting to twenty, which no list of names can do — so every slot gets a box, including
-        // the empty ones.
+        // The literal set this component was written for: the board HAS twenty slots. Mostly solid
+        // with the gaps at the end says "nearly right" without anyone counting to twenty, which no
+        // list of names can do — so every slot gets a box, including the empty ones.
         //
-        // Plus a box per card coming off, which is what takes it past twenty. Those are not slots
-        // on the board you end up with, so they are not numbered: the word under them is the act.
+        // Plus a box per card coming off, which is what takes it past twenty.
         var page = await PageAsync();
 
         var boxes = page.FindAll(".box-strip .box").ToArray();
@@ -52,19 +50,110 @@ public class TradeBoardPageTests : AppHost
         Assert.Equal(GameRules.TradeBoardSlots + off, boxes.Length);
         Assert.True(boxes.Length <= GameRules.TradeBoardSlots * 2,
             "a board cannot drop more cards than it holds");
+    }
 
-        // The slots, numbered in order, because the board is entered by walking a numbered list in
-        // the game. Reading past the boxes that are edits rather than positions.
-        var slots = boxes
-            .Where(b => b.QuerySelector(".slot-art.off") is null)
-            .Select(b => b.QuerySelector(".lbl")!.TextContent.Trim())
-            .Where(l => l is not "On")
-            .ToArray();
+    [Fact]
+    public async Task No_slot_is_numbered_because_the_game_does_not_number_them()
+    {
+        // The boxes carried 1 to 20. The game's wishlist has no slot order — it lists what you
+        // want from a set, in collector number order — so a slot number named a position that
+        // exists nowhere but on this page, and it was being read as one.
+        var page = await PageAsync();
 
+        var words = page.FindAll(".box-strip .box .act")
+                        .Select(e => e.TextContent.Trim())
+                        .ToArray();
+
+        Assert.All(words, w => Assert.Contains(w, new[] { "On", "Off" }));
+
+        // How full the board is has to survive the numbers going: the empty slots are still drawn,
+        // and the clause over the strip still says how many there are.
         Assert.Equal(
-            Enumerable.Range(1, GameRules.TradeBoardSlots - page.FindAll(".box-strip .slot-art.on").Count)
-                      .Select(n => n.ToString()).ToArray(),
-            slots);
+            GameRules.TradeBoardSlots
+                - page.FindAll(".box-strip .box.live").Count
+                + page.FindAll(".box-strip .slot-art.off").Count,
+            page.FindAll(".box-strip .box.dead").Count);
+    }
+
+    [Fact]
+    public async Task A_slot_carries_what_a_collection_tile_carries()
+    {
+        // Art alone identifies a card you already recognise and nothing else, and this is the
+        // board you are about to check against the game's own list. The same three facts a
+        // collection tile shows, in the same order: number, name, rarity.
+        var page = await PageAsync();
+
+        var caps = page.FindAll(".box-strip .box.live .slot-cap").ToArray();
+        Assert.NotEmpty(caps);
+
+        Assert.All(caps, c =>
+        {
+            var printed = c.QuerySelector(".no")!.TextContent.Trim();
+            Assert.Matches(@"^\S+ \d+$", printed);
+
+            var name = c.QuerySelector("a.nm")!;
+            Assert.False(string.IsNullOrWhiteSpace(name.TextContent));
+            Assert.StartsWith("card/", name.GetAttribute("href"));
+
+            Assert.NotNull(c.QuerySelector(".rr"));
+        });
+    }
+
+    [Fact]
+    public async Task The_board_reads_newest_set_first_then_by_collector_number()
+    {
+        // The game's wishlist has no order of its own to match, so this one is picked for reading:
+        // the set you are opening now is the one you are checking, and within a set the game lists
+        // what you want in number order. Selection order is by value and is no use for reading
+        // back — the strip and the table would otherwise list the same twenty cards two ways.
+        var page = await PageAsync();
+
+        var sets = Session.Sets;
+
+        static (string Set, int Number) Printed(string text)
+        {
+            var parts = text.Trim().Split(' ');
+            return (parts[0], int.Parse(parts[^1]));
+        }
+
+        var listed = page.FindAll("table tbody tr")
+                         .Select(r => Printed(r.QuerySelectorAll("td")[1].TextContent))
+                         .ToArray();
+
+        Assert.NotEmpty(listed);
+        AssertReadingOrder(listed, sets);
+
+        // And the strip's groups, so one screen does not carry two orders. The groups themselves
+        // are the diff — what stays, what comes off, what goes on — so each is checked on its own.
+        foreach (var group in new[] { "", "on", "off" })
+        {
+            var boxes = page.FindAll(".box-strip .box.live")
+                .Where(b => b.QuerySelector(".slot-art")!.ClassList.Contains("on") == (group == "on")
+                         && b.QuerySelector(".slot-art")!.ClassList.Contains("off") == (group == "off"))
+                .Select(b => Printed(b.QuerySelector(".slot-cap .no")!.TextContent))
+                .ToArray();
+
+            AssertReadingOrder(boxes, sets);
+        }
+    }
+
+    private static void AssertReadingOrder(
+        IReadOnlyList<(string Set, int Number)> cards, PackProphet.Data.SetCatalog sets)
+    {
+        for (var i = 1; i < cards.Count; i++)
+        {
+            var previous = sets.SortKey(cards[i - 1].Set);
+            var current = sets.SortKey(cards[i].Set);
+            var order = string.CompareOrdinal(previous, current);
+
+            Assert.True(order >= 0,
+                $"{cards[i - 1].Set} came before the newer {cards[i].Set}");
+
+            if (order == 0)
+                Assert.True(cards[i - 1].Number <= cards[i].Number,
+                    $"{cards[i - 1].Set} {cards[i - 1].Number} came before "
+                    + $"{cards[i].Set} {cards[i].Number}");
+        }
     }
 
     [Fact]
@@ -83,18 +172,23 @@ public class TradeBoardPageTests : AppHost
         {
             Assert.False(art.ClassList.Contains("on") && art.ClassList.Contains("off"));
 
-            var word = art.Closest(".box")!.QuerySelector(".lbl")!.TextContent.Trim();
+            var word = art.Closest(".box")!.QuerySelector(".act")?.TextContent.Trim();
             if (art.ClassList.Contains("on")) Assert.Equal("On", word);
             if (art.ClassList.Contains("off")) Assert.Equal("Off", word);
+
+            // A card that merely stays says nothing at all: sixteen boxes reading "Stays" is a
+            // word per card for the case that needs none.
+            if (!art.ClassList.Contains("on") && !art.ClassList.Contains("off"))
+                Assert.Null(word);
         }
     }
 
     [Fact]
-    public async Task A_filled_slot_names_its_card_to_a_screen_reader()
+    public async Task A_filled_slot_names_its_card()
     {
-        // The box is a picture and nothing else — the art IS the recognition, at 30px, which is
-        // the whole reason the strip works as a shape. A picture with no name is a box that says
-        // nothing at all to anyone not looking at it.
+        // It used to name the card to a screen reader only, in a visually-hidden span, because the
+        // box was a picture and nothing else. The name is on the box now, so the hidden copy would
+        // be the same card read twice — and the art is decorative for the same reason.
         var page = await PageAsync();
 
         var filled = page.FindAll(".box-strip .box.live").ToArray();
@@ -102,12 +196,11 @@ public class TradeBoardPageTests : AppHost
 
         Assert.All(filled, b =>
         {
-            var named = b.QuerySelector(".visually-hidden")?.TextContent.Trim();
+            var named = b.QuerySelector(".slot-cap .nm")?.TextContent.Trim();
             Assert.False(string.IsNullOrWhiteSpace(named), "a filled slot must name its card");
 
-            // And the art itself is decorative, since the name beside it already says which card
-            // this is — announcing both is the same card read twice.
             Assert.Equal("true", b.QuerySelector(".slot-art")!.GetAttribute("aria-hidden"));
+            Assert.Empty(b.QuerySelectorAll(".visually-hidden"));
         });
     }
 
@@ -119,7 +212,7 @@ public class TradeBoardPageTests : AppHost
         var page = await PageAsync();
 
         var then = Flat(page.Find(".verdict-lead .then").TextContent);
-        Assert.Contains("retyping in the game", then);
+        Assert.Contains("in the game", then);
         Assert.Contains("edit", then);
 
         // "about about 3 minutes" — the helper and the sentence both supplied the hedge.
@@ -158,6 +251,59 @@ public class TradeBoardPageTests : AppHost
 
         // And the bar carries what they are set to, in words.
         Assert.False(string.IsNullOrWhiteSpace(page.Find(".page-head .subtitle").TextContent));
+    }
+
+    [Fact]
+    public async Task The_board_is_still_shown_when_there_is_nothing_to_change()
+    {
+        // A board that needs no edits is still a board. It used to vanish the moment it came
+        // right — the one state where you might simply want to look at what you have got was the
+        // one state that showed you nothing but a sentence saying so.
+        var page = await PageAsync();
+
+        var accept = page.FindAll(".lead-actions button")
+                         .First(b => b.TextContent.Contains("made these changes"));
+        await page.InvokeAsync(() => accept.Click());
+        page.WaitForState(() => page.FindAll(".verdict-lead .name.take").Count == 1,
+                          TimeSpan.FromSeconds(10));
+
+        Assert.Contains("already right", page.Find(".verdict-lead .name").TextContent);
+        Assert.NotEmpty(page.FindAll(".box-strip .box.live .slot-cap"));
+
+        // No edits, so nothing is marked and there is nothing to confirm having done.
+        Assert.Empty(page.FindAll(".box-strip .act"));
+        Assert.Empty(page.FindAll(".lead-actions"));
+    }
+
+    [Fact]
+    public async Task What_cannot_be_listed_is_a_note_in_the_rail()
+    {
+        // A footnote about cards that are NOT on the board, which under the board read as part of
+        // it. The question it answers — "why is my Crown not here" — is asked of the tuning.
+        await ReadyAsync();
+
+        // Crowns and Immersives cannot be traded at all, so wanting them is what fills this list.
+        var tiers = new[] { "UR", "IM" }
+            .Select(Session.Index.Ladder.IndexOf)
+            .Where(i => i is not null)
+            .Select(i => i!.Value)
+            .ToHashSet();
+
+        Assert.NotEmpty(tiers);
+        Session.SetPlan(RarityPlan.Uniform(tiers));
+
+        var page = RenderComponent<TradeBoard>();
+        page.WaitForState(() => page.FindAll(".page-rail .rail-note").Count > 0,
+                          TimeSpan.FromSeconds(10));
+
+        Assert.Empty(page.FindAll(".rail-main .rail-note"));
+
+        var note = page.Find(".page-rail .rail-note");
+        Assert.Contains("cannot be traded", note.QuerySelector(".lbl")!.TextContent);
+
+        // Every name rather than the first few: only these rarities are excluded, so the group is
+        // small and a truncated list would not say which cards are affected.
+        Assert.False(string.IsNullOrWhiteSpace(note.QuerySelector(".who")!.TextContent));
     }
 
     [Fact]

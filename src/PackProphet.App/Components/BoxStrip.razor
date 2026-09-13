@@ -23,7 +23,7 @@
    It also reads as a shape. Seventeen solid boxes and three dashed ones at the end says "nearly
    right" without anyone counting to twenty, which is the whole job on the wishlist page. *@
 
-<div class="box-strip">
+<div class="box-strip @Class">
     @if (Label is { Length: > 0 })
     {
         <span class="micro">
@@ -39,10 +39,13 @@
     }
 
     @* The column count is the page's, because it is a property of the set being enumerated: five
-       for a pack, four for the routes to a card, ten for a board of twenty in two rows. Inline
-       because it is data rather than a design token -- there is no stylesheet rule that could know
-       how many cards a pack holds. *@
-    <div class="boxes" style="grid-template-columns:repeat(@Columns,minmax(0,1fr))">
+       for a pack, four for the routes to a card. Inline because it is data rather than a design
+       token -- there is no stylesheet rule that could know how many cards a pack holds.
+
+       Zero means the opposite case: a strip whose boxes carry text, where what has to fit is the
+       caption rather than the row, so the count follows the width and the stylesheet owns it. *@
+    <div class="boxes"
+         style="@(Columns > 0 ? $"grid-template-columns:repeat({Columns},minmax(0,1fr))" : null)">
         @ChildContent
     </div>
 </div>
@@ -58,10 +61,13 @@
     [Parameter] public string? Clause { get; set; }
 
     /// <summary>
-    /// Boxes across. One row unless the page says otherwise — twenty slots go ten across in two
-    /// rows, because twenty in a line is a line nobody reads the shape of.
+    /// Boxes across. One row unless the page says otherwise. Zero hands the decision to the
+    /// stylesheet, for a strip whose boxes hold text and so have a width they cannot go under.
     /// </summary>
     [Parameter] public int Columns { get; set; } = 5;
+
+    /// <summary>An extra class on the strip, for the page that has to style its own boxes.</summary>
+    [Parameter] public string? Class { get; set; }
 
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

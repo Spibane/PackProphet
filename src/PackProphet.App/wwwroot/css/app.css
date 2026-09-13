@@ -1142,8 +1142,24 @@ main:has(> .page-body.railed) > .page-head {
     --art-fit: cover;
     background-color: var(--bs-secondary-bg);
 }
-/* The ones being added, so the strip shows which part of itself is the work. */
-.slot-art.new { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
+/* Which direction a slot is moving, and nothing else. The additions were ringed in the accent,
+   which in this app is red -- so the only marked boxes on a picture of a wishlist wore the colour
+   of a warning and read as "take these down" when they meant the opposite.
+
+   Green on, red off, the rest unmarked. Not the accent for either: the accent means "this is the
+   one to act on", and here both colours are acts. */
+.slot-art.on { outline: 2px solid var(--bs-success); outline-offset: 1px; }
+.slot-art.off {
+    outline: 2px solid var(--bs-danger);
+    outline-offset: 1px;
+    /* Coming off, so it is shown leaving rather than merely marked. */
+    opacity: .62;
+}
+
+/* The word under a box that names an act rather than a slot, in its own colour so the strip can be
+   read at a glance without matching outlines to a key. */
+.box:has(.slot-art.on) > .lbl { color: var(--bs-success-text-emphasis); font-weight: 700; }
+.box:has(.slot-art.off) > .lbl { color: var(--bs-danger-text-emphasis); font-weight: 700; }
 
 /* Two readings at the foot of a rail: a pool and its number. Not a control, so no border and no
    fill -- it is the same kind of thing as the target figures on the collection's rail. */

@@ -101,6 +101,29 @@ else
                 <span class="fig">@Session.Profile.Resources.Shinedust.ToString("N0")</span>
             </div>
         </div>
+
+        @* Wanted, and not listable. A footnote about cards that are NOT on the board, which under
+           the board read as part of it -- and the question it answers ("why is my Crown not here")
+           is asked of the tuning, which is what the rail is.
+
+           Every name rather than the first few: only 3-star and Crown are excluded on rarity, so
+           the groups are small and a truncated list would not say which cards are affected. *@
+        @if (_plan is { Excluded.Count: > 0 })
+        {
+            <div class="rail-group">
+                <span class="ttl">Cannot be listed</span>
+                @foreach (var group in _plan.Excluded.GroupBy(x => x.Reason).OrderBy(g => g.Key))
+                {
+                    <div class="rail-note">
+                        <span class="lbl">@group.Count() card(s), @group.Key</span>
+                        <span class="who">
+                            @string.Join(", ", group.Select(x => x.Card.Name)
+                                                    .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase))
+                        </span>
+                    </div>
+                }
+            </div>
+        }
     </PageRail>
 
     @* One element for everything beside the rail, because .railed puts every child of the shell
@@ -145,37 +168,34 @@ else
         {
             @* What to change, first and separately. The board is retyped by hand in the game, so
                the useful output is a couple of edits rather than twenty rows to transcribe. *@
-            @if (_plan.Unchanged)
-            {
-                @* The same block as the branch below, because it fills the same slot: this is the
-                   verdict when the answer is "nothing". It was the app's other verdict component,
-                   so the page drew one shape when there were edits to make and a different one
-                   when there were not. *@
-                <div class="verdict-lead">
-                    <span class="micro">What to change</span>
+            @* One block either way, and the branch is the sentence rather than the section. A
+               board that needs no edits is still a board, and it used to vanish from the page the
+               moment it came right -- the one state where you might want to look at what you have
+               got was the one state that showed you nothing.
 
+               The verdict is EDITS, not a ranking.
+               ==================================================================================
+               Every other Answer page recommends one thing out of many. This one recommends a
+               diff, because the board already exists and is retyped by hand in the game -- twenty
+               rows of "here is your board" is a transcription job, and five edits is a minute. So
+               the headline counts the edits and the cost is stated in the only currency that
+               applies here, which is effort. *@
+            <div class="verdict-lead">
+                <span class="micro">What to change</span>
+
+                @if (_plan.Unchanged)
+                {
                     <div class="lead-head">
                         <div class="lead-text">
                             <h2 class="name take">Your board is already right</h2>
                             <p class="says">
-                                All @_plan.Keep.Count slots still earn their place. Nothing to retype.
+                                All @_plan.Keep.Count slots still earn their place.
                             </p>
                         </div>
                     </div>
-                </div>
-            }
-            else
-            {
-                @* The verdict is EDITS, not a ranking.
-                   ==================================================================================
-                   Every other Answer page recommends one thing out of many. This one recommends a
-                   diff, because the board already exists and is retyped by hand in the game --
-                   twenty rows of "here is your board" is a transcription job, and five edits is a
-                   minute. So the headline counts the edits and the cost is stated in the only
-                   currency that applies here, which is effort. *@
-                <div class="verdict-lead">
-                    <span class="micro">What to change</span>
-
+                }
+                else
+                {
                     <div class="lead-head">
                         <div class="lead-text">
                             <h2 class="name">@Edits(_plan)</h2>
@@ -198,56 +218,77 @@ else
 
                             @* The cost, in the currency this page actually spends. Every figure on
                                the other Answer pages is packs or days; this one is typing. *@
-                            <p class="then">
-                                @EditTotal(_plan) in total, @Minutes(_plan) of retyping in the game.
-                            </p>
+                            <p class="then">@EditTotal(_plan), @Minutes(_plan) in the game.</p>
                         </div>
                     </div>
 
-                    @* The board AND the edits, which is up to forty boxes: twenty coming off and
-                       twenty going on, in the worst case where the whole thing is replaced.
+                }
 
-                       It showed the twenty slots you would end up with, and outlined the new ones.
-                       In the accent -- which is red -- so the one thing marked on a picture of a
-                       wishlist was ringed in the colour of a warning, and it read as "take these
-                       down" when it meant the opposite.
+                @* The board AND the edits, which is up to forty boxes: twenty coming off and
+                   twenty going on, in the worst case where the whole thing is replaced.
 
-                       Colour by direction now and nothing else: green goes on, red comes off, the
-                       ones that stay are left plain. A card being removed is not on the board you
-                       will end up with, so it has no slot number -- the word under it is the act,
-                       not a position.
+                   Colour by direction and nothing else: green goes on, red comes off, the ones
+                   that stay are left plain. The accent is red in this app, so ringing the
+                   ADDITIONS in it put the colour of a warning on the one thing you were being
+                   told to do.
 
-                       Ten across rather than in a line: a line of twenty is a line nobody reads
-                       the shape of, and this can be twice that. *@
-                    <BoxStrip Label="The board, and what changes"
-                              Clause="@SlotClause(_plan)" Columns="10">
-                        @foreach (var edit in BoardEdits(_plan))
-                        {
-                            <Box State="@(edit.Card is null ? Box.Kind.Dead : Box.Kind.Live)"
-                                 Label="@edit.Label">
-                                @if (edit.Card is { } card)
+                   NOT NUMBERED, and it used to be. The game's wishlist has no slot order -- it
+                   lists what you want from a set, in collector number order -- so "slot 7" named
+                   a position that does not exist anywhere but here. How full the board is comes
+                   from the dashed boxes and the clause above them, which is where it belongs.
+
+                   Each box carries what a collection tile carries, for the same reason: art alone
+                   identifies a card you already know and nothing else, and this is the board you
+                   are about to check against the game's. The width follows the caption rather than
+                   a column count -- see BoxStrip -- because the caption is what has to stay
+                   readable. *@
+                <BoxStrip Label="@(_plan.Unchanged ? "The board" : "The board, and what changes")"
+                          Clause="@SlotClause(_plan)" Columns="0" Class="board-strip">
+                    @foreach (var edit in BoardEdits(_plan))
+                    {
+                        <Box State="@(edit.Card is null ? Box.Kind.Dead : Box.Kind.Live)">
+                            @if (edit.Card is { } card)
+                            {
+                                <span class="slot-art @edit.Mark"
+                                      style="@card.ArtVars"
+                                      title="@card.Name" aria-hidden="true"></span>
+
+                                <span class="slot-cap">
+                                    @* Set and number: the pair printed in the card's own corner,
+                                       and what you match against walking the list in the game. *@
+                                    <span class="no">@card.Set @card.Number</span>
+                                    <a class="nm" href="card/@card.Key">@card.Name</a>
+                                    <span class="rr glyphs @Session.Index.GlyphClass(card)"
+                                          title="@Session.Index.Symbol(card)"
+                                          aria-hidden="true">@Session.Index.Glyphs(card)</span>
+                                </span>
+
+                                @* Under the card rather than over it, so every box starts with
+                                   art and the row does not stagger by whether a box has a word. *@
+                                @if (edit.Label is { Length: > 0 })
                                 {
-                                    <span class="slot-art @edit.Mark"
-                                          style="@card.ArtVars"
-                                          title="@card.Name" aria-hidden="true"></span>
-                                    <span class="visually-hidden">@card.Name</span>
+                                    <span class="act @edit.Mark">@edit.Label</span>
                                 }
-                            </Box>
-                        }
-                    </BoxStrip>
+                            }
+                        </Box>
+                    }
+                </BoxStrip>
 
+                @if (!_plan.Unchanged)
+                {
                     <div class="lead-actions">
                         <button class="btn btn-sm btn-primary" @onclick="AcceptPlan">
                             I have made these changes in the game
                         </button>
                     </div>
-                </div>
-            }
+                }
+            </div>
 
-            @* Ordered by set and number rather than by rank: the board is entered by walking the
-               in-game card list, and rank order would mean jumping between sets for every entry.
-               Rank picks the cards; this order gets them typed. *@
-            <h2>The board, in the order you will enter it</h2>
+            @* Newest set first, then collector number. Rank picks the cards; it is no use for
+               reading them back, because the game's wishlist has no order of its own -- it shows
+               what you want from a set, in number order -- and the set you are opening now is the
+               one you are checking. *@
+            <h2>The board</h2>
             <DataTable Label="In-game wishlist board">
                 <thead>
                     <tr>
@@ -328,18 +369,18 @@ else
            every later visit. The verdict and the "I have made these changes" button stay above:
            those are the answer and the action, not the explanation. *@
         <p class="small text-body-secondary">
-            The game's wishlist is an advertisement: it makes other players offer you those cards.
-            Slots cost nothing and never expire, so the board is the @GameRules.TradeBoardSlots
+            The wishlist is an advertisement &mdash; other players see it and offer. Slots are free
+            and never expire, so the board holds the @GameRules.TradeBoardSlots
             <strong>tradeable cards you still want that cost the most to get any other way</strong>,
-            with a few slots held back for cards someone plausibly has spare.
+            a few of them kept for cards someone plausibly has spare.
         </p>
 
         @if (ShowFoilFilter)
         {
             <p class="small text-body-secondary">
-                <strong>Parallel foils</strong> are listed as the 1-3 diamond cards they are
-                printed as, which is what decides trade eligibility and the dust price. If the game
-                will not let you wishlist a foil printing, exclude them above.
+                <strong>Parallel foils</strong> are listed as the 1-3 diamond cards they are printed
+                as, which sets trade eligibility and dust price. Exclude them above if the game will
+                not let you wishlist a foil.
             </p>
         }
 
@@ -349,46 +390,23 @@ else
             @if (_plan.Slots.Any(s => s.Band == BoardBand.Liquid))
             {
                 <p class="small text-body-secondary">
-                    <strong>About the @_plan.Slots.Count(s => s.Band == BoardBand.Liquid)
-                    &ldquo;widely held&rdquo; slots.</strong>
-                    Some slots go to cards more copies of which likely exist: drop rate
-                    times how long the set has been on sale. It is a weak guess: it cannot know who
-                    still needs the card or would part with one. Set the reserve to
-                    <strong>0</strong> above to rank purely by what a card costs you.
+                    The @_plan.Slots.Count(s => s.Band == BoardBand.Liquid)
+                    <strong>&ldquo;widely held&rdquo;</strong> slots go to cards more copies of
+                    which likely exist: drop rate times how long the set has been on sale. A weak
+                    guess &mdash; it cannot know who would part with one. Set the reserve to
+                    <strong>0</strong> to rank purely by cost.
                 </p>
             }
 
             @if (_plan.Slots.Any(s => s.SparesAtRarity == 0))
             {
                 <p class="small text-body-secondary">
-                    A trade needs a card of the same rarity to give back, so <em>no spare to
-                    give</em> means you could not honour the request today. Kept anyway, since a
-                    spare may turn up first.
+                    A trade needs a same-rarity card to give back, so <em>no spare to give</em>
+                    means you could not honour the request today. Kept anyway &mdash; a spare may
+                    turn up first.
                 </p>
             }
 
-            @if (_plan.Excluded.Count > 0)
-            {
-                <h2>Wanted, but cannot be listed</h2>
-                <p class="small text-body-secondary">
-                </p>
-                <ul class="small text-body-secondary">
-                    @foreach (var group in _plan.Excluded.GroupBy(x => x.Reason).OrderBy(g => g.Key))
-                    {
-                        @* Every name rather than the first few. These groups are small by nature —
-                           only 3-star and Crown are excluded on rarity — so the full list costs a
-                           line or two, and a truncated one would not say which cards are
-                           affected. *@
-                        <li>
-                            <strong>@group.Count() card(s)</strong>: @group.Key
-                            <div class="text-body-tertiary">
-                                @string.Join(", ", group.Select(x => x.Card.Name)
-                                                        .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase))
-                            </div>
-                        </li>
-                    }
-                </ul>
-            }
         }
     </div>
     </PageShell>
@@ -473,11 +491,17 @@ else
     private ICompletionTarget CurrentTarget() => Session.TargetForScope(_scope);
 
     /// <summary>
-    /// Selection order is by value; this is the order you will TYPE it in, walking the in-game
-    /// card list set by set. Two different jobs, so two different orders.
+    /// Newest set first, then collector number. Selection order is by value, which is no use for
+    /// reading the board back: the set you are opening now is the one you are checking, and within
+    /// a set the game lists what you want in number order.
+    ///
+    /// Descending on the SET ALONE. SortKey(card) is the set's key with the number appended, so
+    /// reversing it would reverse the numbers with it and walk each set backwards.
     /// </summary>
     private IEnumerable<BoardSlot> Transcription() =>
-        (_plan?.Slots ?? []).OrderBy(s => Session.Sets.SortKey(s.Card), StringComparer.Ordinal);
+        (_plan?.Slots ?? [])
+            .OrderByDescending(s => Session.Sets.SortKey(s.Card.Set), StringComparer.Ordinal)
+            .ThenBy(s => s.Card.Number);
 
     private bool OnBoard(BoardSlot slot) =>
         Session.TradeBoard.Contains(slot.Card.OwnershipKey, StringComparer.OrdinalIgnoreCase);
@@ -567,11 +591,11 @@ else
     }
 
     /// <summary>
-    /// The edits as time at the keyboard, which is the cost this page actually asks of you.
+    /// The edits as time in the game, which is the cost this page actually asks of you.
     ///
     /// Rough on purpose, and said in words: the figure is not a measurement, it is a reassurance
     /// that this is a minute's work rather than the twenty-row transcription the page used to
-    /// hand over. Ten seconds an entry is a slow, careful typist searching a card list.
+    /// hand over. Ten seconds an entry is a slow, careful search of a card list.
     /// </summary>
     private static string Minutes(BoardPlan plan)
     {
@@ -644,51 +668,52 @@ else
         return "you have pulled some, and the rest no longer earn a slot";
     }
 
-    /// <summary>
-    /// The twenty slots as they will stand once the edits are made: what is kept, plus what is
-    /// being added, then dashed boxes for whatever is left over.
-    ///
-    /// Ordered keep-then-add so the additions cluster at the end, which is what makes the strip
-    /// read as a shape -- solid, then the new ones, then the gaps.
-    /// </summary>
     /// <param name="Card">The card in this box, or null for a slot that stays empty.</param>
-    /// <param name="Label">What the box is: a slot number for one that stays, the act otherwise.</param>
+    /// <param name="Label">The act, where there is one: "Off", "On", or nothing for a card that stays.</param>
     /// <param name="Mark">The direction class the art carries — "off", "on", or nothing.</param>
     private sealed record BoardEdit(PocketCard? Card, string Label, string Mark);
 
     /// <summary>
-    /// The board and its edits, in reading order: what stays, what comes off, what goes on, then
+    /// The board and its edits: what stays, what comes off, what goes on, then dashed boxes for
     /// the slots nothing fills. Up to forty boxes where the whole board is replaced.
     ///
     /// Keeps first because they are the board — most of it, most of the time — and the shape worth
     /// seeing is how much of it is changing. Removes before adds because that is the order the
-    /// work happens in: a slot has to be free before anything goes into it.
+    /// work happens in: a slot has to be free before anything goes into it. That grouping is the
+    /// only order here that means anything: the game's wishlist has no order of its own to match.
     ///
-    /// Only the keeps and the empties are numbered. A card coming off has no position on the board
-    /// you end up with, and numbering it would be numbering a slot twice.
+    /// WITHIN a group, the same order as the table under it — newest set, then collector number.
+    /// Selection order is by value, so the strip and the table were listing the same twenty cards
+    /// two different ways on one screen.
+    ///
+    /// And nothing is numbered. The boxes carried 1 to 20, and a slot number names a position the
+    /// game does not have. How full the board is comes from the dashed boxes and the clause over
+    /// them.
     /// </summary>
-    private static IReadOnlyList<BoardEdit> BoardEdits(BoardPlan plan)
+    private IReadOnlyList<BoardEdit> BoardEdits(BoardPlan plan)
     {
         var edits = new List<BoardEdit>(GameRules.TradeBoardSlots * 2);
-        var n = 1;
 
-        foreach (var slot in plan.Keep.Take(GameRules.TradeBoardSlots))
-            edits.Add(new BoardEdit(slot.Card, n++.ToString(), ""));
+        edits.AddRange(Reading(plan.Keep.Take(GameRules.TradeBoardSlots).Select(s => s.Card), "", ""));
+        edits.AddRange(Reading(plan.Drop, "Off", "off"));
+        edits.AddRange(Reading(
+            plan.Add.Take(GameRules.TradeBoardSlots - plan.Keep.Count).Select(s => s.Card), "On", "on"));
 
-        foreach (var card in plan.Drop)
-            edits.Add(new BoardEdit(card, "Off", "off"));
-
-        foreach (var slot in plan.Add.Take(GameRules.TradeBoardSlots - plan.Keep.Count))
-            edits.Add(new BoardEdit(slot.Card, "On", "on"));
-
-        // The gaps are numbered with the slots they are, because that is what makes the row read
-        // as "seventeen of twenty" rather than as a row that ran out of cards.
         var filled = Math.Min(GameRules.TradeBoardSlots, plan.Keep.Count + plan.Add.Count);
         for (var i = filled; i < GameRules.TradeBoardSlots; i++)
-            edits.Add(new BoardEdit(null, (i + 1).ToString(), ""));
+            edits.Add(new BoardEdit(null, "", ""));
 
         return edits;
     }
+
+    /// <summary>
+    /// One group of the strip, in the order the table reads: newest set, then collector number.
+    /// Descending on the SET ALONE, for the reason in <see cref="Transcription"/>.
+    /// </summary>
+    private IEnumerable<BoardEdit> Reading(IEnumerable<PocketCard> cards, string label, string mark) =>
+        cards.OrderByDescending(c => Session.Sets.SortKey(c.Set), StringComparer.Ordinal)
+             .ThenBy(c => c.Number)
+             .Select(c => new BoardEdit(c, label, mark));
 
     /// <summary>
     /// Why the strip has gaps, where it has them. Empty slots on a wishlist are not a fault -- the

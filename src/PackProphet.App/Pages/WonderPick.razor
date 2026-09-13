@@ -41,7 +41,7 @@ else
         </span>
     </div>
 
-    <PageSheet Id="wonder-target">
+    <PageSheet Id="wonder-target" Label="Target">
         <div class="rail-group">
             <span class="ttl">What counts as wanted</span>
             <ScopePicker Label="What counts as wanted"
@@ -193,9 +193,15 @@ else
         @if (_offer.Count < GameRules.WonderPickCardsShown)
         {
             <div class="mt-3">
+                @* Only what could have come out of the same pack, once one card says which pack
+                   that is. Restricting the SEARCH rather than only the tap: a list of cards the
+                   page will refuse is a worse answer than a short list of the ones it will take,
+                   and the heading says which pack so an empty search reads as the rule rather
+                   than as a fault. *@
                 <CardPicker Level="2" ByPrinting="true" AllCardsDefault="true"
-                            Heading="@($"Add card {_offer.Count + 1} of {GameRules.WonderPickCardsShown}")"
-                            PickedLabel="in offer" PickedOf="InOffer" CanPick="CanPick"
+                            Heading="@PickHeading"
+                            PickedLabel="in offer" PickedOf="InOffer"
+                            CanPick="CanPick" Only="FromSamePack" OnlyKey="@OfferPackKey"
                             OnPick="Add" />
             </div>
         }
@@ -556,11 +562,97 @@ else
     /// Five slots, and a card can genuinely appear twice in one offer, so duplicates are
     /// allowed — only the count is capped.
     /// </summary>
-    private bool CanPick(PocketCard card) => _offer.Count < GameRules.WonderPickCardsShown;
+    private bool CanPick(PocketCard card) =>
+        _offer.Count < GameRules.WonderPickCardsShown && FromSamePack(card);
+
+    /// <summary>
+    /// Whether this card could have come out of the same pack as the ones already named.
+    ///
+    /// A Wonder Pick offer is one pack somebody else opened, so the five cards are five cards
+    /// from that pack — not five cards from the game. The picker let you build an offer that
+    /// cannot exist, and an appraisal of an impossible offer is a number with nothing behind it.
+    ///
+    /// Two conditions, because a pack belongs to a set: same set, and some pack in common. Cards
+    /// can sit in more than one pack of their set, so what narrows is the INTERSECTION — name a
+    /// card in both Charizard and Mewtwo and both stay open until a card names one of them.
+    ///
+    /// A card whose pack list is empty does not narrow anything. Promos have none, and the data
+    /// runs ahead of itself for a new set; treating "no data" as "no packs in common" would lock
+    /// the picker to one card with no way to see why.
+    /// </summary>
+    private bool FromSamePack(PocketCard card)
+    {
+        if (_offer.Count == 0) return true;
+
+        if (!string.Equals(card.Set, _offer[0].Set, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var common = OfferPacks();
+        return common.Length == 0
+            || card.Packs is not { Length: > 0 } packs
+            || packs.Any(p => common.Contains(p, StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// The picker's heading, which has to carry the restriction: a search that comes back empty
+    /// because the card is in another pack looks like a broken search unless the page said first.
+    /// </summary>
+    private string PickHeading =>
+        OfferFrom is { Length: > 0 } from
+            ? $"Add card {_offer.Count + 1} of {GameRules.WonderPickCardsShown} \u00b7 {from}"
+            : $"Add card {_offer.Count + 1} of {GameRules.WonderPickCardsShown}";
+
+    /// <summary>Packs every named card appears in. Empty means nothing has narrowed it yet.</summary>
+    private string[] OfferPacks()
+    {
+        string[]? common = null;
+        foreach (var card in _offer)
+        {
+            if (card.Packs is not { Length: > 0 } packs) continue;
+
+            common = common is null
+                ? packs
+                : common.Intersect(packs, StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+
+        return common ?? [];
+    }
+
+    /// <summary>
+    /// What the restriction currently is, as something comparable. <see cref="CardPicker.Only"/>
+    /// is a closure and is rebuilt every render, so the picker cannot tell from the delegate
+    /// whether anything actually changed.
+    /// </summary>
+    private string OfferPackKey =>
+        _offer.Count == 0 ? "" : $"{_offer[0].Set}|{string.Join(',', OfferPacks().Order(StringComparer.Ordinal))}";
+
+    /// <summary>The pack the offer is being read as, for the picker's heading. Empty until one set.</summary>
+    private string OfferFrom
+    {
+        get
+        {
+            if (_offer.Count == 0) return "";
+
+            var packs = OfferPacks();
+            return packs.Length == 1 ? PackName(packs[0]) : _offer[0].Set;
+        }
+    }
+
+    /// <summary>A pack is stored as "SET:Name"; only the name is worth showing beside the set.</summary>
+    private static string PackName(string pack)
+    {
+        var at = pack.IndexOf(':');
+        return at >= 0 ? pack[(at + 1)..] : pack;
+    }
 
     private void Add(PocketCard card)
     {
-        if (_offer.Count >= GameRules.WonderPickCardsShown) return;
+        // Both conditions, not just the count. CanPick governs whether the picker ENABLES a row,
+        // and a rule enforced only by a disabled button is a rule the next caller does not have
+        // to keep -- this is the one door every tap comes through, so it is where the offer's
+        // shape is actually kept. (Reading an offer off a screenshot fills the list directly and
+        // is deliberately not checked: that is a real pack, photographed.)
+        if (!CanPick(card)) return;
 
         _offer.Add(card);
         _logged = null;

@@ -14,9 +14,28 @@ public class WonderPickPageTests : AppHost
     private static string Flat(string text) =>
         System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
 
-    /// <summary>Five cards in the offer, which is what makes the page show anything at all.</summary>
-    private IReadOnlyList<PocketCard> AnOffer() =>
-        Session.Index.All.Where(c => !c.IsPromo).Take(GameRules.WonderPickCardsShown).ToList();
+    /// <summary>
+    /// Five cards in the offer, which is what makes the page show anything at all.
+    ///
+    /// From ONE pack, because that is the only offer the game can produce: a Wonder Pick is a pack
+    /// somebody else opened. Five cards off the front of the index were five cards from wherever
+    /// the index happened to start, and the page now refuses to build an offer that cannot exist.
+    /// </summary>
+    private IReadOnlyList<PocketCard> AnOffer() => AnOfferFrom().Cards;
+
+    /// <summary>The first pack in the snapshot holding enough cards to fill an offer.</summary>
+    private (string Pack, IReadOnlyList<PocketCard> Cards) AnOfferFrom() =>
+        Session.Index.All
+            .Where(c => !c.IsPromo && c.Packs is { Length: > 0 })
+            .SelectMany(c => c.Packs!.Select(p => (Pack: p, Card: c)))
+            .GroupBy(x => x.Pack, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Select(x => x.Card).DistinctBy(c => c.OwnershipKey).Count()
+                        >= GameRules.WonderPickCardsShown)
+            .Select(g => (g.Key, (IReadOnlyList<PocketCard>)g.Select(x => x.Card)
+                .DistinctBy(c => c.OwnershipKey)
+                .Take(GameRules.WonderPickCardsShown)
+                .ToList()))
+            .First();
 
     private IRenderedComponent<WonderPick> WithOffer()
     {
@@ -161,6 +180,86 @@ public class WonderPickPageTests : AppHost
 
         Assert.Contains(buttons, b => b.StartsWith("Took it", StringComparison.Ordinal));
         Assert.Contains(buttons, b => b.StartsWith("Skipped it", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A Wonder Pick is one pack somebody else opened, so the five cards are five cards from that
+    /// pack. Before this the picker offered the whole game after the first card, and an appraisal
+    /// of an offer that cannot exist is a number with nothing behind it.
+    /// </summary>
+    [Fact]
+    public async Task After_the_first_card_only_its_own_pack_can_be_added()
+    {
+        await ReadyAsync();
+        var page = RenderComponent<WonderPick>();
+
+        var (pack, cards) = AnOfferFrom();
+        var first = cards[0];
+
+        var stranger = Session.Index.All.First(c =>
+            c.Packs is { Length: > 0 } packs
+            && !packs.Contains(pack, StringComparer.OrdinalIgnoreCase));
+
+        var picker = page.FindComponent<PackProphet.Components.CardPicker>();
+        page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(first)).GetAwaiter().GetResult();
+        page.WaitForState(() => page.FindAll(".box-strip .box").Count > 0, TimeSpan.FromSeconds(10));
+
+        // A card from another pack is refused...
+        picker = page.FindComponent<PackProphet.Components.CardPicker>();
+        page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(stranger)).GetAwaiter().GetResult();
+
+        Assert.DoesNotContain(page.FindAll(".box-strip .box .visually-hidden"),
+            b => b.TextContent.Trim() == stranger.Name);
+
+        // ...and one from the same pack still lands, so the rule narrows rather than locks.
+        picker = page.FindComponent<PackProphet.Components.CardPicker>();
+        page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(cards[1])).GetAwaiter().GetResult();
+
+        page.WaitForAssertion(() =>
+            Assert.Equal(2, page.FindAll(".box-strip .box .visually-hidden").Count),
+            TimeSpan.FromSeconds(10));
+    }
+
+    /// <summary>
+    /// The rule has to be visible before it bites. A search coming back empty because the card is
+    /// in another pack looks like a broken search unless the page said which pack first.
+    /// </summary>
+    [Fact]
+    public async Task The_picker_names_the_pack_it_is_restricted_to()
+    {
+        await ReadyAsync();
+        var page = RenderComponent<WonderPick>();
+
+        var heading = () => Flat(page.Find(".sub-head").TextContent);
+
+        // Nothing named yet, so nothing to restrict to and nothing to say.
+        Assert.Equal("Add card 1 of 5", heading());
+
+        var (_, cards) = AnOfferFrom();
+        var picker = page.FindComponent<PackProphet.Components.CardPicker>();
+        page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(cards[0])).GetAwaiter().GetResult();
+
+        page.WaitForAssertion(() =>
+        {
+            Assert.StartsWith("Add card 2 of 5", heading());
+            Assert.Contains("\u00b7", heading());
+        }, TimeSpan.FromSeconds(10));
+    }
+
+    /// <summary>
+    /// Emptying the offer has to empty the restriction with it, or the page stays narrowed to a
+    /// pack whose card is no longer on screen.
+    /// </summary>
+    [Fact]
+    public async Task Clearing_the_offer_opens_the_picker_back_up()
+    {
+        var page = WithOffer();
+
+        page.InvokeAsync(() => page.Find(".offer-clear").Click()).GetAwaiter().GetResult();
+
+        page.WaitForAssertion(() =>
+            Assert.Equal("Add card 1 of 5", Flat(page.Find(".sub-head").TextContent)),
+            TimeSpan.FromSeconds(10));
     }
 
     [Fact]

@@ -239,22 +239,43 @@
    Sixteen pixels off a 1044px grid column is under one card's width. */
 :root { --rail-w: 232px; }
 
-/* A railed page pins its page bar, because it is now the only bar the page has: with the controls
-   in a column, there is nothing between the bar and the first card to scroll away instead. The
-   grid runs under it, which is what the second of the two bars is for.
+/* EVERY page pins its bar, and one of the reasons is a platform one.
+   ==================================================================================
+   It started as a rule for railed pages: with the controls in a column there is nothing between
+   the bar and the first card to scroll away instead, so the bar stays and the grid runs under it.
+   That argument is still true, and it was never an argument for the OTHER pages letting theirs go.
+   The bar carries the page's title and the one or two controls that belong to the page rather than
+   to its content -- the pack ranking's target, the card's back link -- and those are worth having
+   at the top of a long page too.
+
+   THE PLATFORM REASON, which is what actually forced this:
+   ----------------------------------------------------------------------------------
+   iOS 26 introduced a scroll edge effect, and iOS 27 applies it to a web app running from the
+   Home Screen: the top of the SCROLLING content is blurred and faded under the status bar, so the
+   system clock stays legible over whatever is passing beneath it. A bar that is pinned is treated
+   as chrome and left alone; a bar that scrolls is content, and gets blurred.
+
+   So on iOS 27 the pack ranking's title read as a smear -- "Which pack" blurred while the line
+   directly under it stayed sharp -- and the four pages with a rail did not, which is exactly the
+   set of pages whose bar this rule already pinned. Measured in the simulator, installed to the
+   Home Screen, on both 26.5 and 27.
+
+   There is no CSS property for it. Safari 27 exposes no scroll-edge-effect of any spelling, under
+   any prefix -- checked against the whole of getComputedStyle, 423 properties -- so the blur
+   cannot be turned off, only kept off things that have to be read. Pinning the bar does that, and
+   is what the page wanted anyway.
 
    Selected through :has rather than by a class on the bar itself, so a page opts into the shell in
-   one place -- the Class it hands PageShell -- rather than in two that can disagree. The bar is a
-   sibling of the body that carries the class, which is why this reaches up to main to join them.
+   one place -- the Class it hands PageShell -- rather than in two that can disagree.
 
-   Same offset and stacking as .sticky-head, the log screen's equivalent: two shells, one pinned
-   bar, and no reason for them to park at different heights. */
-main:has(> .page-body.railed) > .page-head {
+   Same offset and stacking as .sticky-head, the log screen's equivalent: one pinned bar, and no
+   reason for two shells to park at different heights. */
+main > .page-head {
     position: sticky;
     top: var(--nav-h);
     z-index: 25;
 }
-@media (width <= 1056px) { main:has(> .page-body.railed) > .page-head { top: 0; } }
+@media (width <= 1056px) { main > .page-head { top: 0; } }
 
 .page-body.railed {
     display: grid;
@@ -2658,18 +2679,19 @@ h1[tabindex="-1"]:focus-visible { outline: none; }
    overwrites it. */
 @media (pointer: coarse) { .page-head { padding-block: .15rem; } }
 
-/* A header that stays put. Opt-in per page, because it is only worth the top of the screen where
-   the header carries the control that finishes the job and the task is long enough to scroll —
-   logging a pack, where the alternative is scrolling back past every card you just tapped to
-   reach "add to collection".
+/* THE CLASS NO LONGER PINS ANYTHING.
+   ==================================================================================
+   It was the third of three ways to say "keep this bar at the top": this class, the :has() rule
+   on a railed page, and nothing at all everywhere else. All three had the same two declarations
+   and the same two breakpoint values, and the only page carrying this one was the log screen.
 
-   The toolbar below it is sticky too, so it has to be told where the header ends. That number is
-   the header's own fixed height, which is a contract rather than an accident: .page-head is
-   always exactly one row, hence a header that can be relied on to be 3rem plus its border. */
-/* Under the nav, not at the viewport top: with bar one pinned, a bar two at zero parks behind it.
-   Below the nav's breakpoint there is no nav to sit under and the offset falls back to zero. */
-.page-head.sticky-head { position: sticky; top: var(--nav-h); z-index: 25; }
-@media (width <= 1056px) { .page-head.sticky-head { top: 0; } }
+   Every bar is pinned now -- see main > .page-head, which says why -- so what is left here is the
+   one thing this class alone knows: that the log screen has a SECOND pinned bar under the first,
+   and where the first one ends.
+
+   That number is the header's own fixed height, which is a contract rather than an accident:
+   .page-head is always exactly one row, hence a header that can be relied on to be 3rem plus its
+   border. */
 /* One pixel INSIDE the header rather than one clear of it. The header is min-height: 3rem plus a
    border, and border-box rounding lands its real height a fraction under 49px at some zoom levels
    -- so `3rem + 1px` left a sub-pixel gap between the two pinned bars with the card grid scrolling

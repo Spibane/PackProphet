@@ -1,6 +1,8 @@
 @page "/wonder"
 @implements IDisposable
+@implements IAsyncDisposable
 @inject AppSession Session
+@inject IJSRuntime JS
 
 <PageTitle>Wonder Pick · PackProphet</PageTitle>
 
@@ -521,7 +523,31 @@ else
         RebuildHistory();
     }
 
+    /// <summary>
+    /// The picker stays where it is while the offer is being filled.
+    ///
+    /// Naming the first card replaces three paragraphs of explanation with the five boxes, which
+    /// is the largest single change of height anywhere in the app -- and the control it happens
+    /// above is the one you are in the middle of using. Same mechanism as the log screen; the note
+    /// there says what it does.
+    ///
+    /// One token, because this screen never becomes a different screen: it fills up and empties.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) _anchor = await ScrollAnchor.LoadAsync(JS);
+        if (_anchor is not null) await _anchor.KeepAsync(".search-grid", "offer");
+    }
+
+    private ScrollAnchor? _anchor;
+
     public void Dispose() => Session.Changed -= OnChanged;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_anchor is not null) await _anchor.DisposeAsync();
+        _anchor = null;
+    }
 
     private void OnChanged()
     {

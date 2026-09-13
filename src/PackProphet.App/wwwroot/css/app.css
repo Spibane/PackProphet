@@ -4625,13 +4625,76 @@ tr.row-best {
     color: var(--bs-secondary-color);
 }
 
-/* Ratio matched to the art so `contain` and `cover` coincide and nothing is cropped. */
+/* Ratio matched to the art so `contain` and `cover` coincide and nothing is cropped.
+
+   A button, since pressing it opens the art larger. Everything that makes a button look like one
+   comes off; what is left is the picture it was before.
+
+   Including the NATIVE appearance. Bootstrap's reboot sets `-webkit-appearance: button` on every
+   button element, and a control left with its native appearance is free to ignore the background
+   it was given -- which on a box whose entire content is a background image means an empty grey
+   card. It renders on iOS 26, so this is not the reproduction of a bug so much as the removal of
+   the only platform-specific thing about painting art into a button. */
 .card-detail .big-art {
+    display: block;
     width: 100%;
     aspect-ratio: 367 / 512;
+    padding: 0;
+    border: 0;
+    appearance: none;
+    -webkit-appearance: none;
     border-radius: var(--pp-r);
+    cursor: zoom-in;
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center; background-repeat: no-repeat;
+}
+
+/* The art at twice the size, over the page.
+   ------------------------------------------------------------------------------
+   Not a .sheet. A sheet is a panel of controls reached by a thumb and anchored to the bottom edge
+   so what it is filtering stays visible behind it; this is one picture, and there is nothing
+   behind it worth keeping in view.
+
+   Sized to the picture rather than to the screen, which is what leaves a backdrop to press: a
+   popover the size of the window has no outside, so light dismiss would never fire and the only
+   way out would be the key. */
+.art-zoom {
+    position: fixed;
+    inset: 50% auto auto 50%;
+    translate: -50% -50%;
+    inline-size: fit-content;
+    max-inline-size: calc(100vw - 2rem);
+    max-block-size: calc(100svh - 2rem);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    background: transparent;
+}
+.art-zoom::backdrop { background: rgba(13, 12, 15, .72); }
+
+.zoom-art {
+    display: block;
+    /* Twice the 15rem column .card-detail gives the art. */
+    inline-size: 30rem;
+    aspect-ratio: 367 / 512;
+    padding: 0;
+    border: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: var(--pp-r);
+    cursor: zoom-out;
+    /* Image layers from the shared [style*="--art"] rule; this says only how they are fitted. */
+    --art-fit: cover;
+    background-color: var(--bs-secondary-bg);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .5);
+}
+/* The same width .card-detail switches its own layout at: below it the art is not a 15rem column
+   but as wide as the shell, so twice it is twice that. Wider than the screen, which is why the box
+   around it scrolls -- looking closely at a card means reading what is printed on it. */
+@media (width <= 760px) {
+    .zoom-art { inline-size: calc(200vw - 4rem); }
 }
 /* The counter, as a box the width of the card above it.
    ------------------------------------------------------------------------------
@@ -6239,7 +6302,7 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
     --pp-art-mark-size: 72%;
 }
 /* Room for the detailed one only where the box is big. */
-.big-art, .hit-art, .offer-card, .showcase .face { --pp-art-mark-size: 46%; }
+.big-art, .zoom-art, .hit-art, .offer-card, .showcase .face { --pp-art-mark-size: 46%; }
 
 /* unrecognised slots
    The screenshot import's loose ends: a picture of one card slot the reader could not name,

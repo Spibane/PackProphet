@@ -17,6 +17,41 @@ public class CardDetailTests : AppHost
         RenderComponent<CardDetail>(p => p.Add(c => c.Key, cardKey));
 
     [Fact]
+    public async Task The_art_opens_itself_larger()
+    {
+        // The art is the one thing on this page you might want to look at rather than read, and at
+        // 15rem the printed text on it is not legible. Pressing it opens the same art over the
+        // page; a button rather than a click handler on an image, so the keyboard can reach it.
+        await ReadyAsync();
+        var card = Session.Index.All.First(c => !c.IsPromo);
+
+        var page = Open(card.Key);
+
+        var art = page.Find(".card-detail .big-art");
+        Assert.Equal("BUTTON", art.TagName);
+        Assert.Equal("card-zoom", art.GetAttribute("popovertarget"));
+        Assert.False(string.IsNullOrWhiteSpace(art.GetAttribute("aria-label")));
+
+        // The card is named once, by the page's own h1. role="img" with the name on it as well
+        // made a screen reader read it twice.
+        Assert.Null(art.GetAttribute("role"));
+
+        var zoom = page.Find("#card-zoom");
+        Assert.NotNull(zoom.GetAttribute("popover"));
+
+        // Outside the div that answers Escape by navigating back. Inside it, one Escape would
+        // close this AND leave the page.
+        Assert.Null(zoom.Closest(".detail-keys"));
+
+        // The same art, and a way out that is the whole picture rather than a glyph in a corner.
+        var shown = zoom.QuerySelector(".zoom-art")!;
+        Assert.Equal(art.GetAttribute("style"), shown.GetAttribute("style"));
+        Assert.Equal("card-zoom", shown.GetAttribute("popovertarget"));
+        Assert.Equal("hide", shown.GetAttribute("popovertargetaction"));
+        Assert.False(string.IsNullOrWhiteSpace(shown.GetAttribute("aria-label")));
+    }
+
+    [Fact]
     public async Task Every_route_gets_a_box_including_the_ones_that_do_not_exist()
     {
         // The absence of a route is the answer as often as a price is: "you cannot trade for this"

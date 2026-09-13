@@ -125,39 +125,27 @@
 .page-body.measure-text { max-inline-size: var(--measure-text); }
 .page-body.measure-wide { max-inline-size: var(--measure-wide); }
 
-/* A measured page CENTRES, and its bar centres with it.
+/* A measured page CENTRES ITS BODY, and its bar does not follow it in.
    ==================================================================================
-   They were pinned to the left, so Settings, History and Resources ran to about 60% of a 1280px
-   window with the rest empty on the right -- which beside the grid and shelf pages, all of which
-   fill it, reads as a page that failed to load rather than as a considered measure.
+   The body is centred because pinned to the left it ran to about 60% of a 1280px window with the
+   rest empty on the right -- which, beside the grid and shelf pages that fill it, reads as a page
+   that failed to load rather than as a considered measure.
 
-   The bar cannot simply centre with it: it is full-bleed, carrying the sticky background and the
-   rule under it across the whole window. So it insets its CONTENTS to where the body's content
-   starts, and keeps its own edges. The 1rem is the body's own padding, which the bar does not
-   have; without it the title sits a notch left of the first word under it.
+   The BAR keeps its own ordinary padding, so its title and actions start at the window's edge on
+   every page in the app whatever the body below is doing. This block used to inset the bar's
+   contents to wherever the body's content started, on the reasoning that a title sitting a notch
+   left of the first word under it looks like a mistake. In practice the inset is what looked like
+   the mistake: at 1280px Settings pushed its bar 304px in and the import screens 352px, so the bar
+   spanned the window while everything printed on it huddled in the middle, and the bar read as one
+   that stops short. A full-bleed strip is the wrong element to hang a reading measure on -- the
+   measure is for the prose in the body, and a title and two buttons are not prose.
 
-   max() rather than a breakpoint: below the measure there is no space to divide and the bar falls
-   back to its ordinary padding, cutout inset included. Above it, a notch is not the constraint.
-
-   :has() reaching from the bar to its sibling body, the way the sticky rule above does. The
-   alternative is a page naming its measure twice, in two elements, with nothing keeping the two
-   in step. */
+   So there is nothing here but the centring. The bar's padding is the one in the shared
+   .page-head / .page-tools / .grid-toolbar rule, which every other page was already using; a
+   measured page is no longer a page with its own bar geometry. */
 .page-body.measure-form,
 .page-body.measure-text,
 .page-body.measure-wide { margin-inline: auto; }
-
-main:has(> .page-body.measure-form) > .page-head {
-    padding-inline-start: max(calc(.75rem + var(--safe-l)), calc((100% - var(--measure-form)) / 2 + 1rem));
-    padding-inline-end: max(calc(.75rem + var(--safe-r)), calc((100% - var(--measure-form)) / 2 + 1rem));
-}
-main:has(> .page-body.measure-text) > .page-head {
-    padding-inline-start: max(calc(.75rem + var(--safe-l)), calc((100% - var(--measure-text)) / 2 + 1rem));
-    padding-inline-end: max(calc(.75rem + var(--safe-r)), calc((100% - var(--measure-text)) / 2 + 1rem));
-}
-main:has(> .page-body.measure-wide) > .page-head {
-    padding-inline-start: max(calc(.75rem + var(--safe-l)), calc((100% - var(--measure-wide)) / 2 + 1rem));
-    padding-inline-end: max(calc(.75rem + var(--safe-r)), calc((100% - var(--measure-wide)) / 2 + 1rem));
-}
 
 /* The figure in a page bar's sentence that is the one to act on. Accent as ink rather than as a
    fill: it is a word in a line of prose, and a chip in the middle of a sentence reads as a
@@ -217,7 +205,15 @@ main:has(> .page-body.measure-wide) > .page-head {
 
    Placement is explicit rather than by flow order, because three of this container's four
    children go in the second column and the fourth is fixed and in no column at all. */
-:root { --rail-w: 216px; }
+/* One width, every page.
+
+   232 is what the widest rail asks for -- the collection's, whose rarity chips and fourteen type
+   pips wrap into it -- and it is also the floor for the one control that has to fit three equal
+   segments: "Off / Add / Remove". At 216 the third of them had 45px for a 51.5px word, so "Remove"
+   overflowed its share and read as off-centre rather than as clipped.
+
+   Sixteen pixels off a 1044px grid column is under one card's width. */
+:root { --rail-w: 232px; }
 
 /* A railed page pins its page bar, because it is now the only bar the page has: with the controls
    in a column, there is nothing between the bar and the first card to scroll away instead. The
@@ -239,25 +235,26 @@ main:has(> .page-body.railed) > .page-head {
 .page-body.railed {
     display: grid;
 
-    /* fit-content, not a fixed width. --rail-w is the CAP now rather than the measurement, so a
-       rail holding two small selects is as wide as two small selects and the collection's, with
-       its wrapping rarity chips and fourteen type pips, still gets its 216px.
+    /* The same width on every page, rather than each rail sized to its own widest control. They
+       came out five different widths -- 170px on the pack log, 232px on the collection -- and a
+       shell whose edge moves as you navigate reads as five layouts rather than as one app with a
+       column down the side of it.
 
-       A fixed 216px on every page is what the component's own note says it is not -- "sized to its
-       page rather than to a fixed set of controls" -- and on the shelves and the log screen it
-       left 70-odd px of empty column beside every control, which reads as padding inside the rail
-       rather than as a column that is too wide. */
-    grid-template-columns: fit-content(var(--rail-w)) minmax(0, 1fr);
+       This was fit-content(--rail-w), and the argument for that has since gone. The complaint it
+       answered was "70-odd px of empty column beside every control", which was true while controls
+       carried their own widths from the bars they came from; those are gone, and a control in a
+       rail now runs the rail's width. So a wider column is a wider control rather than a gutter,
+       and there is nothing left for fit-content to save.
 
-    /* And the space belongs on the OUTSIDE. There was none: the content column began at the rail's
-       border, so a table's first heading and a pack's artwork sat against the hairline. */
-    column-gap: 20px;
+       Collapsed to one track below the fold width, where the rail is a sheet -- see the
+       width <= 900px block further down, which unwinds the placement with it. */
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
 
     align-items: start;
 
     /* No reading measure on a railed page, whatever the page asked for.
        ------------------------------------------------------------------------------
-       A measure caps CONTENT, and the rail is not content -- it is 216px of chrome. Capping the
+       A measure caps CONTENT, and the rail is not content -- it is a column of chrome. Capping the
        two together at 64rem left the shelves' table about 48rem wide with a third of a 1280px
        screen empty beside it, which reads as a page that failed to load rather than as a
        considered measure.
@@ -313,9 +310,6 @@ main:has(> .page-body.railed) > .page-head {
 .page-rail {
     flex-direction: column;
     gap: 18px;
-    /* The floor for fit-content above. Narrower than this and the group headings -- which are
-       uppercase and tracked, so they set the real minimum -- start wrapping mid-word. */
-    min-inline-size: 9.5rem;
     background: var(--pp-deep, var(--bs-tertiary-bg));
     color: var(--bs-body-color);
 }
@@ -323,6 +317,48 @@ main:has(> .page-body.railed) > .page-head {
 /* The column. Everything here is undoing a UA popover style: a popover is fixed, centred by auto
    margins, sized to its content, bordered and scrollable, none of which a grid item wants. */
 @media (width > 900px) {
+    /* The rail is chrome and reaches the leading edge, the way it already did on the collection --
+       which is flush and so had no body padding for the rail to sit inside. Everywhere else the
+       body's 1rem sat OUTSIDE the rail's own padding, so a group heading stood 30px from the
+       window while the hairline it is measured against was 14px past the control. The same gutter
+       spelled twice on one side only, which reads as a rail that is not centred in itself.
+
+       Inside this media query and not on .railed itself, because below it the rail is a sheet and
+       column one collapses to nothing -- the declaration would then be taking the page's leading
+       padding off the CONTENT, on every railed page, on the one screen size that can least spare
+       it. */
+    .page-body.railed {
+        padding-inline-start: 0;
+
+        /* And the space belongs on the OUTSIDE of the rail. There was none: the content column
+           began at the rail's border, so a table's first heading and a pack's artwork sat against
+           the hairline.
+
+           In here rather than on .railed, for the same reason as the padding above. Below this
+           width the first track holds nothing and collapses to zero, but a grid gap is charged
+           between the tracks whether or not either has anything in it -- so a phone was reading
+           20px of leading inset off a rail that was not there, on the collection's grid and
+           nowhere else on the page.
+
+           1rem is .page-body's own inline padding, so the content column stands the same distance
+           from the hairline on its leading side as it does from the window on its trailing one.
+           At 20px it did not, and two gutters that are nearly the same read worse than two that
+           are plainly different. */
+        column-gap: 1rem;
+    }
+
+    /* Except that a card grid brings its own gutter, and then the gap is a second one stacked on
+       the first: the leading tile stood 34px from the hairline and the trailing one 14px from the
+       window, which is one gutter spelled twice on one side. In list mode the rows want no gutter
+       at all -- they are full-bleed bands, and 20px of page down their leading edge reads as rows
+       inset by accident.
+
+       Either way the grid decides what its own margin is, so the shell stops deciding for it.
+       Keyed to what the content IS rather than to a page, so the next page to put a grid beside a
+       rail gets this without coming back here. The shelves, the log and the board have content
+       with no inline padding of their own and keep the gap. */
+    .page-body.railed:has(> .grid-wrap) { column-gap: 0; }
+
     .page-rail {
         display: flex;
         /* sticky, not static: see the note above on why this pins. The grid item is content-height
@@ -336,7 +372,17 @@ main:has(> .page-body.railed) > .page-head {
         block-size: auto;
         max-block-size: calc(100dvh - var(--bars-h, 0px));
         margin: 0;
-        padding: 16px 14px 20px;
+        /* 18 rather than 14, on both sides. The scroller only appears when the rail overflows and
+           it is an overlay one, drawn inside the padding at the right edge -- expanded on hover it
+           is about 15px, so against 14px of padding it sat a pixel into the rarity chips. Widening
+           the padding is what "give it room" means here; scrollbar-gutter: stable would reserve
+           the space permanently on a rail that usually does not scroll, which is a visible notch
+           down one side in exchange for a scrollbar that is usually not there.
+
+           The cutout inset rides on the leading side, because .railed hands this rule the leading
+           edge of the page -- see the note there. */
+        padding: 16px 18px 20px;
+        padding-inline-start: calc(18px + var(--safe-l));
         border: 0;
         border-right: 1px solid var(--pp-hairline, var(--bs-border-color));
         border-radius: 0;
@@ -381,6 +427,41 @@ main:has(> .page-body.railed) > .page-head {
 }
 .sheet::backdrop { background: rgba(13, 12, 15, .55); }
 
+/* A sheet opened from the page BAR, on a pointer.
+   ==================================================================================
+   Bottom-anchoring is argued for above, and the argument is about a thumb: the rail's sheet opens
+   from a floating button at the bottom of a phone, so the panel meets the hand where it already
+   is. Three sheets are not opened that way. The set picker, the pack target and the wonder target
+   open from a button in the page bar, at every width -- so on a 1280x860 desktop the button was at
+   y=53 and the panel it produced arrived at y=725, 670px away at the far end of the window, with
+   the pointer left where it clicked.
+
+   Centred, then, which is where a pointer-opened dialog belongs and where the eye is already
+   looking. The objection recorded above -- that a centred dialog asks the eye to go and find it --
+   is about a phone, and below this width these stay bottom sheets.
+
+   Not anchored under the bar, which is the other candidate and the more elegant one: it needs the
+   bar's height, which is a title plus an optional sentence and is not a number CSS has. The ways
+   to get it are anchor positioning, which not every browser this has to run in supports, or a
+   script publishing a measurement, which is machinery for a panel three pages open.
+
+   Specificity spelled out rather than left to source order, because `.sheet:popover-open` is two
+   classes deep and this has to outrank it wherever either ends up in the file. */
+@media (width > 900px) {
+    .sheet.page-sheet:popover-open,
+    .sheet.set-sheet:popover-open {
+        inset: 0;
+        margin: auto;
+        inline-size: min(56rem, calc(100vw - 4rem));
+        block-size: fit-content;
+        max-block-size: min(36rem, calc(100dvh - 6rem));
+        padding: 0 14px 18px;
+        border-radius: 1rem;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
+    }
+
+}
+
 @media (width <= 900px) {
     /* The mode is the one control that never comes into the rail's sheet. It is the only one that
        can destroy something, and a destructive mode you have to open a sheet to check is a mode
@@ -412,10 +493,17 @@ main:has(> .page-body.railed) > .page-head {
 .rail-handle { display: none; }
 .sheet:popover-open > .rail-handle {
     display: grid;
-    /* Three tracks so the grabber is centred on the SHEET rather than on the space left over
-       beside the button -- an off-centre grabber reads as a layout fault rather than a handle.
-       The first track is empty and mirrors the third. */
-    grid-template-columns: 1fr auto 1fr;
+    /* Two tracks: what the sheet IS, and the button that shuts it.
+
+       This was three, with a drag grabber centred in the middle one. The grabber was decoration
+       -- nothing here is draggable, the sheet is dismissed by the button, the scrim or Escape --
+       and it was spending the one row that could say which sheet you had opened. On a phone every
+       one of them looks the same on arrival: the same panel, the same corner radius, the same
+       controls. A word in that row is the difference between "a sheet" and "Filters".
+
+       Leading-aligned rather than centred, because it is a heading and headings on this page all
+       start at the same edge as the controls under them. */
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     position: sticky;
     top: 0;
@@ -424,15 +512,32 @@ main:has(> .page-body.railed) > .page-head {
     padding: 10px 14px;
     background: var(--pp-deep, var(--bs-tertiary-bg));
 }
-.sheet:popover-open > .rail-handle::before {
-    content: "";
-    grid-column: 2;
-    inline-size: 2.2rem;
-    block-size: 4px;
-    border-radius: 2px;
-    background: var(--bs-border-color);
+/* The same tier as a rail group's heading, because that is what it is: the name of what is in
+   this sheet, over the groups that are in it. Not an h-element -- the sheet's contents carry
+   their own headings and this would sit above them at no level of its own. */
+.sheet:popover-open > .rail-handle > .ttl {
+    grid-column: 1;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
 }
-.sheet:popover-open > .rail-handle > .btn { grid-column: 3; justify-self: end; }
+.sheet:popover-open > .rail-handle > .btn { grid-column: 2; justify-self: end; }
+
+/* Square, for the same reason the page bar's undo and redo are: the label is one glyph, so height
+   alone leaves a full-height button about 30px wide and a 30px-wide thumb target. The glyph is set
+   larger than a word would be -- at .875rem a multiplication sign reads as a speck rather than as
+   a close. */
+.sheet-close {
+    min-width: var(--ctl-h);
+    min-height: var(--ctl-h);
+    font-size: 1.15rem;
+    line-height: 1;
+}
 
 .rail-group {
     display: flex;
@@ -474,11 +579,17 @@ main:has(> .page-body.railed) > .page-head {
    sizes to its content and a two-state control whose halves are "Adds" and "Removes" reads as a
    toggle only when the two halves are the same width. */
 .rail-seg { display: flex; min-inline-size: 0; }
-/* Three segments fit where two did, so each gets less width and the labels are one word. */
+/* Three segments fit where two did, so each gets less width and the labels are one word.
+
+   .btn-sm's own .5rem of inline padding is what a button on a bar wants, where its width is its
+   content's. Here the width is a third of the rail whatever the word is, so that padding is taken
+   off the only label long enough to need it: at 8px a share of the rail held 45px of a 51.5px
+   "Remove", which overflowed rather than truncating and so read as a label that is not centred. */
 .rail-seg > .btn {
     flex: 1 1 0;
     min-inline-size: 0;
     min-height: var(--ctl-h);
+    padding-inline: .25rem;
     border-radius: 0;
 }
 .rail-seg > .btn:first-child {
@@ -506,6 +617,21 @@ main:has(> .page-body.railed) > .page-head {
     block-size: var(--ctl-h);
     min-height: var(--ctl-h);
 }
+
+/* And an option too long for the column ends in an ellipsis rather than mid-word. The wording is
+   the real fix -- the board's two selects were rewritten to fit -- but a set name or a rarity
+   symbol arriving from the data can be any width, and "Leave out under 150 pac" reads as a bug
+   where "Leave out under 150…" reads as a label with more to it. */
+.page-rail .form-select { text-overflow: ellipsis; }
+
+/* The scope picker's cap, which was an inline style and so could not be overridden by either rule
+   above. It appears in two shells: a sheet, where it is one control on a wide row and a select
+   running the full width of a 1280px window reads as a mistake; and a rail, where full width is
+   the point. 16rem is right for the first and wrong for the second, and inline it won both.
+
+   As a class it loses to `.page-rail .form-select` on specificity, which is the ordering wanted:
+   the shell decides, and the component states a preference the shell may overrule. */
+.scope-pick { max-inline-size: 16rem; }
 
 /* The search field's `flex: 1 1 8rem` is written for a bar, where the flex basis is a WIDTH and
    8rem is the least it should shrink to. In a column that same basis is a height, so the box came
@@ -1330,7 +1456,38 @@ body {
     --safe-r: env(safe-area-inset-right);
 }
 
+/* The status bar's strip, and what colour it is.
+   ==================================================================================
+   The page is pushed clear of the cutout so nothing is printed under the clock. That padding is
+   the BODY's, though, so what showed in the strip above it was the body's own background -- while
+   the thing immediately under the strip is always a bar, and a bar is a different colour. On a
+   phone that reads as a pale band across the top of the app that no page put there.
+
+   It cannot be fixed by moving the inset onto the bar. A sticky element cannot travel outside its
+   containing block, so a bar inside a padded body sticks to the padding edge whatever `top` says
+   -- which is why the collection's bar parks 47px down on a notched phone rather than at 0.
+
+   So the strip is painted rather than occupied: a fixed band of the bar's own colour, the exact
+   height of the inset, which is zero on a device that has none. Every bar that can be at the top
+   -- the nav above 1056px, the page bar below it, the tab bar at the other end -- is this same
+   colour, so one band serves all of them and no page has to opt in.
+
+   Not hit-testable is not a concern: the only thing under the system status bar is the system
+   status bar. */
 body { padding-top: env(safe-area-inset-top); }
+
+body::before {
+    content: "";
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: env(safe-area-inset-top);
+    background: var(--bs-tertiary-bg);
+    /* Over the sticky bars, which cannot reach up here anyway, and under anything in the top
+       layer: a sheet's backdrop should dim this strip with the rest of the page. */
+    z-index: 1050;
+    pointer-events: none;
+}
 
 main {
     display: block;
@@ -1475,6 +1632,25 @@ main > * { flex-shrink: 0; }
 /* The target is focusable so the skip actually lands, but it must not draw a box around the
    entire page when it receives focus programmatically. */
 main:focus { outline: none; }
+
+/* And the same thing one element down, which is where it was actually happening.
+   ==================================================================================
+   App.razor carries <FocusOnNavigate Selector="h1" />, so EVERY navigation moves focus to the new
+   page's title -- which is the right thing to do, and the reason a screen reader announces where
+   it has landed instead of staying silent. Blazor makes the heading focusable with tabindex="-1"
+   to do it.
+
+   The heading has no focus style of its own, so it fell through to the browser's, and on iOS
+   Safari that is the system accent: a blue box drawn around the page title every time you tapped
+   the tab bar. The ring was not marking anything a user could act on -- it was marking the
+   announcement.
+
+   Keyed on tabindex="-1", which is the whole argument: an element with a negative tabindex cannot
+   be reached by keyboard, so it can only ever have been focused by script, so a ring on it can
+   never be telling anyone where their keyboard is. Both pseudo-classes, because Safari has been
+   willing to paint this on :focus alone. */
+h1[tabindex="-1"]:focus,
+h1[tabindex="-1"]:focus-visible { outline: none; }
 
 /* storage alarm
 
@@ -2025,28 +2201,67 @@ main:focus { outline: none; }
     --bs-btn-disabled-border-color: #f0a5aa;
 }
 
-/* skinned form focus
+/* THE FOCUS RING: one colour, and only when focus is worth showing.
+   ==================================================================================
+   Two faults, and the phone showed both at once.
 
-   The focus ring and the checked box are the last two hardcoded blues in Bootstrap's compiled
-   output that the app actually shows. Left alone they put #0d6efd rings and #0d6efd checkboxes on
-   a page that has no other #0d6efd in it, which reads as a control from a different app.
+   ONE, IT WAS BLUE. Bootstrap's compiled output hardcodes #0d6efd for the focus ring and the
+   checked box, on a page that has no other #0d6efd in it, so it read as a control borrowed from a
+   different app. This was already fixed -- for the PAPER skin only, by a pair of rules keyed on
+   [data-pp-skin="paper"]. There are two skins. Anyone on slate kept Bootstrap's blue, and so did
+   anything the pair did not name. The token is set once here instead, so every ring Bootstrap
+   draws anywhere follows the accent without being listed.
 
-   Not a colour-only change: the ring keeps its 4px spread, so focus is still marked by something
-   other than hue for anyone who cannot tell the two apart. */
-[data-pp-skin="paper"] .form-control:focus,
-[data-pp-skin="paper"] .form-select:focus {
+   TWO, IT SHOWED ON A TAP. Bootstrap rings these on :focus, which a tap satisfies, so on a phone
+   every dropdown you opened kept a ring around it until you happened to tap something else --
+   marking where focus is for someone who never asked and cannot see a keyboard.
+
+   :focus-visible is the test that means "and it is worth showing you", and the split it makes is
+   exactly the right one here: a tapped <select> does not match it, because you tapped the thing
+   and know where it is, while a tapped text field DOES, because you are about to type into it and
+   the ring is the cursor's address. So the search box still rings on a tap and the dropdowns stop.
+
+   The ring keeps its 4px spread rather than only changing hue, so focus is still marked by
+   something other than colour for anyone who cannot tell the two apart. */
+:root {
+    --bs-focus-ring-color: rgba(var(--bs-primary-rgb), .25);
+    --bs-focus-ring-rgb: var(--bs-primary-rgb);
+}
+
+/* Bootstrap's :focus ring, taken off. Its border-color goes back to the resting one rather than
+   to `revert`, which would hand the blue straight back. */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    border-color: var(--bs-border-color);
+    box-shadow: none;
+}
+
+/* And put back on the half of focus that is worth drawing. Later than the rule above and at the
+   same specificity, so where both match this one wins. */
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible {
     border-color: var(--bs-primary);
     box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .25);
 }
 
-[data-pp-skin="paper"] .form-check-input:checked {
+.form-check-input:checked {
     background-color: var(--bs-primary);
     border-color: var(--bs-primary);
 }
 
-[data-pp-skin="paper"] .form-check-input:focus {
-    border-color: var(--bs-primary);
-    box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .25);
+/* The catch-all, for everything that is focusable and has no ring of its own. Without it those
+   fall through to the browser's, which on iOS Safari is the system accent -- blue -- and is the
+   other half of what a phone was showing.
+
+   :where() so this carries no specificity beyond the pseudo-class itself, and placed before the
+   twenty-odd component rings further down: any of them that names the same element still wins,
+   whether it is more specific or merely later. Form controls are left out because the rule above
+   already rings them, and two rings on one box is worse than none. */
+:where(a[href], button, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
 }
 
 /* the accent as ink
@@ -2253,6 +2468,25 @@ main:focus { outline: none; }
 .set-picker-body { --ctl-h: 2.5rem; }
 @media (pointer: coarse) { .set-picker-body { --ctl-h: 2.75rem; } }
 
+/* THE BAR'S HEIGHT, AS ONE NUMBER.
+   ==================================================================================
+   Every page bar is exactly this tall, so moving between pages does not move the content under
+   them. A token rather than a figure in three rules, because three rules is how they drifted: the
+   flat bar took its height from min-height and the folded one from `block-size: auto`, and the
+   two answered differently on the same screen -- 60px against 49.8 and 58.5.
+
+   3rem is a 36px control with 6px above and below. It rises where either of the two things that
+   make a bar taller happens: a coarse pointer, where controls are 44px rather than 36, and a
+   phone-width screen, where the bar folds to a title over a subtitle allowed to wrap to a second
+   line. 3.75rem holds both -- 44 with 8px above and below, and a title over two lines with room
+   to spare.
+
+   Two conditions rather than one, because they are separate: a 500px window on a desktop folds
+   without having a thumb, and a tablet has a thumb at a width that does not fold. */
+:root { --bar-h: 3rem; }
+@media (pointer: coarse) { :root { --bar-h: 3.75rem; } }
+@media (width < 600px)   { :root { --bar-h: 3.75rem; } }
+
 .page-head, .page-tools, .grid-toolbar {
     display: flex; align-items: center; gap: .5rem;
     flex: none;
@@ -2261,20 +2495,23 @@ main:focus { outline: none; }
 }
 .page-head {
     background: var(--bs-tertiary-bg);
-    /* Matches a btn-sm or a form-control-sm plus the padding above, so a header with a control
-       in it is exactly as tall as one with only a title. */
-    min-height: 3rem;
+    /* Exactly, not at least. A bar that grows to its content is a bar whose height depends on
+       how long this page's subtitle happens to be, and two of them are long enough to wrap. A
+       control in it is centred in whatever room is left over. */
+    height: var(--bar-h);
     flex-wrap: nowrap;
     /* A long deck name shortens rather than pushing the actions off the row. */
     overflow: hidden;
 }
 .page-tools, .grid-toolbar { flex-wrap: wrap; }
 
-/* The header gives up most of its vertical padding on a touch screen, where its buttons are
-   44px rather than 31. .page-head is a 3rem contract the sticky toolbar below is positioned
-   against, and 44 plus two lots of .35rem is 56 -- a touch header standing 7px taller than the
-   title-only one on the next page, which is the drift the contract exists to prevent. At .15rem
-   it lands within a pixel of where it always was.
+/* Most of the vertical padding goes on a touch screen, where the height above has already made
+   room: the bar is 60px there and the control in it is 44, so the 6px this would otherwise add at
+   each end would be spent twice. What is left is enough to keep a focus ring off the hairline.
+
+   Safe against the sticky toolbar below it, which is positioned on --head-h: gridspy.js MEASURES
+   the header and publishes it, and the calc(3rem - 1px) in that rule is only the fallback for a
+   bar nothing has measured yet.
 
    Below the shorthand above rather than up with the rest of the touch sizing: both selectors are
    one class, so this is settled on source order, and declared any earlier the shorthand simply
@@ -2390,7 +2627,13 @@ main:focus { outline: none; }
             "subtitle actions";
         align-items: center;
         row-gap: 1px;
-        block-size: auto;
+        /* The same height as every other bar, not its own content's. This was `auto`, which is why
+           the collection and the wishlist -- the two whose subtitle actually reaches a second line
+           -- stood 8.7px taller than the eight that did not. The second line is RESERVED here
+           rather than forbidden: clamping the subtitle to one line would have levelled them just
+           as well and taken "53 short of target" off the collection with it, which is the reading
+           that page exists to give. */
+        block-size: var(--bar-h);
     }
     .page-head.folded > .title { grid-area: title; }
     .page-head.folded > .actions { grid-area: actions; }
@@ -2441,7 +2684,12 @@ main:focus { outline: none; }
     padding: .1rem calc(.75rem + var(--safe-r)) .5rem calc(.75rem + var(--safe-l));
 }
 
-.set-tabs { display: flex; gap: .25rem; overflow-x: auto; }
+/* Wraps. It was a horizontal scroller, which is what a row of tabs in a BAR has to be -- and this
+   has not been in a bar since the set row folded into a sheet. In a sheet the room is vertical and
+   there is plenty of it, so scrolling sideways hid four of twelve sets behind a gesture while the
+   rows below them sat empty: 864px of tabs in a 588px scroller. A picker you have to drag through
+   to see what it offers is worse than one that takes a second line. */
+.set-tabs { display: flex; flex-wrap: wrap; gap: .25rem; }
 .set-tab {
     border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
     color: var(--bs-body-color);
@@ -2497,9 +2745,10 @@ main:focus { outline: none; }
    make scrollers focusable the way Firefox does. The wrappers therefore carry tabindex="0" and a
    role, which means they also need a focus ring of their own.
 
-   The app's other two scrollers, .set-tabs and .pick-list, are deliberately NOT given this: every
-   child is a button, so tabbing already walks into them and the browser scrolls each one into
-   view. Adding tabindex there would only insert a stop that does nothing. */
+   The app's other scroller, .pick-list, is deliberately NOT given this: every child is a button,
+   so tabbing already walks into it and the browser scrolls each one into view. Adding tabindex
+   there would only insert a stop that does nothing. (.set-tabs was the third of these and no
+   longer scrolls at all -- it wraps.) */
 .table-responsive:focus-visible {
     outline: 2px solid var(--bs-primary);
     outline-offset: -2px;
@@ -3188,9 +3437,24 @@ img[data-state="loading"] ~ .art-wait {
     /* Over the art, so it needs an edge of its own to stay legible on a pale card. */
     box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
 }
+/* Near-black, as the mockups draw it, rather than the accent.
+   ----------------------------------------------------------------------------------
+   The accent in this app is red, so a grid of owned cards was a grid of red pills -- the loudest
+   colour on the page spent on its most repeated element, and on a reading rather than on anything
+   to act on. Sampling 4a-collection-desktop-rail.png across badges over green, orange and pale
+   art gives a translucent dark neutral: roughly the app's own deep surface at 85%, which is what
+   this is. It reproduces (46,47,27) over the Bulbasaur art where the mockup has (44,49,20).
+
+   One value in both themes, deliberately, and not var(--pp-deep): the badge sits on card ART
+   rather than on the page, so what it has to stay legible against is a Pokemon card, which is the
+   same picture whichever theme is on.
+
+   It also gives the removing mode somewhere to go. `.grid-wrap.removing .cnt` turns the badge
+   var(--bs-danger), and against a primary that is already red that was very nearly no change at
+   all -- the one signal saying a tap will now destroy something. */
 .card-tile .cnt {
     right: calc(4px + var(--gold-pad, 0px));
-    background: var(--bs-primary); color: #fff;
+    background: rgba(20, 19, 23, .85); color: #fff;
 }
 /* Nothing owned: no badge. Out of the flow entirely, so unlike the caption slot it used to hold
    there is no row height for it to keep -- the art box is the same size either way. */

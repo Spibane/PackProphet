@@ -36,6 +36,49 @@ public class WonderPickPageTests : AppHost
     }
 
     [Fact]
+    public async Task While_the_offer_is_half_typed_the_picker_is_under_the_strip()
+    {
+        // The complaint this is for: naming the first card pushed the second search about a screen
+        // and a half down, because the verdict, the commit row and the per-card table all sat
+        // between the five boxes and the control those boxes tell you to use. "Tap a card below"
+        // was true and useless.
+        await ReadyAsync();
+
+        var page = RenderComponent<WonderPick>();
+        var one = AnOffer()[0];
+
+        var picker = page.FindComponent<PackProphet.Components.CardPicker>();
+        await page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(one));
+        page.WaitForState(() => page.FindAll(".box-strip .box.live").Count == 1, TimeSpan.FromSeconds(10));
+
+        var markup = page.Markup;
+        var strip = markup.IndexOf("box-strip", StringComparison.Ordinal);
+        var search = markup.IndexOf("Add card 2 of", StringComparison.Ordinal);
+        var verdict = markup.IndexOf("verdict-lead", StringComparison.Ordinal);
+
+        Assert.True(strip >= 0 && search > strip, "the picker must follow the strip");
+        Assert.True(verdict < 0 || verdict > search,
+            "a verdict over a half-typed offer must not stand between the boxes and the picker");
+    }
+
+    [Fact]
+    public async Task A_finished_offer_puts_the_verdict_straight_under_the_strip()
+    {
+        // And the other half of the rule: once the work is done there is no work to show, so the
+        // picker stops rendering and the page is the ordinary Answer shape -- reached by finishing
+        // rather than by a second layout.
+        await ReadyAsync();
+        var page = WithOffer();
+
+        Assert.DoesNotContain("Add card", page.Markup);
+        Assert.Empty(page.FindComponents<PackProphet.Components.CardPicker>());
+
+        var markup = page.Markup;
+        Assert.True(markup.IndexOf("verdict-lead", StringComparison.Ordinal)
+                    > markup.IndexOf("box-strip", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task The_strip_comes_before_the_verdict()
     {
         // The reversal, and the reason for it: these five boxes are what you are filling in, and

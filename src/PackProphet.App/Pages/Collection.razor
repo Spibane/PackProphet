@@ -29,14 +29,18 @@ else
            It also has to carry what the filters are set to once the rail folds into a sheet on a
            phone, because a count with its filters out of sight is a lie -- so this is the line that
            grows that clause rather than a second bar appearing to hold it. *@
+        @* Each reading in its own .seg, and the dots drawn between them by the stylesheet. On a
+           phone this line wraps, and as a run of text it broke wherever the width ran out --
+           "412 / copies", a figure on one line and its unit on the next, which reads as two facts
+           rather than one. Segments break only at the dots. *@
         <span class="subtitle" title="Distinct cards you own here, total copies including duplicates, and progress against the rarities you have chosen to collect">
-            @Label(_set)
-            &middot; <strong>@Stats.Owned of @Stats.Cards</strong> owned
+            <span class="seg">@Label(_set)</span>
+            <span class="seg"><strong>@Stats.Owned of @Stats.Cards</strong> owned</span>
             @* Copies as well as cards, since they answer different questions: one is how far
                through the set you are, the other how much you are holding — and gold flair needs
                ten of a card, so duplicates are worth counting. *@
-            &middot; @Stats.Copies copies
-            &middot;
+            <span class="seg">@Stats.Copies copies</span>
+            <span class="seg">
             @if (TargetTotal - TargetOwned is > 0 and var outstanding)
             {
                 <strong class="short">@outstanding short</strong>
@@ -46,13 +50,14 @@ else
             {
                 <text>target met</text>
             }
+            </span>
 
             @* Art the CDN did not give us. A caveat on the counts rather than a fact of its own, so
                it travels with them -- it was on the set bar, next to the same figures, and the set
                bar is gone. *@
             @if (_artFailed > 0)
             {
-                <span class="fail">&middot; @_artFailed art failed</span>
+                <span class="seg">@_artFailed art failed</span>
             }
 
             @* What the filters are set to, once any are. Last, because it is the clause that
@@ -60,7 +65,7 @@ else
                clause that appears and disappears in the middle of them would move them about. *@
             @if (FilterWords is { Length: > 0 } words)
             {
-                <span class="filters">showing @words</span>
+                <span class="seg filters">showing @words</span>
             }
         </span>
         <span class="actions">

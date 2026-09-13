@@ -125,6 +125,40 @@
 .page-body.measure-text { max-inline-size: var(--measure-text); }
 .page-body.measure-wide { max-inline-size: var(--measure-wide); }
 
+/* A measured page CENTRES, and its bar centres with it.
+   ==================================================================================
+   They were pinned to the left, so Settings, History and Resources ran to about 60% of a 1280px
+   window with the rest empty on the right -- which beside the grid and shelf pages, all of which
+   fill it, reads as a page that failed to load rather than as a considered measure.
+
+   The bar cannot simply centre with it: it is full-bleed, carrying the sticky background and the
+   rule under it across the whole window. So it insets its CONTENTS to where the body's content
+   starts, and keeps its own edges. The 1rem is the body's own padding, which the bar does not
+   have; without it the title sits a notch left of the first word under it.
+
+   max() rather than a breakpoint: below the measure there is no space to divide and the bar falls
+   back to its ordinary padding, cutout inset included. Above it, a notch is not the constraint.
+
+   :has() reaching from the bar to its sibling body, the way the sticky rule above does. The
+   alternative is a page naming its measure twice, in two elements, with nothing keeping the two
+   in step. */
+.page-body.measure-form,
+.page-body.measure-text,
+.page-body.measure-wide { margin-inline: auto; }
+
+main:has(> .page-body.measure-form) > .page-head {
+    padding-inline-start: max(calc(.75rem + var(--safe-l)), calc((100% - var(--measure-form)) / 2 + 1rem));
+    padding-inline-end: max(calc(.75rem + var(--safe-r)), calc((100% - var(--measure-form)) / 2 + 1rem));
+}
+main:has(> .page-body.measure-text) > .page-head {
+    padding-inline-start: max(calc(.75rem + var(--safe-l)), calc((100% - var(--measure-text)) / 2 + 1rem));
+    padding-inline-end: max(calc(.75rem + var(--safe-r)), calc((100% - var(--measure-text)) / 2 + 1rem));
+}
+main:has(> .page-body.measure-wide) > .page-head {
+    padding-inline-start: max(calc(.75rem + var(--safe-l)), calc((100% - var(--measure-wide)) / 2 + 1rem));
+    padding-inline-end: max(calc(.75rem + var(--safe-r)), calc((100% - var(--measure-wide)) / 2 + 1rem));
+}
+
 /* The figure in a page bar's sentence that is the one to act on. Accent as ink rather than as a
    fill: it is a word in a line of prose, and a chip in the middle of a sentence reads as a
    control. */
@@ -204,7 +238,21 @@ main:has(> .page-body.railed) > .page-head {
 
 .page-body.railed {
     display: grid;
-    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+
+    /* fit-content, not a fixed width. --rail-w is the CAP now rather than the measurement, so a
+       rail holding two small selects is as wide as two small selects and the collection's, with
+       its wrapping rarity chips and fourteen type pips, still gets its 216px.
+
+       A fixed 216px on every page is what the component's own note says it is not -- "sized to its
+       page rather than to a fixed set of controls" -- and on the shelves and the log screen it
+       left 70-odd px of empty column beside every control, which reads as padding inside the rail
+       rather than as a column that is too wide. */
+    grid-template-columns: fit-content(var(--rail-w)) minmax(0, 1fr);
+
+    /* And the space belongs on the OUTSIDE. There was none: the content column began at the rail's
+       border, so a table's first heading and a pack's artwork sat against the hairline. */
+    column-gap: 20px;
+
     align-items: start;
 
     /* No reading measure on a railed page, whatever the page asked for.
@@ -265,6 +313,9 @@ main:has(> .page-body.railed) > .page-head {
 .page-rail {
     flex-direction: column;
     gap: 18px;
+    /* The floor for fit-content above. Narrower than this and the group headings -- which are
+       uppercase and tracked, so they set the real minimum -- start wrapping mid-word. */
+    min-inline-size: 9.5rem;
     background: var(--pp-deep, var(--bs-tertiary-bg));
     color: var(--bs-body-color);
 }
@@ -486,8 +537,12 @@ main:has(> .page-body.railed) > .page-head {
 /* The phone's two controls, floating over the grid's bottom-right corner.
    ==================================================================================
    Clear of the tab bar, which is fixed to the bottom edge and would otherwise sit under them --
-   the same offset .to-top already uses, for the same reason. Right-hand corner because that is
-   where a thumb is; the grid behind them is scrollable everywhere else.
+   the same offset .to-top already uses, for the same reason.
+
+   LEFT corner, where .to-top is on the right. They were both on the right, which put the two
+   things you press most often -- the filters and the add/remove mode -- under the same thumb as
+   the one you press by accident, and stacked them so the mode pill sat above the filter button
+   with the scroll-to-top under both. Split, each corner holds one purpose.
 
    Hidden entirely above the fold width, where the rail is a column and there is nothing to open. */
 .rail-fabs { display: none; }
@@ -496,10 +551,10 @@ main:has(> .page-body.railed) > .page-head {
     .rail-fabs {
         display: flex;
         flex-direction: column;
-        align-items: flex-end;
+        align-items: flex-start;
         gap: .5rem;
         position: fixed;
-        right: calc(14px + var(--safe-r));
+        left: calc(14px + var(--safe-l));
         bottom: calc(14px + var(--tab-bar-h) + 1px + env(safe-area-inset-bottom));
         z-index: 1025;
     }
@@ -3836,7 +3891,7 @@ tr.row-best {
 .pack-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 /* The per-row action. Narrow and right-aligned so the numeric columns keep their width, and
    never wrapping: a two-line row would break the alignment of every figure beside it. */
-.pack-table .act { text-align: right; white-space: nowrap; width: 1%; }
+.pack-table .act { text-align: right; white-space: nowrap; width: 1%; vertical-align: middle; }
 .pack-table th.num { text-align: right; }
 /* The pack's marker and its name, side by side and staying that way. The name column carries
    everything that can wrap -- the name, its set code, the badges -- and min-width: 0 is what lets

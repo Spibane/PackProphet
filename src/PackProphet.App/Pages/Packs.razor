@@ -702,7 +702,10 @@ else
                            and the app's assumption about the shelf should not stop it being
                            recorded. *@
                         <td class="act">
-                            <a class="btn btn-sm btn-outline-secondary py-0"
+                            @* `py-0` made this the one control in the app with no vertical
+                               padding: a 20px target in a 44px row, which both undershot the
+                               touch minimum and sat visibly low against the text beside it. *@
+                            <a class="btn btn-sm btn-outline-secondary"
                                href="@LogHref(row.PackKey)"
                                @onclick:stopPropagation="true"
                                title="Log a @row.PackName pack you just opened">Log</a>

@@ -168,12 +168,41 @@ public class GridFilterTests : AppHost
         var page = await PageAsync();
 
         var adds = page.FindAll(".page-rail .rail-group.mode .btn").ToArray()[1];
-        Assert.Equal("Adds", adds.TextContent.Trim());
+        Assert.Equal("Add", adds.TextContent.Trim());
 
         await page.InvokeAsync(() => adds.Click());
 
         page.WaitForAssertion(() =>
             Assert.DoesNotContain("tap-off", page.Find(".grid-wrap").ClassList));
+    }
+
+    [Fact]
+    public async Task A_set_sold_in_one_pack_is_offered_no_pack_filter()
+    {
+        // A filter that cannot narrow anything is worse than no filter: it looks like a control,
+        // it takes a press, and the list it produces is the list that was already there. Most sets
+        // have exactly one pack, so this was the ordinary case rather than an edge of it.
+        var page = await PageAsync();
+
+        // Whichever set the picker is on, the rule is the same: a pack row exists only where there
+        // is a choice in it.
+        var picks = page.FindAll(".pack-picks .pack-pick").Count;
+        Assert.True(picks != 1, "a pack filter offering one pack narrows nothing");
+
+        // Non-vacuous: drive the picker to the set with the most packs in the fixture and check
+        // the row appears there.
+        var best = Session.Index.OpenableSets
+            .Select(set => (Set: set, Packs: Session.Index.All
+                .Where(c => c.Set == set && c.IsPackObtainable)
+                .SelectMany(c => c.Packs!).Distinct().Count()))
+            .OrderByDescending(x => x.Packs)
+            .First();
+
+        if (best.Packs < 2) return;
+
+        await ChooseAsync(page, Session.Sets.SeriesOf(best.Set), best.Set);
+        page.WaitForAssertion(() =>
+            Assert.Equal(best.Packs, page.FindAll(".pack-picks .pack-pick").Count));
     }
 
     [Fact]

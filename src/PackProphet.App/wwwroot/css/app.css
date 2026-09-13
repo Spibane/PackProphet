@@ -125,6 +125,1271 @@
 .page-body.measure-text { max-inline-size: var(--measure-text); }
 .page-body.measure-wide { max-inline-size: var(--measure-wide); }
 
+/* A measured page CENTRES ITS BODY, and its bar does not follow it in.
+   ==================================================================================
+   The body is centred because pinned to the left it ran to about 60% of a 1280px window with the
+   rest empty on the right -- which, beside the grid and shelf pages that fill it, reads as a page
+   that failed to load rather than as a considered measure.
+
+   The BAR keeps its own ordinary padding, so its title and actions start at the window's edge on
+   every page in the app whatever the body below is doing. This block used to inset the bar's
+   contents to wherever the body's content started, on the reasoning that a title sitting a notch
+   left of the first word under it looks like a mistake. In practice the inset is what looked like
+   the mistake: at 1280px Settings pushed its bar 304px in and the import screens 352px, so the bar
+   spanned the window while everything printed on it huddled in the middle, and the bar read as one
+   that stops short. A full-bleed strip is the wrong element to hang a reading measure on -- the
+   measure is for the prose in the body, and a title and two buttons are not prose.
+
+   So there is nothing here but the centring. The bar's padding is the one in the shared
+   .page-head / .page-tools / .grid-toolbar rule, which every other page was already using; a
+   measured page is no longer a page with its own bar geometry. */
+.page-body.measure-form,
+.page-body.measure-text,
+.page-body.measure-wide { margin-inline: auto; }
+
+/* The figure in a page bar's sentence that is the one to act on. Accent as ink rather than as a
+   fill: it is a word in a line of prose, and a chip in the middle of a sentence reads as a
+   control. */
+.page-head .subtitle .short { color: var(--bs-primary); }
+
+/* The word that names what the reading after it IS, and the same word as the button that changes
+   it: the bar says "Target: everything" and the control beside it says "Target". Quiet, because it
+   is a label on a value rather than part of the sentence -- the value is what someone is reading
+   for.
+
+   The four ranking pages each led with the bare value instead, so the bar said "everything you
+   collect" and left a reader to work out which of the buttons beside it governed that. */
+.page-head .subtitle .lbl { color: var(--bs-secondary-color); }
+
+/* The separator is drawn rather than written, because Razor collapses the whitespace between an
+   element and the markup before it and the clause arrived welded to the word in front of it --
+   "53 short of target· showing missing only". Generated content keeps its spaces.
+
+   The character itself rather than \00b7: a CSS escape eats the whitespace that terminates it, so
+   the escaped form put the space back only on the near side and read "· showing" welded again on
+   the far one. */
+.page-head .subtitle .filters::before { content: " · "; }
+
+/* the rail
+   ==================================================================================
+   A column for the controls that used to be a bar, on the pages whose job is browsing.
+
+   The count it replaces: nav, page header, set tabs, filter row, control row -- five strips and
+   about 300px before the first card on a phone-width collection. The rule that replaced them is
+   that no page stacks more than two horizontal bars, which on a desktop means the nav and the
+   page bar, and leaves the page's own controls nowhere horizontal to go.
+
+   A rail is not just the same controls turned ninety degrees. A bar can afford a chip, so a
+   filter arrives as "Missing only" with no indication of what it is one of; a column has room for
+   the heading, so the control says what it sets. The count goes in the heading of the group that
+   decides it, for the same reason.
+
+   Sized to the page rather than fixed: the collection's rail has five groups and the decks shelf
+   has two. A sidebar of a fixed height would have to pad the short one, which is the argument for
+   this over a sidebar.
+
+   It pins. The first pass had it scroll with the page, on the argument that a pinned rail needs
+   its own scroller as soon as its groups outgrow a laptop, and that a second scrollbar beside a
+   virtualised grid is two things that scroll where the user meant one. That is true and it is the
+   smaller cost: fifty cards down a scrolling rail has taken the search box, the filters and the
+   mode switch off the screen, and the grid below it is thousands of rows long, so "scroll back up
+   to change what you are looking at" is the state the page is in almost all of the time. The
+   controls for a list you cannot see the end of have to stay with you.
+
+   The scroller only appears when the rail actually overflows, which on the decks shelf's two
+   groups is never.
+
+   Pinned under the page bar rather than at the viewport top, using the same measurement the strip
+   below it parks on -- gridspy publishes --bars-h on this container, and the rail reads it from
+   the same place.
+
+   Placement is explicit rather than by flow order, because three of this container's four
+   children go in the second column and the fourth is fixed and in no column at all. */
+/* One width, every page.
+
+   232 is what the widest rail asks for -- the collection's, whose rarity chips and fourteen type
+   pips wrap into it -- and it is also the floor for the one control that has to fit three equal
+   segments: "Off / Add / Remove". At 216 the third of them had 45px for a 51.5px word, so "Remove"
+   overflowed its share and read as off-centre rather than as clipped.
+
+   Sixteen pixels off a 1044px grid column is under one card's width. */
+:root { --rail-w: 232px; }
+
+/* A railed page pins its page bar, because it is now the only bar the page has: with the controls
+   in a column, there is nothing between the bar and the first card to scroll away instead. The
+   grid runs under it, which is what the second of the two bars is for.
+
+   Selected through :has rather than by a class on the bar itself, so a page opts into the shell in
+   one place -- the Class it hands PageShell -- rather than in two that can disagree. The bar is a
+   sibling of the body that carries the class, which is why this reaches up to main to join them.
+
+   Same offset and stacking as .sticky-head, the log screen's equivalent: two shells, one pinned
+   bar, and no reason for them to park at different heights. */
+main:has(> .page-body.railed) > .page-head {
+    position: sticky;
+    top: var(--nav-h);
+    z-index: 25;
+}
+@media (width <= 1056px) { main:has(> .page-body.railed) > .page-head { top: 0; } }
+
+.page-body.railed {
+    display: grid;
+
+    /* The same width on every page, rather than each rail sized to its own widest control. They
+       came out five different widths -- 170px on the pack log, 232px on the collection -- and a
+       shell whose edge moves as you navigate reads as five layouts rather than as one app with a
+       column down the side of it.
+
+       This was fit-content(--rail-w), and the argument for that has since gone. The complaint it
+       answered was "70-odd px of empty column beside every control", which was true while controls
+       carried their own widths from the bars they came from; those are gone, and a control in a
+       rail now runs the rail's width. So a wider column is a wider control rather than a gutter,
+       and there is nothing left for fit-content to save.
+
+       Collapsed to one track below the fold width, where the rail is a sheet -- see the
+       width <= 900px block further down, which unwinds the placement with it. */
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+
+    align-items: start;
+
+    /* No reading measure on a railed page, whatever the page asked for.
+       ------------------------------------------------------------------------------
+       A measure caps CONTENT, and the rail is not content -- it is a column of chrome. Capping the
+       two together at 64rem left the shelves' table about 48rem wide with a third of a 1280px
+       screen empty beside it, which reads as a page that failed to load rather than as a
+       considered measure.
+
+       Prose inside a railed page still gets one: the verdict block caps its own sentence at 32rem,
+       which is where the cap belongs -- on the paragraph rather than on the column it sits in. */
+    max-inline-size: none;
+}
+
+/* The rail takes the first column and everything else takes the second, rather than each content
+   element being named here. Named placement meant this rule knew what a railed page contains --
+   .grid-wrap, .grid-spy -- and the first page to put something else beside a rail had to come back
+   and edit it. The fixed children (.to-top, .rail-fabs) are out of flow and are not grid items at
+   all, so they need no exemption. */
+.page-body.railed > * { grid-area: 1 / 2; }
+.page-body.railed > .page-rail { grid-area: 1 / 1; }
+
+/* The strip naming the set under your thumb shares the grid's cell instead of taking a row above
+   it. A third bar is the thing the rail exists to remove, and "which set am I in" is worth an
+   overlay over the first row of cards and not a strip of page that is there the whole way down.
+   Same sticky offset as before, so it still parks under the bars rather than at the viewport top;
+   align-self keeps it from stretching to the height of the grid it floats over. */
+.page-body.railed > .grid-spy {
+    grid-area: 1 / 2;
+    align-self: start;
+    z-index: 5;
+    margin: .4rem .5rem 0;
+    border: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--bs-border-color);
+    border-radius: var(--pp-r-sm);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, .25);
+}
+
+/* One element, two shells.
+   ==================================================================================
+   Above the fold width this is a column beside the grid. Below it, it is a sheet over the grid,
+   opened from a floating button. The sections are the same sections in the same order either way,
+   which is the point: a filter a user learned to find in the rail is in the same place in the
+   sheet, and neither viewport teaches a vocabulary the other one contradicts.
+
+   It is ONE element carrying the popover attribute, not two rendered and hidden by width. Two
+   copies would mean two of every select, two of every generated id, and two controls bound to one
+   handler -- which is the kind of pair that agrees right up until it does not.
+
+   What that costs: `display` cannot live in this rule. The UA sheet hides a closed popover with
+   `[popover]:not(:popover-open) { display: none }`, and an author rule beats a UA rule whatever
+   its specificity -- so a `display: flex` here would keep the sheet on screen at every width with
+   no way to shut it. Each width sets its own display below, and this rule holds only what both
+   shells share.
+
+   color is set because the UA sheet paints a popover in CanvasText on Canvas, which is the
+   system's idea of a dialog rather than this app's. */
+.page-rail {
+    flex-direction: column;
+    gap: 18px;
+    background: var(--pp-deep, var(--bs-tertiary-bg));
+    color: var(--bs-body-color);
+}
+
+/* The column. Everything here is undoing a UA popover style: a popover is fixed, centred by auto
+   margins, sized to its content, bordered and scrollable, none of which a grid item wants. */
+@media (width > 900px) {
+    /* The rail is chrome and reaches the leading edge, the way it already did on the collection --
+       which is flush and so had no body padding for the rail to sit inside. Everywhere else the
+       body's 1rem sat OUTSIDE the rail's own padding, so a group heading stood 30px from the
+       window while the hairline it is measured against was 14px past the control. The same gutter
+       spelled twice on one side only, which reads as a rail that is not centred in itself.
+
+       Inside this media query and not on .railed itself, because below it the rail is a sheet and
+       column one collapses to nothing -- the declaration would then be taking the page's leading
+       padding off the CONTENT, on every railed page, on the one screen size that can least spare
+       it. */
+    .page-body.railed {
+        padding-inline-start: 0;
+
+        /* And the space belongs on the OUTSIDE of the rail. There was none: the content column
+           began at the rail's border, so a table's first heading and a pack's artwork sat against
+           the hairline.
+
+           In here rather than on .railed, for the same reason as the padding above. Below this
+           width the first track holds nothing and collapses to zero, but a grid gap is charged
+           between the tracks whether or not either has anything in it -- so a phone was reading
+           20px of leading inset off a rail that was not there, on the collection's grid and
+           nowhere else on the page.
+
+           1rem is .page-body's own inline padding, so the content column stands the same distance
+           from the hairline on its leading side as it does from the window on its trailing one.
+           At 20px it did not, and two gutters that are nearly the same read worse than two that
+           are plainly different. */
+        column-gap: 1rem;
+    }
+
+    /* Except that a card grid brings its own gutter, and then the gap is a second one stacked on
+       the first: the leading tile stood 34px from the hairline and the trailing one 14px from the
+       window, which is one gutter spelled twice on one side. In list mode the rows want no gutter
+       at all -- they are full-bleed bands, and 20px of page down their leading edge reads as rows
+       inset by accident.
+
+       Either way the grid decides what its own margin is, so the shell stops deciding for it.
+       Keyed to what the content IS rather than to a page, so the next page to put a grid beside a
+       rail gets this without coming back here. The shelves, the log and the board have content
+       with no inline padding of their own and keep the gap. */
+    .page-body.railed:has(> .grid-wrap) { column-gap: 0; }
+
+    .page-rail {
+        display: flex;
+        /* sticky, not static: see the note above on why this pins. The grid item is content-height
+           inside a row as tall as the grid beside it -- which is what .railed's align-items: start
+           gives it -- so there is room for it to travel. */
+        position: sticky;
+        top: var(--bars-h, 0px);
+        inset-inline: auto;
+        bottom: auto;
+        inline-size: auto;
+        block-size: auto;
+        max-block-size: calc(100dvh - var(--bars-h, 0px));
+        margin: 0;
+        /* 18 rather than 14, on both sides. The scroller only appears when the rail overflows and
+           it is an overlay one, drawn inside the padding at the right edge -- expanded on hover it
+           is about 15px, so against 14px of padding it sat a pixel into the rarity chips. Widening
+           the padding is what "give it room" means here; scrollbar-gutter: stable would reserve
+           the space permanently on a rail that usually does not scroll, which is a visible notch
+           down one side in exchange for a scrollbar that is usually not there.
+
+           The cutout inset rides on the leading side, because .railed hands this rule the leading
+           edge of the page -- see the note there. */
+        padding: 16px 18px 20px;
+        padding-inline-start: calc(18px + var(--safe-l));
+        border: 0;
+        border-right: 1px solid var(--pp-hairline, var(--bs-border-color));
+        border-radius: 0;
+        /* Only when it has to. A rail that fits shows no scrollbar at all. */
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+}
+
+/* The sheet, shared by everything in the app that opens as one.
+   ==================================================================================
+   Bottom-anchored rather than centred, because it is opened by a thumb at the bottom of the screen
+   and a dialog that appears in the middle asks the eye to go and find it.
+
+   82% rather than full height: what it is filtering or picking from has to stay visible behind it,
+   so a count moving is something you can watch rather than something you discover on closing.
+
+   The rail carries this class too and is a sheet at no width above the fold, which needs no
+   override to arrange: this rule only applies while the popover is OPEN, and above that width the
+   button that opens the rail is not displayed, so it never is. */
+.sheet:popover-open {
+    display: flex;
+    flex-direction: column;
+    /* The rail sets this on itself at every width; a bar sheet had none at all, so four pages
+       opened onto controls with nothing between them. One rule covers both shells. */
+    gap: 18px;
+    position: fixed;
+    inset: auto 0 0 0;
+    inline-size: auto;
+    block-size: auto;
+    max-block-size: 82%;
+    margin: 0;
+    padding: 0 14px calc(18px + env(safe-area-inset-bottom));
+    border: 0;
+    border-start-start-radius: 1rem;
+    border-start-end-radius: 1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--pp-deep, var(--bs-tertiary-bg));
+    color: var(--bs-body-color);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, .45);
+}
+.sheet::backdrop { background: rgba(13, 12, 15, .55); }
+
+/* A sheet opened from the page BAR, on a pointer.
+   ==================================================================================
+   Bottom-anchoring is argued for above, and the argument is about a thumb: the rail's sheet opens
+   from a floating button at the bottom of a phone, so the panel meets the hand where it already
+   is. Three sheets are not opened that way. The set picker, the pack target and the wonder target
+   open from a button in the page bar, at every width -- so on a 1280x860 desktop the button was at
+   y=53 and the panel it produced arrived at y=725, 670px away at the far end of the window, with
+   the pointer left where it clicked.
+
+   Centred, then, which is where a pointer-opened dialog belongs and where the eye is already
+   looking. The objection recorded above -- that a centred dialog asks the eye to go and find it --
+   is about a phone, and below this width these stay bottom sheets.
+
+   Not anchored under the bar, which is the other candidate and the more elegant one: it needs the
+   bar's height, which is a title plus an optional sentence and is not a number CSS has. The ways
+   to get it are anchor positioning, which not every browser this has to run in supports, or a
+   script publishing a measurement, which is machinery for a panel three pages open.
+
+   Specificity spelled out rather than left to source order, because `.sheet:popover-open` is two
+   classes deep and this has to outrank it wherever either ends up in the file. */
+@media (width > 900px) {
+    .sheet.page-sheet:popover-open,
+    .sheet.set-sheet:popover-open {
+        inset: 0;
+        margin: auto;
+        inline-size: min(56rem, calc(100vw - 4rem));
+        block-size: fit-content;
+        max-block-size: min(36rem, calc(100dvh - 6rem));
+        padding: 0 14px 18px;
+        border-radius: 1rem;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
+    }
+
+}
+
+@media (width <= 900px) {
+    /* The mode is the one control that never comes into the rail's sheet. It is the only one that
+       can destroy something, and a destructive mode you have to open a sheet to check is a mode
+       you will be wrong about. It is a floating button instead, on screen the whole time. */
+    .page-rail > .rail-group.mode { display: none; }
+}
+
+/* The set picker, as a sheet. It was a bar of its own -- the third on the page, under a header and
+   over the grid's toolbar -- to answer a question asked about once a session: which set am I in.
+   The answer stays on screen, in the page bar's own sentence; only the choosing folds away, which
+   is what the bar's disclosure was already doing and what it was spending a whole row on.
+
+   Opened from the page bar rather than from a floating button, because unlike the filters it is
+   not something you reach for with a thumb mid-scroll, and it is the same sheet at every width --
+   one component, one set of sections, one way in. */
+.set-sheet .set-picker-body {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+    padding-block: .5rem 0;
+}
+
+/* The grabber, and the handle row it sits in. Sticky rather than scrolling away, because it is
+   also what the sheet is tapped shut by, and a dismiss that scrolls off is a sheet with no way out
+   but Escape.
+
+   Keyed to the sheet being OPEN rather than to a width. The filter sheet exists only below the
+   fold width, but the set sheet is a sheet at every width, and gating this on the phone breakpoint
+   left a desktop one with no Done button on it. A rail that is a column is never an open popover,
+   so it never picks this up. */
+.rail-handle { display: none; }
+.sheet:popover-open > .rail-handle {
+    display: grid;
+    /* Two tracks: what the sheet IS, and the button that shuts it.
+
+       This was three, with a drag grabber centred in the middle one. The grabber was decoration
+       -- nothing here is draggable, the sheet is dismissed by the button, the scrim or Escape --
+       and it was spending the one row that could say which sheet you had opened. On a phone every
+       one of them looks the same on arrival: the same panel, the same corner radius, the same
+       controls. A word in that row is the difference between "a sheet" and "Filters".
+
+       Leading-aligned rather than centred, because it is a heading and headings on this page all
+       start at the same edge as the controls under them. */
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin-inline: -14px;
+    padding: 10px 14px;
+    background: var(--pp-deep, var(--bs-tertiary-bg));
+}
+/* The same tier as a rail group's heading, because that is what it is: the name of what is in
+   this sheet, over the groups that are in it. Not an h-element -- the sheet's contents carry
+   their own headings and this would sit above them at no level of its own. */
+.sheet:popover-open > .rail-handle > .ttl {
+    grid-column: 1;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.sheet:popover-open > .rail-handle > .btn { grid-column: 2; justify-self: end; }
+
+/* Square, for the same reason the page bar's undo and redo are: the label is one glyph, so height
+   alone leaves a full-height button about 30px wide and a 30px-wide thumb target. The glyph is set
+   larger than a word would be -- at .875rem a multiplication sign reads as a speck rather than as
+   a close. */
+.sheet-close {
+    min-width: var(--ctl-h);
+    min-height: var(--ctl-h);
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.rail-group {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+    min-inline-size: 0;
+}
+
+/* The group's own heading, and where a reading that belongs to the group goes: "Showing" carries
+   the card count, because a count with an invisible filter behind it is the thing this shell was
+   built to stop. */
+.rail-group > .ttl {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .5rem;
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.rail-group > .ttl > .cnt {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    color: var(--bs-body-color);
+    font-weight: 600;
+}
+
+/* A note under the control it qualifies. Quiet: it explains a setting rather than being one. */
+.rail-note {
+    margin: 0;
+    font-size: .78rem;
+    line-height: 1.35;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
+}
+
+/* A segmented pair, filling the rail's width. Bootstrap's own btn-group would do this, but it
+   sizes to its content and a two-state control whose halves are "Adds" and "Removes" reads as a
+   toggle only when the two halves are the same width. */
+.rail-seg { display: flex; min-inline-size: 0; }
+/* Three segments fit where two did, so each gets less width and the labels are one word.
+
+   .btn-sm's own .5rem of inline padding is what a button on a bar wants, where its width is its
+   content's. Here the width is a third of the rail whatever the word is, so that padding is taken
+   off the only label long enough to need it: at 8px a share of the rail held 45px of a 51.5px
+   "Remove", which overflowed rather than truncating and so read as a label that is not centred. */
+.rail-seg > .btn {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    min-height: var(--ctl-h);
+    padding-inline: .25rem;
+    border-radius: 0;
+}
+.rail-seg > .btn:first-child {
+    border-start-start-radius: var(--pp-r-sm);
+    border-end-start-radius: var(--pp-r-sm);
+}
+.rail-seg > .btn:last-child {
+    border-start-end-radius: var(--pp-r-sm);
+    border-end-end-radius: var(--pp-r-sm);
+}
+/* Collapse the shared edge, so the pair reads as one control and not two that happen to touch. */
+.rail-seg > .btn + .btn { margin-inline-start: -1px; }
+
+/* Everything the page hands the rail runs the full width. In the toolbar these controls sized
+   themselves to their content and to the room left on the line; in a column, a select that stops
+   short of the edge looks like it failed to load.
+
+   block-size is pinned as well as min-height, because the search field is a flex item sized to
+   fill a bar and a column is taller than a bar: left to grow it became a 110px box. */
+.page-rail .form-select,
+.page-rail .form-control,
+.page-rail > .rail-group > .btn {
+    inline-size: 100%;
+    max-inline-size: none;
+    block-size: var(--ctl-h);
+    min-height: var(--ctl-h);
+}
+
+/* And an option too long for the column ends in an ellipsis rather than mid-word. The wording is
+   the real fix -- the board's two selects were rewritten to fit -- but a set name or a rarity
+   symbol arriving from the data can be any width, and "Leave out under 150 pac" reads as a bug
+   where "Leave out under 150…" reads as a label with more to it. */
+.page-rail .form-select { text-overflow: ellipsis; }
+
+/* The scope picker's cap, which was an inline style and so could not be overridden by either rule
+   above. It appears in two shells: a sheet, where it is one control on a wide row and a select
+   running the full width of a 1280px window reads as a mistake; and a rail, where full width is
+   the point. 16rem is right for the first and wrong for the second, and inline it won both.
+
+   As a class it loses to `.page-rail .form-select` on specificity, which is the ordering wanted:
+   the shell decides, and the component states a preference the shell may overrule. */
+.scope-pick { max-inline-size: 16rem; }
+
+/* The search field's `flex: 1 1 8rem` is written for a bar, where the flex basis is a WIDTH and
+   8rem is the least it should shrink to. In a column that same basis is a height, so the box came
+   out 128px tall. Reset rather than re-specified: in this shell it fills the width and stands at
+   one control's height, which the rule above already says. */
+.page-rail .grid-search { flex: none; }
+
+/* A filter group turns ninety degrees with the shell. On a bar its label sits beside its chips,
+   because a bar's spare room is horizontal; in a column the label goes above them, and the chips
+   get the full width to wrap into rather than the ~130px left over beside a word. */
+.page-rail .chip-group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: .3rem;
+}
+.page-rail .chip-group > .ttl {
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.page-rail .chip-toolbar { flex-wrap: wrap; }
+
+/* The separators the bar used to need between groups. The column already has 18px of gap and a
+   heading per group, so a rule as well is the third signal for one boundary. */
+.page-rail .bar-sep { display: none; }
+
+/* The phone's two controls, floating over the grid's bottom-right corner.
+   ==================================================================================
+   Clear of the tab bar, which is fixed to the bottom edge and would otherwise sit under them --
+   the same offset .to-top already uses, for the same reason.
+
+   LEFT corner, where .to-top is on the right. They were both on the right, which put the two
+   things you press most often -- the filters and the add/remove mode -- under the same thumb as
+   the one you press by accident, and stacked them so the mode pill sat above the filter button
+   with the scroll-to-top under both. Split, each corner holds one purpose.
+
+   Hidden entirely above the fold width, where the rail is a column and there is nothing to open. */
+.rail-fabs { display: none; }
+
+@media (width <= 900px) {
+    .rail-fabs {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: .5rem;
+        position: fixed;
+        left: calc(14px + var(--safe-l));
+        bottom: calc(14px + var(--tab-bar-h) + 1px + env(safe-area-inset-bottom));
+        z-index: 1025;
+    }
+
+    .rail-fab {
+        display: inline-flex; align-items: center; gap: .4rem;
+        border: 0;
+        font-weight: 600;
+        color: #fff;
+        box-shadow: 0 3px 14px rgba(0, 0, 0, .55);
+    }
+
+    /* Smaller than the filter button. It is read far more often than it is pressed -- the whole
+       reason it is out here is so its state can be seen without opening anything -- and the
+       button you actually reach for should be the bigger target. */
+    .rail-fab.mode {
+        block-size: 2.5rem;
+        padding: 0 .9rem;
+        border-radius: 1.25rem;
+        font-size: .85rem;
+    }
+    /* The safe state, and it looks like one: no colour, because nothing is armed. A grey pill
+       among coloured ones is the state you want to be able to recognise without reading. */
+    .rail-fab.mode.off {
+        background: var(--bs-secondary-bg);
+        color: var(--bs-body-color);
+        border: 1px solid var(--bs-border-color);
+    }
+    .rail-fab.mode.adding { background: var(--bs-success); }
+    /* Danger, not the accent: this is the state in which a tap takes a card away, and it should
+       not look like the ordinary one in a different hue. */
+    .rail-fab.mode.removing { background: var(--bs-danger); }
+
+    .rail-fab.filters {
+        block-size: 3rem;
+        padding: 0 1.1rem;
+        border-radius: 1.5rem;
+        font-size: .95rem;
+        background: var(--bs-primary);
+    }
+    .rail-fab.filters .n {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-inline-size: 1.4rem;
+        padding: 0 .3rem;
+        border-radius: .7rem;
+        background: rgba(13, 12, 15, .35);
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+/* the odds check and the record, side by side
+   ----------------------------------------------------------------------------------
+   Two halves of one question: did the model hold up, and what did I actually open. Reading either
+   without the other is how a rarity a fifth out looks like a broken engine rather than eleven
+   packs of one set.
+
+   The left column is a table of four rows and the right a list of five, so they are close to equal
+   -- unlike the Answer pages, where a sentence sits beside a ranking and the weighting is 1.55 to
+   1. */
+.check-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+.check-recent { min-inline-size: 0; }
+.recent-rows { display: flex; flex-direction: column; margin-block-start: 8px; }
+.recent-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: .55rem;
+    padding: 8px 0;
+    border-block-end: 1px solid var(--pp-hairline, var(--bs-border-color));
+    font-size: .88rem;
+}
+.recent-row:last-child { border-block-end: 0; }
+.recent-row > .art {
+    inline-size: 26px;
+    block-size: 36px;
+    border-radius: var(--pp-r-xs);
+}
+.recent-row .nm { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.recent-row .cards { color: var(--bs-secondary-color); white-space: nowrap; }
+.recent-row .when { color: var(--bs-secondary-color); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.check-recent .note { margin: 10px 0 0; font-size: .8rem; color: var(--bs-secondary-color); }
+
+/* One under the other below the desk width: two tables of figures at half a phone is neither. */
+@media (width <= 900px) {
+    .check-cols { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .check-recent { margin-block-start: 18px; }
+}
+
+/* the Answer page's two columns
+   ==================================================================================
+   The verdict on the left and the shortlist on the right, divided by a hairline. The ranking is
+   not supporting material: "open Charizard" means one thing alone and another beside "the next one
+   is 4% behind", and the pair of columns is what lets the two be read as one thought.
+
+   1.55fr against 1fr, because the left column holds a sentence and the right holds six rows of
+   figures -- equal halves would give the prose a measure it does not want and the figures room
+   they cannot use. */
+.answer-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+}
+.answer-ranked {
+    padding-inline-start: 22px;
+    border-inline-start: 1px solid var(--pp-hairline, var(--bs-border-color));
+}
+.ranked-rows { display: flex; flex-direction: column; margin-block-start: 8px; }
+
+/* A row is a button, because tapping it is what swaps the verdict. Bordered only between rows:
+   six boxes would be six objects, and this is one list. */
+.ranked-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) 92px auto;
+    align-items: center;
+    gap: .55rem;
+    padding: 9px 0;
+    border: 0;
+    border-block-end: 1px solid var(--pp-hairline, var(--bs-border-color));
+    background: none;
+    color: inherit;
+    text-align: start;
+}
+.ranked-row:last-child { border-block-end: 0; }
+.ranked-row:hover { background: var(--bs-tertiary-bg); }
+/* The one the verdict is currently about, so tapping down the list never loses your place. */
+.ranked-row.current { background: color-mix(in srgb, var(--bs-primary) 12%, transparent); }
+.ranked-row > .art {
+    inline-size: 26px;
+    block-size: 36px;
+    border-radius: var(--pp-r-xs);
+    /* The image layers come from the shared [style*="--art"] rule, which stacks the candidate
+       chain over the placeholder. This says only how this box wants them fitted. */
+    --art-fit: contain;
+    background-color: var(--bs-secondary-bg);
+}
+.ranked-row .nm { min-inline-size: 0; font-size: .92rem; line-height: 1.25; }
+.ranked-row .nm strong { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranked-row .nm .sub { font-size: .78rem; color: var(--bs-secondary-color); }
+.ranked-row .bar {
+    block-size: 6px;
+    border-radius: var(--pp-r-xs);
+    background: color-mix(in srgb, var(--bs-body-color) 16%, transparent);
+    overflow: hidden;
+}
+.ranked-row .bar > span { display: block; block-size: 100%; background: var(--bs-primary); }
+.ranked-row .pct {
+    font-size: .95rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+}
+.answer-ranked .note {
+    margin: 10px 0 0;
+    font-size: .8rem;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
+}
+
+/* Below the desk width they stack, verdict first: on a phone you are asking one question, and the
+   shortlist is the follow-up rather than the answer. The divider becomes a rule above it. */
+@media (width <= 900px) {
+    .answer-cols { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .answer-ranked {
+        padding-inline-start: 0;
+        padding-block-start: 18px;
+        margin-block-start: 18px;
+        border-inline-start: 0;
+        border-block-start: 1px solid var(--pp-hairline, var(--bs-border-color));
+    }
+}
+
+/* the verdict block
+   ==================================================================================
+   What an Answer page leads with: the answer, at display size, with the arithmetic spent in words
+   underneath it and the strip explaining where the figure comes from below that.
+
+   Not a card. It is the page's opening paragraph, not an object sitting on the page, so it takes
+   a rule under it and no border, fill or radius of its own -- those would make it one panel among
+   the several that follow, which is exactly the reading to avoid. */
+.verdict-lead {
+    padding-block-end: 18px;
+    margin-block-end: 18px;
+    border-bottom: 1px solid var(--pp-hairline, var(--bs-border-color));
+}
+
+/* The label above a figure, in the app's quietest voice. Uppercase and tracked because it is read
+   as a category rather than as a sentence, and it has to not compete with the display line it
+   introduces. */
+.micro {
+    display: block;
+    font-size: .72rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+
+.verdict-lead .lead-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-block-start: 12px;
+}
+
+/* The pack, at the size a pack is recognised by. Contain rather than cover: a booster is a tall
+   rounded object on a transparent ground and cropping it to a box cuts the wrapper art that makes
+   it recognisable in the first place. */
+.verdict-lead .art {
+    flex: none;
+    inline-size: 104px;
+    block-size: 144px;
+    border-radius: var(--pp-r-sm);
+    /* The image layers come from the shared [style*="--art"] rule, which stacks the candidate
+       chain over the placeholder. This says only how this box wants them fitted. */
+    --art-fit: contain;
+    background-color: var(--bs-secondary-bg);
+}
+
+.verdict-lead .lead-text { min-inline-size: 0; }
+
+.verdict-lead .name {
+    margin: 0;
+    font-size: 2.1rem;
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    text-wrap: balance;
+}
+.verdict-lead .from {
+    margin: 2px 0 0;
+    font-size: .9rem;
+    color: var(--bs-secondary-color);
+}
+
+/* The sentence. Measured, because this is prose and prose read across a 1200px screen is prose
+   nobody finishes. */
+.verdict-lead .says {
+    margin: 14px 0 0;
+    max-inline-size: 32rem;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    text-wrap: pretty;
+}
+/* One figure in accent ink, and only one: it is the answer, and a sentence with four highlighted
+   numbers has none. The others are bold, which is enough to find them again. */
+.verdict-lead .says .key { color: var(--bs-primary); }
+.verdict-lead .then {
+    margin: 8px 0 0;
+    max-inline-size: 32rem;
+    font-size: .85rem;
+    line-height: 1.5;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
+}
+
+/* the box strip
+   ----------------------------------------------------------------------------------
+   A labelled row of boxes enumerating where an answer comes from. Legal only where the set is
+   literal -- see the note in BoxStrip.razor, which is where the precondition is written down,
+   because it is a rule about when to reach for this rather than about how it looks. */
+.box-strip {
+    margin-block-start: 22px;
+    padding-block-start: 18px;
+    border-top: 1px solid var(--pp-hairline, var(--bs-border-color));
+}
+.box-strip .micro { display: flex; flex-wrap: wrap; gap: .2rem .75rem; }
+.box-strip .clause {
+    font-size: .8rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--bs-tertiary-color);
+}
+.box-strip .boxes {
+    display: grid;
+    gap: 8px;
+    margin-block-start: 10px;
+}
+.box {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-inline-size: 0;
+    padding: 10px 8px;
+    border-radius: var(--pp-r-sm);
+}
+.box.live {
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+}
+/* The one to act on. A tint and an accent edge, because it has to be findable without reading all
+   four -- which is the only reason to rank them side by side rather than list them. */
+.box.best {
+    border: 1px solid var(--bs-primary);
+    background: color-mix(in srgb, var(--bs-primary) 14%, transparent);
+}
+/* Dashed, and that is the information. A route that does not exist for this rarity, or a position
+   that can only ever hand you a duplicate, is a fact -- and an empty box reads as data that failed
+   to arrive rather than as an answer. */
+.box.dead {
+    border: 1px dashed var(--pp-hairline, var(--bs-border-color));
+    background: var(--bs-body-bg);
+    color: var(--bs-tertiary-color);
+}
+.box .lbl {
+    font-size: .78rem;
+    color: var(--bs-secondary-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.box .fig {
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+.box .unit { font-size: .75rem; color: var(--bs-secondary-color); }
+.box .note {
+    font-size: .75rem;
+    line-height: 1.35;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
+}
+/* The bar area keeps its height whether or not there is a bar in it, so the row is one shape
+   rather than a stagger that implies an order the boxes do not have. */
+.box .bar {
+    display: flex;
+    align-items: flex-end;
+    block-size: 52px;
+    margin-block-start: 6px;
+}
+.box .bar > span {
+    inline-size: 100%;
+    border-radius: var(--pp-r-xs);
+    background: linear-gradient(var(--bs-primary), color-mix(in srgb, var(--bs-primary) 62%, #000));
+}
+/* Empty and next. Dashed like dead, but in the accent and hatched, because it is not an absence
+   being reported -- it is where your finger goes. At most one per strip: a row where every gap is
+   accented says "five things to do" where the truth is "do this one next". */
+.box.todo {
+    border: 1px dashed var(--bs-primary);
+    background:
+        repeating-linear-gradient(45deg,
+            color-mix(in srgb, var(--bs-primary) 10%, transparent) 0 4px,
+            transparent 4px 8px),
+        color-mix(in srgb, var(--bs-primary) 8%, transparent);
+    color: var(--bs-primary);
+}
+.box.todo .fig { font-size: 1.6rem; font-weight: 400; line-height: 1; }
+.box.todo .note { color: var(--bs-primary); font-weight: 600; }
+
+/* A rule where the bar would be, so a dead box is visibly the same object as a live one with
+   nothing in it rather than a different, emptier thing. */
+.box.dead .bar { border-bottom: 2px solid var(--pp-hairline, var(--bs-border-color)); }
+
+.verdict-lead .lead-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem .75rem;
+    margin-block-start: 20px;
+}
+.verdict-lead .served { font-size: .85rem; color: var(--bs-secondary-color); }
+
+/* On a phone the block keeps its order and gives up its scale: the art shrinks, the answer comes
+   down to something that fits a 375px line, and the five boxes lose the bar height that was there
+   to be compared across a wide screen. */
+@media (width <= 700px) {
+    .verdict-lead .lead-head { gap: 12px; }
+    .verdict-lead .art { inline-size: 72px; block-size: 100px; }
+    .verdict-lead .name { font-size: 1.5rem; line-height: 1.15; }
+    .verdict-lead .says { font-size: .98rem; }
+    .box-strip .boxes { gap: 5px; }
+    .box { padding: 7px 5px; }
+    .box .lbl { font-size: .7rem; }
+    .box .fig { font-size: .92rem; }
+    .box .bar { block-size: 34px; }
+}
+
+/* A verdict headline that is a call rather than a figure carries the call's colour. The other
+   Answer pages put a number here and leave it in the body ink; "Take it" and "Skip it" are the
+   answer itself, and reading them at a glance is the point of a five-second page. */
+.verdict-lead .name.take { color: var(--bs-success-text-emphasis); }
+.verdict-lead .name.skip { color: var(--bs-secondary-color); }
+
+/* the Record job's signature
+   ==================================================================================
+   What is still missing before this page can commit, on every page whose job is recording
+   something: logging a pack, reading one off a screenshot, importing a collection or a deck.
+
+   Two states, and only the second one warns. While the thing is being filled in this states
+   progress -- "one more card" -- because it is on screen for the whole task and a live alarm about
+   a count is wrong for nearly all of it. The accent form appears only at the moment the question
+   is actually asked, which is when you press commit on something short. */
+.todo-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .3rem .75rem;
+    padding: .4rem calc(.75rem + var(--safe-r)) .4rem calc(.75rem + var(--safe-l));
+    border-bottom: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+    font-size: .85rem;
+}
+.todo-strip .micro { flex: none; }
+.todo-strip .say { min-inline-size: 0; text-wrap: pretty; }
+/* The way out of doing it by hand, and it belongs to this strip because this strip is the one
+   saying how much by-hand work is left. */
+.todo-strip .escape { margin-inline-start: auto; flex: none; }
+
+/* The state that warns. Tinted rather than bordered: it is a bar the page already had, saying
+   something more urgent, not a new object arriving. */
+.todo-strip.short {
+    background: color-mix(in srgb, var(--bs-primary) 12%, transparent);
+    border-bottom-color: var(--bs-primary);
+}
+.todo-strip.short .btn { flex: none; margin-inline-start: auto; }
+
+/* What committing will do, at the foot of the page, where you are when you decide to. */
+.commit-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .3rem 1rem;
+    padding: .45rem calc(.75rem + var(--safe-r)) .45rem calc(.75rem + var(--safe-l));
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--pp-deep, var(--bs-tertiary-bg));
+    font-size: .82rem;
+    color: var(--bs-secondary-color);
+}
+.commit-foot .again { margin-inline-start: auto; padding: 0; font-size: inherit; }
+.commit-foot kbd { font-size: .78em; }
+
+/* A pack's card in its slot: the art, and a caption naming it. Tapping takes it back out, which
+   is what the name chips this replaced were for. */
+.pack-slots .slot-card {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 367 / 512;
+    margin-block-start: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--pp-r-xs);
+    /* Image layers from the shared [style*="--art"] rule; this says only how they are fitted. */
+    --art-fit: cover;
+    background-color: var(--bs-secondary-bg);
+}
+.pack-slots .slot-cap {
+    display: flex;
+    align-items: baseline;
+    gap: .3rem;
+    margin-block-start: 4px;
+    font-size: .78rem;
+    line-height: 1.2;
+}
+.pack-slots .slot-cap .nm { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pack-slots .slot-cap .rr { flex: none; margin-inline-start: auto; }
+
+/* The strip sits in the page's own padding rather than the box strip's default top rule: on this
+   page it follows a bar, not a paragraph. */
+.pack-slots .box-strip {
+    margin-block-start: 0;
+    padding: 14px calc(.75rem + var(--safe-r)) 0 calc(.75rem + var(--safe-l));
+    border-top: 0;
+}
+
+/* the Wonder Pick offer
+   ----------------------------------------------------------------------------------
+   A card in the strip is a button, because tapping it takes it back out of the offer. */
+.box .offer-card {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 367 / 512;
+    margin-block-start: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--pp-r-xs);
+    /* Image layers from the shared [style*="--art"] rule; this says only how they are fitted. */
+    --art-fit: cover;
+    background-color: var(--bs-secondary-bg);
+}
+/* A card you already hold cannot make this offer worth taking. It recedes rather than going,
+   because it is still one of the five you might receive -- which is exactly why the offer is
+   worth less. */
+.box .offer-card.have { opacity: .5; }
+
+.box .offer-say {
+    display: block;
+    margin-block-start: 4px;
+    font-size: .75rem;
+    line-height: 1.2;
+}
+.box .offer-say .have { color: var(--bs-secondary-color); }
+
+/* The histogram. Sized in the markup rather than here: the threshold line has to land at the same
+   place along the axis as the bucket boundaries, so one number owns the width. */
+.offer-hist {
+    flex: none;
+    margin: 0;
+    inline-size: 200px;
+}
+.offer-hist svg {
+    display: block;
+    margin-block-start: 6px;
+    /* The two axes the bars are read against, and no more: a grid would be furniture over ten
+       bars. */
+    border-inline-start: 1px solid var(--pp-hairline, var(--bs-border-color));
+    border-block-end: 1px solid var(--pp-hairline, var(--bs-border-color));
+}
+.offer-hist rect { fill: var(--bs-secondary-bg); }
+/* This offer's own bucket, which is the whole reason the chart is here. */
+.offer-hist rect.mine { fill: var(--bs-primary); }
+.offer-hist .bar-line {
+    stroke: var(--bs-primary);
+    stroke-width: 1;
+    stroke-dasharray: 3 2;
+}
+.offer-hist .axis {
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-block-start: 3px;
+    font-size: .75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-secondary-color);
+}
+.offer-hist .axis .mine { color: var(--bs-primary); font-weight: 600; }
+
+/* The two outcomes, equally weighted. */
+.offer-commit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    margin-block-start: 20px;
+}
+.offer-commit .took { display: flex; gap: .5rem; align-items: center; }
+.offer-commit .took .form-select { inline-size: auto; min-inline-size: 12rem; }
+.offer-clear {
+    padding: 4px 0 0;
+    font-size: .82rem;
+    text-decoration: none;
+}
+.commit-note {
+    margin: 8px 0 0;
+    font-size: .82rem;
+    color: var(--bs-secondary-color);
+    text-wrap: pretty;
+}
+
+/* On a phone neither outcome gets the smaller target: both become full-width rows, and the
+   decision is a five-second one made with the game in the other hand.
+
+   Which also means it has to FIT: the whole page, strip through commit, above the tab bar without
+   a scroll. Three full-width rows is 150px of the 812 on its own, so the space around the verdict
+   comes down to pay for them -- measured at 770 against a bar at 755 before this, and the gap is
+   exactly the sort of thing that is invisible until someone is holding a phone. */
+@media (width <= 700px) {
+    .verdict-lead { padding-block-end: 12px; margin-block-end: 12px; }
+    .offer-commit { margin-block-start: 12px; }
+    .commit-note { margin-block-start: 6px; }
+
+    .offer-commit { flex-direction: column; align-items: stretch; gap: .4rem; }
+    .offer-commit .took { flex-direction: column; align-items: stretch; gap: .4rem; }
+    .offer-commit .took .form-select,
+    .offer-commit .btn { inline-size: 100%; min-block-size: 3rem; }
+    .offer-hist { inline-size: 100%; }
+    .offer-hist svg { inline-size: 100%; }
+}
+
+/* A card's art filling a box, for a strip whose boxes are cards rather than figures. Cover, not
+   contain: at 30px a whole card is a smudge and the top of the art is the part you recognise. */
+.slot-art {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 367 / 512;
+    margin-block-start: 4px;
+    border-radius: var(--pp-r-xs);
+    /* Image layers from the shared [style*="--art"] rule; this says only how they are fitted. */
+    --art-fit: cover;
+    background-color: var(--bs-secondary-bg);
+}
+/* Which direction a slot is moving, and nothing else. The additions were ringed in the accent,
+   which in this app is red -- so the only marked boxes on a picture of a wishlist wore the colour
+   of a warning and read as "take these down" when they meant the opposite.
+
+   Green on, red off, the rest unmarked. Not the accent for either: the accent means "this is the
+   one to act on", and here both colours are acts. */
+.slot-art.on { outline: 2px solid var(--bs-success); outline-offset: 1px; }
+.slot-art.off {
+    outline: 2px solid var(--bs-danger);
+    outline-offset: 1px;
+    /* Coming off, so it is shown leaving rather than merely marked. */
+    opacity: .62;
+}
+
+/* The word under a box that names an act rather than a slot, in its own colour so the strip can be
+   read at a glance without matching outlines to a key. */
+.box:has(.slot-art.on) > .lbl { color: var(--bs-success-text-emphasis); font-weight: 700; }
+.box:has(.slot-art.off) > .lbl { color: var(--bs-danger-text-emphasis); font-weight: 700; }
+
+/* Two readings at the foot of a rail: a pool and its number. Not a control, so no border and no
+   fill -- it is the same kind of thing as the target figures on the collection's rail. */
+.pool-read {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .5rem;
+    font-size: .82rem;
+}
+.pool-read .fig {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-body-color);
+}
+
+/* The prose under a box strip: what each route's figure actually means. A definition list because
+   that is what it is -- a term and its explanation -- and the route names line up down the left so
+   a reader can find the one box they are asking about. */
+.route-notes {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: .2rem .75rem;
+    margin: 12px 0 0;
+    font-size: .82rem;
+    line-height: 1.5;
+}
+.route-notes dt { font-weight: 600; white-space: nowrap; }
+.route-notes dd { margin: 0; color: var(--bs-secondary-color); text-wrap: pretty; }
+
+/* One rarity tier of the target: its glyphs, how far along it is, and how many copies are left.
+   A three-track grid rather than flex, so the bars line up down the column whether a tier's mark
+   is one diamond or four -- the whole point of the row is comparing the lengths. */
+.tier-row {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr) 2.6rem;
+    align-items: center;
+    gap: .5rem;
+    font-size: .78rem;
+}
+.tier-row > .bar {
+    block-size: 6px;
+    border-radius: var(--pp-r-xs);
+    /* Ink at low alpha, not one of the surface tokens. A track has to read against whatever it is
+       drawn on, and this one is drawn on the rail -- a fourth surface, which in the light skin sits
+       within a shade of the sunk one the other tracks in the app use. */
+    background: color-mix(in srgb, var(--bs-body-color) 16%, transparent);
+    overflow: hidden;
+}
+.tier-row > .bar > span {
+    display: block;
+    block-size: 100%;
+    background: var(--bs-primary);
+}
+.tier-row > .fig {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-secondary-color);
+}
+
+/* The gap note reads as prose in a column, where on its own bar it had to be a headline. Its list
+   is a disclosure, so the group is one line until asked. */
+.page-rail .gap-strip {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: .78rem;
+}
+.page-rail .gap-strip .hd {
+    text-align: start;
+    inline-size: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: inherit;
+}
+.page-rail .gap-strip .x { align-self: flex-start; }
+.page-rail .gap-list { padding-inline-start: 1rem; margin: 0; }
+
+/* Below the desk width the column has nowhere to be, so the groups stack above the grid and keep
+   every control reachable. This is the honest intermediate, not the destination: the phone
+   treatment is a pair of floating buttons opening a sheet that repeats these groups in this
+   order, and it replaces this rule rather than adding to it. */
+@media (width <= 900px) {
+    .page-body.railed { grid-template-columns: minmax(0, 1fr); }
+    .page-body.railed > .page-rail {
+        grid-area: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--pp-hairline, var(--bs-border-color));
+    }
+    .page-body.railed > * { grid-area: auto; }
+    .page-body.railed > .grid-spy {
+        margin: 0;
+        border-inline: 0;
+        border-top: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
 /* breakpoints
 
    Three named widths. Everything new uses these; the older rules below still sit on nine ad hoc
@@ -191,7 +1456,38 @@ body {
     --safe-r: env(safe-area-inset-right);
 }
 
+/* The status bar's strip, and what colour it is.
+   ==================================================================================
+   The page is pushed clear of the cutout so nothing is printed under the clock. That padding is
+   the BODY's, though, so what showed in the strip above it was the body's own background -- while
+   the thing immediately under the strip is always a bar, and a bar is a different colour. On a
+   phone that reads as a pale band across the top of the app that no page put there.
+
+   It cannot be fixed by moving the inset onto the bar. A sticky element cannot travel outside its
+   containing block, so a bar inside a padded body sticks to the padding edge whatever `top` says
+   -- which is why the collection's bar parks 47px down on a notched phone rather than at 0.
+
+   So the strip is painted rather than occupied: a fixed band of the bar's own colour, the exact
+   height of the inset, which is zero on a device that has none. Every bar that can be at the top
+   -- the nav above 1056px, the page bar below it, the tab bar at the other end -- is this same
+   colour, so one band serves all of them and no page has to opt in.
+
+   Not hit-testable is not a concern: the only thing under the system status bar is the system
+   status bar. */
 body { padding-top: env(safe-area-inset-top); }
+
+body::before {
+    content: "";
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: env(safe-area-inset-top);
+    background: var(--bs-tertiary-bg);
+    /* Over the sticky bars, which cannot reach up here anyway, and under anything in the top
+       layer: a sheet's backdrop should dim this strip with the rest of the page. */
+    z-index: 1050;
+    pointer-events: none;
+}
 
 main {
     display: block;
@@ -217,6 +1513,19 @@ main > * { flex-shrink: 0; }
 :root { --nav-h: 2.95rem; }
 
 .app-nav {
+    /* Pinned, because it is bar one.
+       ------------------------------------------------------------------------------
+       The two-bar rule describes a frame: the global nav and the page's own bar, with the content
+       running under them. A nav that scrolls away is not that frame -- it is a banner, and on a
+       page whose content is three thousand cards it means the only way to reach another page is to
+       scroll all the way back. The phone never had this problem, because the tab bar is fixed;
+       the desktop was the one width where getting anywhere meant going back to the top first.
+
+       47px of permanent chrome is what the frame costs. That is the trade the rule was already
+       making on a phone, where the tab bar takes more. */
+    position: sticky;
+    top: 0;
+    z-index: 30;
     min-block-size: var(--nav-h);
     display: flex; align-items: center; gap: .35rem; flex-wrap: wrap;
     padding: .4rem calc(.75rem + var(--safe-r)) .4rem calc(.75rem + var(--safe-l));
@@ -324,6 +1633,25 @@ main > * { flex-shrink: 0; }
    entire page when it receives focus programmatically. */
 main:focus { outline: none; }
 
+/* And the same thing one element down, which is where it was actually happening.
+   ==================================================================================
+   App.razor carries <FocusOnNavigate Selector="h1" />, so EVERY navigation moves focus to the new
+   page's title -- which is the right thing to do, and the reason a screen reader announces where
+   it has landed instead of staying silent. Blazor makes the heading focusable with tabindex="-1"
+   to do it.
+
+   The heading has no focus style of its own, so it fell through to the browser's, and on iOS
+   Safari that is the system accent: a blue box drawn around the page title every time you tapped
+   the tab bar. The ring was not marking anything a user could act on -- it was marking the
+   announcement.
+
+   Keyed on tabindex="-1", which is the whole argument: an element with a negative tabindex cannot
+   be reached by keyboard, so it can only ever have been focused by script, so a ring on it can
+   never be telling anyone where their keyboard is. Both pseudo-classes, because Safari has been
+   willing to paint this on :focus alone. */
+h1[tabindex="-1"]:focus,
+h1[tabindex="-1"]:focus-visible { outline: none; }
+
 /* storage alarm
 
    Deliberately the loudest thing in the app, and not dismissible. Every other warning here is
@@ -413,6 +1741,11 @@ main:focus { outline: none; }
     /* Chrome. Distinct enough from the body to mark "this is a control bar" on its own. */
     --bs-tertiary-bg: #edf0f4;
     --bs-secondary-bg: #e2e7ec;
+
+    /* Recessed, for the rail. See the note in the paper skin on why a rail cannot reuse the bar's
+       surface. Slate's dark form has no palette block of its own -- it is Bootstrap's, left as
+       shipped -- so there it falls back to the raised surface at the use site. */
+    --pp-deep: #e7ebf0;
 }
 
 /* outline buttons
@@ -580,6 +1913,12 @@ main:focus { outline: none; }
     --bs-table-border-color: #e2ded6;
     --pp-hairline: #e2ded6;
 
+    /* The recessed surface. See the note in the dark form. The light skin has very little room
+       under its body colour before it reaches the sunk surface, and the first value tried was
+       #eae7e0 -- a shade off the sunk #ebe8e2, which made every track drawn on the rail vanish.
+       This sits between raised and sunk, so all four steps stay separable. */
+    --pp-deep: #f2efe8;
+
     /* Chosen. 5.6:1 under white as a fill and 5.0:1 as ink on the raised surface, so it is safe
        both ways round -- which it has to be, since the token is a fill in nine places and a
        colour in six. */
@@ -633,6 +1972,12 @@ main:focus { outline: none; }
     --bs-border-color-translucent: rgba(238, 236, 234, .16);
     --bs-table-border-color: #2c2b31;
     --pp-hairline: #2c2b31;
+
+    /* A fourth surface, BELOW the body rather than above it, for the rail and for a secondary
+       column. The other three step upward -- body, raised, sunk -- and a rail cannot use any of
+       them: raised is what the bars are, and a control column that matches the bar it replaced
+       reads as a bar that fell over. Recessed says "this is the edge of the page" instead. */
+    --pp-deep: #141317;
 
     /* Still fill-first: 4.8:1 under white, which the nine fills need. */
     --bs-primary: #cf3b44;
@@ -856,28 +2201,67 @@ main:focus { outline: none; }
     --bs-btn-disabled-border-color: #f0a5aa;
 }
 
-/* skinned form focus
+/* THE FOCUS RING: one colour, and only when focus is worth showing.
+   ==================================================================================
+   Two faults, and the phone showed both at once.
 
-   The focus ring and the checked box are the last two hardcoded blues in Bootstrap's compiled
-   output that the app actually shows. Left alone they put #0d6efd rings and #0d6efd checkboxes on
-   a page that has no other #0d6efd in it, which reads as a control from a different app.
+   ONE, IT WAS BLUE. Bootstrap's compiled output hardcodes #0d6efd for the focus ring and the
+   checked box, on a page that has no other #0d6efd in it, so it read as a control borrowed from a
+   different app. This was already fixed -- for the PAPER skin only, by a pair of rules keyed on
+   [data-pp-skin="paper"]. There are two skins. Anyone on slate kept Bootstrap's blue, and so did
+   anything the pair did not name. The token is set once here instead, so every ring Bootstrap
+   draws anywhere follows the accent without being listed.
 
-   Not a colour-only change: the ring keeps its 4px spread, so focus is still marked by something
-   other than hue for anyone who cannot tell the two apart. */
-[data-pp-skin="paper"] .form-control:focus,
-[data-pp-skin="paper"] .form-select:focus {
+   TWO, IT SHOWED ON A TAP. Bootstrap rings these on :focus, which a tap satisfies, so on a phone
+   every dropdown you opened kept a ring around it until you happened to tap something else --
+   marking where focus is for someone who never asked and cannot see a keyboard.
+
+   :focus-visible is the test that means "and it is worth showing you", and the split it makes is
+   exactly the right one here: a tapped <select> does not match it, because you tapped the thing
+   and know where it is, while a tapped text field DOES, because you are about to type into it and
+   the ring is the cursor's address. So the search box still rings on a tap and the dropdowns stop.
+
+   The ring keeps its 4px spread rather than only changing hue, so focus is still marked by
+   something other than colour for anyone who cannot tell the two apart. */
+:root {
+    --bs-focus-ring-color: rgba(var(--bs-primary-rgb), .25);
+    --bs-focus-ring-rgb: var(--bs-primary-rgb);
+}
+
+/* Bootstrap's :focus ring, taken off. Its border-color goes back to the resting one rather than
+   to `revert`, which would hand the blue straight back. */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    border-color: var(--bs-border-color);
+    box-shadow: none;
+}
+
+/* And put back on the half of focus that is worth drawing. Later than the rule above and at the
+   same specificity, so where both match this one wins. */
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible {
     border-color: var(--bs-primary);
     box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .25);
 }
 
-[data-pp-skin="paper"] .form-check-input:checked {
+.form-check-input:checked {
     background-color: var(--bs-primary);
     border-color: var(--bs-primary);
 }
 
-[data-pp-skin="paper"] .form-check-input:focus {
-    border-color: var(--bs-primary);
-    box-shadow: 0 0 0 .25rem rgba(var(--bs-primary-rgb), .25);
+/* The catch-all, for everything that is focusable and has no ring of its own. Without it those
+   fall through to the browser's, which on iOS Safari is the system accent -- blue -- and is the
+   other half of what a phone was showing.
+
+   :where() so this carries no specificity beyond the pseudo-class itself, and placed before the
+   twenty-odd component rings further down: any of them that names the same element still wins,
+   whether it is more specific or merely later. Form controls are left out because the rule above
+   already rings them, and two rings on one box is worse than none. */
+:where(a[href], button, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
 }
 
 /* the accent as ink
@@ -1084,6 +2468,25 @@ main:focus { outline: none; }
 .set-picker-body { --ctl-h: 2.5rem; }
 @media (pointer: coarse) { .set-picker-body { --ctl-h: 2.75rem; } }
 
+/* THE BAR'S HEIGHT, AS ONE NUMBER.
+   ==================================================================================
+   Every page bar is exactly this tall, so moving between pages does not move the content under
+   them. A token rather than a figure in three rules, because three rules is how they drifted: the
+   flat bar took its height from min-height and the folded one from `block-size: auto`, and the
+   two answered differently on the same screen -- 60px against 49.8 and 58.5.
+
+   3rem is a 36px control with 6px above and below. It rises where either of the two things that
+   make a bar taller happens: a coarse pointer, where controls are 44px rather than 36, and a
+   phone-width screen, where the bar folds to a title over a subtitle allowed to wrap to a second
+   line. 3.75rem holds both -- 44 with 8px above and below, and a title over two lines with room
+   to spare.
+
+   Two conditions rather than one, because they are separate: a 500px window on a desktop folds
+   without having a thumb, and a tablet has a thumb at a width that does not fold. */
+:root { --bar-h: 3rem; }
+@media (pointer: coarse) { :root { --bar-h: 3.75rem; } }
+@media (width < 600px)   { :root { --bar-h: 3.75rem; } }
+
 .page-head, .page-tools, .grid-toolbar {
     display: flex; align-items: center; gap: .5rem;
     flex: none;
@@ -1092,20 +2495,23 @@ main:focus { outline: none; }
 }
 .page-head {
     background: var(--bs-tertiary-bg);
-    /* Matches a btn-sm or a form-control-sm plus the padding above, so a header with a control
-       in it is exactly as tall as one with only a title. */
-    min-height: 3rem;
+    /* Exactly, not at least. A bar that grows to its content is a bar whose height depends on
+       how long this page's subtitle happens to be, and two of them are long enough to wrap. A
+       control in it is centred in whatever room is left over. */
+    height: var(--bar-h);
     flex-wrap: nowrap;
     /* A long deck name shortens rather than pushing the actions off the row. */
     overflow: hidden;
 }
 .page-tools, .grid-toolbar { flex-wrap: wrap; }
 
-/* The header gives up most of its vertical padding on a touch screen, where its buttons are
-   44px rather than 31. .page-head is a 3rem contract the sticky toolbar below is positioned
-   against, and 44 plus two lots of .35rem is 56 -- a touch header standing 7px taller than the
-   title-only one on the next page, which is the drift the contract exists to prevent. At .15rem
-   it lands within a pixel of where it always was.
+/* Most of the vertical padding goes on a touch screen, where the height above has already made
+   room: the bar is 60px there and the control in it is 44, so the 6px this would otherwise add at
+   each end would be spent twice. What is left is enough to keep a focus ring off the hairline.
+
+   Safe against the sticky toolbar below it, which is positioned on --head-h: gridspy.js MEASURES
+   the header and publishes it, and the calc(3rem - 1px) in that rule is only the fallback for a
+   bar nothing has measured yet.
 
    Below the shorthand above rather than up with the rest of the touch sizing: both selectors are
    one class, so this is settled on source order, and declared any earlier the shorthand simply
@@ -1120,7 +2526,10 @@ main:focus { outline: none; }
    The toolbar below it is sticky too, so it has to be told where the header ends. That number is
    the header's own fixed height, which is a contract rather than an accident: .page-head is
    always exactly one row, hence a header that can be relied on to be 3rem plus its border. */
-.page-head.sticky-head { position: sticky; top: 0; z-index: 25; }
+/* Under the nav, not at the viewport top: with bar one pinned, a bar two at zero parks behind it.
+   Below the nav's breakpoint there is no nav to sit under and the offset falls back to zero. */
+.page-head.sticky-head { position: sticky; top: var(--nav-h); z-index: 25; }
+@media (width <= 1056px) { .page-head.sticky-head { top: 0; } }
 /* One pixel INSIDE the header rather than one clear of it. The header is min-height: 3rem plus a
    border, and border-box rounding lands its real height a fraction under 49px at some zoom levels
    -- so `3rem + 1px` left a sub-pixel gap between the two pinned bars with the card grid scrolling
@@ -1179,71 +2588,89 @@ main:focus { outline: none; }
 .page-head .actions {
     display: flex; align-items: center; gap: .4rem; flex: none; margin-left: auto;
 }
+/* A word that appears only where the long one is dropped, the counterpart to .wide-only below.
+   The bar's buttons still have to say what they do at 375px, and a label that merely vanishes
+   leaves a control that does not.
+
+   Declared BEFORE the rule that turns it on. The two selectors weigh the same, so whichever comes
+   last wins, and written after the media query this default quietly beat it -- the button rendered
+   as an empty box. */
+.page-head .narrow-only { display: none; }
+
 @media (width < 600px) {
     /* The subtitle is explanatory, and a phone header has room for the title and the buttons
        or for prose, not both. */
     .page-head .subtitle { display: none; }
+
+    /* Except where the page's controls are FOLDED AWAY, marked by the page. There the line is not
+       explanatory: it is the only thing on screen saying what those controls are set to, and a
+       count whose filters are out of sight is a lie -- "110 cards" means something else with
+       "missing only" on. So the bar stacks instead: title over subtitle, the buttons keeping the
+       end of the first row.
+
+       Which is not the bar wrapping to two rows in the sense the two-bar rule forbids. That rule
+       is about strips of controls; this is one bar that is two lines tall, and it is the trade the
+       fold makes -- the row it costs here is the row the filter toolbar used to cost, and the
+       toolbar could not say this.
+
+       This asked `main:has(> .page-body.railed)` before, which is a different question: it tested
+       for a rail. The four pages that fold their controls into a page-bar sheet rather than a rail
+       -- Which pack, Trades, Wonder Pick, Compare -- have no rail, so they answered no and spent a
+       phone header saying "Which pack" and nothing else, while the verdict underneath them counted
+       packs against a target the page had stopped naming. Those are the pages the rule is MOST
+       for: a rail at least leaves a badge on screen, and a bar sheet leaves nothing. */
+    .page-head.folded {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "title    actions"
+            "subtitle actions";
+        align-items: center;
+        row-gap: 1px;
+        /* The same height as every other bar, not its own content's. This was `auto`, which is why
+           the collection and the wishlist -- the two whose subtitle actually reaches a second line
+           -- stood 8.7px taller than the eight that did not. The second line is RESERVED here
+           rather than forbidden: clamping the subtitle to one line would have levelled them just
+           as well and taken "53 short of target" off the collection with it, which is the reading
+           that page exists to give. */
+        block-size: var(--bar-h);
+    }
+    .page-head.folded > .title { grid-area: title; }
+    .page-head.folded > .actions { grid-area: actions; }
+    .page-head.folded > .subtitle {
+        grid-area: subtitle;
+        display: block;
+        font-size: .76rem;
+        line-height: 1.3;
+        /* It has to WRAP here, where everywhere else it is one line that ellipsises. The base rule
+           is nowrap because a subtitle is usually a caption that can be cut anywhere; this one
+           ends with the list of active filters, and cutting that is cutting the only statement of
+           what the count in front of it means.
+
+           Two lines, then clipped. A height cap rather than -webkit-line-clamp: the subtitle is a
+           grid item here, grid items are blockified, and a blockified -webkit-box is a flow-root
+           with the clamp silently doing nothing. Two lines is what the phone mock uses and what
+           the longest real filter list needs. */
+        white-space: normal;
+        max-block-size: calc(2 * 1.3 * .76rem);
+        overflow: hidden;
+    }
     /* Wording a header can afford at a desk and not on a phone: a button's word beside its arrow,
        a count already spelled out on the button next to it. Marked in the markup rather than
        guessed at here, because only the page knows which of its words are the spare ones. The
        title is never one of them -- it is what the bar is for. */
     .page-head .wide-only { display: none; }
+    .page-head .narrow-only { display: inline; }
 }
 
 /* No inset of its own: this sits inside .page-tools, which already carries one, and adding a
    second would push the tabs a cutout's width further in again. Only a band that reaches the
    physical edge needs to inset its contents. */
-/* The set row, now behind a disclosure. Collapsed it is one line naming the set you are in; open
-   it is the row it always was. What changed is that the row is no longer the price of arriving on
-   the page. */
-.set-picker {
-    border-bottom: 1px solid var(--bs-border-color);
-    background: var(--bs-tertiary-bg);
-}
-.set-picker > summary {
-    display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem;
-    padding: .35rem calc(.75rem + var(--safe-r)) .35rem calc(.75rem + var(--safe-l));
-    cursor: pointer; user-select: none;
-    font-size: .9rem;
-}
-.set-picker > summary:hover .fold-hint { color: var(--bs-body-color); }
-.set-picker > summary:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
-.set-picker > summary .cur { font-weight: 600; }
-.set-picker > summary .pct {
-    color: var(--bs-secondary-color); font-variant-numeric: tabular-nums;
-    /* Three characters, and it broke between the number and the sign the moment the row was told
-       not to wrap: "0" on one line and "%" under it, which made the bar two lines tall by way of
-       the one thing on it that could not be misread. */
-    white-space: nowrap;
-}
-/* How many cards the filters left, moved here off the grid's own bar. Quiet like the percentage
-   beside it -- this bar is read, not scanned for -- and never wrapped: "233" on one line and
-   "cards" on the next reads as two figures. */
-.set-picker > summary .tally {
-    color: var(--bs-secondary-color);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-.set-picker > summary .tally .fail { color: var(--bs-danger-text-emphasis); }
-/* With the total on it, this bar holds four things at 375px and the set's own name is the long
-   one, so the name shortens rather than wrapping the row -- the same contract .page-head keeps,
-   for the same reason: a bar that is one line at some widths and two at others moves everything
-   under it. Wrapping had to be turned off for the name to shorten at all: flex decides where to
-   break from each item's base size, so a full-length name breaks the line before anything is
-   given the chance to shrink. The set code leads the label, so what survives the ellipsis is the
-   half that identifies the set. */
-@media (width < 600px) {
-    .set-picker > summary { flex-wrap: nowrap; }
-    .set-picker > summary .cur {
-        min-inline-size: 0;
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    /* The three short ones keep their width: the name is what gives, and a figure squeezed to
-       fewer characters than it has is not a figure. */
-    .set-picker > summary .pct,
-    .set-picker > summary .tally,
-    .set-picker > summary .fold-hint { flex: none; }
-}
+/* The set row was a bar under the header: one line naming the set you are in, opening into the
+   row of set tabs. Both halves have moved -- the naming into the page bar's own sentence, the
+   choosing into a sheet -- so the bar, its summary and everything that kept its four items on one
+   line at 375px are gone with it. What survives is .set-picker-body, the row of tabs itself,
+   which the sheet now holds. */
 /* Pushed to the far edge only where there is an edge to push to. At 375px `margin-left: auto`
    consumed the last of the line and dropped the pill onto a row of its own, which is the row the
    fold was meant to save. Below the phone breakpoint it just follows the text. */
@@ -1257,7 +2684,12 @@ main:focus { outline: none; }
     padding: .1rem calc(.75rem + var(--safe-r)) .5rem calc(.75rem + var(--safe-l));
 }
 
-.set-tabs { display: flex; gap: .25rem; overflow-x: auto; }
+/* Wraps. It was a horizontal scroller, which is what a row of tabs in a BAR has to be -- and this
+   has not been in a bar since the set row folded into a sheet. In a sheet the room is vertical and
+   there is plenty of it, so scrolling sideways hid four of twelve sets behind a gesture while the
+   rows below them sat empty: 864px of tabs in a 588px scroller. A picker you have to drag through
+   to see what it offers is worse than one that takes a second line. */
+.set-tabs { display: flex; flex-wrap: wrap; gap: .25rem; }
 .set-tab {
     border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
     color: var(--bs-body-color);
@@ -1313,9 +2745,10 @@ main:focus { outline: none; }
    make scrollers focusable the way Firefox does. The wrappers therefore carry tabindex="0" and a
    role, which means they also need a focus ring of their own.
 
-   The app's other two scrollers, .set-tabs and .pick-list, are deliberately NOT given this: every
-   child is a button, so tabbing already walks into them and the browser scrolls each one into
-   view. Adding tabindex there would only insert a stop that does nothing. */
+   The app's other scroller, .pick-list, is deliberately NOT given this: every child is a button,
+   so tabbing already walks into it and the browser scrolls each one into view. Adding tabindex
+   there would only insert a stop that does nothing. (.set-tabs was the third of these and no
+   longer scrolls at all -- it wraps.) */
 .table-responsive:focus-visible {
     outline: 2px solid var(--bs-primary);
     outline-offset: -2px;
@@ -1332,9 +2765,15 @@ main:focus { outline: none; }
     padding-block: .5rem;
 }
 
-/* Each figure in its own box. Whitespace alone was not enough separation once there were eight
-   of them: a label sat as close to the value above it as to its own, so the eye grouped them
-   wrongly. The border does the grouping instead. */
+/* Each figure in its own box. Whitespace alone was not enough separation once there were eight of
+   them: a label sat as close to the value above it as to its own, so the eye grouped them wrongly.
+   The border does the grouping instead.
+
+   This is where the stat grid diverges from its design, deliberately. The mock draws six figures
+   as bare columns under one rule, which works at six; History carries ten -- all-time packs,
+   Wonder Picks, logged, cards per pack, duplicates, streak, busiest day and the rest -- and none
+   of them is droppable, since each answers a question the others do not. At ten the boxes are
+   what the finding above says they are. */
 .summary .stat {
     display: flex; flex-direction: column;
     gap: .1rem;
@@ -1348,11 +2787,27 @@ main:focus { outline: none; }
    not widen its box past its share of the row. The sub-line is allowed to wrap, because on the
    pack ranking it is a full sentence explaining what the figure covers. */
 .summary .value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.summary .label { font-size: .86rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bs-secondary-color); }
-.summary .value { font-size: 1.6rem; font-weight: 600; line-height: 1.1; }
+/* The label is a micro-label like every other one in the app now: smaller, tracked further, and
+   quiet enough that the figure under it is what the eye lands on. At .86rem it was nearly the size
+   of the sub-line below the value, so a stat read as three lines of similar text with one big
+   number in the middle rather than as a figure with its name above it. */
+.summary .label {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    color: var(--bs-secondary-color);
+}
+.summary .value {
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height: 1.1;
+    /* These sit in a row and are read down it. Proportional numerals put a 1 in a different place
+       in every box. */
+    font-variant-numeric: tabular-nums;
+}
 /* A pack name is text, not a number, so it cannot take the numeral size. */
 .summary .value.fs-6 { font-size: 1.05rem !important; font-weight: 700; }
-.summary .sub { font-size: .86rem; color: var(--bs-secondary-color); }
+.summary .sub { font-size: .76rem; line-height: 1.35; color: var(--bs-secondary-color); }
 
 /* The affordance on all three fold-away panels. It read as bare grey text saying "change", which
    on pages made largely of links is a link — so it looked like somewhere to navigate to rather
@@ -1403,10 +2858,21 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 
 .rarity-chips { display: flex; gap: .2rem; flex-wrap: wrap; }
 .rarity-chip {
+    /* Height from --ctl-h, like every other control in the app, rather than from its own padding.
+       It came out 36px square, which is under the 44px floor this project already adopted for
+       touch -- and it is one of the most-tapped things here: setting a plan is eleven taps, and it
+       is the whole of what the Settings page is for.
+
+       Width stays its own. A chip holding four diamonds is wider than one holding a single pip,
+       and forcing them square would either crop the glyphs or pad the small ones to nothing. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--ctl-h);
     border: 1px solid var(--bs-border-color);
     background: var(--bs-body-bg);
     color: var(--bs-secondary-color);
-    border-radius: var(--pp-r-sm); padding: .15rem .4rem;
+    border-radius: var(--pp-r-sm); padding: .15rem .8rem;
     font-size: .9rem; line-height: 1.2; white-space: nowrap;
 }
 /* A tint rather than a solid fill, matching .chip-tog.on. A solid primary needs white text, and
@@ -1562,7 +3028,26 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
 .grid-spy .art.has-art { width: 5.1rem; }
 .grid-spy .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.card-row { display: grid; gap: 4px; padding: 2px calc(4px + var(--safe-r)) 2px calc(4px + var(--safe-l)); }
+/* The gutter between cards.
+   ==================================================================================
+   4px made the grid one continuous sheet of artwork: card edges met card edges, and the eye had
+   to find the boundaries before it could find a card. A gutter is what makes a grid of pictures
+   read as separate objects, and these objects are the point of the layout.
+
+   One variable, because the row's own padding is the vertical half of the same gutter -- gap only
+   separates columns within a row, and each row is its own grid. Getting them from one number is
+   what keeps the spacing square.
+
+   Smaller on a phone, where three columns of a 375px screen cannot spare 14px twice. */
+:root { --grid-gap: 14px; }
+@media (width <= 700px) { :root { --grid-gap: 8px; } }
+
+.card-row {
+    display: grid;
+    gap: var(--grid-gap);
+    padding: calc(var(--grid-gap) / 2) calc(var(--grid-gap) + var(--safe-r))
+             calc(var(--grid-gap) / 2) calc(var(--grid-gap) + var(--safe-l));
+}
 
 /* A tile is the art plus a caption strip under it.
    The count, the info button and the heart were all badges over the artwork. One was fine; three
@@ -1607,12 +3092,31 @@ summary:hover .fold-hint { border-color: var(--bs-primary); color: var(--bs-body
    you do not own would make the scrollbar lie about how long the list is. */
 .card-tile .cap {
     display: flex; align-items: center;
-    /* Roomier than the 2px it started at. The heart, the name and the count are three different
-       kinds of thing -- a mark, a link and a fact -- and at 2px they read as one control with three
-       parts. The gap grows with the tile, like everything else in here. */
-    gap: clamp(.3rem, 3cqw, .6rem);
+    /* Roomier than the 2px it started at. The number, the name, the rarity and the heart are
+       different kinds of thing -- two facts, a link and a control -- and at 2px they read as one
+       control with four parts. The gap grows with the tile, like everything else in here. */
+    gap: clamp(.2rem, 2cqw, .45rem);
     padding: clamp(2px, 1.5cqw, 5px) clamp(3px, 2cqw, 7px);
     min-height: clamp(1.35rem, 13cqw, 2.1rem);
+}
+
+/* The printed number. Quietest thing in the caption: it is what you scan when you already know
+   what you are looking for, and furniture the rest of the time. */
+.card-tile .no {
+    flex: none;
+    font-size: clamp(.58rem, 5.5cqw, .78rem);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--bs-tertiary-color);
+}
+
+/* The rarity mark, in the app's accent as ink. Its own glyph classes carry the colour per rung,
+   so this only has to size it and keep it from wrapping mid-mark. */
+.card-tile .rr {
+    flex: none;
+    font-size: clamp(.58rem, 5.5cqw, .78rem);
+    line-height: 1;
+    white-space: nowrap;
 }
 /* Set alongside the flair class on the art, because the mobile badge insets have to clear the ring
    and they live outside the art box, where its own --gold-w cannot reach them. */
@@ -1895,7 +3399,10 @@ img[data-state="loading"] ~ .art-wait {
 .card-tile .info {
     flex: 1 1 auto; min-width: 0;
     font-size: clamp(.62rem, 6cqw, .82rem); font-weight: 600; line-height: 1.2;
-    text-align: center;
+    /* From the start, not centred. Centring was right while the name was the only text in the
+       strip; with a number before it and a rarity after it, a centred name floats between two
+       things that are both hard against their own edges. */
+    text-align: start;
     text-decoration: none; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis;
     color: var(--bs-body-color);
@@ -1904,33 +3411,61 @@ img[data-state="loading"] ~ .art-wait {
 .card-tile .info:hover { color: var(--bs-primary); text-decoration: underline; }
 .card-tile .info:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 1px; }
 
-/* How many you own. Still the most important thing on a tile, and now it is the only one of the
-   three that carries a fill -- which is the whole reason it can be smaller here than it was as a
-   badge and still be the first thing you see. */
-.card-tile .cnt {
-    flex: none;
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: clamp(1.3rem, 13cqw, 2.2rem);
-    height: clamp(1.15rem, 11cqw, 1.8rem);
-    padding: 0 .25rem;
-    font-size: clamp(.7rem, 7cqw, 1rem);
-    font-weight: 700; line-height: 1;
-    background: var(--bs-primary); color: #fff; border-radius: var(--pp-r-sm);
-}
-/* Nothing owned: the slot stays, so the row above and below it line up, and the caption is the
-   same height on every tile in the grid. */
-.card-tile .cnt.none { visibility: hidden; }
+/* How many you own: one badge, on the art, at every width.
+   ==================================================================================
+   This spent a while in the caption, on the argument that three badges covered three corners of
+   the picture you are looking at in order to recognise a card. That argument was about three. A
+   count is a quantity and the grid is scanned for quantities, and a number in a text strip does
+   not read across six columns the way a filled chip on the art does.
 
-/* Mirrors the owned count, in the same row — on the log screen both appear on one tile. */
-.card-tile .pick {
-    flex: none;
+   Positioned against the art box, which is its containing block -- so the inset clears the
+   picture rather than the tile, and the gold flair's ring is accounted for by --gold-pad, which
+   is set on the tile and inherits in.
+
+   The phone rules below still shrink it and drop the caption entirely; what they no longer do is
+   introduce it. */
+.card-tile .cnt, .card-tile .pick {
+    position: absolute;
+    bottom: calc(4px + var(--gold-pad, 0px));
     display: inline-flex; align-items: center; justify-content: center;
     min-width: clamp(1.3rem, 13cqw, 2.2rem);
     height: clamp(1.15rem, 11cqw, 1.8rem);
     padding: 0 .25rem;
     font-size: clamp(.7rem, 7cqw, 1rem);
     font-weight: 700; line-height: 1;
-    background: var(--bs-success); color: #fff; border-radius: var(--pp-r-sm);
+    border-radius: var(--pp-r-sm);
+    /* Over the art, so it needs an edge of its own to stay legible on a pale card. */
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
+}
+/* Near-black, as the mockups draw it, rather than the accent.
+   ----------------------------------------------------------------------------------
+   The accent in this app is red, so a grid of owned cards was a grid of red pills -- the loudest
+   colour on the page spent on its most repeated element, and on a reading rather than on anything
+   to act on. Sampling 4a-collection-desktop-rail.png across badges over green, orange and pale
+   art gives a translucent dark neutral: roughly the app's own deep surface at 85%, which is what
+   this is. It reproduces (46,47,27) over the Bulbasaur art where the mockup has (44,49,20).
+
+   One value in both themes, deliberately, and not var(--pp-deep): the badge sits on card ART
+   rather than on the page, so what it has to stay legible against is a Pokemon card, which is the
+   same picture whichever theme is on.
+
+   It also gives the removing mode somewhere to go. `.grid-wrap.removing .cnt` turns the badge
+   var(--bs-danger), and against a primary that is already red that was very nearly no change at
+   all -- the one signal saying a tap will now destroy something. */
+.card-tile .cnt {
+    right: calc(4px + var(--gold-pad, 0px));
+    background: rgba(20, 19, 23, .85); color: #fff;
+}
+/* Nothing owned: no badge. Out of the flow entirely, so unlike the caption slot it used to hold
+   there is no row height for it to keep -- the art box is the same size either way. */
+.card-tile .cnt.none { display: none; }
+
+/* Mirrors the owned count on the opposite corner — on the log screen both appear on one tile,
+   and they have to be tellable apart at a glance while you are tapping. Everything but the side
+   and the fill comes from the shared rule above. */
+.card-tile .pick {
+    left: calc(4px + var(--gold-pad, 0px));
+    background: var(--bs-success); color: #fff;
 }
 
 /* On a phone the caption would be a strip holding one number.
@@ -1964,9 +3499,11 @@ img[data-state="loading"] ~ .art-wait {
        height floor -- which on a six-column phone tile of 58px came out 30 by 36, half the width of
        the card and nearly two thirds of its height, for one or two digits. The floors are what
        matter at that size, so they are what came down: 28px square, which still clears a comfortable
-       tap-adjacent target and no longer competes with the art it sits on. */
+       tap-adjacent target and no longer competes with the art it sits on.
+
+       Size only. The badge is on the art at every width now, so its position, its fill and its
+       shadow all come from the base rule and this block no longer repeats them. */
     .card-tile .cnt, .card-tile .pick {
-        position: absolute; bottom: calc(4px + var(--gold-pad, 0px));
         width: 24%; min-width: 1.75rem; max-width: 2.8rem;
         height: 19%; min-height: 1.75rem; max-height: 2.8rem;
         /* The floor matters more than the cap here: at six columns on a phone the tile is 58px, so
@@ -1977,10 +3514,11 @@ img[data-state="loading"] ~ .art-wait {
         /* Over the art, so it needs an edge of its own to stay legible on a pale card. */
         box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
     }
-    .card-tile .cnt { right: calc(4px + var(--gold-pad, 0px)); }
-    .card-tile .pick { left: calc(4px + var(--gold-pad, 0px)); }
-    .card-tile .cnt.none { display: none; }
-    .card-tile .want, .card-tile .info { display: none; }
+    /* The whole caption goes, not just the two controls. It is absolutely positioned and
+       pointer-inert here, and the number and the rarity are as unreadable at 58px as the name
+       was -- so what is left on a phone tile is the art and one badge, which is what it was. */
+    .card-tile .want, .card-tile .info,
+    .card-tile .no, .card-tile .rr { display: none; }
     /* Nothing below the art to divide it from, so the rule under it would be a stray line along the
        bottom edge of every card.
 
@@ -2066,6 +3604,9 @@ img[data-state="loading"] ~ .art-wait {
 
 /* Remove mode must be unmistakable: the same tap that was adding a moment ago now subtracts. */
 .grid-wrap.removing { box-shadow: inset 0 0 0 2px var(--bs-danger); }
+/* Nothing armed: the tiles stop looking like buttons, because they are not acting like them. */
+.grid-wrap.tap-off .card-tile { cursor: default; }
+
 .grid-wrap.removing .card-tile.owned:hover { outline: 2px solid var(--bs-danger); }
 .grid-wrap.removing .card-tile .cnt { background: var(--bs-danger); }
 
@@ -2630,7 +4171,7 @@ tr.row-best {
 .pack-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 /* The per-row action. Narrow and right-aligned so the numeric columns keep their width, and
    never wrapping: a two-line row would break the alignment of every figure beside it. */
-.pack-table .act { text-align: right; white-space: nowrap; width: 1%; }
+.pack-table .act { text-align: right; white-space: nowrap; width: 1%; vertical-align: middle; }
 .pack-table th.num { text-align: right; }
 /* The pack's marker and its name, side by side and staying that way. The name column carries
    everything that can wrap -- the name, its set code, the badges -- and min-width: 0 is what lets
@@ -2803,6 +4344,39 @@ tr.row-best {
     display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
 }
 
+/* The heading inside a .section-head belongs to the section-head, which already sets the size and
+   the weight. Both carried `h6` as well, so Bootstrap's h6 size won and the container's 1.1rem was
+   decorative -- "Did the odds hold up?" rendered a tier smaller than "Packs per set" beside it,
+   for no reason anyone chose. */
+.sections > .section-head > :is(h2, h3, h4) {
+    margin: 0;
+    font: inherit;
+}
+
+/* THE SMALLER TIER
+   ==================================================================================
+   A heading inside a panel or a column rather than a break between sections of a page: "Attacks"
+   within a card's facts, "Legality" within a deck. It gets no rule above it -- the panel it is in
+   is already fenced -- and it does not step up in size, because it is subordinate to the section
+   heading above it rather than a peer of one.
+
+   Twenty-two of these were written as `h2 class="h6"`, which is a heading level picked for its
+   semantics and then a Bootstrap class picked for its SIZE to undo it. The top margin came
+   separately as `mt-3`, or `mt-4`, or not at all -- so on the card page "How to get it" and "Packs
+   that can give it" were siblings with different space above them, and on the deck page four of
+   six carried the margin and two did not.
+
+   :first-child does what those margins were reaching for. A heading that opens its panel needs no
+   space above it; one that follows content does. That is a property of where it lands, which the
+   stylesheet can see and the author writing the markup cannot. */
+.sub-head {
+    margin: 1.35rem 0 .4rem;
+    font-size: .95rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.sub-head:first-child { margin-block-start: 0; }
+
 /* The first section needs no rule above it: on History it follows the hits panel, which is
    already fenced by its own border, and on Settings it is the first thing under the page head. */
 .sections > h2:first-of-type,
@@ -2939,21 +4513,52 @@ tr.row-best {
    Three columns on a wide screen: the art with its ownership control, the printed card, and how
    to get it. Collapses to one column on a phone, art first. */
 
+/* Two columns, not three: the card on the left and everything the page says on the right.
+   ------------------------------------------------------------------------------
+   It was art, then printed statistics, then routes -- so the answer ("how do I get this") was in
+   the third column of three, and the first two thirds of the page were a picture of the card and a
+   table of facts printed on that picture.
+
+   The middle column is gone. Facts run under the answer as one line, which is what they are. */
 .card-detail {
     display: grid;
-    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1.25rem;
+    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+    gap: 1.5rem;
     align-items: start;
 }
-/* Two columns on a tablet, and the third child then wraps onto a second row -- into column ONE,
-   which is the 12rem art column. So "How to get it" was a four-column table of packs, points, dust
-   and trades rendered 192px wide, on the widths where there is the most room to spare. It spans the
-   full width instead: it is a table, and a table in a sidebar column is the one place it cannot go. */
-@media (width <= 1100px) {
-    .card-detail { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); }
-    .card-detail .routes { grid-column: 1 / -1; }
+@media (width <= 760px) { .card-detail { grid-template-columns: minmax(0, 1fr); } }
+
+.card-detail .detail-main { min-inline-size: 0; }
+
+/* The second micro label on the page -- "The card" -- opens a new part of it: everything above is
+   what the card costs to get, everything below is what is printed on it. Fenced like one, because
+   air alone was not reading as a boundary with a paragraph of pack-points prose ending just above
+   it. The first micro is inside the lead and spaces itself. */
+.card-detail .detail-main > .micro {
+    margin-block-start: 1.75rem;
+    padding-block-start: 1.1rem;
+    border-top: 1px solid var(--bs-border-color);
 }
-@media (width <= 760px)  { .card-detail { grid-template-columns: minmax(0, 1fr); } }
+
+/* The printed facts, as a line. Six rows of two cells where the left cell is always a label is a
+   table doing a list's job, and it sat above the answer.
+
+   Separated by a drawn middot rather than a written one, so the marks keep their spaces however
+   Razor collapses the whitespace around the elements -- the same reason the page bar's does. */
+.card-detail .fact-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    margin-block: .5rem 1rem;
+    font-size: .95rem;
+}
+.card-detail .fact-row > .f { display: inline-flex; align-items: center; gap: .3rem; }
+.card-detail .fact-row > .f + .f::before {
+    content: "\00b7";
+    margin-inline: .5rem;
+    color: var(--bs-secondary-color);
+}
 
 /* Ratio matched to the art so `contain` and `cover` coincide and nothing is cropped. */
 .card-detail .big-art {
@@ -2963,17 +4568,37 @@ tr.row-best {
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center; background-repeat: no-repeat;
 }
-/* The one caller with room to spare. This is a dedicated control on a full page rather than a
-   cell in a row, and its buttons were already 31px before they were shared, so taking the
-   constrained default here would shrink a target that was never too small. */
-.card-detail .own-row { --step-size: 2rem; display: flex; align-items: center; gap: .5rem; margin: .6rem 0 .4rem; }
+/* The counter, as a box the width of the card above it.
+   ------------------------------------------------------------------------------
+   It was four items in a row that sized themselves -- label, minus, count, plus -- so the count
+   sat wherever the label left it, the whole thing was as wide as its own text, and it had no edge
+   to say it was one control rather than four.
+
+   The one caller with room to spare, so the steppers keep 2rem: this is a dedicated control on a
+   full page rather than a cell in a row, and taking the constrained default would shrink a target
+   that was never too small. */
+.card-detail .own-row {
+    --step-size: 2rem;
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+    margin: .7rem 0 .4rem;
+    padding: .3rem .35rem .3rem .7rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--pp-r-sm);
+}
+.card-detail .own-row .steps { display: flex; align-items: center; gap: .4rem; }
 .card-detail .own-row .label { font-size: .9rem; color: var(--bs-secondary-color); }
 .card-detail .own-row .count { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 1.2rem; text-align: center; }
 
-/* Wraps, unlike the owned counter beside it: the number of wishlists is up to the user, and
-   a row of them must not push the art column out of shape. */
-.card-detail .want-row { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; margin: .2rem 0 .5rem; }
-.card-detail .want-row .label { font-size: .9rem; color: var(--bs-secondary-color); }
+/* Stacked, each the width of the card above them.
+   ------------------------------------------------------------------------------
+   This was an inline row that wrapped, which at 15rem means it always wrapped: a label, the heart,
+   one list button, and the next list alone on a second line at whatever width its name happened to
+   be. A column of equal buttons is both narrower and steadier -- adding a chase list makes the
+   stack one taller rather than reflowing everything above it. */
+.card-detail .want-row {
+    display: flex; flex-direction: column; align-items: stretch;
+    gap: .3rem; margin: 0 0 .5rem;
+}
 /* The heart, first in the want row and always present. Tinted rather than filled when on, so it
    matches the hearts in the grid rather than the primary-filled wishlist buttons beside it -- those
    carry counts and mean "one more", this one means on or off. */
@@ -2989,9 +4614,14 @@ tr.row-best {
     font-weight: 600;
 }
 
-/* The list button and its remove stay glued together, so a row of several wishlists cannot
-   wrap between a name and the minus that belongs to it. */
-.card-detail .want-pair { display: inline-flex; align-items: center; gap: .15rem; }
+/* The list button and its remove stay glued together, so a wishlist name and the minus that
+   belongs to it cannot end up on separate rows. The name takes the room and the minus takes what
+   it needs, so every list button in the stack starts at the same edge. */
+.card-detail .want-pair { display: flex; align-items: stretch; gap: .25rem; }
+.card-detail .want-pair > .btn:first-child { flex: 1; min-inline-size: 0; text-align: start; }
+
+/* The heart is a full-width button here rather than a chip in a row, so its contents centre. */
+.card-detail .want-heart { justify-content: center; }
 
 .card-detail .attack { padding: .35rem 0; border-top: 1px solid var(--bs-border-color); }
 .card-detail .attack .cost { display: inline-flex; gap: .1rem; margin-right: .35rem; }
@@ -3731,28 +5361,15 @@ tr.row-best {
     color: var(--bs-secondary-color); font-size: 1.1rem;
 }
 
-/* The verdict. Coloured by the CALL, not by the value: an offer can be worth a lot in packs and
-   still be the wrong thing to spend a capped, slow-refilling pool on, and the colour has to
-   agree with the sentence rather than with the number. */
-.verdict {
-    padding: .6rem .8rem; border-radius: var(--pp-r); margin-bottom: .6rem;
-    border: 1px solid var(--bs-border-color);
-}
-.verdict .head {
-    display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
-    margin-bottom: .25rem;
-}
-.verdict .call { font-size: 1.15rem; font-weight: 700; }
-.verdict .cost { font-size: .9rem; color: var(--bs-secondary-color); }
-.verdict .why { font-size: .92rem; }
-.verdict.take {
-    border-color: color-mix(in srgb, var(--bs-success) 55%, transparent);
-    background: color-mix(in srgb, var(--bs-success) 8%, transparent);
-}
-.verdict.skip {
-    border-color: color-mix(in srgb, var(--bs-warning) 55%, transparent);
-    background: color-mix(in srgb, var(--bs-warning) 8%, transparent);
-}
+/* The tinted verdict box -- a 1.15rem call over a bordered, green-or-amber panel -- is gone. It
+   was the app's second verdict component, and the wishlist drew it when its answer was "nothing to
+   change" and .verdict-lead when there was something, so one page had two shapes for one slot.
+   Compare had three of them and never converted at all.
+
+   What it knew that was worth keeping is the colouring rule, which .verdict-lead carries on the
+   name: colour by the CALL, not by the value. An offer can be worth a lot in packs and still be
+   the wrong thing to spend a capped, slow-refilling pool on, so the colour has to agree with the
+   sentence rather than with the number. */
 
 /* gold flair
 
@@ -3883,6 +5500,12 @@ tr.row-best {
     padding: .7rem .8rem;
     background: var(--bs-tertiary-bg);
 }
+/* Full, and therefore no longer regenerating: the one state on this page that is actively costing
+   something. A border rather than a fill, so the panel still reads as the same object as the ones
+   beside it -- these are parallel panels and a tinted one would rank itself above the others,
+   which is the thing a Ledger page must not do. */
+.pool.at-cap { border-color: var(--bs-danger-border-subtle, var(--bs-danger)); }
+
 .pool-head { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .35rem; }
 .pool-head .nm { font-weight: 700; }
 .pool-head .rate { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--bs-secondary-color); }
@@ -4526,10 +6149,21 @@ body:has(.nav-more:popover-open) .nav-more-scrim {
    on order. --art-fit is what a box says instead. */
 [style*="--art"][style*="--art"][style*="--art"] {
     background-color: var(--bs-secondary-bg);
-    background-image: var(--art), var(--pp-art-mark), var(--pp-art-weave);
-    background-position: center, center, center;
-    background-repeat: no-repeat, no-repeat, repeat;
-    background-size: var(--art-fit, cover), var(--pp-art-mark-size, 62%) auto, auto;
+
+    /* Five layers, fixed. The first three are the card's art candidates, front to back: a layer
+       that fails to load is not painted and the next one shows through, which is how a background
+       gets the fallback chain an <img> gets from js/imgloader.js. A card with fewer candidates
+       passes `none` for the rest, because these lists are per-layer and a variable-length one
+       could not line up with the three below it. Behind them, the placeholder that was already
+       here for when none of them arrive. */
+    background-image:
+        var(--art), var(--art2, none), var(--art3, none),
+        var(--pp-art-mark), var(--pp-art-weave);
+    background-position: center, center, center, center, center;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    background-size:
+        var(--art-fit, cover), var(--art-fit, cover), var(--art-fit, cover),
+        var(--pp-art-mark-size, 62%) auto, auto;
 }
 
 /* Packs are drawn whole; card art is cropped to the box. */

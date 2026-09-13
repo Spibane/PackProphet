@@ -10,9 +10,19 @@
 }
 else
 {
-    <div class="page-head">
+    <div class="page-head folded">
         <h1 class="title">Decks</h1>
-        <span class="subtitle">@Session.Profile.Decks.Count saved</span>
+        @* The useful count, not the saved one. "6 saved" is a fact about your filing; how many you
+           could build today is the thing you came to find out, and it is the figure that changes
+           when you open a pack. *@
+        <span class="subtitle">
+            @Session.Profile.Decks.Count saved
+            @if (_decks.Count > 0)
+            {
+                <text> &middot; </text>
+                <strong>@Buildable buildable today</strong>
+            }
+        </span>
 
         <span class="actions">
             <a class="btn btn-sm btn-outline-primary" href="decks/import">Import</a>
@@ -20,28 +30,53 @@ else
         </span>
     </div>
 
-    @* Two views because they answer different questions: the table compares decks against each
-       other, the grid lets you recognise one at a glance. Both lay out the same decks, so the
-       toggle sits over the content rather than in the header. *@
+    <PageShell Measure="PageShell.Width.Wide" Class="@(_decks.Count > 0 ? "railed" : null)">
+
     @if (_decks.Count > 0)
     {
-        <div class="grid-toolbar">
-            <div class="btn-group btn-group-sm" role="group" aria-label="Layout">
-                <button class="btn @(Session.DeckGrid ? "btn-outline-secondary" : "btn-secondary")"
-                        @onclick="() => Session.SetDeckGrid(!Session.DeckGrid)"
-                        aria-pressed="@Aria.Flag(!Session.DeckGrid)" title="A table, for comparing">List</button>
-                <button class="btn @(Session.DeckGrid ? "btn-secondary" : "btn-outline-secondary")"
-                        @onclick="() => Session.SetDeckGrid(!Session.DeckGrid)"
-                        aria-pressed="@Aria.Flag(Session.DeckGrid)" title="Cards, for recognising">Grid</button>
+        @* Two groups, which is the argument for a rail over a sidebar: the collection's has seven
+           and this has two, and both are the right size for the page they are on. A fixed sidebar
+           would have to pad one of them. *@
+        <PageRail Id="decks-rail" OpenLabel="View" Count="@(_order == DeckOrder.Buildable ? 0 : 1)">
+            <div class="rail-group">
+                <span class="ttl" id="decks-layout">Layout</span>
+                @* Two views because they answer different questions: the table compares decks
+                   against each other, the grid lets you recognise one at a glance. *@
+                <div class="rail-seg" role="group" aria-labelledby="decks-layout">
+                    <button class="btn btn-sm @(Session.DeckGrid ? "btn-outline-secondary" : "btn-secondary")"
+                            @onclick="() => Session.SetDeckGrid(false)"
+                            aria-pressed="@Aria.Flag(!Session.DeckGrid)"
+                            title="A table, for comparing">List</button>
+                    <button class="btn btn-sm @(Session.DeckGrid ? "btn-secondary" : "btn-outline-secondary")"
+                            @onclick="() => Session.SetDeckGrid(true)"
+                            aria-pressed="@Aria.Flag(Session.DeckGrid)"
+                            title="Cards, for recognising">Grid</button>
+                </div>
             </div>
-        </div>
+
+            @* New here. The shelf has always been closest-to-buildable first, which is the right
+               default and the wrong only option: it answers "what can I play tonight" and cannot
+               answer "where is the one I made last week". A shelf of six does not need a sort; a
+               shelf of thirty does, and nobody's stays at six. *@
+            <div class="rail-group">
+                <span class="ttl">Order</span>
+                <select class="form-select form-select-sm" aria-label="Order the decks"
+                        @onchange="OnOrder">
+                    <option value="@DeckOrder.Buildable" selected="@(_order == DeckOrder.Buildable)">
+                        Closest to buildable
+                    </option>
+                    <option value="@DeckOrder.Name" selected="@(_order == DeckOrder.Name)">
+                        By name
+                    </option>
+                    <option value="@DeckOrder.Size" selected="@(_order == DeckOrder.Size)">
+                        Fullest first
+                    </option>
+                </select>
+            </div>
+        </PageRail>
     }
 
-    @* Full width, and the parameter has to agree with the comment: this said "capping it left the
-       columns bunched at the left of a wide screen with the rest of the row empty" while passing
-       a 64rem cap, which is exactly the thing it warns about. My own slip when every page moved
-       onto the shell -- Wide was the right measure for the page next to it and got copied. *@
-    <PageShell>
+    <div class="shelf-main">
         @if (_decks.Count == 0)
         {
             <EmptyState>
@@ -51,7 +86,7 @@ else
         }
         else if (Session.DeckGrid)
         {
-            <h2 class="h6">
+            <h2 class="sub-head">
                 Your decks
                 <span class="small text-body-secondary fw-normal">Closest to buildable first</span>
             </h2>
@@ -63,7 +98,7 @@ else
                         @* The deck's face card, chosen as its rarest — in practice the card the
                            deck is named after and the one you recognise it by. *@
                         <a class="face" href="decks/@deck.Id"
-                           style="--art:url('@(deck.Face?.ArtUrl)')"
+                           style="@(deck.Face?.ArtVars)"
                            aria-label="Open @deck.Name">
                             @if (deck.Face is null)
                             {
@@ -118,7 +153,7 @@ else
                                 <div class="strip">
                                     @foreach (var card in deck.Strip)
                                     {
-                                        <span class="thumb" style="--art:url('@card.ArtUrl')"
+                                        <span class="thumb" style="@card.ArtVars"
                                               data-tip="@card.Name"></span>
                                     }
                                 </div>
@@ -141,7 +176,7 @@ else
         {
             @* Closest-to-buildable order rather than alphabetical, so the decks nearest to
                finished lead. *@
-            <h2 class="h6">
+            <h2 class="sub-head">
                 Your decks
                 <span class="small text-body-secondary fw-normal">Closest to buildable first</span>
             </h2>
@@ -215,6 +250,7 @@ else
                 </tbody>
             </DataTable>
         }
+    </div>
     </PageShell>
 }
 
@@ -229,6 +265,26 @@ else
         string Id, string Name, int Cards, int Missing,
         IReadOnlyList<EnergyType> Energies, LintReport? Report,
         PocketCard? Face, IReadOnlyList<PocketCard> Strip);
+
+    /// <summary>
+    /// How the shelf is ordered.
+    ///
+    /// Closest-to-buildable is the default and answers "what can I play tonight", which is the
+    /// question the page exists for. It cannot answer "where is the one I made last week", and a
+    /// shelf nobody can sort is fine at six decks and useless at thirty.
+    /// </summary>
+    private enum DeckOrder { Buildable, Name, Size }
+
+    private DeckOrder _order = DeckOrder.Buildable;
+
+    private void OnOrder(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<DeckOrder>(e.Value?.ToString(), out var order)) _order = order;
+        Build();
+    }
+
+    /// <summary>How many decks could be built right now, for the bar.</summary>
+    private int Buildable => _decks.Count(d => d.Cards > 0 && d.Missing == 0);
 
     private IReadOnlyList<Card> _decks = [];
 
@@ -254,7 +310,21 @@ else
     {
         if (!Session.Ready) return;
 
-        _decks = Session.DecksByBuildability.Select(deck =>
+        @* The engine still owns the default order -- it is the one that needs MissingCount, which
+           is the session's to compute -- and the other two are re-sorts of what it returns. *@
+        var ordered = _order switch
+        {
+            DeckOrder.Name => Session.Profile.Decks
+                .OrderBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToArray(),
+            DeckOrder.Size => Session.Profile.Decks
+                .OrderByDescending(d => d.DeckBuilderNrs.Count)
+                .ThenBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToArray(),
+            _ => Session.DecksByBuildability,
+        };
+
+        _decks = ordered.Select(deck =>
         {
             // The face is the user's pick where they made one; AppSession owns the fallback.
             var face = Session.FaceCardOf(deck);

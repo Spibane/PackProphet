@@ -1,0 +1,46 @@
+@* The way out of a page one level deep, first in its bar.
+
+   Nine of these were written by hand and produced eight different sentences: "back", "decks",
+   "chase lists", "all chase lists", "settings", "collection", "go to your collection" and
+   "Change Pack" -- two of them in one file, pointing at the same page, worded differently. One was
+   capitalised and the rest were not. One was a button where the others were links, so right-click,
+   middle-click and open-in-new-tab worked on eight of nine.
+
+   The label is the destination's own name, as that page's own title spells it. A back link is not
+   a sentence about going somewhere; it is the name of where you land. *@
+
+@if (To is { Length: > 0 })
+{
+    @* A link wherever it is a destination, so the browser's own ways of following one work. *@
+    <a class="btn btn-sm btn-outline-secondary back" href="@To" title="@Title">
+        &larr;&nbsp;<span class="@(Compact ? "wide-only" : null)">@Label</span>
+    </a>
+}
+else
+{
+    @* A button where there is no fixed destination: the card page returns to whichever list sent
+       you, and the log screen's is not navigation at all -- it drops the pack you were typing. *@
+    <button class="btn btn-sm btn-outline-secondary back" @onclick="OnBack"
+            aria-label="@(Title ?? Label)" title="@Title">
+        &larr;&nbsp;<span class="@(Compact ? "wide-only" : null)">@Label</span>
+    </button>
+}
+
+@code {
+    /// <summary>Where it goes. Omitted for the two that have no fixed destination.</summary>
+    [Parameter] public string? To { get; set; }
+
+    /// <summary>
+    /// The destination's name, spelled as that page spells its own title. Not a phrase: "Decks",
+    /// not "go to your decks".
+    /// </summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    /// <summary>Hover text, and the accessible name where the label collapses to the arrow.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Drop the word on a phone, leaving the arrow. For a bar with no room to spare.</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    [Parameter] public EventCallback OnBack { get; set; }
+}

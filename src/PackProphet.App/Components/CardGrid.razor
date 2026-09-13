@@ -21,167 +21,336 @@
    details rather than a sheet or a modal: you want to watch the count move as you change a
    filter, and a modal is precisely what stops you. It also needs no JavaScript, no focus trap and
    no escape handling, and Find-in-page opens it on its own. *@
-<div class="grid-toolbar">
-    @Search
+@* The same controls, stacked and labelled, for a page that gives them a column of its own.
 
-    @* An explicit add/remove mode, since there was otherwise no way to decrement on a touch
-       device: shift-click is both undiscoverable and unavailable on a phone.
+   A rail is what lets a filter carry its own label. "Missing only" and "Any rarity" are cryptic
+   as chips because a bar has no room to say what they set, and the page underneath is the one
+   place a user reads a count that those filters decide the meaning of.
 
-       Only where it governs something. It is read by exactly two paths -- a tap on a tile, and a
-       release of a sweep -- so in list mode with the sweep unarmed it governs nothing at all: a
-       tap on a row does nothing (every row carries its own -/+ buttons instead), and the keyboard
-       has its own +/- keys that pass their direction explicitly and never consult this. It sat
-       there anyway, labelled "Tapping a card adds a copy", next to rows where tapping does not.
+   The mode switch, the layout switch and the selection controls are still this component's, and
+   still read the same private flags the tile handler reads -- the bar and the rail can disagree
+   about where they are drawn and never about what a tap does. What the page supplies is what it
+   already supplied to the bar, plus whatever groups only it knows about.
 
-       The label follows suit, because in list mode the thing it governs is the drag, not the tap. *@
-    @if (AllowRemove && (!ListView || Sweeping))
-    {
-        @* Either half flips it, so a tap on the side already chosen still does something. With two
-           states, "the other one" is unambiguous. *@
-        <div class="btn-group btn-group-sm" role="group" aria-label="@Gesture action">
-            <button class="btn @(Removing ? "btn-outline-secondary" : "btn-success")"
-                    @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(!Removing)"
-                    title="@(Removing ? $"Switch back to adding a copy per {Gesture}" : $"{GestureVerb} adds a copy")">
-                Add
-            </button>
-            <button class="btn @(Removing ? "btn-danger" : "btn-outline-secondary")"
-                    @onclick="() => Removing = !Removing" aria-pressed="@Aria.Flag(Removing)"
-                    title="@(Removing ? $"{GestureVerb} removes a copy" : $"Switch to removing a copy per {Gesture}")">
-                Remove
-            </button>
-        </div>
-    }
-
-    @FilterChips
-
-    @{
-        var saysDetail = ListView && FactOf is not null && !FactsReady;
-        var saysMode = Removing && (!ListView || Sweeping);
-    }
-    @* The strip is dropped entirely when it would be empty -- a page that says the total on a bar
-       of its own leaves nothing here most of the time -- but its auto margin is what pins the
-       layout switch to the far end of a wide bar, so a spacer takes that job over. *@
-    @if (ShowCount || saysDetail || saysMode)
-    {
-        <span class="ms-auto small text-body-secondary grid-count">
-            @if (saysDetail)
+   Group order is the order the phone sheet repeats, so both viewports teach one vocabulary. *@
+@if (Rail is not null)
+{
+    @* popover, and see the note on .page-rail in app.css: the attribute is what lets this be a
+       column at one width and a sheet at another without a second copy of every control in it.
+       Above the fold width the stylesheet overrides the UA popover rules and it is an ordinary
+       grid item, so the attribute costs a desktop nothing but the two buttons below being
+       hidden. *@
+    <PageRail Id="@($"{_gridId}-rail")" OpenLabel="Filters" Count="@ActiveFilters">
+        <Fabs>
+            @* Never folded, never behind a summary, never in a sheet, at any width. A concealed
+               destructive mode is how a user loses cards. *@
+            @if (AllowRemove && (!ListView || Sweeping))
             {
-                <span class="text-body-tertiary">Loading card detail&hellip;@(ShowCount || saysMode ? " · " : "")</span>
+                @* One button rather than three, because on a phone this has to be readable at a
+                   glance and pressable without aiming. It says which state it is in and cycles;
+                   the rail is where the three are laid out side by side. *@
+                <button class="rail-fab mode @ModeClass" @onclick="CycleMode"
+                        title="@ModeTitle">
+                    @ModeLabel
+                </button>
             }
-            @if (saysMode)
+        </Fabs>
+
+        <ChildContent>
+            @* In a group of its own, like everything else here, so it is not a bare flex child of the
+               column with a bar's sizing still on it. *@
+            @if (Search is not null)
             {
-                <span class="text-danger-emphasis fw-semibold">@Gesture removes a copy@(ShowCount ? " · " : "")</span>
+                <div class="rail-group">@Search</div>
             }
-            @if (ShowCount)
+
+            @* Never folded, never behind a summary, never in a sheet, at any width. A concealed
+               destructive mode is how a user loses cards -- and unlike the bar, a rail has room to
+               say what the two states are rather than leaving a green button to imply it. *@
+            @if (AllowRemove && (!ListView || Sweeping))
             {
-                @if (Summary is not null)
-                {
-                    @Summary
-                }
-                else
-                {
-                    @Cards.Count
-                    <text> cards</text>
-                }
-                @if (_imgFailed > 0)
-                {
-                    <span class="text-danger-emphasis"> · @_imgFailed art failed</span>
-                }
+                <div class="rail-group mode">
+                    <span class="ttl" id="@(_gridId)-mode">Tapping a card</span>
+                    <div class="rail-seg" role="group" aria-labelledby="@(_gridId)-mode">
+                        @* Nothing, first and selected on arrival. Every visit to this page starts
+                           in the state where the grid cannot change a count by being touched. *@
+                        <button class="btn btn-sm @(Mode == Tap.Off ? "btn-secondary" : "btn-outline-secondary")"
+                                @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)"
+                                title="@($"A {Gesture} changes nothing. Right-click or shift-click still removes one.")">
+                            Off
+                        </button>
+                        <button class="btn btn-sm @(Mode == Tap.Add ? "btn-success" : "btn-outline-secondary")"
+                                @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)"
+                                title="@($"{GestureVerb} adds a copy")">
+                            Add
+                        </button>
+                        <button class="btn btn-sm @(Mode == Tap.Remove ? "btn-danger" : "btn-outline-secondary")"
+                                @onclick="() => SetMode(Tap.Remove)" aria-pressed="@Aria.Flag(Mode == Tap.Remove)"
+                                title="@($"{GestureVerb} removes a copy")">
+                            Remove
+                        </button>
+                    </div>
+                </div>
             }
-        </span>
-    }
-    else
-    {
-        <span class="ms-auto" aria-hidden="true"></span>
-    }
 
-    <span class="bar-sep" aria-hidden="true"></span>
+            @* The count sits in the group heading rather than over the grid: it is a reading of what
+               the controls below it have done, so it belongs with them. Chips first, because a chip
+               is an active filter and the selects under it are only the way to set one. *@
+            @if (Filters is not null || FilterChips is not null)
+            {
+                <div class="rail-group">
+                    @* The count is unconditional here, where ShowCount governs only the bar. A page
+                       turns that off because some OTHER bar of its own already says the total -- and
+                       the rail exists to retire those bars, so in this shell there is nowhere else for
+                       it to be. It also belongs to this group specifically: the filters below it are
+                       what make the number mean something. *@
+                    <span class="ttl">
+                        Showing
+                        <span class="cnt">@Cards.Count</span>
+                    </span>
+                    @FilterChips
+                    @Filters
+                </div>
+            }
 
-    @* Promoted out of the disclosure it used to share with the layout options. List mode is not a
-       preference among equals: it is the only view that carries a count per row, a typed count, the
-       set and number, type, rarity and the printed text, and it is the answer to half of what a
-       tile grid cannot do. Behind a summary reading "filters and layout" it was findable only by
-       someone who already suspected it existed. The density toggle stays inside, because it only
-       means anything once you are in list mode and this row has to survive a phone. *@
-    <div class="btn-group btn-group-sm layout-switch" role="group" aria-label="Layout">
-        <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
-                @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
-                title="Card images in a grid">Grid</button>
-        <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
-                title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
-            List
-        </button>
-    </div>
+            <div class="rail-group">
+                <span class="ttl" id="@(_gridId)-layout">Layout</span>
+                <div class="rail-seg" role="group" aria-labelledby="@(_gridId)-layout">
+                    <button class="btn btn-sm @(ListView ? "btn-outline-secondary" : "btn-secondary")"
+                            @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
+                            title="Card images in a grid">Grid</button>
+                    <button class="btn btn-sm @(ListView ? "btn-secondary" : "btn-outline-secondary")"
+                            @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
+                            title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
+                        List
+                    </button>
+                </div>
 
-    @* Back to the top, on the bar as well as floating over the corner.
-       ------------------------------------------------------------------------------------
-       The floating button is the right answer for a thumb: it is where the hand already is and
-       it costs the bar nothing. It is the wrong place to LOOK. Getting back to the top is what
-       you do when you are done reading and want the controls again -- the search box, the set
-       picker, the filters -- and those are all on this bar, so this bar is where the eye goes
-       and the button was in the opposite corner.
+                @* Density only means anything once you are in list mode, which is why it follows the
+                   switch that gets you there rather than sitting beside it. *@
+                @if (ListView)
+                {
+                    <div class="rail-seg" role="group" aria-label="Row height">
+                        <button class="btn btn-sm @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
+                                @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
+                                title="Short rows, most cards per screen">Compact</button>
+                        <button class="btn btn-sm @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
+                                @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
+                                title="Taller rows with attack and ability text shown in full">Roomy</button>
+                    </div>
+                }
 
-       Wide screens only, and the same class from js/gridspy.js that shows the floating one, so
-       the two agree about when there is something to scroll back from. Below the breakpoint the
-       bar is already carrying more than fits on one line and the thumb is on the other button. *@
-    <button class="btn btn-sm btn-outline-secondary to-top-bar" data-to-top type="button"
-            @onclick="ScrollToTopAsync"
-            title="Back to the top of the list" aria-label="Back to the top of the list">
-        <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false">
-            <path d="M8 13V4M3.5 8.5 8 3.5l4.5 5" fill="none" stroke="currentColor"
-                  stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        Top
-    </button>
-</div>
+                @ToolbarExtras
 
-<details class="toolbar-more">
-    <summary>Filters and Layout</summary>
-    <div class="toolbar-more-body">
-    @if (Filters is not null)
-    {
-        @Filters
+                @* The setting stays the user's, and a select reading "6 Cols" over a three-column grid
+                   is the same kind of lie as a count with its filters hidden. So the override says so
+                   where the control that it overrides is. *@
+                @if (ColumnsClamped)
+                {
+                    <p class="rail-note">
+                        Showing @EffectiveColumns on a screen this narrow. Your setting is kept for
+                        wider ones.
+                    </p>
+                }
+            </div>
+
+            @* Kept out of the way of the four groups above, because neither is a setting: both arm a
+               way of working on the cards, and a user who wants neither should not have to read past
+               them to reach the target figures. Still visible rather than revealed on focus -- the
+               keyboard route has to be findable by someone who does not already know it is there. *@
+            <div class="rail-group">
+                <span class="ttl">Selecting</span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
+                        title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
+                    Keyboard
+                </button>
+                @if (ShowSweepToggle)
+                {
+                    <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
+                            @onclick="ToggleSweep"
+                            title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
+                        Sweep @(Sweeping ? "On" : "Off")
+                    </button>
+                }
+            </div>
+
+            @* Last, and the reason a rail beats a bar: what goes here is different on every page that
+               has one, and is sized to the page rather than to the room a bar happened to have. *@
+            @Rail
+        </ChildContent>
+    </PageRail>
+}
+else
+{
+    <div class="grid-toolbar">
+        @Search
+
+        @* An explicit add/remove mode, since there was otherwise no way to decrement on a touch
+           device: shift-click is both undiscoverable and unavailable on a phone.
+
+           Only where it governs something. It is read by exactly two paths -- a tap on a tile, and a
+           release of a sweep -- so in list mode with the sweep unarmed it governs nothing at all: a
+           tap on a row does nothing (every row carries its own -/+ buttons instead), and the keyboard
+           has its own +/- keys that pass their direction explicitly and never consult this. It sat
+           there anyway, labelled "Tapping a card adds a copy", next to rows where tapping does not.
+
+           The label follows suit, because in list mode the thing it governs is the drag, not the tap. *@
+        @if (AllowRemove && (!ListView || Sweeping))
+        {
+            @* Three states now, and the first is the one every visit starts in. It used to be two,
+               on the reasoning that "the other one" is unambiguous with two -- which was true and
+               was answering the wrong question. The one that matters is whether a stray tap on a
+               grid of three thousand buttons can change a number you will read as fact later. *@
+            <div class="btn-group btn-group-sm" role="group" aria-label="@Gesture action">
+                <button class="btn @(Mode == Tap.Off ? "btn-secondary" : "btn-outline-secondary")"
+                        @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)"
+                        title="@($"A {Gesture} changes nothing")">
+                    Off
+                </button>
+                <button class="btn @(Mode == Tap.Add ? "btn-success" : "btn-outline-secondary")"
+                        @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)"
+                        title="@($"{GestureVerb} adds a copy")">
+                    Add
+                </button>
+                <button class="btn @(Mode == Tap.Remove ? "btn-danger" : "btn-outline-secondary")"
+                        @onclick="() => SetMode(Tap.Remove)" aria-pressed="@Aria.Flag(Mode == Tap.Remove)"
+                        title="@($"{GestureVerb} removes a copy")">
+                    Remove
+                </button>
+            </div>
+        }
+
+        @FilterChips
+
+        @{
+            var saysDetail = ListView && FactOf is not null && !FactsReady;
+            var saysMode = Removing && (!ListView || Sweeping);
+        }
+        @* The strip is dropped entirely when it would be empty -- a page that says the total on a bar
+           of its own leaves nothing here most of the time -- but its auto margin is what pins the
+           layout switch to the far end of a wide bar, so a spacer takes that job over. *@
+        @if (ShowCount || saysDetail || saysMode)
+        {
+            <span class="ms-auto small text-body-secondary grid-count">
+                @if (saysDetail)
+                {
+                    <span class="text-body-tertiary">Loading card detail&hellip;@(ShowCount || saysMode ? " · " : "")</span>
+                }
+                @if (saysMode)
+                {
+                    <span class="text-danger-emphasis fw-semibold">@Gesture removes a copy@(ShowCount ? " · " : "")</span>
+                }
+                @if (ShowCount)
+                {
+                    @if (Summary is not null)
+                    {
+                        @Summary
+                    }
+                    else
+                    {
+                        @Cards.Count
+                        <text> cards</text>
+                    }
+                    @if (_imgFailed > 0)
+                    {
+                        <span class="text-danger-emphasis"> · @_imgFailed art failed</span>
+                    }
+                }
+            </span>
+        }
+        else
+        {
+            <span class="ms-auto" aria-hidden="true"></span>
+        }
+
         <span class="bar-sep" aria-hidden="true"></span>
-    }
 
-    @* Density, list only. Compact fits far more cards on screen; roomy trades that for the
-       attack and ability text inline, which compact can only show on hover. *@
-    @if (ListView)
-    {
-        <div class="btn-group btn-group-sm" role="group" aria-label="Row height">
-            <button class="btn @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
-                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
-                    title="Short rows, most cards per screen">Compact</button>
-            <button class="btn @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
-                    @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
-                    title="Taller rows with attack and ability text shown in full">Roomy</button>
+        @* Promoted out of the disclosure it used to share with the layout options. List mode is not a
+           preference among equals: it is the only view that carries a count per row, a typed count, the
+           set and number, type, rarity and the printed text, and it is the answer to half of what a
+           tile grid cannot do. Behind a summary reading "filters and layout" it was findable only by
+           someone who already suspected it existed. The density toggle stays inside, because it only
+           means anything once you are in list mode and this row has to survive a phone. *@
+        <div class="btn-group btn-group-sm layout-switch" role="group" aria-label="Layout">
+            <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
+                    @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
+                    title="Card images in a grid">Grid</button>
+            <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
+                    @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
+                    title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
+                List
+            </button>
         </div>
-    }
 
-    @* Hidden where it cannot do anything: in grid mode an unarmed mouse drag already
-       range-selects, so on a device with no touch input the button would change nothing. It stays
-       in list mode (where a mouse drag means "select this text" until armed) and on anything with
-       a touchscreen (where a drag is a scroll until armed). *@
-    @* Visible rather than revealed on focus, so keyboard entry can be found without already
-       knowing about it. It is also the switch a pointer user wants when they stop tapping and
-       start typing counts. *@
-    <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
-            title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
-        Keyboard
-    </button>
+        @* Back to the top, on the bar as well as floating over the corner.
+           ------------------------------------------------------------------------------------
+           The floating button is the right answer for a thumb: it is where the hand already is and
+           it costs the bar nothing. It is the wrong place to LOOK. Getting back to the top is what
+           you do when you are done reading and want the controls again -- the search box, the set
+           picker, the filters -- and those are all on this bar, so this bar is where the eye goes
+           and the button was in the opposite corner.
 
-    @if (ShowSweepToggle)
-    {
-        <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
-                @onclick="ToggleSweep"
-                title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
-            Sweep @(Sweeping ? "On" : "Off")
+           Wide screens only, and the same class from js/gridspy.js that shows the floating one, so
+           the two agree about when there is something to scroll back from. Below the breakpoint the
+           bar is already carrying more than fits on one line and the thumb is on the other button. *@
+        <button class="btn btn-sm btn-outline-secondary to-top-bar" data-to-top type="button"
+                @onclick="ScrollToTopAsync"
+                title="Back to the top of the list" aria-label="Back to the top of the list">
+            <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false">
+                <path d="M8 13V4M3.5 8.5 8 3.5l4.5 5" fill="none" stroke="currentColor"
+                      stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Top
         </button>
-    }
-    @ToolbarExtras
     </div>
-</details>
+
+    <details class="toolbar-more">
+        <summary>Filters and Layout</summary>
+        <div class="toolbar-more-body">
+        @if (Filters is not null)
+        {
+            @Filters
+            <span class="bar-sep" aria-hidden="true"></span>
+        }
+
+        @* Density, list only. Compact fits far more cards on screen; roomy trades that for the
+           attack and ability text inline, which compact can only show on hover. *@
+        @if (ListView)
+        {
+            <div class="btn-group btn-group-sm" role="group" aria-label="Row height">
+                <button class="btn @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
+                        @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
+                        title="Short rows, most cards per screen">Compact</button>
+                <button class="btn @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
+                        @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
+                        title="Taller rows with attack and ability text shown in full">Roomy</button>
+            </div>
+        }
+
+        @* Hidden where it cannot do anything: in grid mode an unarmed mouse drag already
+           range-selects, so on a device with no touch input the button would change nothing. It stays
+           in list mode (where a mouse drag means "select this text" until armed) and on anything with
+           a touchscreen (where a drag is a scroll until armed). *@
+        @* Visible rather than revealed on focus, so keyboard entry can be found without already
+           knowing about it. It is also the switch a pointer user wants when they stop tapping and
+           start typing counts. *@
+        <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
+                title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
+            Keyboard
+        </button>
+
+        @if (ShowSweepToggle)
+        {
+            <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
+                    @onclick="ToggleSweep"
+                    title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
+                Sweep @(Sweeping ? "On" : "Off")
+            </button>
+        }
+        @ToolbarExtras
+        </div>
+    </details>
+}
 
 @* Which set is under your thumb, while you scroll. Only where the list spans more than one: with
    a single set selected the header two bars up already says it, and a strip repeating it would be
@@ -222,7 +391,7 @@
 @* tabindex, role and aria-activedescendant are set from js/gridkeys.js, which owns the cursor —
    see the note there on why a roving tabindex does not suit a virtualised grid. The container is
    the single tab stop for however many thousand cards are in scope. *@
-<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(PickedOf is null ? "" : "picking") @(OnWant.HasDelegate ? "wanting" : "")"
+<div class="grid-wrap @(ListView ? "listing" : "") @(Sweeping ? "sweeping" : "") @(Removing ? "removing" : "") @(Mode == Tap.Off ? "tap-off" : "") @(PickedOf is null ? "" : "picking") @(OnWant.HasDelegate ? "wanting" : "")"
      id="@_gridId" role="grid"
      aria-label="@(ListView ? "Card list" : "Card grid"): arrow keys to move, digits to set a count"
      @ref="_gridEl">
@@ -502,7 +671,7 @@
             @* Guarded like the attributes below it: a row is never empty by construction, and
                the key must not be the thing that discovers otherwise. *@
             <div @key="@(row.Count > 0 ? (object)row[0].Card.Key : row)"
-                 class="card-row" style="grid-template-columns:repeat(@Columns,minmax(0,1fr))" role="row"
+                 class="card-row" style="grid-template-columns:repeat(@EffectiveColumns,minmax(0,1fr))" role="row"
                  data-group="@(row.Count > 0 ? GroupLabelOf(row[0].Card) : null)"
                  data-group-art="@(row.Count > 0 ? GroupArtFor(row[0].Card) : null)">
                 @foreach (var (card, idx) in row)
@@ -514,6 +683,7 @@
                               Gold="@Gold(card, CountOf(card))"
                               Picked="@(PickedOf?.Invoke(card) ?? 0)"
                               Wanted="@(WantedOf?.Invoke(card) ?? 0)"
+                              Rung="@RungOf?.Invoke(card)"
                               OnWant="OnWant"
                               ShowInfo="@(!Sweeping)"
                               OnHold="OpenDetail"
@@ -649,6 +819,45 @@
     [Parameter] public bool FactsReady { get; set; }
 
     [Parameter] public int Columns { get; set; } = 6;
+
+    /// <summary>
+    /// The grid is a phone's at or under this width. The app's own phone breakpoint, measured on
+    /// the GRID rather than on the window because in the rail layout the two differ by the rail --
+    /// and it is the grid's width that decides how wide a tile comes out.
+    /// </summary>
+    private const float PhoneGridPx = 600f;
+
+    /// <summary>
+    /// The gutter between cards, matching --grid-gap in the stylesheet. Used only for the row
+    /// height ESTIMATE that stands in until a row has been laid out and measured, so a drift
+    /// between the two costs a slightly wrong scrollbar for one frame rather than a wrong layout.
+    /// </summary>
+    private float GridGap => _gridPx > 0 && _gridPx <= PhoneGridPx ? 8f : 14f;
+
+    /// <summary>Most columns a phone gets, whatever the setting says. The mock's figure.</summary>
+    private const int PhoneColumns = 3;
+
+    /// <summary>
+    /// Columns actually laid out: the page's setting, clamped on a phone.
+    ///
+    /// The setting is one number shared with the desktop and persisted, so a phone inherited
+    /// whatever was last chosen on a laptop -- six columns of a 375px screen is a 58px card, which
+    /// is not a card you can recognise and is the layout the tile grid exists for. The setting is
+    /// still the user's and still what a wide screen gets; this only stops it being applied where
+    /// it cannot be read.
+    ///
+    /// Off the measured width rather than a media query, because this number is needed in C# --
+    /// the rows are chunked here, not by CSS -- and the measurement already exists and already
+    /// follows a resize. Unmeasured means not laid out yet, and then the setting stands: a first
+    /// paint reflows once when the measurement lands, as the row height already does.
+    /// </summary>
+    private int EffectiveColumns =>
+        _gridPx > 0 && _gridPx <= PhoneGridPx
+            ? Math.Min(Math.Max(1, Columns), PhoneColumns)
+            : Math.Max(1, Columns);
+
+    /// <summary>Whether the setting is currently being overridden, so the rail can say so.</summary>
+    private bool ColumnsClamped => EffectiveColumns < Math.Max(1, Columns);
     [Parameter] public RenderFragment? ToolbarExtras { get; set; }
 
     /// <summary>
@@ -663,6 +872,29 @@
     /// fastest way to narrow a set and belongs in reach, not behind a summary.
     /// </summary>
     [Parameter] public RenderFragment? Search { get; set; }
+
+    /// <summary>
+    /// Groups only this page has, rendered at the foot of a rail — and, by being non-null at all,
+    /// what asks for the rail instead of the toolbar.
+    ///
+    /// The two shells hold the same controls and differ in what they can afford to say. A bar has
+    /// room for a chip, so a filter arrives unlabelled and the page spends a second bar on a row
+    /// of chips explaining it; a rail has a column, so every filter carries its own heading and
+    /// the count sits in the heading of the group that decides it. That is worth a shell of its
+    /// own on a page whose whole job is browsing, and not worth one on a page that is logging five
+    /// cards and wants the room for them.
+    ///
+    /// Which is why this is a fragment and not a flag: a page that wants a rail always has
+    /// something of its own to put in it — the collection's four target tiers and its evolution
+    /// gap, neither of which any other page has — and a page with nothing to add wants the bar.
+    /// The rail is also sized to what it holds rather than to a fixed width of controls, so the
+    /// decks shelf's two groups do not have to look like the collection's five.
+    ///
+    /// The page's other fragments are placed in either shell unchanged: <see cref="Search"/>,
+    /// <see cref="FilterChips"/>, <see cref="Filters"/> and <see cref="ToolbarExtras"/> all keep
+    /// their meaning. Only the arrangement moves.
+    /// </summary>
+    [Parameter] public RenderFragment? Rail { get; set; }
 
     /// <summary>
     /// What the always-on bar says about the content, replacing the card count.
@@ -697,6 +929,17 @@
     /// image loader rather than counted here, so there is nothing the page could compute itself.
     /// </summary>
     [Parameter] public EventCallback<int> ImgFailedChanged { get; set; }
+
+    /// <summary>
+    /// How many filters the page currently has applied, for the count on the phone's filter
+    /// button.
+    ///
+    /// Supplied rather than counted here, because the grid does not know what a filter is: it is
+    /// handed <see cref="Cards"/> already narrowed, and <see cref="FilterChips"/> as opaque
+    /// markup. The page owns the predicates, so the page owns the number -- and it is the same
+    /// number the chips are built from, so the two cannot disagree about whether anything is on.
+    /// </summary>
+    [Parameter] public int ActiveFilters { get; set; }
 
     /// <summary>
     /// One chip per filter currently applied. This is the half of filtering that may never hide —
@@ -752,8 +995,72 @@
 
     private bool Sweeping { get; set; }
 
-    /// <summary>When set, a tap or sweep removes a copy instead of adding one.</summary>
-    private bool Removing { get; set; }
+    /// <summary>
+    /// What a tap on a card does. Three states, and OFF IS THE DEFAULT.
+    ///
+    /// The grid's whole surface is a control: every tile is a button that silently changes a
+    /// number you will read as fact later. There is no confirmation, the change is one of
+    /// thousands on screen, and the only feedback is a small badge on the card you are probably
+    /// no longer looking at -- so a mis-tap while scrolling is a wrong count discovered weeks
+    /// later, when the thing it is wrong about is which pack to open.
+    ///
+    /// Undo exists and does not help: you have to know it happened. This is the state where
+    /// nothing happens, and it is where every visit starts.
+    ///
+    /// Not persisted, deliberately. A mode that can destroy something should not be armed by a
+    /// decision you made on Tuesday.
+    /// </summary>
+    private enum Tap { Off, Add, Remove }
+
+    private Tap _tap = Tap.Off;
+
+    /// <summary>
+    /// The mode in effect. A grid that cannot remove has nothing to be off about -- on the log
+    /// screen a tap means "this came out of the pack", which is the page's entire interaction, and
+    /// an off state there would be a page that does nothing.
+    /// </summary>
+    private Tap Mode => AllowRemove ? _tap : Tap.Add;
+
+    /// <summary>Whether a tap currently changes anything, for the markup that has to say so.</summary>
+    private bool Removing => Mode == Tap.Remove;
+
+    private void SetMode(Tap mode)
+    {
+        _tap = mode;
+
+        // A sweep armed toward a direction that no longer exists would either do nothing on drag
+        // or, worse, do the opposite of what the control now says.
+        if (mode == Tap.Off && Sweeping) _ = ToggleSweep();
+    }
+
+    /// <summary>Off, add, remove, off. The phone has one button where the rail has three.</summary>
+    private void CycleMode() => SetMode(Mode switch
+    {
+        Tap.Off => Tap.Add,
+        Tap.Add => Tap.Remove,
+        _ => Tap.Off,
+    });
+
+    private string ModeClass => Mode switch
+    {
+        Tap.Add => "adding",
+        Tap.Remove => "removing",
+        _ => "off",
+    };
+
+    private string ModeLabel => Mode switch
+    {
+        Tap.Add => $"{Gesture} adds",
+        Tap.Remove => $"{Gesture} removes",
+        _ => $"{Gesture} off",
+    };
+
+    private string ModeTitle => Mode switch
+    {
+        Tap.Add => $"{GestureVerb} adds a copy. Press for removing.",
+        Tap.Remove => $"{GestureVerb} removes a copy. Press to switch it off.",
+        _ => $"A {Gesture} changes nothing. Press to start adding.",
+    };
 
     /// <summary>
     /// What the add/remove mode governs here. In the tile grid it is the tap; in list mode a tap
@@ -769,7 +1076,21 @@
     /// Shift-click and right-click are one-off inversions of the current mode, so a single
     /// mistaken count can be fixed without switching the whole grid to remove and back.
     /// </summary>
-    private int DeltaFor(bool invert) => Removing ^ invert ? -1 : +1;
+    /// <param name="invert">
+    /// Shift-click or right-click: a one-off inversion, so a single mistaken count can be fixed
+    /// without switching the whole grid to remove and back.
+    /// </param>
+    /// <returns>The change to make, or null where the gesture means nothing.</returns>
+    private int? DeltaFor(bool invert) => Mode switch
+    {
+        Tap.Add => invert ? -1 : +1,
+        Tap.Remove => invert ? +1 : -1,
+
+        // Off. A plain tap does nothing at all, which is the point -- but an inverting gesture
+        // still removes, because right-click has always meant remove and it is deliberate enough
+        // that nobody does it by accident while scrolling.
+        _ => invert ? -1 : null,
+    };
 
     /// <summary>
     /// The height of one row of tiles, as laid out. Measured from the DOM after the first paint
@@ -803,11 +1124,14 @@
     {
         get
         {
-            var cols = Math.Max(1, Columns);
-            if (_gridPx <= 0) return 1000f / cols * 1.42f + 8f;
+            var cols = EffectiveColumns;
+            if (_gridPx <= 0) return 1000f / cols * 1.42f + GridGap;
 
-            var tile = (_gridPx - 8f - 4f * (cols - 1)) / cols;
-            return tile <= 0 ? 1f : tile * (512f / 367f) + 4f;
+            // The same gutter the stylesheet draws, named in both places because neither can read
+            // the other. Only an estimate either way: gridmetrics.js measures the real row as soon
+            // as one is laid out and this is what the scrollbar uses until then.
+            var tile = (_gridPx - GridGap * 2 - GridGap * (cols - 1)) / cols;
+            return tile <= 0 ? 1f : tile * (512f / 367f) + GridGap;
         }
     }
 
@@ -969,8 +1293,12 @@
 
     private Task Bump(PocketCard card, int delta) => OnAdjust.InvokeAsync((card, delta));
 
+    /// <summary>The column count the current rows were chunked at, so a change of it re-chunks.</summary>
+    private int _chunkedCols;
+
     private void Rechunk()
     {
+        _chunkedCols = EffectiveColumns;
         _flat = Sorted();
 
         // Whether the strip is worth a row at all. Stops at the second distinct value rather than
@@ -991,7 +1319,7 @@
         _indexOf = new Dictionary<string, int>(_flat.Count);
         for (var i = 0; i < _flat.Count; i++) _indexOf[_flat[i].Key] = i;
 
-        var cols = Math.Max(1, Columns);
+        var cols = EffectiveColumns;
         var rows = new List<List<(PocketCard, int)>>((_flat.Count / cols) + 1);
         for (var i = 0; i < _flat.Count; i += cols)
         {
@@ -1073,7 +1401,7 @@
         _keys = await JS.InvokeAsync<IJSObjectReference>("import", "./js/gridkeys.js");
         if (_disposed) { await ReleaseModulesAsync(); return; }
 
-        await _keys.InvokeVoidAsync("attach", _gridEl, _self, ListView ? 1 : Columns);
+        await _keys.InvokeVoidAsync("attach", _gridEl, _self, ListView ? 1 : EffectiveColumns);
         if (_disposed) { await ReleaseModulesAsync(); return; }
 
         // So the command palette can hand focus here from anywhere on the page.
@@ -1198,7 +1526,7 @@
     private async Task SyncKeyColumnsAsync()
     {
         if (_keys is null) return;
-        try { await _keys.InvokeVoidAsync("setColumns", _gridEl, ListView ? 1 : Columns); }
+        try { await _keys.InvokeVoidAsync("setColumns", _gridEl, ListView ? 1 : EffectiveColumns); }
         catch (JSDisconnectedException) { }
         catch (JSException) { }
     }
@@ -1222,7 +1550,6 @@
         // Null where there is no browser to answer — a bUnit render, or interop stubbed out.
         if (m is null || _disposed) return;
 
-        var shape = $"{Columns}";
         var was = RowHeight;
 
         _gridPx = m.width;
@@ -1231,6 +1558,19 @@
         // to rendering no rows at all, and letting that drop the height back to the estimate would
         // have the two take turns, each change of ItemSize prompting the render that undoes it.
         if (m.row > 0) _rowPx = m.row;
+
+        // After the width lands, not before it. The column clamp reads that width, so a shape
+        // taken first describes the layout being replaced -- on a phone's first measure it would
+        // record "6" for a grid that had just become three columns wide, and cost a second pass to
+        // notice.
+        var shape = $"{EffectiveColumns}";
+
+        // The rows are chunked to a column count, and until the clamp existed that count could
+        // only change through a parameter -- so OnParametersSet was the only place that had to
+        // re-chunk. It can now change here instead, when a resize carries the grid across the
+        // phone width with every parameter identical, and rows chunked three wide stayed three
+        // wide on a screen that had just become a desktop.
+        if (_chunkedCols != EffectiveColumns) Rechunk();
 
         if (_measuredFor == shape && Math.Abs(RowHeight - was) < 0.5f) return;
 
@@ -1290,7 +1630,11 @@
     /// </summary>
     private bool _touchCapable = true;
 
-    private bool ShowSweepToggle => ListView || _touchCapable;
+    /// <summary>
+    /// A bulk edit needs a direction, so it is not offered while the mode is off. Arming a sweep
+    /// that could not do anything is a control that lies about being available.
+    /// </summary>
+    private bool ShowSweepToggle => Mode != Tap.Off && (ListView || _touchCapable);
 
     private async Task ToggleSweep()
     {
@@ -1299,8 +1643,8 @@
     }
 
     private Task Activate((int Index, bool Invert) a) =>
-        a.Index >= 0 && a.Index < Cards.Count
-            ? OnAdjust.InvokeAsync((Cards[a.Index], DeltaFor(a.Invert)))
+        a.Index >= 0 && a.Index < Cards.Count && DeltaFor(a.Invert) is { } delta
+            ? OnAdjust.InvokeAsync((Cards[a.Index], delta))
             : Task.CompletedTask;
 
     // ---- keyboard, from js/gridkeys.js ---------------------------------------------
@@ -1366,7 +1710,12 @@
         var swept = new List<PocketCard>(hi - lo + 1);
         for (var i = lo; i <= hi; i++) swept.Add(Cards[i]);
 
-        await OnSweep.InvokeAsync((swept, DeltaFor(false)));
+        // Nothing to sweep toward with the mode off. Unreachable while the toggle below refuses
+        // to arm in that state, and here anyway because a drag that has already been captured
+        // should not fall through to a default direction.
+        if (DeltaFor(false) is not { } delta) return;
+
+        await OnSweep.InvokeAsync((swept, delta));
         StateHasChanged();   // interop callback runs outside the render loop
     }
 

@@ -94,4 +94,44 @@ public sealed class PocketCard
     /// business to promise.
     /// </summary>
     public string ArtFallbackUrls => string.Join('|', ArtSource.Candidates(this).Skip(1));
+
+    /// <summary>
+    /// The whole candidate chain as inline custom properties, for the places that draw a card as a
+    /// background rather than as an img.
+    ///
+    /// An img gets the chain from js/imgloader.js, which listens for the error and moves down the
+    /// list. A background image has no error to listen for, so every place in the app that draws a
+    /// card this way -- a wishlist slot, a pack slot, a deck's face, a picker thumbnail -- took the
+    /// first candidate and fell straight through to the generic placeholder whenever it was
+    /// missing, which for a newly released set is every card.
+    ///
+    /// CSS does the falling back on its own: a background-image layer that fails to load is simply
+    /// not painted, and the layers behind it show through. So the candidates stacked front to back
+    /// ARE the chain, resolved by the browser, with no script and no error handling.
+    ///
+    /// Three NAMED properties rather than one comma-separated list, because the rule that consumes
+    /// them also stacks the placeholder mark and weave behind the art, and background-position,
+    /// -repeat and -size are per-layer lists that have to line up with the images. A list of
+    /// variable length cannot line up with anything; three slots and `none` for the ones a card
+    /// does not have can. See the rule on [style*="--art"] in app.css.
+    /// </summary>
+    public string ArtVars
+    {
+        get
+        {
+            var urls = ArtSource.Candidates(this);
+            var css = new System.Text.StringBuilder();
+
+            for (var i = 0; i < 3; i++)
+            {
+                var name = i == 0 ? "--art" : $"--art{i + 1}";
+                css.Append(name).Append(':')
+                   .Append(i < urls.Count ? $"url('{urls[i]}')" : "none")
+                   .Append(';');
+            }
+
+            return css.ToString();
+        }
+    }
+
 }

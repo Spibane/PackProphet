@@ -24,70 +24,88 @@ else if (!Session.MultipleProfiles)
 }
 else
 {
-    <div class="page-head">
+    <div class="page-head folded">
         <h1 class="title">Compare collections</h1>
-        <span class="subtitle">@Session.Profile.Name against your other collections</span>
-    </div>
-
-    <div class="page-tools">
-        <label class="small text-body-secondary">Compare With</label>
-        <select class="form-select form-select-sm" style="max-width:14rem" aria-label="Collection to compare with" @onchange="OnPick">
-            @foreach (var profile in Others)
+        @* Which two, and what is currently narrowing the answer. The page compares one pair at a
+           time and the filter changes which rows exist, so a reader who cannot see either is
+           reading a list that means something other than what it says. *@
+        <span class="subtitle">
+            @Session.Profile.Name against @(Others.FirstOrDefault(o => o.Id == _otherId)?.Name ?? "your other collections")
+            @if (_readyOnly)
             {
-                <option value="@profile.Id" selected="@(profile.Id == _otherId)">@profile.Name</option>
+                <span class="filters">affordable today only</span>
             }
-        </select>
+        </span>
 
-        <span class="bar-sep" aria-hidden="true"></span>
-
-        <label class="small">
-            <input type="checkbox" class="form-check-input me-1" checked="@_readyOnly"
-                   @onchange="e => _readyOnly = (bool)(e.Value ?? false)" />
-            only the ones both accounts can afford today
-        </label>
+        <span class="actions">
+            <SheetOpener For="compare-target" Label="Pairing" />
+        </span>
     </div>
+
+    @* The pairing and the filter, behind the button rather than on a bar of their own. Two
+       controls do not earn a strip across a page whose answer is two verdicts and two lists. *@
+    <PageSheet Id="compare-target" Label="Pairing">
+        <div class="rail-group">
+            <span class="ttl">Compare with</span>
+            <select class="form-select form-select-sm" aria-label="Collection to compare with" @onchange="OnPick">
+                @foreach (var profile in Others)
+                {
+                    <option value="@profile.Id" selected="@(profile.Id == _otherId)">@profile.Name</option>
+                }
+            </select>
+        </div>
+
+        <div class="rail-group">
+            <span class="ttl">Show</span>
+            <label class="small">
+                <input type="checkbox" class="form-check-input me-1" checked="@_readyOnly"
+                       @onchange="e => _readyOnly = (bool)(e.Value ?? false)" />
+                Only what both can afford today
+            </label>
+        </div>
+    </PageSheet>
+
 
     @* Two mechanics, and the split between them is what the page is for. A Share is one-way and
        free but stops at 4 diamonds; a trade is a same-rarity swap that costs both accounts dust
        and a stamina. So "what does my alt have that my main needs" is not one list. *@
-    <PageShell Measure="PageShell.Width.Wide" Class="pb-0">
-    <p class="small text-body-secondary mb-0">
+    @* One shell for the page. Four of them stacked here, the first wearing `pb-0` to close the
+       seam its own padding opened between it and the next -- which is the shell being used as a
+       wrapper for a paragraph rather than as the page's body. *@
+    <PageShell Measure="PageShell.Width.Wide" Class="sections">
+    <p class="small text-body-secondary">
         Rarity decides which applies. <strong>Shares</strong> carry 1 to 4 diamonds one way, free,
         @GameRules.SharesReceivedPerDay received a day. Above that it is a <strong>trade</strong>:
         both cards must be the same rarity, and both sides pay that rarity's shinedust and one
         stamina. Balances come from each collection's own Resources page.
     </p>
-    </PageShell>
 
     @if (_swaps is null)
     {
-        <PageShell Measure="PageShell.Width.Wide"><p class="mb-0">Working&hellip;</p></PageShell>
+        <Loading />
     }
     else if (_swaps.Nothing)
     {
-        <PageShell Measure="PageShell.Width.Wide">
-            <p class="mb-0">
-                Nothing to move. Neither collection holds a spare the other still wants at a
-                rarity that can be shared or traded.
-            </p>
-        </PageShell>
+        <EmptyState>
+            Nothing to move: neither collection holds a spare the other still wants at a rarity
+            that can be shared or traded.
+        </EmptyState>
     }
     else
     {
-        <PageShell Measure="PageShell.Width.Wide" Class="sections">
             @* Shares first: one costs nothing, so there is no reason to trade before taking one.
                Both directions are listed because each account has its own daily allowance, so they
                do not compete. *@
             @if (_swaps.IncomingShares.Count > 0 || _swaps.OutgoingShares.Count > 0)
             {
-                <div class="verdict take" aria-live="polite">
-                    <div class="head">
-                        <span class="call">
-                            @ShareTotal @Card(ShareTotal) can just be sent
-                        </span>
-                        <span class="cost">Free: no card back, no dust, no stamina</span>
-                    </div>
-                    <span class="why">
+                <div class="verdict-lead" aria-live="polite">
+                    <span class="micro">The call</span>
+
+                    <div class="lead-head">
+                      <div class="lead-text">
+                        <h2 class="name take">@ShareTotal @Card(ShareTotal) can just be sent</h2>
+                        <p class="then">No card back, no dust, no stamina</p>
+                        <p class="says">
                         @if (_swaps.IncomingShares.Count > 0)
                         {
                             <span>
@@ -101,7 +119,9 @@ else
                             @_swaps.AllSharesDays @Day(_swaps.AllSharesDays), because the two
                             directions run at the same time.
                         </span>
-                    </span>
+                        </p>
+                      </div>
+                    </div>
                 </div>
 
                 <h2>Free to send</h2>
@@ -135,14 +155,18 @@ else
 
             @if (_swaps.Swaps.Count == 0 && _swaps.Unpayable.Count > 0)
             {
-                <div class="verdict skip" aria-live="polite">
-                    <div class="head"><span class="call">No trade is possible yet</span></div>
-                    <span class="why">
-                        @_swaps.Unpayable.Count @Card(_swaps.Unpayable.Count) in
-                        @_swaps.Theirs.Name would fill a gap here, but they are above the diamonds
-                        so a Share cannot carry them, and @_swaps.Mine.Name holds no spare at those
-                        rarities to trade back.
-                    </span>
+                <div class="verdict-lead" aria-live="polite">
+                    <div class="lead-head">
+                      <div class="lead-text">
+                        <h2 class="name skip">No trade is possible yet</h2>
+                        <p class="says">
+                            @_swaps.Unpayable.Count @Card(_swaps.Unpayable.Count) in
+                            @_swaps.Theirs.Name would fill a gap here, but they are above the
+                            diamonds so a Share cannot carry them, and @_swaps.Mine.Name holds no
+                            spare at those rarities to trade back.
+                        </p>
+                      </div>
+                    </div>
                 </div>
             }
             @* Explicit rather than a bare else. Narrowing the branch above to "no trade and
@@ -152,18 +176,18 @@ else
             else if (_swaps.Swaps.Count > 0)
             {
                 var best = _swaps.Swaps[0];
-                <div class="verdict @(best.Ready ? "take" : "skip")" aria-live="polite">
-                    <div class="head">
-                        <span class="call">
+                <div class="verdict-lead" aria-live="polite">
+                    <div class="lead-head">
+                      <div class="lead-text">
+                        <h2 class="name @(best.Ready ? "take" : "skip")">
                             @(best.Ready ? "Swap" : "Best swap once you can pay for it:")
                             @best.Incoming.Name for @best.Outgoing.Name
-                        </span>
-                        <span class="cost">
+                        </h2>
+                        <p class="then">
                             1 stamina each side &middot;
                             @(best.Dust > 0 ? $"{best.Dust:N0} dust each side" : "no dust")
-                        </span>
-                    </div>
-                    <span class="why">
+                        </p>
+                        <p class="says">
                         @if (best.Mutual)
                         {
                             <span>
@@ -184,7 +208,9 @@ else
                         {
                             <span>@Blocked(best)</span>
                         }
-                    </span>
+                        </p>
+                      </div>
+                    </div>
                 </div>
 
                 <p class="small text-body-secondary">
@@ -325,8 +351,8 @@ else
                     </p>
                 }
             }
-        </PageShell>
     }
+    </PageShell>
 }
 
 @code {
@@ -337,7 +363,7 @@ else
         @<text>
             @if (gifts.Count == 0)
             {
-                <p class="small text-body-secondary">Nothing this way.</p>
+                <EmptyState>Nothing this way.</EmptyState>
             }
             else
             {

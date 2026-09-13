@@ -124,7 +124,7 @@
     }
     else
     {
-        <h2 class="h5 mt-4">
+        <h2 class="sub-head">
             @if (_shots.Count > 1)
             {
                 @shot.Name
@@ -245,7 +245,7 @@
                             <tr>
                                 <td style="width: 2.5rem">
                                     <span class="thumb"
-                                          style="--art:url('@match.Card.ArtUrl')"
+                                          style="@match.Card.ArtVars"
                                           role="img" aria-label="@match.Card.Name"></span>
                                 </td>
                                 <td>
@@ -293,7 +293,7 @@
                    named. A pick made from a thumbnail is a pick that can be wrong, and a row that
                    vanishes the moment it is answered is a row that cannot be corrected — the card
                    would be in the table above with no way back to the picture it came from. *@
-                <h3 class="h6 mb-1">
+                <h3 class="sub-head">
                     @if (reading.UnreadCells == 0)
                     {
                         <text>Every slot named</text>

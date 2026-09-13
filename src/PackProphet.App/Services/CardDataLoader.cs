@@ -97,9 +97,19 @@ public sealed class CardDataLoader
     private const int MostGapsWorthFetchingSetBySet = 4;
 
     private readonly HttpClient _http;
+    private readonly TimeSpan _artManifestDeadline;
     private CardData? _cached;
 
-    public CardDataLoader(HttpClient http) => _http = http;
+    /// <param name="artManifestDeadline">
+    /// How long to wait for the art manifest before giving up on it. Defaults to
+    /// <see cref="DefaultArtManifestDeadline"/>, which is what the app uses; a caller supplies its
+    /// own only where the wall clock is not a measure of anything, which in practice means tests.
+    /// </param>
+    public CardDataLoader(HttpClient http, TimeSpan? artManifestDeadline = null)
+    {
+        _http = http;
+        _artManifestDeadline = artManifestDeadline ?? DefaultArtManifestDeadline;
+    }
 
     /// <summary>
     /// Fetch JSON, putting a deadline on anything that leaves the origin. Local reads are left
@@ -170,8 +180,20 @@ public sealed class CardDataLoader
     /// development build and most deploys say anyway. A hang here used to hold the boot open
     /// indefinitely -- caught by the test that hangs every remote request, which is exactly the
     /// shape of a network that drops packets rather than refusing them.
+    ///
+    /// A BUDGET, NOT A MEASUREMENT
+    /// ----------------------------------------------------------------------------------
+    /// Three seconds is generous for a round trip to your own origin and is not generous at all
+    /// for three seconds of a machine that is busy. When it fires spuriously, nothing says so:
+    /// the answer is "no vendored art", identical to the 404 that means it. That made a test
+    /// asserting the manifest was read fail about one run in twenty -- always alone, always with
+    /// an empty collection, and only when something else was using the CPU.
+    ///
+    /// So it is settable. The app keeps the short one, because a user on a slow phone genuinely
+    /// would rather boot than wait; a test supplies its own, because the wall clock on a machine
+    /// running the whole suite in parallel is not a measure of whether this code works.
     /// </summary>
-    private static readonly TimeSpan ArtManifestDeadline = TimeSpan.FromSeconds(3);
+    public static readonly TimeSpan DefaultArtManifestDeadline = TimeSpan.FromSeconds(3);
 
     /// <summary>
     /// Read the art manifest and tell <see cref="ArtSource"/> what it found. Awaited inside
@@ -184,22 +206,36 @@ public sealed class CardDataLoader
     /// </summary>
     private async Task<IReadOnlyCollection<string>> ReadArtManifestAsync(CancellationToken ct)
     {
+        VendoredArt? manifest;
+
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(ArtManifestDeadline);
+            cts.CancelAfter(_artManifestDeadline);
 
-            var manifest = await _http.GetFromJsonAsync<VendoredArt>(ArtManifest, cts.Token);
-            ArtSource.UseVendored(manifest?.Sets, manifest?.Packs);
+            manifest = await _http.GetFromJsonAsync<VendoredArt>(ArtManifest, cts.Token);
         }
         catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             // Absent, malformed, or offline with nothing cached. Every card falls back to the
             // remote chain, which is where it came from before any of this existed.
-            ArtSource.UseVendored(null, null);
+            manifest = null;
         }
 
-        return ArtSource.VendoredSets.ToArray();
+        ArtSource.UseVendored(manifest?.Sets, manifest?.Packs);
+
+        // Reported from what THIS load read, not from the static it has just written.
+        //
+        // ArtSource is process-wide by design -- it is read from PocketCard.ArtUrl, which markup
+        // calls from a dozen places, and it is set once during boot in a single-threaded
+        // WebAssembly runtime. Writing it and reading it back is safe in the app and is a race
+        // anywhere a second loader exists, which is every test run: another boot calling
+        // UseVendored between these two lines makes this load report the other one's manifest.
+        //
+        // The value is a fact about the response that just arrived, so it comes from the response.
+        // Blanks dropped to match what UseVendored stores, so the pair cannot disagree about how
+        // many sets were vendored.
+        return manifest?.Sets?.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray() ?? [];
     }
 
     public async Task<CardData> LoadAsync(CancellationToken ct = default)

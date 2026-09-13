@@ -94,10 +94,13 @@ public class CollectionPageTests : AppHost
     [Fact]
     public async Task The_headline_target_figure_matches_what_the_engine_says()
     {
-        // The assertion that would have caught the original bug. The page prints "target N / M" in
-        // its header and used to compute both numbers itself, so the header disagreed with the
-        // ranking on the same set. Comparing the rendered text against the engine is what notices a
-        // page doing its own arithmetic.
+        // The assertion that would have caught the original bug. The page used to compute both
+        // numbers itself, so the header disagreed with the ranking on the same set. Comparing the
+        // rendered text against the engine is what notices a page doing its own arithmetic.
+        //
+        // The wording moved from "target N / M" to "N short of target" -- a ratio is something the
+        // reader has to subtract before they can act on it -- so the figure checked here is the
+        // shortfall. Same requirement: it comes from the engine, not from the page.
         await ReadyAsync();
 
         var foilSet = Session.FoilSets.First();
@@ -112,7 +115,12 @@ public class CollectionPageTests : AppHost
 
         var expected = Session.TargetProgress([foilSet]);
 
-        Assert.Contains($"target {expected.Satisfied} / {expected.Wanted}", page.Markup);
+        // A finished target says so instead of counting down from nothing, and then there is no
+        // figure to check -- so the fixture has to be a set with something still outstanding.
+        Assert.True(expected.Wanted > expected.Satisfied,
+            $"{foilSet} is already complete, so this fixture cannot test the shortfall");
+
+        Assert.Contains($"{expected.Wanted - expected.Satisfied} short", page.Markup);
 
         // And it moves when the setting does, rather than being right once by luck.
         Session.SetFoilCopies(1);
@@ -120,7 +128,7 @@ public class CollectionPageTests : AppHost
 
         var withFoils = Session.TargetProgress([foilSet]);
         Assert.True(withFoils.Wanted > expected.Wanted);
-        Assert.Contains($"target {withFoils.Satisfied} / {withFoils.Wanted}", page.Markup);
+        Assert.Contains($"{withFoils.Wanted - withFoils.Satisfied} short", page.Markup);
     }
 
     [Fact]

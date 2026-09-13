@@ -1,0 +1,108 @@
+@* One box of a <see cref="BoxStrip"/>: a label, a figure, and what the figure is in.
+
+   Three states, and the middle one is the reason the component exists. A LIVE box carries a
+   figure. A DEAD box carries an em dash and a dashed border, which says "there is nothing here"
+   where a blank says "something went wrong". A BEST box is the one to act on, tinted.
+
+   Content over a figure rather than a figure is the fourth case — a card's art in a wishlist slot,
+   a pack's picture — and that comes in as child content instead. The frame, the states and the
+   dash are what this owns. *@
+
+<div class="box @StateClass">
+    @if (Label is { Length: > 0 })
+    {
+        <span class="lbl">@Label</span>
+    }
+
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        @* The dash is drawn for a dead box whatever the page passed, so "unavailable" cannot come
+           out as an empty line in one place and a dash in another. *@
+        <span class="fig">@(State switch
+        {
+            Kind.Dead => "—",
+            Kind.Todo => "+",
+            _ => Figure,
+        })</span>
+
+        @if (State is not (Kind.Dead or Kind.Todo) && Unit is { Length: > 0 })
+        {
+            <span class="unit">@Unit</span>
+        }
+    }
+
+    @* A proportional bar, where the figures are of one quantity and worth comparing across the
+       row. Not on a strip whose boxes are different currencies -- the four routes to a card are
+       priced in packs, shinedust and stamina, and drawing those at a shared scale would be
+       inventing an exchange rate the game does not have. *@
+    @if (Bar is double fill)
+    {
+        <span class="bar" aria-hidden="true">
+            @if (State != Kind.Dead && fill > 0)
+            {
+                <span style="block-size:@((Math.Clamp(fill, 0, 1) * 100).ToString("F0"))%"></span>
+            }
+        </span>
+    }
+
+    @if (Note is { Length: > 0 })
+    {
+        <span class="note">@Note</span>
+    }
+</div>
+
+@code {
+    public enum Kind
+    {
+        /// <summary>Has a figure.</summary>
+        Live,
+        /// <summary>Has none, and that is the information. Dashed, with an em dash.</summary>
+        Dead,
+        /// <summary>The one to act on. Tinted, and there should be at most one per strip.</summary>
+        Best,
+
+        /// <summary>
+        /// Empty, and the next thing to fill. Dashed like Dead but in the accent, because it is
+        /// not an absence being reported -- it is the action.
+        ///
+        /// At most one per strip, for the same reason: a row where every gap is accented says
+        /// "five things to do" where the truth is "do this one next".
+        /// </summary>
+        Todo,
+    }
+
+    [Parameter] public Kind State { get; set; } = Kind.Live;
+
+    /// <summary>What this box is: an ordinal, a route name, a slot number.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>The figure itself, already formatted. Ignored on a dead box.</summary>
+    [Parameter] public string? Figure { get; set; }
+
+    /// <summary>What the figure is in — "packs", "shinedust". Ignored on a dead box.</summary>
+    [Parameter] public string? Unit { get; set; }
+
+    /// <summary>A few words under the figure, for a caveat that belongs to this box alone.</summary>
+    [Parameter] public string? Note { get; set; }
+
+    /// <summary>
+    /// Fill for a comparison bar, 0 to 1. Null for no bar at all — which is not the same as zero,
+    /// where the box keeps the bar's height so the row stays one shape.
+    /// </summary>
+    [Parameter] public double? Bar { get; set; }
+
+    /// <summary>Replaces the figure entirely: art, a pip, whatever the box is actually of.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string StateClass => State switch
+    {
+        Kind.Dead => "dead",
+        Kind.Best => "best",
+        Kind.Todo => "todo",
+        _ => "live",
+    };
+}

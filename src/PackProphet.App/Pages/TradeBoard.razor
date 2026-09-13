@@ -200,25 +200,33 @@ else
                         </div>
                     </div>
 
-                    @* Twenty boxes, the literal set this component was written for: the board HAS
-                       twenty slots, they are numbered, and the picture is the point. Mostly solid
-                       with three dashed gaps at the end says "nearly right" without anyone counting
-                       to twenty, which no list of names can do.
+                    @* The board AND the edits, which is up to forty boxes: twenty coming off and
+                       twenty going on, in the worst case where the whole thing is replaced.
 
-                       Ten across in two rows rather than twenty in a line -- twenty in a line is a
-                       line nobody reads the shape of. *@
-                    <BoxStrip Label="The board, once you have typed it"
+                       It showed the twenty slots you would end up with, and outlined the new ones.
+                       In the accent -- which is red -- so the one thing marked on a picture of a
+                       wishlist was ringed in the colour of a warning, and it read as "take these
+                       down" when it meant the opposite.
+
+                       Colour by direction now and nothing else: green goes on, red comes off, the
+                       ones that stay are left plain. A card being removed is not on the board you
+                       will end up with, so it has no slot number -- the word under it is the act,
+                       not a position.
+
+                       Ten across rather than in a line: a line of twenty is a line nobody reads
+                       the shape of, and this can be twice that. *@
+                    <BoxStrip Label="The board, and what changes"
                               Clause="@SlotClause(_plan)" Columns="10">
-                        @foreach (var (slot, n) in BoardSlots(_plan))
+                        @foreach (var edit in BoardEdits(_plan))
                         {
-                            <Box State="@(slot is null ? Box.Kind.Dead : Box.Kind.Live)"
-                                 Label="@n.ToString()">
-                                @if (slot is not null)
+                            <Box State="@(edit.Card is null ? Box.Kind.Dead : Box.Kind.Live)"
+                                 Label="@edit.Label">
+                                @if (edit.Card is { } card)
                                 {
-                                    <span class="slot-art @(IsNew(slot, _plan) ? "new" : "")"
-                                          style="@slot.Card.ArtVars"
-                                          title="@slot.Card.Name" aria-hidden="true"></span>
-                                    <span class="visually-hidden">@slot.Card.Name</span>
+                                    <span class="slot-art @edit.Mark"
+                                          style="@card.ArtVars"
+                                          title="@card.Name" aria-hidden="true"></span>
+                                    <span class="visually-hidden">@card.Name</span>
                                 }
                             </Box>
                         }
@@ -635,16 +643,44 @@ else
     /// Ordered keep-then-add so the additions cluster at the end, which is what makes the strip
     /// read as a shape -- solid, then the new ones, then the gaps.
     /// </summary>
-    private static IReadOnlyList<(BoardSlot? Slot, int Number)> BoardSlots(BoardPlan plan)
+    /// <param name="Card">The card in this box, or null for a slot that stays empty.</param>
+    /// <param name="Label">What the box is: a slot number for one that stays, the act otherwise.</param>
+    /// <param name="Mark">The direction class the art carries — "off", "on", or nothing.</param>
+    private sealed record BoardEdit(PocketCard? Card, string Label, string Mark);
+
+    /// <summary>
+    /// The board and its edits, in reading order: what stays, what comes off, what goes on, then
+    /// the slots nothing fills. Up to forty boxes where the whole board is replaced.
+    ///
+    /// Keeps first because they are the board — most of it, most of the time — and the shape worth
+    /// seeing is how much of it is changing. Removes before adds because that is the order the
+    /// work happens in: a slot has to be free before anything goes into it.
+    ///
+    /// Only the keeps and the empties are numbered. A card coming off has no position on the board
+    /// you end up with, and numbering it would be numbering a slot twice.
+    /// </summary>
+    private static IReadOnlyList<BoardEdit> BoardEdits(BoardPlan plan)
     {
-        var filled = plan.Keep.Concat(plan.Add).Take(GameRules.TradeBoardSlots).ToList();
+        var edits = new List<BoardEdit>(GameRules.TradeBoardSlots * 2);
+        var n = 1;
 
-        return Enumerable.Range(0, GameRules.TradeBoardSlots)
-            .Select(i => (i < filled.Count ? filled[i] : null, i + 1))
-            .ToList();
+        foreach (var slot in plan.Keep.Take(GameRules.TradeBoardSlots))
+            edits.Add(new BoardEdit(slot.Card, n++.ToString(), ""));
+
+        foreach (var card in plan.Drop)
+            edits.Add(new BoardEdit(card, "Off", "off"));
+
+        foreach (var slot in plan.Add.Take(GameRules.TradeBoardSlots - plan.Keep.Count))
+            edits.Add(new BoardEdit(slot.Card, "On", "on"));
+
+        // The gaps are numbered with the slots they are, because that is what makes the row read
+        // as "seventeen of twenty" rather than as a row that ran out of cards.
+        var filled = Math.Min(GameRules.TradeBoardSlots, plan.Keep.Count + plan.Add.Count);
+        for (var i = filled; i < GameRules.TradeBoardSlots; i++)
+            edits.Add(new BoardEdit(null, (i + 1).ToString(), ""));
+
+        return edits;
     }
-
-    private static bool IsNew(BoardSlot slot, BoardPlan plan) => plan.Add.Contains(slot);
 
     /// <summary>
     /// Why the strip has gaps, where it has them. Empty slots on a wishlist are not a fault -- the

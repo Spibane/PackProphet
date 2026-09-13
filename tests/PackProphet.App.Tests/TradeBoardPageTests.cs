@@ -35,22 +35,58 @@ public class TradeBoardPageTests : AppHost
         System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
 
     [Fact]
-    public async Task The_strip_has_a_box_for_every_slot_the_board_holds()
+    public async Task The_strip_has_a_box_for_every_slot_and_for_every_edit()
     {
         // The literal set this component was written for: the board HAS twenty slots and they are
         // numbered. Mostly solid with the gaps at the end says "nearly right" without anyone
         // counting to twenty, which no list of names can do — so every slot gets a box, including
         // the empty ones.
+        //
+        // Plus a box per card coming off, which is what takes it past twenty. Those are not slots
+        // on the board you end up with, so they are not numbered: the word under them is the act.
         var page = await PageAsync();
 
         var boxes = page.FindAll(".box-strip .box").ToArray();
-        Assert.Equal(GameRules.TradeBoardSlots, boxes.Length);
+        var off = page.FindAll(".box-strip .slot-art.off").Count;
 
-        // Numbered in order, because the board is entered by walking a numbered list in the game.
-        var labels = boxes.Select(b => b.QuerySelector(".lbl")!.TextContent.Trim()).ToArray();
+        Assert.Equal(GameRules.TradeBoardSlots + off, boxes.Length);
+        Assert.True(boxes.Length <= GameRules.TradeBoardSlots * 2,
+            "a board cannot drop more cards than it holds");
+
+        // The slots, numbered in order, because the board is entered by walking a numbered list in
+        // the game. Reading past the boxes that are edits rather than positions.
+        var slots = boxes
+            .Where(b => b.QuerySelector(".slot-art.off") is null)
+            .Select(b => b.QuerySelector(".lbl")!.TextContent.Trim())
+            .Where(l => l is not "On")
+            .ToArray();
+
         Assert.Equal(
-            Enumerable.Range(1, GameRules.TradeBoardSlots).Select(n => n.ToString()).ToArray(),
-            labels);
+            Enumerable.Range(1, GameRules.TradeBoardSlots - page.FindAll(".box-strip .slot-art.on").Count)
+                      .Select(n => n.ToString()).ToArray(),
+            slots);
+    }
+
+    [Fact]
+    public async Task A_slot_is_coloured_by_which_way_it_is_moving()
+    {
+        // The additions used to be ringed in the accent — which is red — so the only marked boxes
+        // on a picture of a wishlist wore the colour of a warning and read as "take these down"
+        // when they meant the opposite. Green on, red off, and nothing marked stays.
+        var page = await PageAsync();
+
+        Assert.Empty(page.FindAll(".slot-art.new"));
+
+        // Whatever the fixture's plan happens to be, no box can be both directions at once, and a
+        // marked box always says in words which way it is going.
+        foreach (var art in page.FindAll(".slot-art").ToArray())
+        {
+            Assert.False(art.ClassList.Contains("on") && art.ClassList.Contains("off"));
+
+            var word = art.Closest(".box")!.QuerySelector(".lbl")!.TextContent.Trim();
+            if (art.ClassList.Contains("on")) Assert.Equal("On", word);
+            if (art.ClassList.Contains("off")) Assert.Equal("Off", word);
+        }
     }
 
     [Fact]

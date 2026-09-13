@@ -131,12 +131,6 @@ else if (Id is null)
                         <div class="body">
                             <a class="nm" href="chase/@list.Id">@list.Name</a>
 
-                            @if (_order == "custom")
-                            {
-                                <DragHandle Name="@list.Name" Index="@at" Count="@_lists.Count"
-                                            OnMove="MoveTo" Id="@list.Id" />
-                            }
-
                             <div class="meta">
                                 <span class="small text-body-secondary">
                                     @list.Wanted card(s) wanted
@@ -199,6 +193,15 @@ else if (Id is null)
                                 </button>
                             </div>
                         </div>
+
+                        @* On the card rather than in its body: it grips the whole card, so it
+                           belongs against the card's own edge. Last, so tabbing through a shelf
+                           reaches what a card SAYS before what you can do to its position. *@
+                        @if (_order == "custom")
+                        {
+                            <DragHandle Name="@list.Name" Index="@at" Count="@_lists.Count"
+                                        OnMove="MoveTo" Id="@list.Id" />
+                        }
                     </div>
                 }
             </div>

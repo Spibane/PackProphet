@@ -191,6 +191,34 @@ public class ShelfPageTests : AppHost
     }
 
     [Fact]
+    public async Task The_grip_is_on_the_card_rather_than_in_its_body()
+    {
+        // It sat in the body under the deck's name, where it read as one more fact about the deck
+        // and put the thing you pick the card up by in the middle of the card. It grips the whole
+        // card, so it belongs against the card's own edge.
+        await ReadyAsync();
+        SeedDecks();
+        Session.SetDeckGrid(true);
+        Session.SetDeckOrder("custom");
+
+        var page = RenderComponent<Decks>();
+        var handles = page.FindAll(".showcase [data-drag-handle]");
+        Assert.Equal(Session.Profile.Decks.Count, handles.Count);
+
+        Assert.All(handles, h =>
+        {
+            Assert.True(h.ParentElement!.ClassList.Contains("showcase"),
+                "the grip is a child of the card, not of something inside it");
+            Assert.Null(h.Closest(".showcase .body"));
+
+            // Drawn rather than typed. The braille grip it replaced is round, is laid out 2 by 4,
+            // and is not in every system font.
+            Assert.NotNull(h.QuerySelector("svg"));
+            Assert.DoesNotContain("\u283f", h.TextContent);
+        });
+    }
+
+    [Fact]
     public async Task The_chase_shelf_is_the_same_shelf()
     {
         // Same two groups in the same order, because it is the same shelf with different things on

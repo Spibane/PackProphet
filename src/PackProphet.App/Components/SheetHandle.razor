@@ -1,0 +1,37 @@
+@* The row at the top of a sheet: the grabber, and the button that shuts it.
+
+   Three sheets had this pasted into them -- the rail, PageSheet, and the collection's set picker,
+   which cannot use PageSheet because its body is styled on .set-sheet. Identical markup in three
+   files is how the four target sheets drifted before PageSheet existed, and changing "Done" to a
+   close glyph meant editing the same four lines three times, which is the argument for this being
+   a file.
+
+   An X rather than a word. The button dismisses rather than confirming: nothing here is applied on
+   the way out -- a filter, a set, a target all take effect the moment they are touched -- so "Done"
+   named a step that does not exist and implied one that has to be taken. The glyph also stops the
+   button being a label whose width changes with translation, in a row that now has a
+   heading in it to make room for.
+
+   Styled by .rail-handle in the stylesheet, which is also where the sheet-only display rule lives:
+   a rail that is a column is never an open popover, so it never shows this row at all. *@
+
+<div class="rail-handle">
+    <span class="ttl">@Label</span>
+
+    <button class="btn btn-sm btn-outline-secondary sheet-close" popovertarget="@For"
+            popovertargetaction="hide" aria-label="@CloseLabel" title="@CloseLabel">&times;</button>
+</div>
+
+@code {
+    /// <summary>The popover this shuts — the sheet's own id.</summary>
+    [Parameter, EditorRequired] public string For { get; set; } = "";
+
+    /// <summary>
+    /// What this sheet is: "Filters", "Tuning", "Target". The same word its opener carries, so a
+    /// sheet says on arrival what you pressed to get it — on a phone every sheet in the app is
+    /// otherwise the same panel with the same corners and the same controls.
+    /// </summary>
+    [Parameter] public string Label { get; set; } = "";
+
+    private string CloseLabel => Label is { Length: > 0 } label ? $"Close {label}" : "Close";
+}

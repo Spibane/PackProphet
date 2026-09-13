@@ -17,18 +17,17 @@
    room for the heading, so the control says what it sets and the reading it produces sits in the
    heading of the group that decides it.
 
-   It is sized to its page rather than to a fixed set of controls -- the collection's rail has
-   seven groups and the wishlist's has three -- which is the argument for this over a sidebar.
+   It holds what its page needs rather than a fixed set of controls -- the collection's rail has
+   seven groups and the wishlist's has three -- which is the argument for this over a sidebar. Its
+   WIDTH is fixed and shared, though, and deliberately: a page decides what goes in the column, not
+   where the column's edge falls, or the shell moves as you navigate between pages.
 
    The page still has to say in its own bar what the controls are set to. A count whose filters are
    out of sight is a lie, and on a phone they are all out of sight. *@
 
 <div class="page-rail sheet" popover id="@Id">
     @* Sheet only, by the stylesheet: on a column there is nothing to dismiss. *@
-    <div class="rail-handle">
-        <button class="btn btn-sm btn-outline-secondary" popovertarget="@Id"
-                popovertargetaction="hide">Done</button>
-    </div>
+    <SheetHandle For="@Id" Label="@OpenLabel" />
 
     @ChildContent
 </div>

@@ -319,4 +319,25 @@ public class TradeBoardPageTests : AppHost
 
         Assert.NotNull(rerun);
     }
+    [Fact]
+    public async Task The_tuning_badge_counts_what_you_changed_not_what_it_shipped_with()
+    {
+        // The badge says how many of the rail's controls are doing something, which is only worth
+        // reading if the answer is zero on arrival. It counted "slots kept for likely offers" as
+        // set whenever it was above none — and four of the twenty are kept by default — so a board
+        // nobody had touched said Tuning 1, every visit, forever.
+        await ReadyAsync();
+
+        var page = RenderComponent<TradeBoard>();
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll(".rail-fab.filters")));
+        Assert.Empty(page.FindAll(".rail-fab.filters .n"));
+
+        // And it does still count: moving the reserve off its default is a change worth reporting.
+        Session.SetBoardSettings(liquidSlots: 0);
+
+        var tuned = RenderComponent<TradeBoard>();
+        tuned.WaitForAssertion(() =>
+            Assert.Equal("1", tuned.Find(".rail-fab.filters .n").TextContent.Trim()));
+    }
+
 }

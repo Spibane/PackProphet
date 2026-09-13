@@ -191,6 +191,29 @@ public class ShelfPageTests : AppHost
     }
 
     [Fact]
+    public async Task Neither_shelf_badges_the_way_it_is_arranged()
+    {
+        // The badge on the rail's button answers one question: is something being kept from me.
+        // That is why it is a count of FILTERS. Neither control on either shelf filters — an order
+        // changes what comes first and a layout changes what a row looks like, and both are
+        // legible on the page itself — so the button carried a permanent "1" reporting a setting
+        // that was not even off its default.
+        await ReadyAsync();
+        SeedDecks();
+
+        foreach (var order in new[] { "buildable", "name", "size", "custom" })
+        {
+            Session.SetDeckOrder(order);
+
+            var page = RenderComponent<Decks>();
+            Assert.Empty(page.FindAll(".rail-fab.filters .n"));
+        }
+
+        Session.CreateChaseList("Crowns I want");
+        Assert.Empty(RenderComponent<ChaseLists>().FindAll(".rail-fab.filters .n"));
+    }
+
+    [Fact]
     public async Task The_grip_is_on_the_card_rather_than_in_its_body()
     {
         // It sat in the body under the deck's name, where it read as one more fact about the deck

@@ -26,10 +26,7 @@
    sheet. *@
 
 <div class="page-sheet sheet" popover id="@Id">
-    <div class="rail-handle">
-        <button class="btn btn-sm btn-outline-secondary" popovertarget="@Id"
-                popovertargetaction="hide">Done</button>
-    </div>
+    <SheetHandle For="@Id" Label="@Label" />
 
     @ChildContent
 </div>
@@ -40,6 +37,13 @@
     /// popovertarget resolves to the first and the second can never be opened.
     /// </summary>
     [Parameter, EditorRequired] public string Id { get; set; } = "";
+
+    /// <summary>
+    /// What this sheet is, for its own heading row. The same word the <see cref="SheetOpener"/>
+    /// that opens it carries — they are two halves of one control, and a sheet titled differently
+    /// from the button that produced it is a sheet you are not sure you meant to open.
+    /// </summary>
+    [Parameter] public string Label { get; set; } = "";
 
     /// <summary>The groups themselves, in the order the sheet presents them.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }

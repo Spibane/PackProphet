@@ -1,9 +1,10 @@
 @page "/chase"
 @page "/chase/{Id}"
-@implements IDisposable
+@implements IAsyncDisposable
 @inject AppSession Session
 @inject UiBusy Busy
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>@(_list?.Name ?? "Chase lists") · PackProphet</PageTitle>
 
@@ -37,7 +38,7 @@ else if (Id is null)
     {
         @* The same two groups the decks shelf has, in the same order, because they are the same
            shelf with different things on it. *@
-        <PageRail Id="chase-rail" OpenLabel="View" Count="@(_order == ListOrder.Closest ? 0 : 1)">
+        <PageRail Id="chase-rail" OpenLabel="View" Count="@(_order == "closest" ? 0 : 1)">
             <div class="rail-group">
                 <span class="ttl" id="chase-layout">Layout</span>
                 @* Two views because they answer different questions: the table compares lists
@@ -54,20 +55,26 @@ else if (Id is null)
                 </div>
             </div>
 
+            @* Remembered between visits, as on the deck shelf: an order that reset on arrival is
+               one nobody would set twice. *@
             <div class="rail-group">
                 <span class="ttl">Order</span>
                 <select class="form-select form-select-sm" aria-label="Order the chase lists"
                         @onchange="OnOrder">
-                    <option value="@ListOrder.Closest" selected="@(_order == ListOrder.Closest)">
+                    <option value="closest" selected="@(_order == "closest")">
                         Closest to complete
                     </option>
-                    <option value="@ListOrder.Name" selected="@(_order == ListOrder.Name)">
-                        By name
-                    </option>
-                    <option value="@ListOrder.Size" selected="@(_order == ListOrder.Size)">
-                        Biggest first
-                    </option>
+                    <option value="name" selected="@(_order == "name")">By name</option>
+                    <option value="size" selected="@(_order == "size")">Biggest first</option>
+                    @* Your own arrangement, which no computed key can express. *@
+                    <option value="custom" selected="@(_order == "custom")">My own order</option>
                 </select>
+
+                @if (_order == "custom")
+                {
+                    <span class="rail-hint">Drag a list by its handle, or focus one and use the
+                    arrow keys.</span>
+                }
             </div>
         </PageRail>
     }
@@ -100,10 +107,15 @@ else if (Id is null)
         }
         else if (Session.ChaseGrid)
         {
-            <div class="showcase-grid">
-                @foreach (var list in _lists)
+            <div class="showcase-grid @(_order == "custom" ? "dragsort" : "")" @ref="_shelf">
+                @* Indexed rather than a foreach: the drag handle has to say "3 of 12" out loud,
+                   and a position is not a property of the list. *@
+                @for (var i = 0; i < _lists.Count; i++)
                 {
-                    <div class="showcase @(list.Missing == 0 && list.Wanted > 0 ? "ready" : "")">
+                    var list = _lists[i];
+                    var at = i;
+                    <div class="showcase @(list.Missing == 0 && list.Wanted > 0 ? "ready" : "")"
+                         data-drag-id="@list.Id">
                         @* The face is the rarest card still missing — a chase list is a chase, so the
                            card you have not got yet represents it. A finished list falls back to
                            its rarest card. *@
@@ -118,6 +130,12 @@ else if (Id is null)
 
                         <div class="body">
                             <a class="nm" href="chase/@list.Id">@list.Name</a>
+
+                            @if (_order == "custom")
+                            {
+                                <DragHandle Name="@list.Name" Index="@at" Count="@_lists.Count"
+                                            OnMove="MoveTo" Id="@list.Id" />
+                            }
 
                             <div class="meta">
                                 <span class="small text-body-secondary">
@@ -190,6 +208,10 @@ else if (Id is null)
             <DataTable Label="Your chase lists">
                 <thead>
                     <tr>
+                        @if (_order == "custom")
+                        {
+                            <th scope="col" class="grip"><span class="visually-hidden">Reorder</span></th>
+                        }
                         <th scope="col">Chase List</th>
                         <th scope="col" class="num">Cards Wanted</th>
                         <th scope="col" class="num">Still Missing</th>
@@ -197,10 +219,19 @@ else if (Id is null)
                         <th scope="col"><span class="visually-hidden">Actions</span></th>
                     </tr>
                 </thead>
-                <tbody>
-                    @foreach (var list in _lists)
+                <tbody class="@(_order == "custom" ? "dragsort dragsort-rows" : "")" @ref="_shelf">
+                    @for (var i = 0; i < _lists.Count; i++)
                     {
-                        <tr>
+                        var list = _lists[i];
+                        var at = i;
+                        <tr data-drag-id="@list.Id">
+                            @if (_order == "custom")
+                            {
+                                <td class="grip">
+                                    <DragHandle Name="@list.Name" Index="@at" Count="@_lists.Count"
+                                                OnMove="MoveTo" Id="@list.Id" />
+                                </td>
+                            }
                             <td>
                                 <a href="chase/@list.Id"><strong>@list.Name</strong></a>
                                 @if (list.Id == Session.Profile.WantListId)
@@ -536,15 +567,56 @@ else
     /// How the shelf is ordered. Closest-to-complete answers "what am I nearly done with"; it
     /// cannot answer "where is the one I made last week", and a shelf nobody can sort is fine at
     /// six lists and useless at thirty.
+    ///
+    /// Owned by the session, so it survives leaving the page — see AppSession.ChaseOrder.
     /// </summary>
-    private enum ListOrder { Closest, Name, Size }
-
-    private ListOrder _order = ListOrder.Closest;
+    private string _order => Session.ChaseOrder;
 
     private void OnOrder(ChangeEventArgs e)
     {
-        if (Enum.TryParse<ListOrder>(e.Value?.ToString(), out var order)) _order = order;
-        BuildRows();
+        // No BuildRows() here: SetChaseOrder raises Changed, which this page is subscribed to.
+        if (e.Value?.ToString() is { Length: > 0 } order) Session.SetChaseOrder(order);
+    }
+
+    /// <summary>
+    /// The shelf element, whichever view is drawn, and the drag module bound to it. Only one view
+    /// is in the DOM at a time, but they are different elements — so the binding is re-made when
+    /// the view or the order changes, which is what _boundTo tracks.
+    /// </summary>
+    private ElementReference _shelf;
+    private DragSorter? _sorter;
+    private string _boundTo = "";
+
+    private Task MoveTo((string Id, int To) move)
+    {
+        Session.MoveChaseList(move.Id, move.To);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Where a dropped list landed, from dragsort.js.</summary>
+    private Task Dropped(string id, int index)
+    {
+        Session.MoveChaseList(id, index);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Only the shelf, and only in custom order: the detail view has no shelf to drag, and a
+        // drop into an alphabetical one would be undone by the next render.
+        var want = Id is null && _order == "custom" ? $"{Session.ChaseGrid}" : "";
+        if (want == _boundTo) return;
+
+        _boundTo = want;
+
+        if (_sorter is not null)
+        {
+            await _sorter.DisposeAsync();
+            _sorter = null;
+        }
+
+        if (want.Length > 0)
+            _sorter = await DragSorter.AttachAsync(JS, _shelf, Dropped);
     }
 
     /// <summary>Lists with nothing outstanding, for the bar.</summary>
@@ -750,15 +822,18 @@ else
         @* Sorted after building rather than before: two of the three keys -- how much is missing,
            and how big the list is -- are computed above, so ordering the sources first would mean
            computing them twice. *@
+        // Custom is not a sort: the rows were built by walking Profile.ChaseLists, so they are
+        // already in the order the profile stores them in, which is what dragging rewrites.
         _lists = _order switch
         {
-            ListOrder.Name => _lists
+            "name" => _lists
                 .OrderBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToArray(),
-            ListOrder.Size => _lists
+            "size" => _lists
                 .OrderByDescending(l => l.Wanted)
                 .ThenBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToArray(),
+            "custom" => _lists,
             _ => _lists
                 .OrderBy(l => l.Missing)
                 .ThenBy(l => l.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -852,5 +927,9 @@ else
 
     private static string Fmt(double packs) => Text.Fmt.Packs(packs);
 
-    public void Dispose() => Session.Changed -= OnChanged;
+    public async ValueTask DisposeAsync()
+    {
+        Session.Changed -= OnChanged;
+        if (_sorter is not null) await _sorter.DisposeAsync();
+    }
 }

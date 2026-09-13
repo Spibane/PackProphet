@@ -90,7 +90,9 @@ public class ShelfPageTests : AppHost
         Assert.Contains("By name", options);
 
         // And it actually reorders: by name puts Articuno before Zapdos, buildability does not.
-        await page.InvokeAsync(() => order.Change("Name"));
+        // The value is the stored vocabulary rather than the page's own enum -- an order outlives
+        // the component that reads it, so Prefs keeps a string.
+        await page.InvokeAsync(() => order.Change("name"));
 
         page.WaitForAssertion(() =>
         {
@@ -98,6 +100,94 @@ public class ShelfPageTests : AppHost
             Assert.True(names.Length >= 2, "need two decks to tell an order from a coincidence");
             Assert.Equal(names.OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase), names);
         });
+    }
+
+    [Fact]
+    public async Task The_shelf_remembers_what_it_was_last_ordered_by()
+    {
+        // A shelf is somewhere you come back to. The order lived in a field on the page, so every
+        // arrival reset it to the default and nobody would have bothered setting it twice.
+        await ReadyAsync();
+        SeedDecks();
+
+        var page = RenderComponent<Decks>();
+        var order = page.Find(".page-rail select[aria-label='Order the decks']");
+        await page.InvokeAsync(() => order.Change("name"));
+
+        Assert.Equal("name", Session.DeckOrder);
+
+        // A fresh render of the page is the same thing as coming back to it.
+        var again = RenderComponent<Decks>();
+        var selected = again.FindAll(".page-rail select[aria-label='Order the decks'] option")
+                            .Single(o => o.HasAttribute("selected"));
+
+        Assert.Equal("name", selected.GetAttribute("value"));
+    }
+
+    [Fact]
+    public async Task A_shelf_can_be_put_in_an_order_of_your_own()
+    {
+        // The three computed orders rank decks by a property. "These two first because I am playing
+        // them this week" is not a property of a deck, so it cannot be a sort — it is an
+        // arrangement, and the arrangement is the order the profile stores them in.
+        await ReadyAsync();
+        SeedDecks();
+
+        var page = RenderComponent<Decks>();
+        var order = page.Find(".page-rail select[aria-label='Order the decks']");
+        await page.InvokeAsync(() => order.Change("custom"));
+
+        // A grip per deck, and nothing to grip in any other order.
+        page.WaitForAssertion(() =>
+            Assert.Equal(Session.Profile.Decks.Count, page.FindAll("[data-drag-handle]").Count));
+
+        var stored = Session.Profile.Decks.Select(d => d.Name).ToArray();
+        var shown = page.FindAll("tbody [data-drag-id]")
+                        .Select(r => Flat(r.QuerySelector("td a strong")!.TextContent))
+                        .ToArray();
+        Assert.Equal(stored, shown);
+
+        // The last deck moved to the front, which is what a drop at index 0 means.
+        var last = Session.Profile.Decks[^1];
+        Session.MoveDeck(last.Id, 0);
+
+        Assert.Equal(last.Id, Session.Profile.Decks[0].Id);
+        Assert.Equal(stored.Length, Session.Profile.Decks.Count);
+
+        page.WaitForAssertion(() => Assert.Equal(
+            last.Name,
+            Flat(page.FindAll("tbody [data-drag-id] td a strong").First().TextContent)));
+
+        await page.InvokeAsync(() => order.Change("name"));
+        page.WaitForAssertion(() => Assert.Empty(page.FindAll("[data-drag-handle]")));
+    }
+
+    [Fact]
+    public async Task Reordering_never_loses_or_duplicates_an_item()
+    {
+        // The move is a removal and an insertion, and an index counted against the list BEFORE the
+        // removal is off by one for every move down the shelf. Whatever it does to the order, it
+        // has to leave the same decks on it.
+        await ReadyAsync();
+        SeedDecks();
+
+        var ids = Session.Profile.Decks.Select(d => d.Id).ToArray();
+        Assert.True(ids.Length >= 3, "need three decks for a move to be able to land wrong");
+
+        foreach (var to in new[] { 0, 1, ids.Length - 1, ids.Length + 5, -3 })
+        {
+            Session.MoveDeck(ids[1], to);
+
+            var after = Session.Profile.Decks.Select(d => d.Id).ToArray();
+            Assert.Equal(ids.Length, after.Length);
+            Assert.Equal(ids.OrderBy(x => x, StringComparer.Ordinal),
+                         after.OrderBy(x => x, StringComparer.Ordinal));
+        }
+
+        // An id the shelf does not hold changes nothing, rather than throwing or inserting a hole.
+        var before = Session.Profile.Decks.Select(d => d.Id).ToArray();
+        Session.MoveDeck("no-such-deck", 0);
+        Assert.Equal(before, Session.Profile.Decks.Select(d => d.Id).ToArray());
     }
 
     [Fact]

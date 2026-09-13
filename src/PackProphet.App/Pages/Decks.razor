@@ -1,6 +1,7 @@
 @page "/decks"
 @inject AppSession Session
-@implements IDisposable
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>Decks · PackProphet</PageTitle>
 
@@ -37,7 +38,7 @@ else
         @* Two groups, which is the argument for a rail over a sidebar: the collection's has seven
            and this has two, and both are the right size for the page they are on. A fixed sidebar
            would have to pad one of them. *@
-        <PageRail Id="decks-rail" OpenLabel="View" Count="@(_order == DeckOrder.Buildable ? 0 : 1)">
+        <PageRail Id="decks-rail" OpenLabel="View" Count="@(_order == "buildable" ? 0 : 1)">
             <div class="rail-group">
                 <span class="ttl" id="decks-layout">Layout</span>
                 @* Two views because they answer different questions: the table compares decks
@@ -54,24 +55,33 @@ else
                 </div>
             </div>
 
-            @* New here. The shelf has always been closest-to-buildable first, which is the right
-               default and the wrong only option: it answers "what can I play tonight" and cannot
-               answer "where is the one I made last week". A shelf of six does not need a sort; a
-               shelf of thirty does, and nobody's stays at six. *@
+            @* The shelf has always been closest-to-buildable first, which is the right default and
+               the wrong only option: it answers "what can I play tonight" and cannot answer "where
+               is the one I made last week". A shelf of six does not need a sort; a shelf of thirty
+               does, and nobody's stays at six.
+
+               Remembered between visits, because a shelf is somewhere you come back to and an order
+               that reset on arrival is one nobody would set twice. *@
             <div class="rail-group">
                 <span class="ttl">Order</span>
                 <select class="form-select form-select-sm" aria-label="Order the decks"
                         @onchange="OnOrder">
-                    <option value="@DeckOrder.Buildable" selected="@(_order == DeckOrder.Buildable)">
+                    <option value="buildable" selected="@(_order == "buildable")">
                         Closest to buildable
                     </option>
-                    <option value="@DeckOrder.Name" selected="@(_order == DeckOrder.Name)">
-                        By name
-                    </option>
-                    <option value="@DeckOrder.Size" selected="@(_order == DeckOrder.Size)">
-                        Fullest first
-                    </option>
+                    <option value="name" selected="@(_order == "name")">By name</option>
+                    <option value="size" selected="@(_order == "size")">Fullest first</option>
+                    @* Your own arrangement, which no computed key can express: the three above rank
+                       decks by a property, and "these two first because I am playing them this
+                       week" is not a property of a deck. *@
+                    <option value="custom" selected="@(_order == "custom")">My own order</option>
                 </select>
+
+                @if (_order == "custom")
+                {
+                    <span class="rail-hint">Drag a deck by its handle, or focus one and use the
+                    arrow keys.</span>
+                }
             </div>
         </PageRail>
     }
@@ -88,13 +98,20 @@ else
         {
             <h2 class="sub-head">
                 Your decks
-                <span class="small text-body-secondary fw-normal">Closest to buildable first</span>
+                @* What the shelf is actually in, rather than the default said unconditionally. It
+                   read "Closest to buildable first" under every order the rail could pick. *@
+                <span class="small text-body-secondary fw-normal">@OrderSaid</span>
             </h2>
 
-            <div class="showcase-grid">
-                @foreach (var deck in _decks)
+            <div class="showcase-grid @(_order == "custom" ? "dragsort" : "")" @ref="_shelf">
+                @* Indexed rather than a foreach: the drag handle has to say "3 of 12" out loud,
+                   and a position is not a property of the deck. *@
+                @for (var i = 0; i < _decks.Count; i++)
                 {
-                    <div class="showcase @(deck.Missing == 0 && deck.Cards > 0 ? "ready" : "")">
+                    var deck = _decks[i];
+                    var at = i;
+                    <div class="showcase @(deck.Missing == 0 && deck.Cards > 0 ? "ready" : "")"
+                         data-drag-id="@deck.Id">
                         @* The deck's face card, chosen as its rarest — in practice the card the
                            deck is named after and the one you recognise it by. *@
                         <a class="face" href="decks/@deck.Id"
@@ -108,6 +125,12 @@ else
 
                         <div class="body">
                             <a class="nm" href="decks/@deck.Id">@deck.Name</a>
+
+                            @if (_order == "custom")
+                            {
+                                <DragHandle Name="@deck.Name" Index="@at" Count="@_decks.Count"
+                                            OnMove="MoveTo" Id="@deck.Id" />
+                            }
 
                             <div class="meta">
                                 @foreach (var energy in deck.Energies)
@@ -174,15 +197,17 @@ else
         }
         else
         {
-            @* Closest-to-buildable order rather than alphabetical, so the decks nearest to
-               finished lead. *@
             <h2 class="sub-head">
                 Your decks
-                <span class="small text-body-secondary fw-normal">Closest to buildable first</span>
+                <span class="small text-body-secondary fw-normal">@OrderSaid</span>
             </h2>
             <DataTable Label="Saved decks">
                 <thead>
                     <tr>
+                        @if (_order == "custom")
+                        {
+                            <th scope="col" class="grip"><span class="visually-hidden">Reorder</span></th>
+                        }
                         <th scope="col">Deck</th>
                         <th scope="col" class="num">Cards</th>
                         <th scope="col" class="num">Missing</th>
@@ -190,10 +215,19 @@ else
                         <th scope="col"><span class="visually-hidden">Actions</span></th>
                     </tr>
                 </thead>
-                <tbody>
-                    @foreach (var deck in _decks)
+                <tbody class="@(_order == "custom" ? "dragsort dragsort-rows" : "")" @ref="_shelf">
+                    @for (var i = 0; i < _decks.Count; i++)
                     {
-                        <tr>
+                        var deck = _decks[i];
+                        var at = i;
+                        <tr data-drag-id="@deck.Id">
+                            @if (_order == "custom")
+                            {
+                                <td class="grip">
+                                    <DragHandle Name="@deck.Name" Index="@at" Count="@_decks.Count"
+                                                OnMove="MoveTo" Id="@deck.Id" />
+                                </td>
+                            }
                             <td>
                                 <a href="decks/@deck.Id"><strong>@deck.Name</strong></a>
                             </td>
@@ -267,20 +301,70 @@ else
         PocketCard? Face, IReadOnlyList<PocketCard> Strip);
 
     /// <summary>
-    /// How the shelf is ordered.
-    ///
-    /// Closest-to-buildable is the default and answers "what can I play tonight", which is the
-    /// question the page exists for. It cannot answer "where is the one I made last week", and a
-    /// shelf nobody can sort is fine at six decks and useless at thirty.
+    /// How the shelf is ordered. Owned by the session rather than by this field, so it survives
+    /// leaving the page — see AppSession.DeckOrder.
     /// </summary>
-    private enum DeckOrder { Buildable, Name, Size }
-
-    private DeckOrder _order = DeckOrder.Buildable;
+    private string _order => Session.DeckOrder;
 
     private void OnOrder(ChangeEventArgs e)
     {
-        if (Enum.TryParse<DeckOrder>(e.Value?.ToString(), out var order)) _order = order;
-        Build();
+        // Build() is not called here. SetDeckOrder raises Changed, which this page is subscribed
+        // to, and that rebuilds -- calling both would order the shelf twice per change.
+        if (e.Value?.ToString() is { Length: > 0 } order) Session.SetDeckOrder(order);
+    }
+
+    /// <summary>The order in words, under the heading, so the shelf says what it is in.</summary>
+    private string OrderSaid => _order switch
+    {
+        "name" => "By name",
+        "size" => "Fullest first",
+        "custom" => "Your own order",
+        _ => "Closest to buildable first",
+    };
+
+    /// <summary>
+    /// The shelf element, whichever view is drawn. Only one of the two is ever in the DOM, so one
+    /// field serves both -- but they are different elements, so the drag module has to be re-bound
+    /// when the view changes, which is what _boundTo tracks.
+    /// </summary>
+    private ElementReference _shelf;
+    private DragSorter? _sorter;
+    private string _boundTo = "";
+
+    private Task MoveTo((string Id, int To) move)
+    {
+        Session.MoveDeck(move.Id, move.To);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Where a dropped deck landed, from dragsort.js. The DOM has already been rearranged by the
+    /// drag; this makes it true, and the re-render that follows puts the elements back in an order
+    /// that now matches.
+    /// </summary>
+    private Task Dropped(string id, int index)
+    {
+        Session.MoveDeck(id, index);
+        return InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Custom is the only order a drag means anything in: dropping a deck halfway down an
+        // alphabetical shelf would be undone by the next render.
+        var want = _order == "custom" ? $"{Session.DeckGrid}" : "";
+        if (want == _boundTo) return;
+
+        _boundTo = want;
+
+        if (_sorter is not null)
+        {
+            await _sorter.DisposeAsync();
+            _sorter = null;
+        }
+
+        if (want.Length > 0)
+            _sorter = await DragSorter.AttachAsync(JS, _shelf, Dropped);
     }
 
     /// <summary>How many decks could be built right now, for the bar.</summary>
@@ -298,7 +382,11 @@ else
         Build();
     }
 
-    public void Dispose() => Session.Changed -= OnChanged;
+    public async ValueTask DisposeAsync()
+    {
+        Session.Changed -= OnChanged;
+        if (_sorter is not null) await _sorter.DisposeAsync();
+    }
 
     private void OnChanged()
     {
@@ -311,16 +399,20 @@ else
         if (!Session.Ready) return;
 
         @* The engine still owns the default order -- it is the one that needs MissingCount, which
-           is the session's to compute -- and the other two are re-sorts of what it returns. *@
+           is the session's to compute -- and the others are re-sorts of what it returns.
+
+           Custom is not a sort at all: it is the order the profile already stores its decks in,
+           which is what dragging rewrites. *@
         var ordered = _order switch
         {
-            DeckOrder.Name => Session.Profile.Decks
+            "name" => Session.Profile.Decks
                 .OrderBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToArray(),
-            DeckOrder.Size => Session.Profile.Decks
+            "size" => Session.Profile.Decks
                 .OrderByDescending(d => d.DeckBuilderNrs.Count)
                 .ThenBy(d => d.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToArray(),
+            "custom" => [.. Session.Profile.Decks],
             _ => Session.DecksByBuildability,
         };
 

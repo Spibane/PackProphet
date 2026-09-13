@@ -1,0 +1,56 @@
+@* The grip on one item of a reorderable shelf: press it and drag, or focus it and use the arrows.
+
+   THE ARROWS ARE NOT A FALLBACK
+   ==================================================================================
+   They are the only way to do this without a pointer, and dragging is the only thing on either
+   shelf that a keyboard could not otherwise reach. A drag handle with no key bindings is a feature
+   that exists for some people.
+
+   They are also faster than dragging for the common case, which is one item moved one place.
+
+   The glyph is the braille-pattern grip, which is what a grabbable edge looks like everywhere else;
+   the label is what says which deck or list it belongs to, since the glyph is the same six dots on
+   all of them. *@
+
+<button type="button" class="drag-handle" data-drag-handle
+        aria-label="@($"Reorder {Name}, {Index + 1} of {Count}")"
+        title="Drag to reorder, or use the arrow keys"
+        @onkeydown="OnKey"
+        @onclick:preventDefault="true">&#10287;</button>
+
+@code {
+    /// <summary>The item this grips, for the label — the glyph is identical on every row.</summary>
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+
+    /// <summary>The item's id, which is what the move is reported against.</summary>
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+
+    /// <summary>Where it currently sits, zero-based, and how many there are — both spoken.</summary>
+    [Parameter] public int Index { get; set; }
+    [Parameter] public int Count { get; set; }
+
+    /// <summary>Called with the item's id and the index it should move to.</summary>
+    [Parameter, EditorRequired] public EventCallback<(string Id, int To)> OnMove { get; set; }
+
+    /// <summary>
+    /// Up and down move by one; Home and End take it to an end, which is the move worth having a
+    /// shortcut for on a shelf of thirty. Left and right as well as up and down, because the grid
+    /// view lays the same shelf out in rows and "up" there is a row, not an item.
+    /// </summary>
+    private Task OnKey(KeyboardEventArgs e)
+    {
+        var to = e.Key switch
+        {
+            "ArrowUp" or "ArrowLeft" => Index - 1,
+            "ArrowDown" or "ArrowRight" => Index + 1,
+            "Home" => 0,
+            "End" => Count - 1,
+            _ => Index,
+        };
+
+        // Clamped rather than wrapped: an item at the top that jumps to the bottom on one more
+        // press of Up is an item you have lost.
+        to = Math.Clamp(to, 0, Math.Max(0, Count - 1));
+        return to == Index ? Task.CompletedTask : OnMove.InvokeAsync((Id, to));
+    }
+}

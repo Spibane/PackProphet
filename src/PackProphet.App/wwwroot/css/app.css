@@ -4266,9 +4266,15 @@ tr.row-best {
 
 .card-detail .detail-main { min-inline-size: 0; }
 
-/* The second micro label on the page -- "The card" -- opens a new part of it, so it needs the air
-   a section break would have. The first one is inside the lead and spaces itself. */
-.card-detail .detail-main > .micro { margin-block-start: 1.75rem; }
+/* The second micro label on the page -- "The card" -- opens a new part of it: everything above is
+   what the card costs to get, everything below is what is printed on it. Fenced like one, because
+   air alone was not reading as a boundary with a paragraph of pack-points prose ending just above
+   it. The first micro is inside the lead and spaces itself. */
+.card-detail .detail-main > .micro {
+    margin-block-start: 1.75rem;
+    padding-block-start: 1.1rem;
+    border-top: 1px solid var(--bs-border-color);
+}
 
 /* The printed facts, as a line. Six rows of two cells where the left cell is always a label is a
    table doing a list's job, and it sat above the answer.
@@ -4298,17 +4304,37 @@ tr.row-best {
     background-color: var(--bs-secondary-bg);
     background-size: cover; background-position: center; background-repeat: no-repeat;
 }
-/* The one caller with room to spare. This is a dedicated control on a full page rather than a
-   cell in a row, and its buttons were already 31px before they were shared, so taking the
-   constrained default here would shrink a target that was never too small. */
-.card-detail .own-row { --step-size: 2rem; display: flex; align-items: center; gap: .5rem; margin: .6rem 0 .4rem; }
+/* The counter, as a box the width of the card above it.
+   ------------------------------------------------------------------------------
+   It was four items in a row that sized themselves -- label, minus, count, plus -- so the count
+   sat wherever the label left it, the whole thing was as wide as its own text, and it had no edge
+   to say it was one control rather than four.
+
+   The one caller with room to spare, so the steppers keep 2rem: this is a dedicated control on a
+   full page rather than a cell in a row, and taking the constrained default would shrink a target
+   that was never too small. */
+.card-detail .own-row {
+    --step-size: 2rem;
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+    margin: .7rem 0 .4rem;
+    padding: .3rem .35rem .3rem .7rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--pp-r-sm);
+}
+.card-detail .own-row .steps { display: flex; align-items: center; gap: .4rem; }
 .card-detail .own-row .label { font-size: .9rem; color: var(--bs-secondary-color); }
 .card-detail .own-row .count { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 1.2rem; text-align: center; }
 
-/* Wraps, unlike the owned counter beside it: the number of wishlists is up to the user, and
-   a row of them must not push the art column out of shape. */
-.card-detail .want-row { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; margin: .2rem 0 .5rem; }
-.card-detail .want-row .label { font-size: .9rem; color: var(--bs-secondary-color); }
+/* Stacked, each the width of the card above them.
+   ------------------------------------------------------------------------------
+   This was an inline row that wrapped, which at 15rem means it always wrapped: a label, the heart,
+   one list button, and the next list alone on a second line at whatever width its name happened to
+   be. A column of equal buttons is both narrower and steadier -- adding a chase list makes the
+   stack one taller rather than reflowing everything above it. */
+.card-detail .want-row {
+    display: flex; flex-direction: column; align-items: stretch;
+    gap: .3rem; margin: 0 0 .5rem;
+}
 /* The heart, first in the want row and always present. Tinted rather than filled when on, so it
    matches the hearts in the grid rather than the primary-filled wishlist buttons beside it -- those
    carry counts and mean "one more", this one means on or off. */
@@ -4324,9 +4350,14 @@ tr.row-best {
     font-weight: 600;
 }
 
-/* The list button and its remove stay glued together, so a row of several wishlists cannot
-   wrap between a name and the minus that belongs to it. */
-.card-detail .want-pair { display: inline-flex; align-items: center; gap: .15rem; }
+/* The list button and its remove stay glued together, so a wishlist name and the minus that
+   belongs to it cannot end up on separate rows. The name takes the room and the minus takes what
+   it needs, so every list button in the stack starts at the same edge. */
+.card-detail .want-pair { display: flex; align-items: stretch; gap: .25rem; }
+.card-detail .want-pair > .btn:first-child { flex: 1; min-inline-size: 0; text-align: start; }
+
+/* The heart is a full-width button here rather than a chip in a row, so its contents centre. */
+.card-detail .want-heart { justify-content: center; }
 
 .card-detail .attack { padding: .35rem 0; border-top: 1px solid var(--bs-border-color); }
 .card-detail .attack .cost { display: inline-flex; gap: .1rem; margin-right: .35rem; }

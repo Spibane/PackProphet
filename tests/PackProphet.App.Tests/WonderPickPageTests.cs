@@ -201,19 +201,19 @@ public class WonderPickPageTests : AppHost
             && !packs.Contains(pack, StringComparer.OrdinalIgnoreCase));
 
         var picker = page.FindComponent<PackProphet.Components.CardPicker>();
-        page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(first)).GetAwaiter().GetResult();
+        await page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(first));
         page.WaitForState(() => page.FindAll(".box-strip .box").Count > 0, TimeSpan.FromSeconds(10));
 
         // A card from another pack is refused...
         picker = page.FindComponent<PackProphet.Components.CardPicker>();
-        page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(stranger)).GetAwaiter().GetResult();
+        await page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(stranger));
 
         Assert.DoesNotContain(page.FindAll(".box-strip .box .visually-hidden"),
             b => b.TextContent.Trim() == stranger.Name);
 
         // ...and one from the same pack still lands, so the rule narrows rather than locks.
         picker = page.FindComponent<PackProphet.Components.CardPicker>();
-        page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(cards[1])).GetAwaiter().GetResult();
+        await page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(cards[1]));
 
         page.WaitForAssertion(() =>
             Assert.Equal(2, page.FindAll(".box-strip .box .visually-hidden").Count),
@@ -237,7 +237,7 @@ public class WonderPickPageTests : AppHost
 
         var (_, cards) = AnOfferFrom();
         var picker = page.FindComponent<PackProphet.Components.CardPicker>();
-        page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(cards[0])).GetAwaiter().GetResult();
+        await page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(cards[0]));
 
         page.WaitForAssertion(() =>
         {
@@ -255,7 +255,7 @@ public class WonderPickPageTests : AppHost
     {
         var page = WithOffer();
 
-        page.InvokeAsync(() => page.Find(".offer-clear").Click()).GetAwaiter().GetResult();
+        await page.InvokeAsync(() => page.Find(".offer-clear").Click());
 
         page.WaitForAssertion(() =>
             Assert.Equal("Add card 1 of 5", Flat(page.Find(".sub-head").TextContent)),

@@ -39,6 +39,32 @@ public class CollectionPageTests : AppHost
     }
 
     [Fact]
+    public async Task A_tap_opens_the_card_when_tapping_does_not_count_it()
+    {
+        // Tapping is OFF by default, which used to mean a tile answered nothing at all: the whole
+        // of the app's largest surface was inert until you turned a counting mode on. The name in
+        // the caption is a way to detail and a long press is another, but on a phone one is four
+        // points of text and the other is a gesture nothing announces.
+        //
+        // It can only mean this in the off mode. In the counting modes a tap already means "I own
+        // one more", and that is the gesture the screen is built around.
+        var page = await PageAsync();
+
+        var nav = Services.GetRequiredService<NavigationManager>();
+        nav.NavigateTo("collection");
+
+        var tile = page.FindAll(".card-tile").FirstOrDefault();
+        Assert.NotNull(tile);
+
+        // The caption's link is the same card, so it is what the tap has to agree with.
+        var expected = tile!.QuerySelector("a.info")!.GetAttribute("href");
+        Assert.StartsWith("card/", expected);
+
+        tile.Click();
+        Assert.EndsWith(expected, nav.Uri);
+    }
+
+    [Fact]
     public async Task Every_filter_renders()
     {
         // Each of these is a different predicate over the card list, and one of them — the

@@ -1642,10 +1642,35 @@ else
         if (_sweep is not null) await _sweep.InvokeVoidAsync("setSweep", Sweeping);
     }
 
-    private Task Activate((int Index, bool Invert) a) =>
-        a.Index >= 0 && a.Index < Cards.Count && DeltaFor(a.Invert) is { } delta
-            ? OnAdjust.InvokeAsync((Cards[a.Index], delta))
-            : Task.CompletedTask;
+    /// <summary>
+    /// A tap on a tile. In either counting mode it is the count that moves; with tapping off it
+    /// opens the card instead.
+    ///
+    /// WHY OFF IS NOT NOTHING
+    /// ==================================================================================
+    /// Off is the default, so the default state of the app's largest surface was a grid of three
+    /// thousand things that do not answer a tap. The name in the caption is the way to detail and
+    /// a long press is the other, but on a phone the name is four points of text and a long press
+    /// is a gesture nothing announces — so what a thumb actually met was a dead picture.
+    ///
+    /// It cannot mean this in the counting modes: there a tap already means "I own one more", and
+    /// that is the gesture the whole screen is built around. Off is the one mode with the tap
+    /// spare, and detail is the thing a card has to say that a tile cannot.
+    ///
+    /// The inverting gesture is left alone. Right-click still removes a copy in every mode, which
+    /// is deliberate enough that nobody does it while scrolling.
+    /// </summary>
+    private Task Activate((int Index, bool Invert) a)
+    {
+        if (a.Index < 0 || a.Index >= Cards.Count) return Task.CompletedTask;
+
+        var card = Cards[a.Index];
+
+        if (DeltaFor(a.Invert) is { } delta) return OnAdjust.InvokeAsync((card, delta));
+
+        if (!a.Invert) OpenDetail(card);
+        return Task.CompletedTask;
+    }
 
     // ---- keyboard, from js/gridkeys.js ---------------------------------------------
     // The cursor lives in JS so moving it costs no renders; these are the points where a key

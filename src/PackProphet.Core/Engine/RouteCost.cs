@@ -135,10 +135,17 @@ public sealed class RouteCost
 
         // Trading needs a same-rarity card to offer as well as the dust, so report which gate is
         // blocking rather than collapsing both to one number.
-        var spares = _index.All
-            .Where(c => c.Rarity == card.Rarity && c.OwnershipKey != card.OwnershipKey)
-            .DistinctBy(c => c.OwnershipKey)
-            .Sum(c => Math.Max(0, owned.Of(c) - 1));
+        //
+        // Counted per RARITY and then adjusted, rather than per card. This scanned the whole index
+        // -- every printing in the game -- and allocated a DistinctBy set, once per card it was
+        // asked about. Recommending a board prices every outstanding demand, so a fresh profile
+        // ran that scan 2,373 times over 3,700 cards and the wishlist blocked the browser's one
+        // thread for five seconds.
+        //
+        // The sum does not actually depend on the card. It is "spares I hold at this rarity",
+        // whose only per-card part is that the card cannot be offered against itself -- so the
+        // rarity's total is computed once and this card's own contribution taken back off it.
+        var spares = SparesOfRarity(card.Rarity, owned) - Math.Max(0, owned.Of(card) - 1);
 
         var note = spares > 0
             ? $"{spares} spare {card.Rarity} to offer."
@@ -149,6 +156,37 @@ public sealed class RouteCost
             Stamina: GameRules.TradeStaminaPerTrade,
             Note: note);
     }
+
+    /// <summary>
+    /// Spare copies held at one rarity — every printing of it, counting a card owned three times
+    /// as two spares, de-duplicated by ownership key so a card re-listed in several sets is not
+    /// counted twice.
+    ///
+    /// Memoised against the collection it was counted from. A Collection is immutable — every
+    /// edit produces a new one through With() — so a different instance is a different collection
+    /// and the table is dropped rather than invalidated entry by entry. There are about a dozen
+    /// rarities, so what is kept is a dozen ints.
+    /// </summary>
+    private int SparesOfRarity(string rarity, Collection owned)
+    {
+        if (!ReferenceEquals(_sparesFrom, owned))
+        {
+            _sparesFrom = owned;
+            _sparesByRarity.Clear();
+        }
+
+        if (_sparesByRarity.TryGetValue(rarity, out var cached)) return cached;
+
+        var spares = _index.All
+            .Where(c => c.Rarity == rarity)
+            .DistinctBy(c => c.OwnershipKey)
+            .Sum(c => Math.Max(0, owned.Of(c) - 1));
+
+        return _sparesByRarity[rarity] = spares;
+    }
+
+    private Collection? _sparesFrom;
+    private readonly Dictionary<string, int> _sparesByRarity = new(StringComparer.Ordinal);
 
     /// <summary>
     /// A friend sends the card and gets nothing back. Free, and gated only by a daily allowance

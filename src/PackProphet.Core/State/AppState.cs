@@ -178,6 +178,25 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     /// </summary>
     public bool ChaseGrid { get; init; }
 
+    /// <summary>
+    /// How the deck shelf is ordered: "buildable", "name", "size", or "custom".
+    ///
+    /// Persisted, because the shelf is a place you return to and an order that reset on every
+    /// visit is one nobody would bother setting. Null means never chosen, and the reader supplies
+    /// the default -- so this could be added without a schema bump, and an order written by a
+    /// later version that this one does not know falls back rather than throwing.
+    ///
+    /// A string rather than the page's enum, for the same reason <see cref="BoardFoils"/> is one:
+    /// the enum is a detail of one component and the stored value outlives it.
+    /// </summary>
+    public string? DeckOrder { get; init; }
+
+    /// <summary>
+    /// How the chase shelf is ordered: "closest", "name", "size", or "custom". Separate from
+    /// <see cref="DeckOrder"/>, on the same argument as the two grid flags.
+    /// </summary>
+    public string? ChaseOrder { get; init; }
+
     /// <summary>The v3 spelling of <see cref="ChaseGrid"/>. Read and cleared, as on the profile.</summary>
     public bool? WishGrid { get; init; }
 

@@ -1369,6 +1369,57 @@ main:has(> .page-body.railed) > .page-head {
 .slot-cap > .nm:hover { color: var(--bs-primary); text-decoration: underline; }
 .slot-cap > .rr { font-size: .7rem; line-height: 1.25; }
 
+/* reordering a shelf
+   ==================================================================================
+   The grip on one item, and what the shelf looks like while one is being carried. See
+   js/dragsort.js for why the drag is pointer events rather than HTML5 dragging, and DragHandle
+   for why the arrow keys are not a fallback. */
+.drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.9rem;
+    block-size: 1.9rem;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--pp-r-xs);
+    background: none;
+    color: var(--bs-tertiary-color);
+    font-size: 1.05rem;
+    line-height: 1;
+    /* The gesture is the point: without this a vertical drag on a phone scrolls the page and the
+       item never moves. dragsort.js only claims the gesture once it is definitely a drag, so a
+       scroll that happens to start on the grip is still a scroll. */
+    touch-action: none;
+    cursor: grab;
+}
+.drag-handle:hover { border-color: var(--bs-border-color); color: var(--bs-body-color); }
+.drag-handle:active { cursor: grabbing; }
+
+/* The narrow column the grip sits in, so a row of a table does not give it a quarter of the width. */
+.grip { inline-size: 1px; padding-inline-end: 0; white-space: nowrap; }
+
+/* The item being carried. Lifted rather than hidden: what is being dragged has to stay legible,
+   because where it lands is judged against the items it is passing. */
+.dragsort .dragging {
+    opacity: .85;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+}
+.dragsort .dragging .drag-handle { cursor: grabbing; }
+
+/* Text selection while dragging is a drag of a different kind, and it fights this one -- a slow
+   press that turns into a move leaves a blue streak across the shelf. */
+.dragsort.dragging-in { user-select: none; }
+
+/* A line of guidance under the control it belongs to, where the control needs one: the rail says
+   how to reorder only while the order is one you can reorder. */
+.rail-hint {
+    font-size: .75rem;
+    line-height: 1.35;
+    color: var(--bs-tertiary-color);
+    text-wrap: pretty;
+}
+
 /* A note in a rail: a line that names something, and the detail under it. Not a control and not a
    figure -- the wishlist's "cannot be listed" is a footnote about cards that are NOT on the board,
    which under the board read as part of it. */

@@ -1130,6 +1130,72 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// How each shelf is ordered, remembered between visits. The shelf is somewhere you come back
+    /// to, and an order that reset on arrival is one nobody would set twice.
+    ///
+    /// The default is the answer the page exists to give -- "what can I build tonight", "what am I
+    /// nearly done with" -- and an unrecognised stored value falls back to it rather than throwing,
+    /// so a profile written by a later version still opens.
+    /// </summary>
+    public string DeckOrder => Known(State.Prefs.DeckOrder, DeckOrders, "buildable");
+
+    public void SetDeckOrder(string order)
+    {
+        if (order == DeckOrder) return;
+        State = State with { Prefs = State.Prefs with { DeckOrder = order } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    public string ChaseOrder => Known(State.Prefs.ChaseOrder, ChaseOrders, "closest");
+
+    public void SetChaseOrder(string order)
+    {
+        if (order == ChaseOrder) return;
+        State = State with { Prefs = State.Prefs with { ChaseOrder = order } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    private static readonly string[] DeckOrders = ["buildable", "name", "size", "custom"];
+    private static readonly string[] ChaseOrders = ["closest", "name", "size", "custom"];
+
+    private static string Known(string? stored, string[] allowed, string fallback) =>
+        stored is not null && Array.IndexOf(allowed, stored) >= 0 ? stored : fallback;
+
+    /// <summary>
+    /// A deck moved to a new position on the shelf.
+    ///
+    /// The custom order IS the order the profile stores its decks in, rather than a separate list
+    /// of ids beside it. A parallel list has to be reconciled with every add and delete, and the
+    /// two drift the first time one is written without the other -- where this cannot: a new deck
+    /// lands at the end because that is where it was appended, and a deleted one leaves no gap.
+    /// </summary>
+    public void MoveDeck(string id, int to) =>
+        Mutate(p => p with { Decks = Reordered(p.Decks, d => d.Id, id, to) });
+
+    /// <summary>A chase list moved to a new position, on the same reasoning as <see cref="MoveDeck"/>.</summary>
+    public void MoveChaseList(string id, int to) =>
+        Mutate(p => p with { ChaseLists = Reordered(p.ChaseLists, l => l.Id, id, to) });
+
+    /// <summary>
+    /// One item lifted out and put back at <paramref name="to"/>, counted against the list with the
+    /// item already removed -- which is what a drop between two neighbours means, and why the index
+    /// is clamped after the removal rather than before it.
+    /// </summary>
+    private static List<T> Reordered<T>(IReadOnlyList<T> items, Func<T, string> idOf, string id, int to)
+    {
+        var next = new List<T>(items);
+        var from = next.FindIndex(x => idOf(x) == id);
+        if (from < 0) return next;
+
+        var moving = next[from];
+        next.RemoveAt(from);
+        next.Insert(Math.Clamp(to, 0, next.Count), moving);
+        return next;
+    }
+
     public bool DeckGrid => State.Prefs.DeckGrid;
 
     public void SetDeckGrid(bool on)

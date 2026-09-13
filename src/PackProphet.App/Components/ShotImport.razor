@@ -309,12 +309,15 @@
                     Name one and it joins the list above. Leave it and nothing happens to it.
                 </p>
 
+                @{ var pool = PoolFor(reading); }
                 @foreach (var slot in shot.Reading.UnreadSlots)
                 {
                     <SlotFix Slot="slot"
                              Group="@($"{_group}-{shot.Id}")"
                              Picked="@shot.Picks.GetValueOrDefault((slot.Row, slot.Col))"
                              PreferSets="reading.SetsSeen"
+                             Only="@(pool?.Cards)"
+                             OnlyLabel="@(pool?.Label)"
                              OnPick="card => Name(shot, slot, card)" />
                 }
             </section>
@@ -631,6 +634,39 @@
         CardScreen.PackReveal => "the cards from a pack",
         _ => "a Wonder Pick line-up",
     };
+
+    /// <summary>
+    /// The cards this picture can be of, where that is a short enough list to be worth searching
+    /// instead of the whole game.
+    ///
+    /// A hand comes out of ONE pack, and the cards that WERE read say which one -- so the slot the
+    /// reader could not name is one of that pack's eighty-odd cards and cannot be anything else.
+    /// Offering all three thousand instead answers a closed question with an open list, and the
+    /// answers it offers first are reprints of the same Pokemon from other sets: precisely the
+    /// resemblance that stopped the slot being read in the first place.
+    ///
+    /// Null where there is nothing sound to narrow with, and each case is a real one: a card list
+    /// is a SET rather than a pack and its cards span every pack in it; a hand of shared high
+    /// rarities fits several packs; nothing was recognised at all. A wrong restriction is worse
+    /// than none, because the card the user is looking at would not be in it.
+    /// </summary>
+    private (IReadOnlyList<PocketCard> Cards, string Label)? PoolFor(ShotReading reading)
+    {
+        if (!IsHand(reading)) return null;
+
+        var guess = PackIdentifier.Identify(Session.Index, reading);
+        var packs = guess.PackKey is { } one ? [one] : guess.Candidates;
+        if (packs.Count == 0) return null;
+
+        var cards = packs
+            .SelectMany(key => Session.Index.ByPack.GetValueOrDefault(key) ?? [])
+            .DistinctBy(c => c.Key)
+            .ToArray();
+
+        return cards.Length == 0
+            ? null
+            : (cards, string.Join(" or ", packs.Select(k => k.Split(':')[1])));
+    }
 
     /// <summary>Whether this reading came off the one screen that prints how many copies you hold.</summary>
     private static bool ShowsCopies(ShotReading reading) =>

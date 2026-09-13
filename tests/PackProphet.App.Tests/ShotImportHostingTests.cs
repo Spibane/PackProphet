@@ -480,6 +480,108 @@ public class ShotImportHostingTests : AppHost
         Assert.False(Session.CanUndo);
     }
 
+    /// <summary>
+    /// A hand where four cards fingerprint and the fifth does not: the pack is determined, and one
+    /// slot still has to be named by hand.
+    /// </summary>
+    private static ShotScan HandWithOneUnread()
+    {
+        var scan = HandScan([.. MewtwoHand.Take(4)]);
+        scan.Cells.Add(new ShotCell
+        {
+            // A hash that matches nothing in the table, which is what an artwork the reader cannot
+            // place looks like by the time it reaches the page.
+            Row = 1, Col = 1, Hash = new string('f', 32),
+            Detail = 0.07, Saturation = 0.45, Luma = 0.5,
+        });
+        return scan;
+    }
+
+    /// <summary>A card of the same set that this pack cannot give, chosen from the data rather than
+    /// named here: which cards a pack holds changes, and a hard-coded one quietly stops testing
+    /// anything the day it becomes a card the pack does hold.</summary>
+    private string OutsideTheMewtwoPack()
+    {
+        var inside = Session.Index.ByPack["A1:Mewtwo"]
+            .Select(c => c.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return Session.Index.All
+            .First(c => c.Set == "A1" && !inside.Contains(c.Name) && c.Name.Length > 4)
+            .Name;
+    }
+
+    [Fact]
+    public async Task A_slot_you_have_to_name_is_searched_within_the_pack_the_picture_is_of()
+    {
+        // The cards that WERE read say which pack this is, and a pack holds about eighty cards. So
+        // the slot that was not read is one of those eighty and cannot be anything else.
+        //
+        // Searching the whole game for it answers a closed question with an open list — and the
+        // answers it puts first are the same Pokémon printed in other sets, which is the exact
+        // resemblance that stopped the slot being read in the first place.
+        StubScan(HandWithOneUnread());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        Upload(page);
+
+        var box = page.Find("input[type=search]");
+
+        // It says which pack it is over. A short list is only obviously right if you can see what
+        // makes it short.
+        Assert.Contains("Mewtwo", box.GetAttribute("placeholder"));
+
+        // A card of the same set that this pack cannot give. Nothing, because this picture cannot
+        // be of it.
+        box.Input(OutsideTheMewtwoPack());
+        page.WaitForAssertion(
+            () => Assert.Contains("Search every card", page.Markup),
+            TimeSpan.FromSeconds(3));
+        Assert.Empty(page.FindAll(".btn-outline-primary"));
+
+        // And a card the pack does hold comes back — with every hit from that pack, which is the
+        // assertion that would fail if the restriction were only a sort order.
+        var inside = Session.Index.ByPack["A1:Mewtwo"];
+        box.Input(inside[0].Name);
+        page.WaitForAssertion(
+            () => Assert.NotEmpty(page.FindAll(".btn-outline-primary")),
+            TimeSpan.FromSeconds(3));
+
+        var keys = inside.Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
+        Assert.All(page.FindAll(".btn-outline-primary"), hit =>
+            Assert.Contains(hit.QuerySelector("span")!.TextContent.Trim(), keys));
+    }
+
+    [Fact]
+    public async Task The_short_list_can_be_escaped_when_the_pack_was_guessed_wrong()
+    {
+        // The pack is worked out from the cards that were read, so it can be wrong — a hand of
+        // shared high rarities, a reprint recognised as its original printing. It is rare, and when
+        // it happens the card in front of you is not in the list at all, so a restriction with no
+        // way past it is a slot that can never be named.
+        StubScan(HandWithOneUnread());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        Upload(page);
+
+        var box = page.Find("input[type=search]");
+        box.Input(OutsideTheMewtwoPack());
+        page.WaitForAssertion(
+            () => Assert.Contains("Search every card", page.Markup),
+            TimeSpan.FromSeconds(3));
+
+        page.FindAll("button").First(b => b.TextContent.Contains("Search every card")).Click();
+
+        page.WaitForAssertion(
+            () => Assert.NotEmpty(page.FindAll(".btn-outline-primary")),
+            TimeSpan.FromSeconds(3));
+
+        // And it stops claiming to be over one pack once it is not.
+        Assert.DoesNotContain("Mewtwo", page.Find("input[type=search]").GetAttribute("placeholder"));
+    }
+
     [Fact]
     public async Task More_cards_than_an_offer_holds_is_flagged_rather_than_truncated_silently()
     {

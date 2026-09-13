@@ -1,5 +1,6 @@
 using PackProphet.Data;
 using PackProphet.Deck;
+using PackProphet.Text;
 
 namespace PackProphet.Tests;
 
@@ -168,7 +169,11 @@ public class CrossValidationTests
     {
         // The deck linter warns when an evolution's pre-evolution is absent, which is only
         // meaningful if evolves-from actually names a card we know.
-        var names = Ix.All.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        //
+        // Through CardName, because that is what the app compares with -- the two datasets write
+        // an apostrophe differently and an ordinal comparison here would be testing something the
+        // app does not do. See PackProphet.Text.CardName.
+        var names = Ix.All.Select(c => c.Name).ToHashSet(CardName.Comparer);
 
         var dangling = Ix.ByDeckBuilderNr.Keys
             .Select(Facts.For)

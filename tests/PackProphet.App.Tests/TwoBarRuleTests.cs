@@ -225,4 +225,40 @@ public class TwoBarRuleTests : AppHost
         // headings went straight past the page's own name.
         Assert.Single(page.FindAll("h1"));
     }
+
+    [Theory]
+    [MemberData(nameof(ParameterlessPages))]
+    public async Task Only_the_floating_button_opens_a_rail(string typeName)
+    {
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        var rails = page.FindAll(".page-rail").Select(r => r.Id).Where(id => id is { Length: > 0 }).ToHashSet();
+        if (rails.Count == 0) return;
+
+        // The rail is a column above 900px and a sheet below, and the sheet half is keyed to the
+        // popover being OPEN rather than to a width -- `.sheet:popover-open`, which at two class
+        // selectors outweighs the rule that makes it a column. So a rail that is open above the
+        // fold paints as a full-width sheet over the page.
+        //
+        // Nothing may open one except the floating button, which the stylesheet hides at exactly
+        // the width where the column takes over. A second opener anywhere else -- a bar button, a
+        // link in an empty state -- is visible at that width and would put the rail into the one
+        // state it has no layout for. js/railfold.js closes it if the viewport crosses while it is
+        // open; this stops a page offering the trip in the first place.
+        foreach (var opener in page.FindAll("[popovertarget]").ToArray())
+        {
+            var target = opener.GetAttribute("popovertarget");
+            if (target is null || !rails.Contains(target)) continue;
+
+            // Openers only. The sheet's own Done button points at the rail too, to close it, and
+            // it lives inside the rail rather than in the fabs -- a control that can only ever
+            // take the rail OUT of the state this is about.
+            if (opener.GetAttribute("popovertargetaction") == "hide") continue;
+
+            Assert.NotNull(opener.Closest(".rail-fabs"));
+        }
+    }
 }

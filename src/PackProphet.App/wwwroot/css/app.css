@@ -4249,21 +4249,46 @@ tr.row-best {
    Three columns on a wide screen: the art with its ownership control, the printed card, and how
    to get it. Collapses to one column on a phone, art first. */
 
+/* Two columns, not three: the card on the left and everything the page says on the right.
+   ------------------------------------------------------------------------------
+   It was art, then printed statistics, then routes -- so the answer ("how do I get this") was in
+   the third column of three, and the first two thirds of the page were a picture of the card and a
+   table of facts printed on that picture.
+
+   The middle column is gone. Facts run under the answer as one line, which is what they are. */
 .card-detail {
     display: grid;
-    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1.25rem;
+    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+    gap: 1.5rem;
     align-items: start;
 }
-/* Two columns on a tablet, and the third child then wraps onto a second row -- into column ONE,
-   which is the 12rem art column. So "How to get it" was a four-column table of packs, points, dust
-   and trades rendered 192px wide, on the widths where there is the most room to spare. It spans the
-   full width instead: it is a table, and a table in a sidebar column is the one place it cannot go. */
-@media (width <= 1100px) {
-    .card-detail { grid-template-columns: minmax(0, 12rem) minmax(0, 1fr); }
-    .card-detail .routes { grid-column: 1 / -1; }
+@media (width <= 760px) { .card-detail { grid-template-columns: minmax(0, 1fr); } }
+
+.card-detail .detail-main { min-inline-size: 0; }
+
+/* The second micro label on the page -- "The card" -- opens a new part of it, so it needs the air
+   a section break would have. The first one is inside the lead and spaces itself. */
+.card-detail .detail-main > .micro { margin-block-start: 1.75rem; }
+
+/* The printed facts, as a line. Six rows of two cells where the left cell is always a label is a
+   table doing a list's job, and it sat above the answer.
+
+   Separated by a drawn middot rather than a written one, so the marks keep their spaces however
+   Razor collapses the whitespace around the elements -- the same reason the page bar's does. */
+.card-detail .fact-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0;
+    margin-block: .5rem 1rem;
+    font-size: .95rem;
 }
-@media (width <= 760px)  { .card-detail { grid-template-columns: minmax(0, 1fr); } }
+.card-detail .fact-row > .f { display: inline-flex; align-items: center; gap: .3rem; }
+.card-detail .fact-row > .f + .f::before {
+    content: "\00b7";
+    margin-inline: .5rem;
+    color: var(--bs-secondary-color);
+}
 
 /* Ratio matched to the art so `contain` and `cover` coincide and nothing is cropped. */
 .card-detail .big-art {

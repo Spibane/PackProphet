@@ -74,15 +74,25 @@ public class CardDetailTests : AppHost
         await ReadyAsync();
         var card = Session.Index.All.First(c => !c.IsPromo);
 
-        var notes = Session.Routes.For(card, Session.Owned).Options
+        var routes = Session.Routes.For(card, Session.Owned);
+        var notes = routes.Options
             .Where(o => o.Available && o.Note is { Length: > 0 })
             .ToArray();
         Assert.NotEmpty(notes);
 
         var page = Open(card.Key);
-        var rendered = page.Find(".route-notes").TextContent;
 
-        Assert.All(notes, n => Assert.Contains(n.Note!, rendered));
+        // Every one of them is on the page. The cheapest route's is the sentence under the display
+        // figure, because that is the price it explains; the rest are the list below the strip.
+        // Printing the cheapest one in both places reads as two different facts about one price.
+        Assert.All(notes, n => Assert.Contains(n.Note!, page.Markup));
+
+        if (routes.Cheapest?.Note is { Length: > 0 } lead)
+        {
+            Assert.Contains(lead, page.Find(".verdict-lead .says").TextContent);
+            Assert.DoesNotContain(lead, page.FindAll(".route-notes").Count == 0
+                ? "" : page.Find(".route-notes").TextContent);
+        }
     }
 
     [Fact]

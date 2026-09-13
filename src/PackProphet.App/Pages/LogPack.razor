@@ -34,7 +34,7 @@ else if (_pack is null)
                and only grows, and a set heading answers "which set is this pack from", which a pack
                name like "Mewtwo" does not. Defaults to the newest series, where packs are usually
                being opened. *@
-            <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Series" @onchange="OnSeries">
+            <select class="form-select form-select-sm" aria-label="Series" @onchange="OnSeries">
                 @foreach (var series in Session.Sets.Series)
                 {
                     <option value="@series" selected="@(_series == series)">Series @series</option>
@@ -68,7 +68,7 @@ else if (_pack is null)
 
         <div class="rail-group">
             <span class="ttl">Layout</span>
-            <select class="form-select form-select-sm" style="max-width:7rem" aria-label="Columns in the grid" @onchange="OnCols">
+            <select class="form-select form-select-sm" aria-label="Columns in the grid" @onchange="OnCols">
                 @foreach (var n in new[] { 2, 3, 4, 5, 6, 8 })
                 {
                     <option value="@n" selected="@(n == Session.PackColumns)">@n Cols</option>

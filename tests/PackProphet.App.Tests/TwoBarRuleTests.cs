@@ -261,4 +261,30 @@ public class TwoBarRuleTests : AppHost
             Assert.NotNull(opener.Closest(".rail-fabs"));
         }
     }
+
+    [Theory]
+    [MemberData(nameof(ParameterlessPages))]
+    public async Task No_control_in_a_rail_carries_its_own_width(string typeName)
+    {
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        // Every control in a rail runs the column's full width, which is a stylesheet rule -- and
+        // an inline style beats it however the rule is written. The pack log kept two widths from
+        // its bar days, 11rem on the series picker and 7rem on the column count, so its three
+        // controls came out three different lengths in a column sized to the widest of them: the
+        // rail then reads as one control with two short ones under it rather than as a set.
+        //
+        // Swept rather than fixed twice, because the width belongs to the BAR these controls came
+        // from. Any control moved into a rail from a toolbar arrives carrying one.
+        foreach (var control in page.FindAll(".page-rail select, .page-rail input, .page-rail .btn").ToArray())
+        {
+            var style = control.GetAttribute("style");
+            if (style is null) continue;
+
+            Assert.DoesNotContain("width", style, StringComparison.OrdinalIgnoreCase);
+        }
+    }
 }

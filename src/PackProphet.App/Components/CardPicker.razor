@@ -393,6 +393,22 @@ else
 
     [Parameter] public Func<PocketCard, bool> CanPick { get; set; } = _ => true;
 
+    /// <summary>
+    /// Narrows what is SEARCHABLE, where <see cref="CanPick"/> decides whether a row that was
+    /// found is enabled. Wonder Pick uses it: after the first card the offer can only hold cards
+    /// from the same pack, and a search answering with forty greyed-out rows is a worse answer
+    /// than one answering with the four that qualify.
+    /// </summary>
+    [Parameter] public Func<PocketCard, bool>? Only { get; set; }
+
+    /// <summary>
+    /// What <see cref="Only"/> is currently restricting to, as a value that can be compared.
+    /// A delegate cannot be: the parent builds a fresh closure every render, so equality is
+    /// always false and the search would re-run on every keystroke of the page around it. When
+    /// this changes the results are stale by definition, so the search runs again.
+    /// </summary>
+    [Parameter] public string? OnlyKey { get; set; }
+
     /// <summary>Word after the count on a chosen row: "in deck", "wanted".</summary>
     [Parameter] public string PickedLabel { get; set; } = "in deck";
 
@@ -445,6 +461,18 @@ else
     {
         _ownedOnly = !AllCardsDefault;
         Session.Changed += OnSessionChanged;
+    }
+
+    private string? _onlyKey;
+    private bool _onlySeen;
+
+    protected override void OnParametersSet()
+    {
+        if (_onlySeen && _onlyKey == OnlyKey) return;
+
+        _onlySeen = true;
+        _onlyKey = OnlyKey;
+        RunSearch();
     }
 
     public void Dispose()
@@ -593,6 +621,8 @@ else
         {
             var (card, nr, fact) = _pool[i];
 
+            if (Only is not null && !Only(card)) continue;
+
             var owned = Session.CountOf(card);
             if (query.OwnedOnly && owned == 0) continue;
 
@@ -622,8 +652,14 @@ else
             var wider = query with { OwnedOnly = false };
             var count = 0;
             for (var i = 0; i < _pool.Length; i++)
+            {
+                // Same restriction as the scan above. "None owned, 12 elsewhere" has to mean 12
+                // you could actually pick, or the offer to widen leads to an empty list.
+                if (Only is not null && !Only(_pool[i].Card)) continue;
+
                 if (CardSearch.Rank(_pool[i].Card, _pool[i].Fact, wider, blobs?[i]) != CardSearch.Hit.None)
                     count++;
+            }
 
             _elsewhere = count;
         }

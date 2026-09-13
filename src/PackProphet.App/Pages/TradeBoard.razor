@@ -369,18 +369,17 @@ else
            every later visit. The verdict and the "I have made these changes" button stay above:
            those are the answer and the action, not the explanation. *@
         <p class="small text-body-secondary">
-            The wishlist is an advertisement &mdash; other players see it and offer. Slots are free
-            and never expire, so the board holds the @GameRules.TradeBoardSlots
-            <strong>tradeable cards you still want that cost the most to get any other way</strong>,
-            a few of them kept for cards someone plausibly has spare.
+            The wishlist is an advertisement: other players see it and offer. Slots are free, so
+            it holds the @GameRules.TradeBoardSlots <strong>tradeable cards that cost you most to
+            get any other way</strong>, a few kept for cards someone plausibly has spare.
         </p>
 
         @if (ShowFoilFilter)
         {
             <p class="small text-body-secondary">
-                <strong>Parallel foils</strong> are listed as the 1-3 diamond cards they are printed
-                as, which sets trade eligibility and dust price. Exclude them above if the game will
-                not let you wishlist a foil.
+                <strong>Parallel foils</strong> count as the 1-3 diamond cards they are printed
+                as, which sets their dust price. Exclude them above if the game will not let you
+                wishlist one.
             </p>
         }
 
@@ -390,20 +389,19 @@ else
             @if (_plan.Slots.Any(s => s.Band == BoardBand.Liquid))
             {
                 <p class="small text-body-secondary">
-                    The @_plan.Slots.Count(s => s.Band == BoardBand.Liquid)
+                The @_plan.Slots.Count(s => s.Band == BoardBand.Liquid)
                     <strong>&ldquo;widely held&rdquo;</strong> slots go to cards more copies of
-                    which likely exist: drop rate times how long the set has been on sale. A weak
-                    guess &mdash; it cannot know who would part with one. Set the reserve to
-                    <strong>0</strong> to rank purely by cost.
+                    which likely exist &mdash; drop rate times time on sale, which cannot know who
+                    would part with one. Set the reserve to <strong>0</strong> to rank on cost
+                    alone.
                 </p>
             }
 
             @if (_plan.Slots.Any(s => s.SparesAtRarity == 0))
             {
                 <p class="small text-body-secondary">
-                    A trade needs a same-rarity card to give back, so <em>no spare to give</em>
-                    means you could not honour the request today. Kept anyway &mdash; a spare may
-                    turn up first.
+                    A trade needs a same-rarity card back, so <em>no spare to give</em> means you
+                    could not honour the request today. Kept anyway &mdash; a spare may turn up.
                 </p>
             }
 

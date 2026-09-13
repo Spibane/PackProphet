@@ -594,6 +594,9 @@ public class ShotImportHostingTests : AppHost
         var page = RenderComponent<WonderPick>();
         Upload(page);
 
-        Assert.Contains("more than one offer", page.Markup);
+        // On the fact rather than on the sentence: what has to reach the reader is that the
+        // picture holds more than one offer and that only the first five would be used.
+        Assert.Contains("two offers", page.Markup);
+        Assert.Contains("Crop to one", page.Markup);
     }
 }

@@ -89,10 +89,9 @@ else if (Id is null)
         @* A chase list is the one target the app cannot derive, so the empty state says what it is
            for rather than only that there is nothing here. *@
         <p class="text-body-secondary small mb-3">
-            Any set of cards you want, for any reason. The pack ranking prices a chase list exactly
-            as it prices a rarity target. Unlike a deck, a chase list wants a particular
-            <strong>printing</strong>: the alternate art is not satisfied by the plain
-            one.
+            Any cards you want, for any reason, priced by the pack ranking like a rarity target.
+            It wants a particular <strong>printing</strong> &mdash; the alternate art, not the
+            plain one.
         </p>
 
         @* The action as well as the fact. The decks page next door answers both questions an
@@ -403,15 +402,15 @@ else
     <PageShell>
     <div class="summary">
         <div class="stat">
-            <span class="label">Cards Wanted</span>
+            <span class="label">Cards wanted</span>
             <span class="value">@Session.WantedTotal(_list)</span>
         </div>
         <div class="stat">
-            <span class="label">Still Missing</span>
+            <span class="label">Still missing</span>
             <span class="value">@_missing</span>
         </div>
         <div class="stat">
-            <span class="label">Expected Packs</span>
+            <span class="label">Expected packs</span>
             <span class="value">@Fmt(_packs)</span>
             @* As on the Packs page, an estimate never appears without saying what it covers, since
                a card no pack sells changes the scope. *@

@@ -1,7 +1,9 @@
 @page "/log"
 @implements IDisposable
+@implements IAsyncDisposable
 @inject AppSession Session
 @inject UiBusy Busy
+@inject IJSRuntime JS
 
 <PageTitle>Log a pack · PackProphet</PageTitle>
 
@@ -552,6 +554,26 @@ else
     }
 
     protected override void OnParametersSet() => ApplyQuery();
+
+    /// <summary>
+    /// The grid stays where it is when the slots above it grow.
+    ///
+    /// Tapping the first card of a pack fills a box that was empty with the card's art and a
+    /// caption, so the strip goes from a row of outlines to a row of pictures and everything under
+    /// it drops by about the height of one. What is under it is the grid you are tapping in, so
+    /// the card you were aiming at next moves out from under your thumb at the exact moment you
+    /// are looking at the slot rather than at the grid.
+    ///
+    /// The pack key is the token: choosing a different pack rebuilds the screen, and a position
+    /// remembered from the pack before is not a change in height.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) _anchor = await ScrollAnchor.LoadAsync(JS);
+        if (_anchor is not null) await _anchor.KeepAsync(".grid-wrap", _pack ?? "");
+    }
+
+    private ScrollAnchor? _anchor;
 
     /// <summary>
     /// Open the pack named in the URL, once. An unknown key is IGNORED rather than reported:
@@ -1114,5 +1136,11 @@ else
     {
         Session.Changed -= OnChanged;
         Busy.Changed -= OnChanged;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_anchor is not null) await _anchor.DisposeAsync();
+        _anchor = null;
     }
 }

@@ -4734,9 +4734,21 @@ tr.row-best {
     font-size: .95rem;
 }
 .card-detail .fact-row > .f { display: inline-flex; align-items: center; gap: .3rem; }
-.card-detail .fact-row > .f + .f::before {
+/* The mark belongs to the item BEFORE it, not the one after.
+   ----------------------------------------------------------------------------------
+   As a ::before it led its own item, so whenever the line wrapped the new line opened with the
+   separator and its half-em of margin -- the type, which is always first, sat flush at the margin
+   and every line under it started twelve pixels in. On a phone this line wraps three times, so
+   what it looked like was one item out of alignment with the rest.
+
+   As an ::after the mark can only ever END a line, which is where a separator says "this
+   continues" rather than shifting the thing that follows it. Same convention as the page bar's
+   subtitle, which separates its readings the same way. */
+.card-detail .fact-row > .f:not(:last-child)::after {
     content: "\00b7";
-    margin-inline: .5rem;
+    /* Inside an inline-flex box, so the item's own .3rem gap is already there on the leading side;
+       the start margin makes up the difference rather than adding a second gap to it. */
+    margin-inline: .2rem .5rem;
     color: var(--bs-secondary-color);
 }
 

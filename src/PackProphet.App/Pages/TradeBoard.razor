@@ -553,8 +553,14 @@ else
     /// The scope is not one of them. It is the question the page is answering rather than a
     /// narrowing of it, and it is named in full in the subtitle.
     /// </summary>
+    /// <summary>
+    /// How many of the three knobs are turned away from where they ship. Against the DEFAULT
+    /// rather than against zero: four slots are kept for likely offers unless you say otherwise,
+    /// so "more than none" was true on a fresh install and the badge read 1 for a board nobody had
+    /// tuned. A badge that is always lit says nothing.
+    /// </summary>
     private int TuningCount =>
-        (_liquidSlots > 0 ? 1 : 0)
+        (_liquidSlots != TradeBoardAdvisor.DefaultLiquidSlots ? 1 : 0)
         + (ShowFoilFilter && _foils != "with" ? 1 : 0)
         + (_floor > 0 ? 1 : 0);
 

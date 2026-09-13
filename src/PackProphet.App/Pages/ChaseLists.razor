@@ -38,7 +38,12 @@ else if (Id is null)
     {
         @* The same two groups the decks shelf has, in the same order, because they are the same
            shelf with different things on it. *@
-        <PageRail Id="chase-rail" OpenLabel="View" Count="@(_order == "closest" ? 0 : 1)">
+        @* No Count. The badge answers "is something being kept from me", which is why it is
+           on a page whose rail FILTERS -- and neither control in here filters: an order
+           changes what comes first and a layout changes what a row looks like, and both
+           are legible on the page itself. A permanent "1" beside View reported a setting
+           that was the default. *@
+        <PageRail Id="chase-rail" OpenLabel="View">
             <div class="rail-group">
                 <span class="ttl" id="chase-layout">Layout</span>
                 @* Two views because they answer different questions: the table compares lists

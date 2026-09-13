@@ -63,9 +63,19 @@
         }
         else
         {
-            <label class="form-label small mb-1" for="@_id">@Where</label>
+            <label class="form-label small mb-1" for="@_id">
+                @Where
+                @* Which cards the box is over. A short list is only obviously right if you can see
+                   what makes it short -- otherwise a card that is genuinely missing from it reads
+                   as a broken search. *@
+                @if (Narrowed)
+                {
+                    <span class="text-body-secondary fw-normal">&middot; @OnlyLabel</span>
+                }
+            </label>
             <input id="@_id" class="form-control form-control-sm" type="search"
-                   placeholder="Type the card's name" autocomplete="off"
+                   placeholder="@(Narrowed ? $"Type a name from {OnlyLabel}" : "Type the card's name")"
+                   autocomplete="off"
                    value="@_text" @oninput="OnTyped" />
 
             @if (_results.Count > 0)
@@ -95,7 +105,23 @@
             }
             else if (_searched && _text.Trim().Length >= MinLength)
             {
-                <p class="small text-body-secondary mb-0 mt-1">No card of that name.</p>
+                <p class="small text-body-secondary mb-0 mt-1">
+                    @if (Narrowed)
+                    {
+                        @* The pack is worked out from the cards that WERE read, so it can be wrong
+                           -- a hand of shared rarities, a reprint read as its original. Rare, and
+                           when it happens the right card is not in the list at all, so there has to
+                           be a way past it. Offered only here, where the short list has already
+                           failed, rather than as a switch beside every box. *@
+                        <text>No @_text.Trim() in @OnlyLabel.</text>
+                        <button type="button" class="btn btn-sm btn-link p-0 align-baseline ms-1"
+                                @onclick="Widen">Search every card</button>
+                    }
+                    else
+                    {
+                        <text>No card of that name.</text>
+                    }
+                </p>
             }
         }
     </div>
@@ -133,6 +159,18 @@
     /// </summary>
     [Parameter] public IReadOnlyList<string> PreferSets { get; set; } = [];
 
+    /// <summary>
+    /// The only cards this slot can be, where the host knows. A pack reveal and a Wonder Pick are
+    /// each one pack, and the cards already read say which -- so the unread slot is one of that
+    /// pack's cards and searching the rest of the game for it only offers lookalikes from other
+    /// sets. Null leaves the search over everything, which is right for a card list: that screen is
+    /// a set, and a set's cards are spread across all of its packs.
+    /// </summary>
+    [Parameter] public IReadOnlyList<PocketCard>? Only { get; set; }
+
+    /// <summary>What that list is, in the user's words — the pack's name.</summary>
+    [Parameter] public string? OnlyLabel { get; set; }
+
     /// <summary>Distinguishes this row's field and label from every other slot's on the page.</summary>
     [Parameter] public string Group { get; set; } = "slot";
 
@@ -144,6 +182,12 @@
 
     private bool _searched;
     private int _more;
+
+    /// <summary>Set once the short list has failed and the reader has asked for the long one.</summary>
+    private bool _widened;
+
+    /// <summary>Whether the box is currently over one pack rather than over the whole game.</summary>
+    private bool Narrowed => !_widened && Only is { Count: > 0 } && OnlyLabel is { Length: > 0 };
     private IReadOnlyList<PocketCard> _results = [];
     private CancellationTokenSource? _typing;
 
@@ -194,7 +238,7 @@
         var query = new CardQuery(text);
         var preferred = PreferSets.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var hits = Session.Index.All
+        var hits = (Narrowed ? Only! : Session.Index.All)
             .Select(card => (Card: card, Rank: CardSearch.Rank(card, null, query)))
             .Where(h => h.Rank != CardSearch.Hit.None)
             .OrderByDescending(h => preferred.Contains(h.Card.Set))
@@ -218,4 +262,11 @@
     }
 
     private Task Clear() => OnPick.InvokeAsync(null);
+
+    /// <summary>Drop the pack restriction and search again with what is already typed.</summary>
+    private void Widen()
+    {
+        _widened = true;
+        Search();
+    }
 }

@@ -12,12 +12,33 @@ public class CardDataLoaderTests
     /// <summary>Generous against the loader's own five-second deadline, so a slow CI box does not fail it.</summary>
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(20);
 
+    /// <summary>
+    /// The art-manifest deadline for every test that is not ABOUT the art-manifest deadline.
+    ///
+    /// The app ships three seconds, which is generous for a round trip to its own origin and not
+    /// generous at all for three seconds of a machine running this suite in parallel with a dev
+    /// server. When it fires, the loader reports "no vendored art" -- the same answer as the 404
+    /// that legitimately means it -- so the manifest test failed about one run in twenty, alone,
+    /// with an empty collection, and only ever when something else was using the CPU.
+    ///
+    /// A wall clock is not a measure of whether this code works, so these tests do not use one.
+    /// </summary>
+    private static readonly TimeSpan Unhurried = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// And the opposite, for the two tests whose subject IS the deadline. Explicit rather than
+    /// leaning on whatever the app's default happens to be: they assert that a manifest which
+    /// never arrives does not hold the boot open, and how long "never" waits is the point.
+    /// </summary>
+    private static readonly TimeSpan Impatient = TimeSpan.FromMilliseconds(250);
+
     private static CardDataLoader Loader(Func<CancellationToken, Task<HttpResponseMessage>>? onRemote,
-                                        string? artManifest = null) =>
+                                        string? artManifest = null,
+                                        TimeSpan? artDeadline = null) =>
         new(new HttpClient(new SnapshotHandler(onRemote, artManifest))
         {
             BaseAddress = new Uri("https://test.local/")
-        });
+        }, artDeadline ?? Unhurried);
 
     /// <summary>A connection held open with no response — a network that drops packets to the CDN.</summary>
     private static async Task<HttpResponseMessage> Hang(CancellationToken ct)
@@ -29,7 +50,7 @@ public class CardDataLoaderTests
     [Fact]
     public async Task A_hanging_cdn_still_boots_from_the_snapshot()
     {
-        var data = await Loader(Hang).LoadAsync().WaitAsync(Patience);
+        var data = await Loader(Hang, artDeadline: Impatient).LoadAsync().WaitAsync(Patience);
 
         Assert.Equal(DataSource.VendoredSnapshot, data.Source);
         Assert.True(data.Index.All.Count > 3000, $"only {data.Index.All.Count} cards");
@@ -47,6 +68,10 @@ public class CardDataLoaderTests
         // every other test class boots a loader of its own and resets it, so a global assertion
         // here passes alone and races in the suite. What the URLs then look like is ArtSourceTests'
         // job. This is only the wiring.
+        //
+        // And it runs without the app's three-second manifest deadline, which is what actually made
+        // this flake: under load it fired, the loader answered "no vendored art" exactly as it does
+        // for a 404, and the assertion below failed on an empty collection.
         var data = await Loader(null, """{"sets":["B4a"],"packs":["Team Rocket"]}""").LoadAsync();
 
         Assert.Contains("B4a", data.VendoredArtSets);
@@ -74,7 +99,7 @@ public class CardDataLoaderTests
         // through the reported set list as well as the clock: a boot that returned but claimed a
         // vendored set would pass a timing check and then serve local urls for art it does not
         // have.
-        var data = await Loader(Hang).LoadAsync().WaitAsync(Patience);
+        var data = await Loader(Hang, artDeadline: Impatient).LoadAsync().WaitAsync(Patience);
 
         Assert.Equal(DataSource.VendoredSnapshot, data.Source);
         Assert.Empty(data.VendoredArtSets);
@@ -85,7 +110,7 @@ public class CardDataLoaderTests
     {
         // The local copy is tried first here, so this proves the deadline did not break the
         // ordinary path rather than that it fired.
-        var facts = await Loader(Hang).LoadFactsAsync().WaitAsync(Patience);
+        var facts = await Loader(Hang, artDeadline: Impatient).LoadFactsAsync().WaitAsync(Patience);
 
         Assert.True(facts.Count > 0, "no card detail loaded");
     }
@@ -124,7 +149,8 @@ public class CardDataLoaderTests
         IReadOnlyDictionary<string, string>? remoteFiles)
     {
         var handler = new SnapshotHandler(remoteFiles: remoteFiles);
-        return (new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") }),
+        return (new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") },
+                                   Unhurried),
                 handler);
     }
 

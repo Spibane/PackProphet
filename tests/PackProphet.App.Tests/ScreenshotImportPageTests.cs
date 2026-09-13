@@ -240,21 +240,36 @@ public class ScreenshotImportPageTests : AppHost
 
         // Typed and then waited on, because the search is debounced -- a scan of every card in the
         // game on each keystroke is what that delay is there to avoid.
+        //
+        // Waited FOR rather than slept through. This was Task.Delay(600), which is a guess about
+        // how long someone else's machine takes: it held on an idle box and lost on a loaded one,
+        // where the result had not rendered yet and First() threw on an empty sequence. Polling
+        // passes the moment the row appears and only spends the budget when it does not.
         fix.Find("input[type=search]").Input("Charmander");
-        await Task.Delay(600);
-        fix.Render();
 
-        var pick = fix.FindAll("button").First(b => b.TextContent.Contains("A1-33"));
-        pick.Click();
+        fix.WaitForAssertion(() =>
+            Assert.Contains(fix.FindAll("button"), b => b.TextContent.Contains("A1-33")));
+
+        // Found and clicked inside one InvokeAsync, the way every other click in this suite is:
+        // the wait above renders, and an element handle taken before a render has no handler
+        // attached by the time it is clicked.
+        await fix.InvokeAsync(() =>
+            fix.FindAll("button").First(b => b.TextContent.Contains("A1-33")).Click());
 
         // In the table as a card the user named, in its own slot, and counted apart from what the
-        // artwork managed.
-        Assert.Contains("you named it", page.Markup);
-        Assert.Contains("Named by hand", page.Markup);
+        // artwork managed. Waited for as well: the pick folds into the reading through the page
+        // above it, so the table it lands in is a render away rather than a return away. The sleep
+        // this replaces was covering that too, by accident.
+        page.WaitForAssertion(() =>
+        {
+            Assert.Contains("you named it", page.Markup);
+            Assert.Contains("Named by hand", page.Markup);
+        });
         Assert.DoesNotContain("could not be named", page.Markup);
 
-        page.Find("button.btn-primary").Click();
-        Assert.Equal(1, Session.CountOf(Session.Index.ByKey["A1-33"]));
+        await page.InvokeAsync(() => page.Find("button.btn-primary").Click());
+        page.WaitForAssertion(() =>
+            Assert.Equal(1, Session.CountOf(Session.Index.ByKey["A1-33"])));
     }
 
     [Fact]

@@ -790,11 +790,11 @@ else
            control only reachable by scrolling past all of them may as well not exist. *@
         <div class="summary">
             <div class="stat">
-                <span class="label">Cards Still Needed</span>
+                <span class="label">Cards still needed</span>
                 <span class="value">@_outstanding</span>
             </div>
             <div class="stat">
-                <span class="label">Expected Packs</span>
+                <span class="label">Expected packs</span>
                 <span class="value">@Fmt(_bestCase)</span>
                 <span class="sub">
                     @* Always say what the number covers. When a pack is unavailable its exclusive
@@ -806,7 +806,7 @@ else
             @if (Session.AssumedRates.Count > 0)
             {
                 <div class="stat">
-                    <span class="label">Assumed Rates</span>
+                    <span class="label">Assumed rates</span>
                     <span class="value">@Session.AssumedRates.Count set(s)</span>
                     <span class="sub">
                         @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
@@ -1477,11 +1477,15 @@ else
         if (Math.Abs(one - rounded) < .12) return $"1 pack in {rounded:N0}";
 
         // Otherwise the other way up, in thirds, quarters or fifths -- whichever lands closest.
+        //
+        // Pluralised, because the numerator reaches this branch at one: a chance of .233 rounds to
+        // a quarter here rather than to "1 in 4" above, and the verdict on the pack ranking read
+        // "About 1 packs in 4".
         foreach (var den in new[] { 3, 4, 5 })
         {
-            var num = Math.Round(chance * den);
-            if (num >= 1 && num < den && Math.Abs(chance - num / den) < .04)
-                return $"{num:N0} packs in {den}";
+            var num = (int)Math.Round(chance * den);
+            if (num >= 1 && num < den && Math.Abs(chance - (double)num / den) < .04)
+                return $"{num:N0} {Text.Fmt.S(num, "pack")} in {den}";
         }
 
         return chance.ToString("P1");

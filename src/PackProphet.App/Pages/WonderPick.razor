@@ -65,25 +65,22 @@ else
             @if (Session.ShowWonderIntro)
             {
                 <p class="lead-note">
-                    The game already shows the @GameRules.WonderPickCardsShown cards and how many
-                    of each you hold. What it cannot show is <strong>the bar</strong>: how good an
-                    offer has to be before it is worth one of your @GameRules.StaminaCap stamina.
-                    That depends on the offers you have been getting, not on this one, so
-                    log every offer, taken or skipped, and the bar comes from your own
-                    distribution.
+                    The game shows the cards. What it cannot show is <strong>the bar</strong>:
+                    how good an offer has to be to be worth a stamina. That comes from the offers
+                    you have been getting, so log every one, taken or skipped.
                     <button class="x" @onclick="() => Session.SetShowWonderIntro(false)"
-                            title="Hide this note for good. Settings brings it back."
+                            title="Hide this for good. Settings brings it back."
                             aria-label="Hide the explanation">&times;</button>
                 </p>
             }
             <p class="text-body-secondary">
-                Tap the @GameRules.WonderPickCardsShown cards you have been offered. You receive
-                <strong>one at random</strong>, so the only choice is whether to spend a stamina at
-                all. Stamina caps at @GameRules.StaminaCap and refills one every
-                @GameRules.StaminaRegen.TotalHours hours.
+                Tap the @GameRules.WonderPickCardsShown cards you were offered. You get
+                <strong>one at random</strong>, so the only question is whether to spend at all.
             </p>
             <p class="text-body-secondary small">
-                3&#9733;, Crown and Shiny never appear, which is why the price stops at 4.
+                Stamina caps at @GameRules.StaminaCap, one back every
+                @GameRules.StaminaRegen.TotalHours hours.
+                3&#9733;, Crown and Shiny never appear, so the price stops at 4.
             </p>
         }
         else
@@ -180,10 +177,9 @@ else
                                 @* More than one offer in frame. Taking the first five would appraise
                                    a mixture of two offers, which is worse than saying so. *@
                                 <p class="small text-warning-emphasis mt-2 mb-0">
-                                    That is more than @GameRules.WonderPickCardsShown cards, so the
-                                    picture probably holds more than one offer. Crop to the offer you
-                                    are deciding about and try again: only the first
-                                    @GameRules.WonderPickCardsShown would be used.
+                                    More than @GameRules.WonderPickCardsShown cards, so this is
+                                    probably two offers. Crop to one and try again &mdash; only the
+                                    first @GameRules.WonderPickCardsShown would be used.
                                 </p>
                             }
                         </Actions>
@@ -259,9 +255,8 @@ else
                             else
                             {
                                 <text>
-                                    @_history.Count of @MinSamplesForThreshold logged offers so
-                                    far, so this takes anything useful until there is a
-                                    distribution worth trusting. Log every offer, taken or
+                                    @_history.Count of @MinSamplesForThreshold logged offers, so
+                                    this takes anything useful for now. Log every offer, taken or
                                     skipped &mdash; the bar is only as good as what is behind it.
                                 </text>
                             }
@@ -310,12 +305,12 @@ else
                     </select>
                     <button class="btn btn-primary" disabled="@(_received.Length == 0)"
                             @onclick="LogTaken">
-                        Took it &mdash; log and spend a stamina
+                        Took it &mdash; spend a stamina
                     </button>
                 </span>
 
                 <button class="btn btn-outline-secondary" @onclick="LogSkipped">
-                    Skipped it &mdash; log anyway
+                    Skipped it
                 </button>
             </div>
 
@@ -326,13 +321,13 @@ else
 
             <div class="summary">
                 <div class="stat">
-                    <span class="label">Expected Value</span>
+                    <span class="label">Expected value</span>
                     <span class="value">@Fmt(a.ExpectedValue) packs</span>
                     @* Averaged over the 1-in-5 rather than the best card in the offer. *@
                     <span class="sub">Averaged over the 1-in-@GameRules.WonderPickCardsShown</span>
                 </div>
                 <div class="stat">
-                    <span class="label">Per Stamina</span>
+                    <span class="label">Per stamina</span>
                     <span class="value">@Fmt(a.ValuePerStamina)</span>
                     @* Never called a price. Wonder Stamina and Pack Hourglasses are separate
                        currencies with no exchange rate, so packs-per-stamina only ranks one

@@ -156,7 +156,7 @@ public class WonderPickPageTests : AppHost
         var page = WithOffer();
 
         Assert.Empty(page.FindAll(".offer-hist"));
-        Assert.Contains("logged offers so far", Flat(page.Find(".verdict-lead .then").TextContent));
+        Assert.Contains("logged offers", Flat(page.Find(".verdict-lead .then").TextContent));
     }
 
     [Fact]

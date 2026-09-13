@@ -901,6 +901,17 @@ main > .page-head {
         border-inline-start: 0;
         border-block-start: 1px solid var(--pp-hairline, var(--bs-border-color));
     }
+
+    /* And only ONE rule where the two columns became two stacked blocks. The verdict closes with
+       a rule of its own and the shortlist opens with one, which is right when they are side by
+       side and one of them is a column divider -- stacked, they are the same line drawn twice,
+       30px apart, which reads as an empty band between the two. The shortlist keeps its rule,
+       because it is the one that still has a job when there is no verdict above it. */
+    .answer-lead > .verdict-lead:last-child {
+        padding-block-end: 0;
+        margin-block-end: 0;
+        border-bottom: 0;
+    }
 }
 
 /* the verdict block

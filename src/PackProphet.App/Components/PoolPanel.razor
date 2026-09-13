@@ -2,7 +2,10 @@
    12 hours, 12 hourglasses for one unit — and differ only in what spending them costs, so they
    share this component. *@
 
-<div class="pool">
+@* A pool at its cap is the one state on this page that is costing you something, so the panel
+   says so before the prose inside it does. Every other panel looks the same as it did: this is a
+   mark on the one that needs reading, not a status colour on all of them. *@
+<div class="pool @(Outlook.AtCap ? "at-cap" : "")">
     <div class="pool-head">
         <span class="nm">@Title</span>
         <span class="rate">@Outlook.Balance of @Outlook.Cap</span>

@@ -16,6 +16,11 @@ obj/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+.re-design/
+
+# Finder drops one of these into every directory it has been asked to display, so this is
+# deliberately unanchored: /.DS_Store would catch the one at the root and none of the rest.
+.DS_Store
 
 # Python bytecode, from the diagnostic tool under tools/DiagProbe. Anchored nowhere in
 # particular because it appears next to whichever script was run.

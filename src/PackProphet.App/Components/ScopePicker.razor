@@ -11,7 +11,7 @@
 
 @inject AppSession Session
 
-<select class="form-select form-select-sm" style="max-width:16rem"
+<select class="form-select form-select-sm scope-pick"
         aria-label="@Label" @onchange="OnScope">
     <option value="everything" selected="@(Scope == "everything")">@Everything</option>
 
@@ -26,7 +26,7 @@
             @if (Merged && Session.ChaseLists.Count > 1)
             {
                 <option value="chases" selected="@(Scope == "chases")">
-                    All chase lists together
+                    All of them, merged
                 </option>
             }
             @foreach (var list in Session.ChaseLists)
@@ -79,8 +79,11 @@
     /// </summary>
     [Parameter, EditorRequired] public string Label { get; set; } = default!;
 
-    /// <summary>The first option's wording, which reads differently depending on the page.</summary>
-    [Parameter] public string Everything { get; set; } = "Everything I collect";
+    /// <summary>
+    /// The first option's wording. One word: the control sits under a heading that already says
+    /// what it picks, so "Everything I collect" spent three of them restating the heading.
+    /// </summary>
+    [Parameter] public string Everything { get; set; } = "Everything";
 
     /// <summary>The scope currently chosen, in the grammar AppSession.TargetForScope reads.</summary>
     [Parameter, EditorRequired] public string Scope { get; set; } = default!;

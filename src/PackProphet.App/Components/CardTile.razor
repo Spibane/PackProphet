@@ -67,36 +67,44 @@
            it. *@
         <span class="art-none" aria-hidden="true"
               data-set="@Card.Set" data-nr="@Card.Number"><span class="nm">@Card.Name</span></span>
+
+        @* How many you own, back on the art at every width rather than only on a phone.
+           ==================================================================================
+           The three badges that used to cover the art were a count, an info button and a heart,
+           and the note above is right that three was two too many. It does not follow that the
+           right number is none: one was fine, and the count is the one, because it is the only
+           thing here that is a quantity. A caption row can say a number but it cannot make one
+           read at a glance across six columns, and "how many of this do I have" is the question
+           the grid is scanned for.
+
+           So it is the only badge, and the caption keeps the three things that are text -- the
+           printed number, the name, the rarity -- plus the heart, which is a control rather than
+           a fact and sits at the end with the other one.
+
+           Inside the art box rather than over the tile, so its inset is measured from the picture
+           it has to stay clear of. On a phone the caption is absolutely positioned and shows
+           nothing at all, and this is what is left. *@
+        <span class="cnt @(Count > 0 ? "" : "none")">@(Count > 0 ? Count.ToString() : "")</span>
+
+        @* Distinct from the owned count: this is "I just pulled this" rather than "I own this".
+           Both appear on one tile on the log screen, which is why they are a pair rather than one
+           element with two meanings. *@
+        @if (Picked > 0)
+        {
+            <span class="pick">@(Picked > 1 ? $"+{Picked}" : "+")</span>
+        }
     </span>
 
     <span class="cap">
 
-    @* Wanting a card and owning it are different facts, and this is the screen where you notice
-       the first one: you are already looking at the set, and the alternative was open the card,
-       mark it, come back.
+    @* The number the card is printed with, which is how a set is navigated: the grid is in number
+       order by default, and "I am looking for 143" is answerable by eye only if the numbers are on
+       screen. It was in the tooltip and in the accessible label and nowhere a sighted user could
+       read it without hovering.
 
-       Its own target, and in the caption rather than over the art -- a tap on the tile means "I
-       own one more", so wanting cannot also be a tap on the tile, but it no longer has to cover a
-       corner of the picture to say so. *@
-    @if (OnWant.HasDelegate)
-    {
-        <button class="want @(Wanted > 0 ? "on" : "")" type="button"
-                @onclick="Want" @onclick:stopPropagation="true"
-                @onpointerdown:stopPropagation="true"
-                @oncontextmenu:stopPropagation="true"
-                tabindex="-1"
-                aria-pressed="@Aria.Flag(Wanted > 0)"
-                aria-label="@(Wanted > 0 ? $"On your chase list: {Card.Name}" : $"Add {Card.Name} to your chase list")"
-                title="@(Wanted > 0 ? "On your chase list" : "Add to your chase list")">
-            @* Drawn, not typed: the heart characters that carry a filled and an outlined form are
-               not in every system font, and the pair that are do not match each other's weight. *@
-            <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">
-                <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
-                      fill="@(Wanted > 0 ? "currentColor" : "none")"
-                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
-            </svg>
-        </button>
-    }
+       aria-hidden because the tile's own label already names the set and number, and a screen
+       reader meeting it twice per tile across three thousand tiles is noise. *@
+    <span class="no" aria-hidden="true">@Card.Number</span>
 
     @* The card's name, and the way into its detail page.
        ==================================================================================
@@ -123,15 +131,45 @@
            @oncontextmenu:stopPropagation="true">@Card.Name</a>
     }
 
-    @* The count keeps the end of the row whether or not there is one to show, so a caption is the
-       same shape on every tile: a virtualised grid needs every row to be the same height, and an
-       empty strip that collapsed would make the scrollbar lie. *@
-    <span class="cnt @(Count > 0 ? "" : "none")">@(Count > 0 ? Count.ToString() : "")</span>
+    @* The rarity, last of the three facts and the one that decides whether a gap matters: a
+       missing common is tonight's problem and a missing crown is this year's. The glyphs the game
+       prints, from the same rungs the list view and the filter chips draw, so a chip and a card
+       agree on what a rarity looks like.
 
-    @* Distinct from the owned count: this is "I just pulled this" rather than "I own this". *@
-    @if (Picked > 0)
+       Null where the grid was not given a ladder -- the picker screens pass no RungOf -- and then
+       the caption is simply one item shorter rather than carrying an empty slot. Nothing lines up
+       across tiles here that a missing rarity would throw out, because it is the last item and
+       the name beside it takes the room. *@
+    @if (Rung is { } rung)
     {
-        <span class="pick">@(Picked > 1 ? $"+{Picked}" : "+")</span>
+        <span class="rr glyphs @rung.GlyphClass" aria-hidden="true">@rung.Glyphs</span>
+    }
+
+    @* Wanting a card and owning it are different facts, and this is the screen where you notice
+       the first one: you are already looking at the set, and the alternative was open the card,
+       mark it, come back.
+
+       Its own target, and in the caption rather than over the art -- a tap on the tile means "I
+       own one more", so wanting cannot also be a tap on the tile, but it no longer has to cover a
+       corner of the picture to say so. *@
+    @if (OnWant.HasDelegate)
+    {
+        <button class="want @(Wanted > 0 ? "on" : "")" type="button"
+                @onclick="Want" @onclick:stopPropagation="true"
+                @onpointerdown:stopPropagation="true"
+                @oncontextmenu:stopPropagation="true"
+                tabindex="-1"
+                aria-pressed="@Aria.Flag(Wanted > 0)"
+                aria-label="@(Wanted > 0 ? $"On your chase list: {Card.Name}" : $"Add {Card.Name} to your chase list")"
+                title="@(Wanted > 0 ? "On your chase list" : "Add to your chase list")">
+            @* Drawn, not typed: the heart characters that carry a filled and an outlined form are
+               not in every system font, and the pair that are do not match each other's weight. *@
+            <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">
+                <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
+                      fill="@(Wanted > 0 ? "currentColor" : "none")"
+                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            </svg>
+        </button>
     }
     </span>
 </div>
@@ -172,6 +210,13 @@
 
     /// <summary>Copies wanted on the chase list the page is pointing at. Zero draws an empty heart.</summary>
     [Parameter] public int Wanted { get; set; }
+
+    /// <summary>
+    /// This card's rung on the rarity ladder, for the caption's rarity mark. Passed in for the
+    /// same reason <see cref="Gold"/> is: the ladder is the grid's, and a tile knows only its own
+    /// card. Null on a grid given no ladder, and then the caption omits the mark.
+    /// </summary>
+    [Parameter] public RarityRung? Rung { get; set; }
 
     /// <summary>
     /// Toggle the card on that chase list. Absent where the page has no chase list to write to, which

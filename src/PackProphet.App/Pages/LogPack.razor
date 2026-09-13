@@ -11,56 +11,73 @@
 }
 else if (_pack is null)
 {
-    <div class="page-head">
+    <div class="page-head folded">
         <h1 class="title">Log a pack</h1>
         <span class="subtitle">Which pack did you open?</span>
     </div>
 
-    @* Grouped by series, then by set. A flat list of every pack ever sold is already long and only
-       grows, and a set heading answers "which set is this pack from", which a pack name like
-       "Mewtwo" does not. Defaults to the newest series, where packs are usually being opened. *@
-    <div class="page-tools">
-        <select class="form-select form-select-sm" style="max-width:11rem" aria-label="Series" @onchange="OnSeries">
-            @foreach (var series in Session.Sets.Series)
-            {
-                <option value="@series" selected="@(_series == series)">Series @series</option>
-            }
-        </select>
 
-        @* The same setting as on the Packs page — there is one answer to "is Deluxe on sale" — and
-           it is repeated here because this is the page you are on when you find out. It never
-           filters the picker: you can log a pack you opened whatever the app assumed about the
-           shelf. *@
-        @if (Session.LimitedPacks.Count > 0)
-        {
-            <span class="avail ms-auto">
-                <span class="ttl">Limited-time</span>
-                @foreach (var pack in Session.LimitedPacks)
+
+    <PageShell Class="railed">
+
+    @* Choosing a pack is browsing -- a grid of every pack ever sold, narrowed by series -- so it
+       gets the shell browsing gets. It was two bars for three controls: the series above, the
+       column count below, and the availability chips sharing the first one with a select they have
+       nothing to do with.
+
+       The screen after this one, where the cards are picked, is a Record screen and has the strip
+       instead. Same route, two jobs, and the shell says which one you are in. *@
+    <PageRail Id="log-rail" OpenLabel="Packs">
+        <div class="rail-group">
+            <span class="ttl">Series</span>
+            @* Grouped by series, then by set. A flat list of every pack ever sold is already long
+               and only grows, and a set heading answers "which set is this pack from", which a pack
+               name like "Mewtwo" does not. Defaults to the newest series, where packs are usually
+               being opened. *@
+            <select class="form-select form-select-sm" aria-label="Series" @onchange="OnSeries">
+                @foreach (var series in Session.Sets.Series)
                 {
-                    var on = Session.IsLimitedPackAvailable(pack);
-                    <button class="avail-chip @(on ? "on" : "off")"
-                            @onclick="() => Session.SetLimitedPackAvailable(pack, !on)"
-                            title="@(pack.Split(':')[1]) packs come and go. This only affects which packs the Which pack page recommends. You can log one either way.">
-                        <span class="nm">@pack.Split(':')[1]</span>
-                        <span class="st">@(on ? "on sale" : "off sale")</span>
-                    </button>
+                    <option value="@series" selected="@(_series == series)">Series @series</option>
                 }
-            </span>
-        }
-    </div>
+            </select>
 
-    @* Column count sits with the grid it lays out, as it does over the card grid. It changes
-       nothing about which packs are shown. *@
-    <div class="grid-toolbar">
-        <select class="form-select form-select-sm" style="max-width:7rem" aria-label="Columns in the grid" @onchange="OnCols">
-            @foreach (var n in new[] { 2, 3, 4, 5, 6, 8 })
+        </div>
+
+        <div class="rail-group">
+            <span class="ttl">Limited-time</span>
+            @* The same setting as on the Packs page — there is one answer to "is Deluxe on sale" — and
+               it is repeated here because this is the page you are on when you find out. It never
+               filters the picker: you can log a pack you opened whatever the app assumed about the
+               shelf. *@
+            @if (Session.LimitedPacks.Count > 0)
             {
-                <option value="@n" selected="@(n == Session.PackColumns)">@n Cols</option>
+                <span class="avail">
+                    @foreach (var pack in Session.LimitedPacks)
+                    {
+                        var on = Session.IsLimitedPackAvailable(pack);
+                        <button class="avail-chip @(on ? "on" : "off")"
+                                @onclick="() => Session.SetLimitedPackAvailable(pack, !on)"
+                                title="@(pack.Split(':')[1]) packs come and go. This only affects which packs the Which pack page recommends. You can log one either way.">
+                            <span class="nm">@pack.Split(':')[1]</span>
+                            <span class="st">@(on ? "on sale" : "off sale")</span>
+                        </button>
+                    }
+                </span>
             }
-        </select>
-    </div>
+        </div>
 
-    <PageShell>
+        <div class="rail-group">
+            <span class="ttl">Layout</span>
+            <select class="form-select form-select-sm" aria-label="Columns in the grid" @onchange="OnCols">
+                @foreach (var n in new[] { 2, 3, 4, 5, 6, 8 })
+                {
+                    <option value="@n" selected="@(n == Session.PackColumns)">@n Cols</option>
+                }
+            </select>
+        </div>
+    </PageRail>
+
+    <div class="chooser-main">
 
         @* Reading the pack off a screenshot, before the picker, because it is the faster route when
            it works: the game has just shown you the five cards, and the cards themselves say which
@@ -141,7 +158,7 @@ else if (_pack is null)
                             var plan = Plan(readings);
 
                             <section class="mt-3 border-top pt-3">
-                                <h2 class="h6">All @readings.Count pictures</h2>
+                                <h2 class="sub-head">All @readings.Count pictures</h2>
 
                                 @if (plan.Unidentified > 0)
                                 {
@@ -272,6 +289,7 @@ else if (_pack is null)
                 </div>
             }
         </div>
+    </div>
     </PageShell>
 }
 else
@@ -286,9 +304,8 @@ else
            full label here and "picked N" beside the button, a 375px header left the title about
            ten pixels and "Mega Altaria" rendered as "M.". The arrow is still the same control and
            still the same size to tap -- the aria-label carries the wording the eye loses. *@
-        <button class="btn btn-sm btn-outline-secondary" @onclick="Reset" aria-label="Change pack">
-            &larr; <span class="wide-only">Change Pack</span>
-        </button>
+        <BackLink Label="Change pack" OnBack="Reset" Compact="true"
+                  Title="Pick a different pack. Nothing typed here is kept." />
         <h1 class="title">@_pack.Split(':')[1]</h1>
         @* The instruction has to match the view. In the tile grid a tap on a card picks it; in
            list mode a tap on a row does nothing and the row's own + is what picks. Telling
@@ -298,44 +315,101 @@ else
             @(Session.ListView ? "add each card that came out" : "tap each card that came out")
         </span>
         <span class="actions">
-            @* Dropped on a phone rather than shortened: the button next to it already reads
-               "add N to collection", so this is the one thing on the bar that is said twice. *@
-            <span class="small wide-only">Picked @_picked.Count</span>
+            @* Progress against what a pack holds, rather than a bare count. "Picked 3" is a fact
+               about your typing; "3 of 5 named" is how far through the job you are, which is what
+               a Record page's bar is for. Dropped on a phone, where the strip below says the same
+               thing in the words that matter. *@
+            <span class="small wide-only">@ProgressLabel</span>
             <button class="btn btn-sm btn-success" disabled="@(_picked.Count == 0 || Busy.IsBusy)" @onclick="Commit">
-                Add @_picked.Count to collection
+                Add to collection
             </button>
         </span>
     </div>
 
-    @* Raised on the way out rather than while picking. The count is wrong for the whole time you
-       are tapping -- one card into a five-card pack it is already "not five" -- so a live warning
-       fires immediately, pushes the card list down, and is on screen for the entire task while
-       being about none of it. It is a question about saving, so it is asked when you save.
+    @* What is still to do, which is what a Record page leads with. Nothing on this page is true
+       until the commit, so there is no figure to headline -- what there is instead is the gap
+       between what you have typed and what a pack holds.
 
-       Not a block. A partial log is sometimes what you meant, so the second press goes through. *@
+       ONE ELEMENT, TWO STATES, and the second state is the only one that warns.
+       ==================================================================================
+       The repo's existing finding stands and this keeps it: a live warning about the count is
+       wrong for the whole time you are tapping, because one card into a five-card pack it is
+       already "not five". So while you are picking this states progress and nothing else -- "one
+       more card" is a fact about the job, not an alarm about it.
+
+       It turns accent and names the consequence only when you press commit on a short pack, which
+       is the moment the question is actually being asked. That was a separate warning strip that
+       appeared then; making it the same element means the place you look for "how am I doing"
+       is the place that answers "and what happens if I stop here".
+
+       Not a block either way. A partial log is sometimes what you meant, so the second press goes
+       through. *@
     @if (_miscount is { } warning)
     {
-        <PageShell Class="py-2">
-            <Notice Severity="Notice.Level.Warning" Dense="true" Class="mb-0">
+        <div class="todo-strip short">
+            <span class="micro">Still to do</span>
+            <span class="say">
                 @warning
-                <button class="btn btn-sm btn-warning ms-2 py-0" @onclick="CommitAnyway">
-                    Log @_picked.Count Anyway
-                </button>
-            </Notice>
-        </PageShell>
+            </span>
+            <button class="btn btn-sm btn-warning" @onclick="CommitAnyway">
+                Log @_picked.Count anyway
+            </button>
+        </div>
     }
-
-    @if (_picked.Count > 0)
+    else if (!PackFull)
     {
-        <div class="picked-strip">
-            @foreach (var card in _picked)
+        <div class="todo-strip">
+            <span class="micro">Still to do</span>
+            <span class="say">@TodoSay</span>
+            @if (_picked.Count == 0)
             {
-                <button class="picked-chip" @onclick="() => Unpick(card)" title="Remove">
-                    @card.Name <span class="rar glyphs @Session.Index.GlyphClass(card)">@Session.Index.Symbol(card)</span> &times;
-                </button>
+                <a class="escape" href="collection/screenshot">Read it off a screenshot</a>
             }
         </div>
     }
+
+    @* The pack's cards, as the pack's cards.
+       ==================================================================================
+       This was a row of name chips, which is a list of what you have typed. Five slots is a
+       picture of the pack: how many came out, how many you have named, and which one is next --
+       the same shape as the thing on the table in front of you, which is what you are copying
+       from.
+
+       The set is literal, which is the precondition: a pack holds five or six cards and the number
+       is published. One empty slot is accented, because it is the next action; the rest are plain,
+       because a row where every gap shouts says "five things to do" and the truth is "do this one
+       next".
+
+       Tapping a filled slot takes that card back out -- the chips' one job, kept. *@
+    <div class="pack-slots">
+        <BoxStrip Label="@($"The {SlotCount} cards")"
+                  Clause="@(_picked.Count > 0 ? "tap one to take it back out" : null)"
+                  Columns="@SlotCount">
+            @for (var i = 0; i < SlotCount; i++)
+            {
+                var slot = i;
+                if (slot < _picked.Count)
+                {
+                    var card = _picked[slot];
+                    <Box State="Box.Kind.Live" Label="@((slot + 1).ToString())">
+                        <button class="slot-card" @onclick="() => Unpick(card)"
+                                title="Take @card.Name back out"
+                                style="@card.ArtVars"></button>
+                        <span class="slot-cap">
+                            <span class="nm">@card.Name</span>
+                            <span class="rr glyphs @Session.Index.GlyphClass(card)">@Session.Index.Symbol(card)</span>
+                        </span>
+                    </Box>
+                }
+                else
+                {
+                    <Box State="@(slot == _picked.Count ? Box.Kind.Todo : Box.Kind.Dead)"
+                         Label="@((slot + 1).ToString())"
+                         Note="@(slot == _picked.Count ? "next" : null)" />
+                }
+            }
+        </BoxStrip>
+    </div>
 
     @if (_justLogged is not null)
     {
@@ -398,6 +472,22 @@ else
             }
         </FilterChips>
     </CardGrid>
+
+    @* What committing will do, at the bottom, where you are when you decide to.
+       ==================================================================================
+       Everything above this is about getting the five cards right. This is the only thing on the
+       page about the act of saving them, and all three parts of it are things a user would
+       otherwise find out afterwards: what the pack points become, that there is exactly one undo,
+       and that logging another pack is a click rather than a journey back through the picker.
+
+       A Record page cannot headline a figure -- nothing here is true until the commit -- but it
+       can say what the figure will BE, which is a statement about the future rather than a reading
+       of the present. *@
+    <div class="commit-foot">
+        <span>@PointsAfter</span>
+        <span>One undo step, <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</span>
+        <button class="btn btn-sm btn-link again" @onclick="Reset">Log another after this</button>
+    </div>
 }
 
 @code {
@@ -408,6 +498,24 @@ else
 
     /// <summary>Name search over the pack in front of you. Never touches what has been picked.</summary>
     private string _find = "";
+
+    /// <summary>
+    /// How many slots the strip draws: what this pack holds, or what has been picked if that is
+    /// somehow more.
+    ///
+    /// The smallest published size where a set has two. A five-slot strip that grows a sixth when
+    /// you name a sixth card is honest about both: five is what you expect, and the strip does not
+    /// pretend the sixth has nowhere to go.
+    /// </summary>
+    private int SlotCount
+    {
+        get
+        {
+            var sizes = PackSizes;
+            var target = sizes.Count == 0 ? 5 : sizes.Min();
+            return Math.Max(target, _picked.Count);
+        }
+    }
 
     private readonly List<PocketCard> _picked = [];
     private (int cards, string set, int points, bool capped)? _justLogged;
@@ -651,6 +759,86 @@ else
     /// "picked 3 of 5", or just "picked 3" where the set has no published rates to say what a pack
     /// holds. A set with two pack sizes says both rather than picking one, since either is right.
     /// </summary>
+    /// <summary>
+    /// How far through the job you are, for the page bar. "3 of 5 named" rather than "picked 3":
+    /// the second is a fact about your typing and the first is a fact about the pack, and a Record
+    /// page's bar reports the job.
+    /// </summary>
+    private string ProgressLabel
+    {
+        get
+        {
+            var sizes = PackSizes;
+            return sizes.Count == 0
+                ? $"{_picked.Count} named"
+                : $"{_picked.Count} of {string.Join(" or ", sizes.OrderBy(n => n))} named";
+        }
+    }
+
+    /// <summary>
+    /// What is left, in words, while the pack is still being typed.
+    ///
+    /// Deliberately not a warning. It is on screen for the whole of the task, so it says what
+    /// remains rather than what is wrong -- "one more card" is a fact about the job and "you have
+    /// picked four of five" is an accusation about it. The consequence of stopping early belongs
+    /// to the moment you try to stop, which is the strip's other state.
+    ///
+    /// A set with no published rates has nothing to count toward, so it gets the instruction
+    /// instead of a figure.
+    /// </summary>
+    private string TodoSay
+    {
+        get
+        {
+            var sizes = PackSizes;
+            if (sizes.Count == 0)
+                return _picked.Count == 0
+                    ? "Name each card that came out of the pack."
+                    : "Name the rest of the cards that came out.";
+
+            var target = sizes.Min();
+            var left = target - _picked.Count;
+
+            if (_picked.Count == 0)
+                return sizes.Count == 1
+                    ? $"Name the {Words(target)} cards that came out."
+                    : "Name the cards that came out.";
+
+            return left <= 0
+                ? "Name the rest of the cards that came out."
+                : left == 1 ? "One more card." : $"{Words(left)} more cards.";
+        }
+    }
+
+    private static string Words(int n) => n switch
+    {
+        1 => "one", 2 => "two", 3 => "three", 4 => "four", 5 => "five", _ => n.ToString()
+    };
+
+    /// <summary>
+    /// Where this set's pack points land once the pack is logged, and whether that matters.
+    ///
+    /// Points accrue per set and stop dead at the cap, so a pack opened while capped earns
+    /// nothing at all -- which is worth knowing BEFORE the commit rather than discovering as a
+    /// figure that did not move. Said as a destination rather than as a delta: "takes A4 to 1,175"
+    /// is what you check against a price, where "+5" is arithmetic you then have to do.
+    /// </summary>
+    private string PointsAfter
+    {
+        get
+        {
+            if (_pack is null) return "";
+
+            var set = _pack.Split(':')[0];
+            var before = Session.Profile.Resources.PackPointsBySet.TryGetValue(set, out var p) ? p : 0;
+            var after = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
+
+            return after == before
+                ? $"{set} is at the {GameRules.PackPointsCap:N0}-point cap, so this pack earns none."
+                : $"Committing takes {set} points to {after:N0} of {GameRules.PackPointsCap:N0}.";
+        }
+    }
+
     private string PickedLabel
     {
         get

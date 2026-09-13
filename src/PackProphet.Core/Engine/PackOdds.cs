@@ -218,24 +218,45 @@ public sealed class PackOdds
     public IReadOnlyDictionary<string, double> BestRatesByCard(
         IReadOnlySet<string>? unavailablePacks = null)
     {
-        var packs = (unavailablePacks is { Count: > 0 }
-            ? PriceablePacks.Where(p => !unavailablePacks.Contains(p))
-            : PriceablePacks).ToArray();
+        // THE KEY COST MORE THAN THE LOOKUP.
+        // ------------------------------------------------------------------------------
+        // Every call used to enumerate PriceablePacks -- which splits each pack key and asks the
+        // rate table whether it covers that set -- copy the result to an array, sort it, and join
+        // it into a string, purely to find out whether the answer was already cached. On a hit,
+        // which is nearly every call, all of that was thrown away.
+        //
+        // Which would be a rounding error if this were called once per estimate, and it is not:
+        // RouteCost.Pull calls it once per CARD. Recommending a board for a fresh profile prices
+        // every outstanding demand, so opening the wishlist rebuilt that key about 3,500 times and
+        // blocked the browser's one thread for 5.4 seconds -- on a desktop.
+        //
+        // No unavailable packs is the overwhelmingly common case and needs no key at all, so it
+        // gets a field. Publishing a reference is atomic, and the dictionary is complete before it
+        // is assigned, so a reader either sees the finished table or builds its own -- the same
+        // guarantee GetOrAdd gives, whose factory can also run twice.
+        if (unavailablePacks is not { Count: > 0 })
+            return _allPacksRates ??= BestRates(PriceablePacks.ToArray());
 
+        var packs = PriceablePacks.Where(p => !unavailablePacks.Contains(p)).ToArray();
         var cacheKey = string.Join('|', packs.OrderBy(p => p, StringComparer.Ordinal));
 
         // Built and published atomically, so a concurrent reader never sees a half-filled
         // dictionary and reads a zero rate as "unobtainable".
-        return _bestRatesCache.GetOrAdd(cacheKey, _ =>
-        {
-            var best = new Dictionary<string, double>();
-            foreach (var pack in packs)
-            foreach (var (cardKey, rate) in ExpectedCopies(pack))
-                if (!best.TryGetValue(cardKey, out var current) || rate > current)
-                    best[cardKey] = rate;
-            return best;
-        });
+        return _bestRatesCache.GetOrAdd(cacheKey, _ => BestRates(packs));
     }
+
+    /// <summary>The table itself, for one set of packs. Shared by both paths above.</summary>
+    private Dictionary<string, double> BestRates(string[] packs)
+    {
+        var best = new Dictionary<string, double>();
+        foreach (var pack in packs)
+        foreach (var (cardKey, rate) in ExpectedCopies(pack))
+            if (!best.TryGetValue(cardKey, out var current) || rate > current)
+                best[cardKey] = rate;
+        return best;
+    }
+
+    private Dictionary<string, double>? _allPacksRates;
 
     /// <summary>Priceable packs that are limited-time, so the caller can ask about them.</summary>
     public IEnumerable<string> LimitedTimePacks =>

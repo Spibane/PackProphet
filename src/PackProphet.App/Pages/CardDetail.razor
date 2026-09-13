@@ -28,8 +28,8 @@ else
     <div class="detail-keys" tabindex="-1" @ref="_root" @onkeydown="OnKey">
 
     <div class="page-head">
-        <button class="btn btn-sm btn-outline-secondary" @onclick="Back"
-                title="Back to @History.LastListPage, or press Escape">&larr; back</button>
+        <BackLink Label="Back" OnBack="Back"
+                  Title="@($"Back to {History.LastListPage}, or press Escape")" />
         <h1 class="title">@_card.Name</h1>
         <span class="subtitle">@_card.Set&thinsp;@_card.Number</span>
         <span class="actions">
@@ -50,7 +50,7 @@ else
             @* Background rather than <img>: a failed load leaves the placeholder instead of a
                broken-image gap, with no error handling needed. *@
             <div class="big-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
-                 style="--art:url('@_card.ArtUrl')"
+                 style="@_card.ArtVars"
                  role="img" aria-label="@_card.Name"></div>
 
             @* Said in words as well as drawn: the ring alone does not explain itself, and being
@@ -71,20 +71,29 @@ else
                 </p>
             }
 
+            @* A box, with the label at one end and the stepper at the other. It was four items in a
+               row that sized themselves, so the count floated wherever the label left it and the
+               control had no edge of its own. *@
             <div class="own-row">
-                <span class="label">You Own</span>
-                <button class="step" @onclick="() => Bump(-1)"
-                        disabled="@(_owned == 0)" aria-label="Remove one">&minus;</button>
-                <span class="count">@_owned</span>
-                <button class="step" @onclick="() => Bump(1)" aria-label="Add one">+</button>
+                <span class="label">You own</span>
+                <span class="steps">
+                    <button class="step" @onclick="() => Bump(-1)"
+                            disabled="@(_owned == 0)" aria-label="Remove one">&minus;</button>
+                    <span class="count">@_owned</span>
+                    <button class="step" @onclick="() => Bump(1)" aria-label="Add one">+</button>
+                </span>
             </div>
 
             @* Wanting a card is a separate fact from owning it, and this is the screen that has
                the card in hand, so the chase lists live here rather than requiring another search
                from the list side. *@
-            <div class="want-row">
-                <span class="label">Want It</span>
+            @* Stacked and full width, each the width of the card above them. They were an inline
+               row that wrapped: "Want It", the heart, one list, then the next list alone on a
+               second line at whatever width its name happened to be.
 
+               No "Want It" label either. The button under it says Want it -- the label was the
+               same two words again, in front of them. *@
+            <div class="want-row">
                 @* The same heart the collection grid has, on the same list, doing the same one
                    thing. It comes first and it is always here, whether or not that list exists yet
                    -- on a phone the tile hearts are hidden, so this is the only route to wanting a
@@ -147,217 +156,242 @@ else
             }
         </div>
 
-        <div>
-            @if (_fact is null)
-            {
-                <p class="text-body-secondary">
-                    @if (!Session.FactsReady)
+        <div class="detail-main">
+        @* THE ANSWER, first and in the shape every other Answer page uses.
+           ==================================================================================
+           "How to get it" was a heading two thirds of the way across a three-column page, over a
+           strip of four boxes you had to read and compare to find the cheapest -- while the page
+           led with a table of printed statistics nobody came here for.
+
+           The cheapest route is the answer, so it is the display line, and the strip underneath is
+           where it came from. Same lead, same micro label, same box strip as Which pack. *@
+        <div class="verdict-lead">
+            <span class="micro">How to get it</span>
+
+            <div class="lead-head">
+                <div class="lead-text">
+                    <h2 class="name @(_routes?.Cheapest is null ? "skip" : null)">@LeadFigure()</h2>
+                    <p class="from">@LeadFrom()</p>
+
+                    @if (LeadSays() is { Length: > 0 } says)
                     {
-                        <span>Card detail is still downloading&hellip;</span>
+                        <p class="says">@says</p>
                     }
-                    else
-                    {
-                        @* Not a dead end: art, rarity, packs and routes are all still shown. *@
-                        <span>No printed detail published for this card yet.</span>
-                    }
-                </p>
+
+                    <p class="then">
+                        Only <strong>pull</strong> and <strong>pack points</strong> are priced in
+                        packs. Shinedust and stamina are separate currencies with no exchange rate.
+                    </p>
+                </div>
+            </div>
+
+            @* Inside the lead, not after it. Both carry a rule -- the lead a border-bottom, the
+               strip a border-top -- so as siblings they drew two hairlines 22px apart with the
+               caveat stranded between them. Which pack nests it the same way, and for the better
+               reason: the strip is where the figure above it came from, so it belongs to the
+               answer rather than following it. *@
+
+            @* Every route, including the ones that do not exist for this rarity, because the absence
+           of a route is the answer as often as a price is: "you cannot trade for this" is what you
+           came to find out when the card is a crown.
+
+           A strip rather than the table this was, for exactly the reason BoxStrip exists. A table
+           cell for an impossible route is blank, and blank reads as a figure that failed to load;
+           a dashed box with the reason under it reads as the fact it is. The set is literal -- the
+           game has these routes and no others -- which is the precondition.
+
+           No bars. The four are priced in three currencies that do not exchange, and drawing them
+           at one scale would invent a rate the game does not have. *@
+            <BoxStrip Columns="@(_routes?.Options.Count ?? 4)">
+                @foreach (var option in _routes?.Options ?? [])
+                {
+                @* Only the closed routes carry a note in the box, and it is the short one this
+                   page writes. The engine's own notes are whole sentences -- they have to be, they
+                   are explaining a price -- and five of them inside five boxes is a wall of prose
+                   in the one place on the page that exists to be compared at a glance. They are
+                   kept, under the strip, where they read as prose. *@
+                    <Box Label="@RouteName(option.Route)"
+                         State="@(!option.Available ? Box.Kind.Dead
+                                  : option == _routes?.Cheapest ? Box.Kind.Best
+                                  : Box.Kind.Live)"
+                         Figure="@RouteFigure(option)"
+                         Unit="@RouteUnit(option)"
+                         Note="@(option.Available ? null : BlockReason(option.Block))" />
             }
-            else
-            {
-                <h2 class="h6">@(_fact.IsPokemon ? "Pokémon" : "Trainer")</h2>
-                <DataTable Label="Card stats" Fit="true">
-                    <tbody>
-                        @* One row however many types the card has. A dual-typed Pokémon gets a
-                           pip and a word each, which is the one place in the app with room to
-                           spell both out in full. *@
-                        @if (_fact.Subtypes.Count > 0)
-                        {
-                            <tr>
-                                <td>@(_fact.Subtypes.Count > 1 ? "Types" : "Type")</td>
-                                <td>
-                                    @foreach (var sub in _fact.Subtypes)
-                                    {
-                                        <span class="ty-one">
-                                            @if (HasPip(sub))
-                                            {
-                                                <EnergyPip Type="@sub" />
-                                            }
-                                            @sub
-                                        </span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                        @if (_fact.Stage is { Length: > 0 } stage)
-                        {
-                            <tr>
-                                <td>Stage</td>
-                                <td>
-                                    @stage
-                                    @if (_fact.EvolvesFrom is { Length: > 0 } from)
-                                    {
-                                        <span class="text-body-secondary">(evolves from @from)</span>
-                                        @* An evolution you cannot evolve is dead weight in a deck,
-                                           and nothing else on the page would say so. *@
-                                        @if (!OwnsAnyNamed(from))
-                                        {
-                                            <span class="badge text-bg-warning ms-1"
-                                                  title="You own none. Any printing of it will do: the game evolves on the printed name.">
-                                                You Own None
-                                            </span>
-                                        }
-                                    }
-                                </td>
-                            </tr>
-                        }
-                        @if (_fact.Health is int hp)
-                        {
-                            <tr><td>HP</td><td>@hp</td></tr>
-                        }
-                        @if (_fact.Weakness is { Length: > 0 } weak)
-                        {
-                            <tr><td>Weakness</td><td>@weak</td></tr>
-                        }
-                        @if (_fact.Retreat is int retreat)
-                        {
-                            <tr><td>Retreat</td><td>@retreat</td></tr>
-                        }
-                        @if (_fact.Artist is { Length: > 0 } artist)
-                        {
-                            <tr><td>Illustrator</td><td>@artist</td></tr>
-                        }
-                    </tbody>
-                </DataTable>
-
-                @if (_fact.HasAbility)
-                {
-                    <h2 class="h6">Ability: @_fact.Ability!.Name</h2>
-                    <p class="small">@(_fact.Ability.Effect ?? "")</p>
-                }
-
-                @if (_fact.AttackList.Count > 0)
-                {
-                    <h2 class="h6">Attacks</h2>
-                    @foreach (var atk in _fact.AttackList)
-                    {
-                        <div class="attack">
-                            <span class="cost">
-                                @foreach (var sym in atk.CostSymbols)
-                                {
-                                    <EnergyPip Type="@sym" />
-                                }
-                            </span>
-                            <strong>@atk.Name</strong>
-                            @* Printed damage, so a multiplier or bonus is not lost. *@
-                            @if (atk.DamageLabel is { Length: > 0 } dmg)
-                            {
-                                <span class="dmg">@dmg</span>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(atk.Effect))
-                            {
-                                <div class="effect small text-body-secondary">@atk.Effect</div>
-                            }
-                        </div>
-                    }
-                }
-
-                @if (_fact.CardText is { Length: > 0 } text)
-                {
-                    <h2 class="h6">Card text</h2>
-                    <p class="small">@text</p>
-                }
-            }
+            </BoxStrip>
         </div>
 
-        <div class="routes">
-            <h2 class="h6">How to get it</h2>
-            @* All four routes, including the ones that do not exist for this rarity, so the absence
-               of a route is stated rather than left blank. *@
-            <DataTable Label="Ways to get this card">
-                <tbody>
-                    @foreach (var option in _routes?.Options ?? [])
-                    {
-                        <tr class="@(option == _routes?.Cheapest ? "row-best" : "")">
-                            <td style="width:7rem">
-                                <strong>@RouteName(option.Route)</strong>
-                                @if (option == _routes?.Cheapest)
-                                {
-                                    <span class="badge text-bg-primary ms-1">Cheapest</span>
-                                }
-                            </td>
-                            <td>
-                                @if (!option.Available)
-                                {
-                                    <span class="text-body-secondary">Unavailable</span>
-                                }
-                                else
-                                {
-                                    @if (option.PacksEquivalent is double packs)
-                                    {
-                                        <span class="fw-semibold">@Fmt(packs) packs</span>
-                                    }
-                                    @if (option.Dust is int dust)
-                                    {
-                                        <span class="fw-semibold">@dust.ToString("N0") shinedust</span>
-                                    }
-                                    @if (option.Stamina is int stamina)
-                                    {
-                                        <span class="text-body-secondary">
-                                            @(option.Dust is null ? "" : "+ ")@stamina stamina
-                                        </span>
-                                    }
-                                }
-                                @if (option.Note is { Length: > 0 } note)
-                                {
-                                    <div class="small text-body-secondary">@note</div>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </DataTable>
+        @* The prose the boxes gave up, in full. Every word the table carried, and they are worth
+           keeping: "points accrue while you open, so this is what you give up from a shared
+           per-set budget, not extra packs" is the difference between a figure that means something
+           and one that does not.
 
+           The cheapest route's own note is not repeated here: it is the sentence in the lead. *@
+        @if (OtherNotes().Count > 0)
+        {
+            <dl class="route-notes">
+                @foreach (var option in OtherNotes())
+                {
+                    <dt>@RouteName(option.Route)</dt>
+                    <dd>@option.Note</dd>
+                }
+            </dl>
+        }
+
+        <h2 class="sub-head">Packs that can give it</h2>
+        @if (_packs.Count == 0)
+        {
             <p class="small text-body-secondary">
-                Only <strong>pull</strong> and <strong>pack points</strong> are priced in packs.
-                Shinedust and stamina are separate currencies with no exchange rate.
+                None: @(_card.IsPromo ? "promos come from events, not packs." : "this card is not sold in packs.")
+            </p>
+        }
+        else
+        {
+            <div class="pack-links">
+                @foreach (var packKey in _packs)
+                {
+                    <span class="pack-link">
+                        <span class="pack-thumb"
+                              style="--art:url('@Session.PackArtUrl(packKey)')"></span>
+                        <span>
+                            @packKey.Split(':')[1]
+                            <span class="small text-body-secondary">@packKey.Split(':')[0]</span>
+                            @if (Session.UnavailablePacks.Contains(packKey))
+                            {
+                                <span class="badge text-bg-warning">Not on Sale</span>
+                            }
+                        </span>
+                    </span>
+                }
+            </div>
+        }
+
+        @if (_printingPoints is int printPoints)
+        {
+            <p class="small text-body-secondary mt-2 mb-0">
+                This printing costs <strong>@printPoints.ToString("N0")</strong> pack points.
+                Alternate arts are priced far above their base card, so each printing has its own
+                price.
+            </p>
+        }
+
+        @* THE CARD, second.
+           ==================================================================================
+           It was first, beside the routes in a column of its own: a six-row table of type, stage,
+           HP, weakness, retreat and illustrator, taking a third of the page above the thing
+           someone opened this page to find out.
+
+           Printed facts are reference. They do not change, they are on the card itself, and the
+           art is right there. So they read as one line under the answer -- and a line is what they
+           are, rather than six rows of two cells where the left cell is always a label. *@
+        <span class="micro">The card</span>
+
+        @if (_fact is null)
+        {
+            <p class="text-body-secondary">
+                @if (!Session.FactsReady)
+                {
+                    <span>Card detail is still downloading&hellip;</span>
+                }
+                else
+                {
+                    @* Not a dead end: art, rarity, packs and routes are all still shown. *@
+                    <span>No printed detail published for this card yet.</span>
+                }
+            </p>
+        }
+        else
+        {
+            <p class="fact-row">
+                @* One item however many types the card has. A dual-typed Pokemon gets a pip and a
+                   word each, which is the one place in the app with room to spell both out. *@
+                @foreach (var sub in _fact.Subtypes)
+                {
+                    <span class="f">
+                        @if (HasPip(sub))
+                        {
+                            <EnergyPip Type="@sub" />
+                        }
+                        @sub
+                    </span>
+                }
+
+                @if (_fact.Stage is { Length: > 0 } stage)
+                {
+                    <span class="f">
+                        @stage
+                        @if (_fact.EvolvesFrom is { Length: > 0 } from)
+                        {
+                            <text>, from @from</text>
+                            @* An evolution you cannot evolve is dead weight in a deck, and nothing
+                               else on the page would say so. *@
+                            @if (!OwnsAnyNamed(from))
+                            {
+                                <span class="badge text-bg-warning ms-1"
+                                      title="You own none. Any printing of it will do: the game evolves on the printed name.">
+                                    You own none
+                                </span>
+                            }
+                        }
+                    </span>
+                }
+
+                @if (_fact.Health is int hp)
+                {
+                    <span class="f">@hp HP</span>
+                }
+                @if (_fact.Weakness is { Length: > 0 } weak)
+                {
+                    <span class="f">Weak to @weak</span>
+                }
+                @if (_fact.Retreat is int retreat)
+                {
+                    <span class="f">Retreat @retreat</span>
+                }
+                @if (_fact.Artist is { Length: > 0 } artist)
+                {
+                    <span class="f">Art by @artist</span>
+                }
             </p>
 
-            <h2 class="mt-3 h6">Packs that can give it</h2>
-            @if (_packs.Count == 0)
+            @if (_fact.HasAbility)
             {
-                <p class="small text-body-secondary">
-                    None: @(_card.IsPromo ? "promos come from events, not packs." : "this card is not sold in packs.")
-                </p>
-            }
-            else
-            {
-                <div class="pack-links">
-                    @foreach (var packKey in _packs)
-                    {
-                        <span class="pack-link">
-                            <span class="pack-thumb"
-                                  style="--art:url('@Session.PackArtUrl(packKey)')"></span>
-                            <span>
-                                @packKey.Split(':')[1]
-                                <span class="small text-body-secondary">@packKey.Split(':')[0]</span>
-                                @if (Session.UnavailablePacks.Contains(packKey))
-                                {
-                                    <span class="badge text-bg-warning">Not on Sale</span>
-                                }
-                            </span>
-                        </span>
-                    }
-                </div>
+                <h2 class="sub-head">Ability: @_fact.Ability!.Name</h2>
+                <p class="small">@(_fact.Ability.Effect ?? "")</p>
             }
 
-            @if (_printingPoints is int printPoints)
+            @if (_fact.AttackList.Count > 0)
             {
-                <p class="small text-body-secondary mt-2 mb-0">
-                    This printing costs <strong>@printPoints.ToString("N0")</strong> pack points.
-                    Alternate arts are priced far above their base card, so each printing has its
-                    own price.
-                </p>
+                <h2 class="sub-head">Attacks</h2>
+                @foreach (var atk in _fact.AttackList)
+                {
+                    <div class="attack">
+                        <span class="cost">
+                            @foreach (var sym in atk.CostSymbols)
+                            {
+                                <EnergyPip Type="@sym" />
+                            }
+                        </span>
+                        <strong>@atk.Name</strong>
+                        @* Printed damage, so a multiplier or bonus is not lost. *@
+                        @if (atk.DamageLabel is { Length: > 0 } dmg)
+                        {
+                            <span class="dmg">@dmg</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(atk.Effect))
+                        {
+                            <div class="effect small text-body-secondary">@atk.Effect</div>
+                        }
+                    </div>
+                }
             }
+
+            @if (_fact.CardText is { Length: > 0 } text)
+            {
+                <h2 class="sub-head">Card text</h2>
+                <p class="small">@text</p>
+            }
+        }
         </div>
     </div>
     </PageShell>
@@ -481,6 +515,109 @@ else
         Session.Index.All.Any(c =>
             string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)
             && Session.CountOf(c) > 0);
+
+    /// <summary>
+    /// The figure for a route, in whichever currency prices it.
+    ///
+    /// One figure per box, because a box has one. Where a route costs two things -- a trade is
+    /// shinedust AND a stamina -- the dust leads and the stamina goes in the note: they are not
+    /// addable, so putting both on the figure line would read as a sum.
+    /// </summary>
+    /// <summary>
+    /// The display line: what the cheapest way in costs, figure and unit together.
+    ///
+    /// The strip below prices every route, and the one someone is here for is the cheapest of
+    /// them. Reading that off four boxes is work the page can do.
+    /// </summary>
+    private string LeadFigure()
+    {
+        if (_routes?.Cheapest is not { } best) return "No way in";
+
+        var unit = RouteUnit(best);
+        var figure = RouteFigure(best);
+
+        // "free" already reads as a price, so pinning a unit to it produces "free but 1 a day" as
+        // a headline. The clause belongs in the line under it.
+        return figure == "free" ? "Free" : $"{figure} {unit}";
+    }
+
+    /// <summary>Which route that figure is, and -- for a pull -- which packs it comes out of.</summary>
+    private string LeadFrom()
+    {
+        if (_routes?.Cheapest is not { } best)
+            return "No route in the game gives you this card.";
+
+        var route = RouteName(best.Route);
+        if (best.Route != AcquisitionRoute.Pull || _packs.Count == 0) return route;
+
+        var names = _packs.Select(k => k.Split(':')[1]).Distinct().ToArray();
+        return names.Length switch
+        {
+            1 => $"{route} · {names[0]}",
+            2 => $"{route} · {names[0]} or {names[1]}",
+            _ => $"{route} · {names.Length} packs",
+        };
+    }
+
+    /// <summary>
+    /// The engine's own sentence for the cheapest route, which is the one explaining the figure
+    /// above it. Written by the engine rather than here because it is the arithmetic talking:
+    /// "points accrue while you open, so this is what you give up from a shared per-set budget".
+    /// </summary>
+    private string LeadSays() => _routes?.Cheapest?.Note ?? "";
+
+    /// <summary>
+    /// The notes for every OTHER route. The cheapest one's is in the lead, and printing it twice
+    /// on one page reads as two different facts about one price.
+    /// </summary>
+    private IReadOnlyList<RouteOption> OtherNotes() =>
+        (_routes?.Options ?? [])
+            .Where(o => o.Available && o.Note is { Length: > 0 } && o != _routes?.Cheapest)
+            .ToList();
+
+    private static string RouteFigure(RouteOption option) => option switch
+    {
+        { Available: false } => "",
+        { PacksEquivalent: double packs } => Fmt(packs),
+        { Dust: int dust } => dust.ToString("N0"),
+        { Stamina: int stamina } => stamina.ToString("N0"),
+        { Points: int points } => points.ToString("N0"),
+        // Available and priced in nothing at all, which is Share: no card back, no dust, no
+        // stamina. It still needs a figure -- a live box with a blank where its number goes is the
+        // exact failure the dashed box exists to avoid, and "free" is what the note already says.
+        _ => "free",
+    };
+
+    private static string RouteUnit(RouteOption option) => option switch
+    {
+        { Available: false } => "",
+        { PacksEquivalent: not null } => "packs",
+        { Dust: not null } => "shinedust",
+        { Stamina: not null } => "stamina",
+        { Points: not null } => "pack points",
+        // "free" is its own unit. What it actually costs is a day's allowance, and that is in the
+        // note rather than here, because a day is not a currency the other boxes are counted in.
+        _ => "but 1 a day",
+    };
+
+    /// <summary>
+    /// Why a route is closed, in the words a player would use.
+    ///
+    /// The engine names the reason rather than just refusing, and this is the whole point of
+    /// spending a box on an unavailable route: "not tradeable" is an answer, and an empty cell is
+    /// not. A trade's stamina rides along here too, since it is a second cost rather than a
+    /// second price.
+    /// </summary>
+    private static string BlockReason(RouteBlock block) => block switch
+    {
+        RouteBlock.NotSoldInPacks => "not sold in packs",
+        RouteBlock.NoPullRates => "no published pull rates",
+        RouteBlock.NotTradeable => "not tradeable at this rarity",
+        RouteBlock.NotShareable => "not shareable at this rarity",
+        RouteBlock.NotInWonderPick => "never offered in a Wonder Pick",
+        RouteBlock.NoDustPrice => "no shinedust price",
+        _ => "unavailable",
+    };
 
     private static string RouteName(AcquisitionRoute route) => route switch
     {

@@ -11,142 +11,292 @@
 }
 else
 {
-    <div class="page-head">
+    <div class="page-head folded">
         <h1 class="title">Which pack</h1>
-        <span class="subtitle">Ranked for @ScopeLabel</span>
+        @* What the ranking is OF, said in words, because every figure below means something
+           different once it changes. It was "Ranked for <scope>" with the plan itself a line
+           further down inside the bar that set it -- so the page named half of its own premise and
+           kept the other half folded away under the control that changes it.
+
+           Led by the word on the button that changes it, so the reading and its control are named
+           the same thing. *@
+        <span class="subtitle">
+            <span class="lbl">Target:</span> @Session.ScopeLabel(_scope)
+            @if (!IsChaseScope)
+            {
+                <text> &middot; </text>
+                <PlanSummary Plan="Draft" Foils="@(ScopeHasFoils ? Session.FoilCopies : 0)" />
+                @if (PlanScope is not null)
+                {
+                    <text>, </text><span>@ScopedSet only</span>
+                }
+            }
+            @if (OnSaleNow is { Length: > 0 } onSale)
+            {
+                <text> &middot; @onSale on sale</text>
+            }
+            @if (_pending)
+            {
+                <span class="chip-pending" title="Applying shortly, keep tapping to make more changes">
+                    Updating&hellip;
+                </span>
+            }
+        </span>
+
+        <span class="actions">
+            @* An Answer page gets no rail -- it leads with a verdict, not with content to browse --
+               so its controls fold behind a button rather than standing up a second bar. *@
+            <SheetOpener For="target-sheet" Label="Target" />
+        </span>
     </div>
 
-    <div class="page-tools">
-        @* Scope, target and availability sit together because they are the same kind of control:
-           each changes what the ranking is of, so every figure below means something different
-           afterwards. *@
+    @* What the ranking is of: the scope, the rarity plan, and which limited packs are on sale.
+       Three controls of one kind -- each changes what is being ranked, so each changes every
+       figure on the page -- and between them they were a bar plus a disclosure inside it. *@
+    <PageSheet Id="target-sheet" Label="Target">
+        @* Everything that sets what the ranking is OF, and nothing else. Scope, target and
+           availability are one kind of control -- each changes what is being ranked, so each
+           changes every figure on the page -- and between them they were a bar plus a disclosure
+           folded inside it. Eleven chips alone wrapped to three lines at 375px, which is what put
+           them behind that fold; a fold inside a sheet would be two doors on one room, so the
+           sheet is the only one now. What the settings ARE is said in the page bar, so opening
+           this is for changing them.
+
+           No premium switch. It is a subscription -- set once, changed almost never -- and a
+           control that permanent does not earn a place in something you pass through every time
+           you ask which pack to open. It lives on Resources, beside the pack rate it modifies and
+           the hourglass balance it is read against, which is where the arithmetic it changes is. *@
+
         @* Grouped by series so this stays usable as sets accumulate. *@
-        <ScopePicker Label="What to rank packs against" Everything="Everything"
-                     Grouped="true" Merged="true" Scope="@_scope" OnScope="OnScope" />
+        <div class="rail-group">
+            <span class="ttl">Ranking for</span>
+            <ScopePicker Label="What to rank packs against"
+                         Grouped="true" Merged="true" Scope="@_scope" OnScope="OnScope" />
+        </div>
 
-        @* No premium switch here. It is a subscription -- set once, changed almost never -- and a
-           control that permanent does not earn a place in a bar you pass through every time you
-           ask which pack to open. It lives on Resources, beside the pack rate it modifies and the
-           hourglass balance it is read against, which is where the arithmetic it changes is. *@
+        @* One chip per rarity, carrying its own copy count. Selection and quantity are the same
+           fact — a rarity you want zero of is one you ignore — so a single control says both, and
+           "two of each diamond, one of the stars" is a few taps. Tap to cycle none / 1 / 2.
 
-        @* One chip per rarity, carrying its own copy count. Selection and quantity are the
-           same fact — a rarity you want zero of is one you ignore — so a single control says
-           both, and "two of each diamond, one of the stars" is a few taps. Tap to cycle
-           none / 1 / 2. *@
-        @* The rarity chips edit the completion plan, which a chase list target does not consult, so
-           under a chase list scope they are hidden rather than shown doing nothing. *@
-        @* One panel for everything that sets what the ranking is OF, rather than a row of chips
-           and a row of availability toggles above the ranking they configure. Eleven chips alone
-           wrapped to three lines at 375px. The summary carries the settings themselves, so folding
-           them costs no information -- it is the reading that stays out and the changing that
-           folds away. *@
-        <details class="rarity-plan">
-            <summary>
-                @if (IsChaseScope)
+           The chips edit the completion plan, which a chase list target does not consult, so under
+           a chase list scope they are hidden rather than shown doing nothing. *@
+        @if (!IsChaseScope)
+        {
+            <div class="rail-group">
+            <span class="ttl">Copies wanted</span>
+            <span class="rarity-chips">
+                <RarityChips Plan="Draft" OnCycle="CycleTier"
+                             ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
+            </span>
+
+            @* Which plan the chips are editing, and how to reach the other one. This used to be
+               a label reading "default" with no route to a per-set plan unless a single set was
+               already scoped — so the word promised a distinction the page never offered. It
+               now says what to do at every scope. *@
+            <p class="plan-scope">
+                @if (PlanScope is not null)
                 {
-                    <span class="cur">A chase list decides what counts</span>
+                    <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
+                    <button class="chip-link" @onclick="ClearOverride"
+                            title="Follow the default plan again">Use the default here</button>
+                }
+                else if (ScopedSet is not null)
+                {
+                    <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
+                    <button class="chip-link" @onclick="StartOverride"
+                            title="Give @ScopedSet its own plan, starting from the default">
+                        Give @ScopedSet its own
+                    </button>
                 }
                 else
                 {
-                    <span class="ttl">Collecting</span>
-                    <span class="cur"><PlanSummary Plan="Draft" Foils="@(ScopeHasFoils ? Session.FoilCopies : 0)" /></span>
-                    @* Only when it is not the default. "every set" is what a plan does unless told
-                       otherwise, so saying it spends a line on a phone reporting the absence of a
-                       decision; "A1 only" is a decision and is worth the room. *@
-                    @if (PlanScope is not null)
-                    {
-                        <span class="scope">@ScopedSet only</span>
-                    }
-                }
-                @* Likewise: the app assumes limited-time packs are off sale, so only the other
-                   answer is worth a word here. *@
-                @if (OnSaleNow is { Length: > 0 } onSale)
-                {
-                    <span class="scope">@onSale on sale</span>
-                }
-                @if (_pending)
-                {
-                    <span class="chip-pending" title="Applying shortly, keep tapping to make more changes">
-                        Updating&hellip;
+                    <span>
+                        This is the <strong>default</strong>, used by every set without a plan
+                        of its own. Pick a single set above to give it one.
                     </span>
                 }
-                <span class="fold-hint">Change</span>
-            </summary>
+            </p>
+            </div>
+        }
 
-            @* The rarity chips edit the completion plan, which a chase list target does not consult,
-               so under a chase list scope they are hidden rather than shown doing nothing. *@
-            @if (!IsChaseScope)
-            {
-                <span class="rarity-chips">
-                    <RarityChips Plan="Draft" OnCycle="CycleTier"
-                                 ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
-                </span>
-
-                @* Which plan the chips are editing, and how to reach the other one. This used to be
-                   a label reading "default" with no route to a per-set plan unless a single set was
-                   already scoped — so the word promised a distinction the page never offered. It
-                   now says what to do at every scope. *@
-                <p class="plan-scope">
-                    @if (PlanScope is not null)
-                    {
-                        <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
-                        <button class="chip-link" @onclick="ClearOverride"
-                                title="Follow the default plan again">Use the default here</button>
-                    }
-                    else if (ScopedSet is not null)
-                    {
-                        <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
-                        <button class="chip-link" @onclick="StartOverride"
-                                title="Give @ScopedSet its own plan, starting from the default">
-                            Give @ScopedSet its own
-                        </button>
-                    }
-                    else
-                    {
-                        <span>
-                            This is the <strong>default</strong>, used by every set without a plan
-                            of its own. Pick a single set above to give it one.
-                        </span>
-                    }
-                </p>
-            }
-
-            @* Availability is a live fact no dataset records. The app assumes off sale, and a
-               Deluxe pack is otherwise the standout pick for a 4-diamond target, so the assumption
-               changes every figure on the page — which is why it is a labelled control saying
-               which way it is set rather than a bare switch. In here with the plan because it is
-               the same kind of thing: what the ranking is allowed to consider. *@
-            @if (Session.LimitedPacks.Count > 0)
-            {
-                <span class="avail">
-                    <span class="ttl">Limited-time</span>
-                    @foreach (var pack in Session.LimitedPacks)
-                    {
-                        var on = Session.IsLimitedPackAvailable(pack);
-                        <button class="avail-chip @(on ? "on" : "off")"
-                                @onclick="() => ToggleLimited(pack, !on)"
-                                title="@(pack.Split(':')[1]) packs come and go. @(on
-                                    ? "Counted in the ranking. Tap if they are not on sale."
-                                    : "Left out of the ranking, and their exclusive cards count as unobtainable. Tap when they are on sale.")">
-                            <span class="nm">@pack.Split(':')[1]</span>
-                            <span class="st">@(on ? "on sale" : "off sale")</span>
-                        </button>
-                    }
-                </span>
-            }
-        </details>
-    </div>
+        @* Availability is a live fact no dataset records. The app assumes off sale, and a
+           Deluxe pack is otherwise the standout pick for a 4-diamond target, so the assumption
+           changes every figure on the page — which is why it is a labelled control saying
+           which way it is set rather than a bare switch. In here with the plan because it is
+           the same kind of thing: what the ranking is allowed to consider. *@
+        @if (Session.LimitedPacks.Count > 0)
+        {
+            <div class="rail-group">
+            <span class="ttl">On sale now</span>
+            <span class="avail">
+                @foreach (var pack in Session.LimitedPacks)
+                {
+                    var on = Session.IsLimitedPackAvailable(pack);
+                    <button class="avail-chip @(on ? "on" : "off")"
+                            @onclick="() => ToggleLimited(pack, !on)"
+                            title="@(pack.Split(':')[1]) packs come and go. @(on
+                                ? "Counted in the ranking. Tap if they are not on sale."
+                                : "Left out of the ranking, and their exclusive cards count as unobtainable. Tap when they are on sale.")">
+                        <span class="nm">@pack.Split(':')[1]</span>
+                        <span class="st">@(on ? "on sale" : "off sale")</span>
+                    </button>
+                }
+            </span>
+            </div>
+        }
+    </PageSheet>
 
     <PageShell>
 
     @if (_outstanding == 0)
     {
-        <Notice Severity="Notice.Level.Success">
-            Nothing outstanding for this target. Raise the rarity or copies to aim higher.
-        </Notice>
+        @* An empty, not a success. It was a green alert, which is the app's voice for "something
+           you did worked" -- and nothing was done here; the ranking simply has nothing to rank. *@
+        <EmptyState>
+            <ChildContent>Nothing outstanding for this target.</ChildContent>
+            <Action>
+                <SheetOpener For="target-sheet" Label="Aim higher" />
+            </Action>
+        </EmptyState>
     }
     else
     {
+
+        @* The answer, before anything that supports it.
+           ==================================================================================
+           This page ranks packs, and a ranking's first row IS the answer -- but it was arriving as
+           a tinted row in a table of a dozen, with the figure that matters in a column headed
+           "Chance of a hit" and the arithmetic left for the reader to do. An Answer page leads
+           with the verdict and spends the arithmetic in words.
+
+           Which pack the block is about follows the ranking by default and follows your finger
+           after that: tapping any row in the table below promotes that pack up here, so comparing
+           two is reading one sentence twice rather than reading across five columns.
+
+           Everything under it is unchanged and still says what it always said. This is a heading
+           for a page that had none, not a replacement for what it heads. *@
+        @* Two columns on a wide screen: the answer on the left, everything else ranked on the
+           right.
+           ==================================================================================
+           The ranking is not supporting material -- it is the second half of the answer. "Open
+           Charizard" means one thing on its own and another beside "and the next one is 4% behind",
+           and reading the two as one thought is what the pair of columns is for. Below the desk
+           width they stack, verdict first, because on a phone you are asking one question. *@
+        <div class="answer-cols">
+        <div class="answer-lead">
+        @if (Verdict is { Standing: not null } lead)
+        {
+            var st = lead.Standing!;
+            var chance = ChanceWords(st.ChanceUseful);
+            <div class="verdict-lead">
+                <span class="micro">@(lead.Best ? "Open this next" : "If you open this")</span>
+
+                <div class="lead-head">
+                    @* Background rather than <img>, as the table's thumbnails are: a failed load
+                       shows the placeholder instead of a broken-image gap, with nothing to
+                       handle. *@
+                    <span class="art" style="--art:url('@Session.PackArtUrl(lead.PackKey)')"
+                          aria-hidden="true"></span>
+
+                    <div class="lead-text">
+                        <h2 class="name">@lead.PackName</h2>
+                        <p class="from">@Session.Sets.DisplayName(lead.Set)</p>
+
+                        @* The figure in words, then the two that follow from it. "34.2%" is a
+                           number you have to convert before you can act on it; "about 1 pack in 3"
+                           is the same fact already converted. *@
+                        <p class="says">
+                            @chance.Lead<strong class="key">@chance.Figure</strong> gives you a
+                            card you still need &mdash; roughly
+                            <strong>@PackCount(st.PacksToNextUseful)</strong> between new cards, and
+                            <strong>@MorePacks(st.PacksToFinishItsShare)</strong> to finish its
+                            share of your target.
+                        </p>
+
+                        @* The same figure as calendar time, which is the one that changes a
+                           decision: nobody plans in packs, they plan in days. *@
+                        <p class="then">
+                            At @GameRules.PacksPerDay(Premium) free packs a day that is about
+                            <strong>@Days(st.PacksToFinishItsShare, Premium)</strong>@if (!Premium)
+                            {
+                                <text>, or @Days(st.PacksToFinishItsShare, true) with premium</text>
+                            }.
+                        </p>
+                    </div>
+                </div>
+
+                @* Where in the pack the chance actually is.
+                   ==========================================================================
+                   Five positions, and they are not alike: the first three come from the common
+                   pool, so once you have finished the commons they can only ever give you a
+                   duplicate. A single "chance of a hit" hides that entirely, and it is the whole
+                   reason one pack beats another once a set is half done.
+
+                   A dashed box says that position is dead, which an empty cell cannot -- blank
+                   reads as missing data rather than as a fact.
+
+                   The strip is legal here because the set of boxes is literal: a pack has five
+                   cards, always, and they are on screen because the page has to explain itself
+                   rather than because a chart seemed nice. *@
+                @if (SlotStrip(lead.PackKey) is { Count: > 0 } slots)
+                {
+                    @* The set is literal -- a pack has five cards -- which is the precondition
+                       BoxStrip documents. Bars, because these five figures are one quantity and
+                       comparing them across the row is the point. *@
+                    <BoxStrip Label="Where the chance is" Clause="@SlotClause(slots)"
+                              Columns="@slots.Count">
+                        @foreach (var slot in slots)
+                        {
+                            <Box State="@(slot.Chance > 0 ? Box.Kind.Live : Box.Kind.Dead)"
+                                 Label="@Ordinal(slot.Position)"
+                                 Figure="@slot.Chance.ToString("P1")"
+                                 Bar="@slot.Chance" />
+                        }
+                    </BoxStrip>
+                }
+
+                <div class="lead-actions">
+                    <a class="btn btn-sm btn-primary" href="log?pack=@Uri.EscapeDataString(lead.PackKey)">
+                        Log a @lead.PackName pack
+                    </a>
+                    <span class="served">@CardCount(st.DemandsServed) it can give</span>
+                </div>
+            </div>
+        }
+        </div>
+
+        @* The ranked list, as a summary rather than as the table. One row per pack: the picture,
+           the name, what it can give, a bar and the chance. The table below keeps every column it
+           had -- this is the shape you read the shortlist in, and that is the shape you read one
+           pack's detail in. *@
+        <div class="answer-ranked">
+            <span class="micro">Everything else, ranked</span>
+            <div class="ranked-rows">
+                @foreach (var row in _rows.Where(r => r.Standing is not null).Take(RankedShown))
+                {
+                    var rs = row.Standing!;
+                    <button class="ranked-row @(row.PackKey == Verdict?.PackKey ? "current" : "")"
+                            @onclick="() => SelectPack(row.PackKey)"
+                            title="Read the verdict for @row.PackName">
+                        <span class="art" aria-hidden="true"
+                              style="--art:url('@Session.PackArtUrl(row.PackKey)')"></span>
+                        <span class="nm">
+                            <strong>@row.PackName</strong>
+                            <span class="sub">@row.Set &middot; @CardCount(rs.DemandsServed) it can give</span>
+                        </span>
+                        <span class="bar" aria-hidden="true">
+                            <span style="inline-size:@((Math.Clamp(rs.ChanceUseful, 0, 1) * 100).ToString("F0"))%"></span>
+                        </span>
+                        <span class="pct">@rs.ChanceUseful.ToString("P1")</span>
+                    </button>
+                }
+            </div>
+            <p class="note">
+                Chance a pack gives you something you need. Tap a row to swap the verdict above to
+                that pack; the full table is below.
+            </p>
+        </div>
+        </div>
 
         @* Every extra breakdown lives behind a button in one row here, at the top of the page,
            rather than below the ranking table &mdash; that table runs to dozens of rows across
@@ -397,7 +547,7 @@ else
                     </tbody>
                 </DataTable>
 
-                <h2 class="mt-3 h6">Where points are worth spending</h2>
+                <h2 class="sub-head">Where points are worth spending</h2>
                 @if (_pointsShop.Count == 0)
                 {
                     <p class="small text-body-secondary mb-0">
@@ -427,7 +577,7 @@ else
                                     <td>
                                         <span class="pack-thumb deck-thumb"
                                               data-tip-img="@row.Card.ArtUrl" data-tip="@row.Card.Name"
-                                              style="--art:url('@row.Card.ArtUrl')"></span>
+                                              style="@row.Card.ArtVars"></span>
                                         <strong>@row.Card.Name</strong>
                                         <span class="small text-body-secondary ms-1">@row.Card.Set&thinsp;@row.Card.Number</span>
                                     </td>
@@ -475,7 +625,7 @@ else
                        of their contents — would both compare equal to the winner and both light
                        up as "the best". *@
                     <tr class="@(row.Best ? "row-best" : "") @(row.Mark is null ? "" : "pack-row-muted") pack-row-click"
-                        @onclick="() => ToggleExpanded(row.PackKey)">
+                        @onclick="() => SelectPack(row.PackKey)">
                         @* Three inline things in one cell is fine until the cell is 190px wide,
                            which is what a phone leaves after the three figures beside it. Then a
                            long name wraps back under the expander and the thumbnail, and its set
@@ -502,7 +652,7 @@ else
                             @if (row.Best)
                             {
                                 <span class="badge text-bg-primary ms-1"
-                                      title="Best pack for @ScopeLabel right now">Open This</span>
+                                      title="Best pack for @Session.ScopeLabel(_scope) right now">Open This</span>
                             }
                             @if (row.Mark is { Length: > 0 } mark)
                             {
@@ -552,7 +702,10 @@ else
                            and the app's assumption about the shelf should not stop it being
                            recorded. *@
                         <td class="act">
-                            <a class="btn btn-sm btn-outline-secondary py-0"
+                            @* `py-0` made this the one control in the app with no vertical
+                               padding: a 20px target in a 44px row, which both undershot the
+                               touch minimum and sat visibly low against the text beside it. *@
+                            <a class="btn btn-sm btn-outline-secondary"
                                href="@LogHref(row.PackKey)"
                                @onclick:stopPropagation="true"
                                title="Log a @row.PackName pack you just opened">Log</a>
@@ -775,19 +928,6 @@ else
         _scope == "chases" || _scope.StartsWith("chase:", StringComparison.Ordinal);
 
     /// <summary>
-    /// What the header says the page is ranking for. The scope control moved down to the tools
-    /// bar, so the header has to name the choice — otherwise the page's own subject would only
-    /// be legible from a dropdown further down.
-    /// </summary>
-    private string ScopeLabel =>
-        _scope == "chases" ? "all chase lists"
-        : _scope.StartsWith("chase:", StringComparison.Ordinal)
-            ? Session.ChaseListById(_scope[5..])?.Name ?? "a chase list"
-        : _scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {_scope[7..]}"
-        : _scope == "everything" ? "everything you collect"
-        : $"{_scope}: {Session.Sets.DisplayName(_scope)}";
-
-    /// <summary>
     /// Which plan the chips edit: one set's, or the default that the rest follow. A set only
     /// gets its own once the user asks for one, so scoping to a set does not by itself create
     /// an override — that would fork every set the moment it was looked at.
@@ -969,6 +1109,24 @@ else
 
         var outstanding = CurrentTarget().Outstanding(Session.Index, Session.Owned);
         _pointsShop = Session.Routes.PointsShopRanking(outstanding, Session.Owned);
+    }
+
+    /// <summary>
+    /// A tap on a ranked row: promote that pack into the verdict block, and open its detail.
+    ///
+    /// Both, from one tap, because they are the same intent said at two levels of detail --
+    /// "tell me about this one". Comparing two packs is then reading one sentence twice rather
+    /// than reading across five columns, which is the whole reason the verdict block is worth
+    /// having on a page that already ranks them.
+    ///
+    /// The promotion is not undone by tapping again. Collapsing the detail of the pack the verdict
+    /// is about should not also throw the verdict back to a different pack -- the reading you were
+    /// left looking at would change under a gesture that meant "I am done with the detail".
+    /// </summary>
+    private void SelectPack(string packKey)
+    {
+        _verdictPack = packKey;
+        ToggleExpanded(packKey);
     }
 
     /// <summary>One row open at a time: two open expanders push the ranking off the screen.</summary>
@@ -1239,6 +1397,151 @@ else
     private static string LogHref(string packKey) => $"log?pack={Uri.EscapeDataString(packKey)}";
 
     private static string Fmt(double packs) => Text.Fmt.Packs(packs);
+
+    /// <summary>
+    /// A pack count with its noun agreed. Fmt formats the number and knows nothing about the word
+    /// after it, which is how the sentence came out reading "roughly 1 packs between new cards".
+    /// </summary>
+    private static string PackCount(double packs) =>
+        Fmt(packs) == "1" ? "1 pack" : $"{Fmt(packs)} packs";
+
+    /// <summary>The same agreement for the card count beside the action.</summary>
+    private static string CardCount(int cards) => cards == 1 ? "1 card" : $"{cards} cards";
+
+    /// <summary>
+    /// "149 more packs", with the adjective inside the phrase rather than bolted onto the end of
+    /// it. Built separately from <see cref="PackCount"/> because "149 packs more" is what you get
+    /// when the count and the word after it are assembled in the markup.
+    /// </summary>
+    private static string MorePacks(double packs) =>
+        Fmt(packs) == "1" ? "1 more pack" : $"{Fmt(packs)} more packs";
+
+    /// <summary>
+    /// The chance as the phrase that opens the sentence, split from the words that lead into it.
+    ///
+    /// Two parts because only one of them is the answer: the accent ink goes on the figure, and
+    /// "About" is a hedge rather than a figure. Splitting it also settles the case that reads
+    /// worst -- a pack every card of which can serve the target is "Every pack", and "About every
+    /// pack" is not a sentence anyone would write.
+    /// </summary>
+    private static (string Lead, string Figure) ChanceWords(double chance) =>
+        chance >= .995 ? ("", "Every pack") : ("About ", InWords(chance));
+
+    /// <summary>
+    /// Which pack the verdict block is about. The ranking's own answer until you point at another.
+    ///
+    /// Held as a key rather than as a row, because the rows are rebuilt whenever the scope or the
+    /// plan changes and a held row would go stale pointing at a ranking that no longer exists.
+    /// Falling back to the best one also means a pack that drops out of the ranking entirely --
+    /// a set left out by a new scope -- resolves to the new answer rather than to nothing.
+    /// </summary>
+    /// <summary>
+    /// How many packs the shortlist beside the verdict shows.
+    ///
+    /// A shortlist, not the ranking: the table below is the ranking and runs to every priceable
+    /// pack. This is the handful you would actually weigh against the one being recommended, and
+    /// past about six the column is taller than the verdict it sits beside.
+    /// </summary>
+    private const int RankedShown = 6;
+
+    private string? _verdictPack;
+
+    private PackRow? Verdict =>
+        _rows.FirstOrDefault(r => r.PackKey == _verdictPack && r.Standing is not null)
+        ?? _rows.FirstOrDefault(r => r.Best && r.Standing is not null)
+        ?? _rows.FirstOrDefault(r => r.Standing is not null);
+
+    /// <summary>
+    /// A probability as the phrase a player would use. "About 1 pack in 3" is the same fact as
+    /// "34.2%" with the division already done, and the division is the part that decides whether
+    /// to open one.
+    ///
+    /// Only down to one in twenty; below that "1 in 34" is not a number anyone holds in their head
+    /// and the percentage reads better. Above a half it inverts -- "2 packs in 3" rather than
+    /// "1 pack in 1.5" -- because a fraction with a decimal in it is not a phrase.
+    /// </summary>
+    private static string InWords(double chance)
+    {
+        if (chance <= 0) return "no pack";
+
+        // The near-certain case is ChanceWords' -- it needs the whole phrase, not just the figure,
+        // because "About every pack" is not a sentence. The guard stays here so this is safe to
+        // call on its own: without it a .99998 chance comes out as "1 pack in 1".
+        if (chance >= .995) return "every pack";
+
+        var one = 1 / chance;
+        if (one > 20) return chance.ToString("P1");
+
+        // Near a whole number, say it as one in N.
+        var rounded = Math.Round(one);
+        if (Math.Abs(one - rounded) < .12) return $"1 pack in {rounded:N0}";
+
+        // Otherwise the other way up, in thirds, quarters or fifths -- whichever lands closest.
+        foreach (var den in new[] { 3, 4, 5 })
+        {
+            var num = Math.Round(chance * den);
+            if (num >= 1 && num < den && Math.Abs(chance - num / den) < .04)
+                return $"{num:N0} packs in {den}";
+        }
+
+        return chance.ToString("P1");
+    }
+
+    /// <summary>One box per card position in the pack, expanded from the grouped odds.</summary>
+    private sealed record Slot(int Position, double Chance);
+
+    /// <summary>
+    /// The five positions, each carrying its group's chance.
+    ///
+    /// The engine groups adjacent positions that share a distribution -- "1st-3rd card" is one
+    /// entry -- because that is how the rates are published. The strip shows five boxes anyway:
+    /// the set being literal is the whole precondition for a strip, and a pack has five cards
+    /// whatever the arithmetic groups them into.
+    /// </summary>
+    private IReadOnlyList<Slot> SlotStrip(string packKey)
+    {
+        var groups = SlotOddsFor(packKey);
+        if (groups.Count == 0) return [];
+
+        // Sized from the groups rather than from a constant: the engine's last position is what a
+        // pack of this set actually holds, and there is no rule in GameRules claiming otherwise.
+        var slots = new List<Slot>(groups[^1].Last);
+        foreach (var g in groups)
+            for (var i = g.First; i <= g.Last; i++)
+                slots.Add(new Slot(i, g.Chance));
+
+        return slots.OrderBy(s => s.Position).ToList();
+    }
+
+    /// <summary>
+    /// Why the dead boxes are dead, said once rather than per box.
+    ///
+    /// Only where there is something to explain. A strip with a live figure in every box needs no
+    /// clause, and a sentence appearing and disappearing is less confusing than one that is
+    /// sometimes vacuous.
+    /// </summary>
+    private static string? SlotClause(IReadOnlyList<Slot> slots)
+    {
+        var dead = slots.Where(s => s.Chance <= 0).Select(s => s.Position).ToList();
+        if (dead.Count == 0 || dead.Count == slots.Count) return null;
+
+        // Contiguous from the first card is the common case by far: the first three come from the
+        // common pool, and a collection past its commons kills exactly those.
+        var run = dead.Count == dead[^1] && dead[0] == 1;
+        return run
+            ? $"the first {Words(dead.Count)} cards come from the common pool, and you have finished those"
+            : "some positions can only give you a card you already have";
+    }
+
+    private static string Words(int n) => n switch
+    {
+        1 => "one", 2 => "two", 3 => "three", 4 => "four", 5 => "five", _ => n.ToString()
+    };
+
+    private static string Ordinal(int n) => n switch
+    {
+        1 => "1st", 2 => "2nd", 3 => "3rd", 4 => "4th", 5 => "5th", _ => $"{n}th"
+    };
 
     /// <summary>Expected packs as calendar time, which is the number that changes decisions.</summary>
     private static string Days(double packs, bool premium)

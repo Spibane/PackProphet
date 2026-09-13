@@ -82,6 +82,78 @@ public class LogPackTests : AppHost
         Assert.DoesNotContain(" cards", bar);
     }
 
+    private static string Flat(string text) =>
+        System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+
+    [Fact]
+    public async Task The_page_leads_with_what_is_still_missing()
+    {
+        // The Record job's signature, and the reason this page has no headline figure: nothing on
+        // it is true until the commit, so what it can lead with is the gap between what you have
+        // typed and what a pack holds.
+        var page = await PageAsync();
+        page.FindAll(".pack-choice").First().Click();
+
+        var strip = page.WaitForElement(".todo-strip");
+        Assert.Contains("Still to do", strip.TextContent);
+
+        // Nothing picked yet, so it says what to do rather than what is wrong.
+        Assert.DoesNotContain("short", strip.GetAttribute("class") ?? "");
+
+        // And it offers the way out of doing it by hand, which is the one moment that offer is
+        // worth making — before any of it has been done.
+        Assert.NotNull(strip.QuerySelector(".escape"));
+    }
+
+    [Fact]
+    public async Task The_strip_only_warns_when_the_commit_is_actually_short()
+    {
+        // The existing finding this had to keep: a live warning about the count is wrong for the
+        // whole time you are tapping, because one card into a five-card pack it is already "not
+        // five". So the alarm belongs to the moment the question is asked, not to the task.
+        var page = await PageAsync();
+        page.FindAll(".pack-choice").First().Click();
+        page.WaitForElement(".todo-strip");
+
+        // One card in: still just progress. The grid is virtualised, so the tiles arrive a render
+        // after the pack choice rather than with it.
+        page.WaitForState(() => page.FindAll(".card-tile").Count > 0, TimeSpan.FromSeconds(10));
+        page.Find(".card-tile").Click();
+        page.WaitForAssertion(() =>
+            Assert.Contains("named", page.Find(".page-head.sticky-head").TextContent));
+
+        Assert.Empty(page.FindAll(".todo-strip.short"));
+
+        // Pressing commit on a short pack is when it says what that would mean.
+        page.Find(".page-head.sticky-head .btn-success").Click();
+
+        page.WaitForAssertion(() =>
+        {
+            var warned = page.Find(".todo-strip.short");
+            Assert.Contains("odds check", Flat(warned.TextContent));
+            Assert.Contains("anyway", Flat(warned.TextContent));
+        });
+    }
+
+    [Fact]
+    public async Task The_foot_says_what_committing_will_do()
+    {
+        // A Record page cannot headline a figure, but it can say what the figure will BE — which
+        // is a statement about the future rather than a reading of a present that does not exist
+        // yet. Points accrue per set and stop dead at the cap, so a pack opened while capped earns
+        // nothing, and that is worth knowing before rather than after.
+        var page = await PageAsync();
+        page.FindAll(".pack-choice").First().Click();
+
+        var foot = page.WaitForElement(".commit-foot");
+        var said = Flat(foot.TextContent);
+
+        Assert.True(said.Contains("points to") || said.Contains("cap"),
+                    $"the foot should say where the points land: {said}");
+        Assert.Contains("One undo step", said);
+        Assert.Contains("Log another", said);
+    }
+
     [Fact]
     public async Task The_header_that_carries_the_save_button_is_pinned_to_the_top()
     {
@@ -93,6 +165,10 @@ public class LogPackTests : AppHost
 
         var head = page.WaitForElement(".page-head.sticky-head");
         Assert.Contains("sticky-head", head.GetAttribute("class"));
-        Assert.Contains("Add 0 to collection", head.TextContent);
+        Assert.Contains("Add to collection", head.TextContent);
+
+        // The count went with it, as progress against what a pack holds rather than a bare tally:
+        // "picked 3" is a fact about your typing and "3 of 5 named" is a fact about the job.
+        Assert.Contains("named", head.TextContent);
     }
 }

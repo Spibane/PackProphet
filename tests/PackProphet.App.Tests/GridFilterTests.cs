@@ -48,27 +48,33 @@ public class GridFilterTests : AppHost
                                    .QuerySelectorAll(".chip-tog").ToArray()[index].Click());
 
     /// <summary>
-    /// How many cards the bar says are listed. The set bar, with the set name and the percentage —
-    /// the total moved there off the grid's own bar, which wraps as soon as a filter is on.
+    /// How many cards the controls say are listed.
+    ///
+    /// In the rail's "Showing" heading, which is where the count went when the set bar it used to
+    /// sit on was folded into a sheet: it belongs to the group whose filters decide it, and the
+    /// whole argument for the rail is that a control can carry its own label.
     /// </summary>
     private static int Listed(IRenderedComponent<Collection> page)
     {
-        var text = page.Find(".set-picker > summary .tally").TextContent;
+        var text = page.Find(".page-rail .rail-group > .ttl > .cnt").TextContent;
         var digits = new string(text.SkipWhile(c => !char.IsDigit(c)).TakeWhile(char.IsDigit).ToArray());
         return int.Parse(digits);
     }
 
     [Fact]
-    public async Task The_missing_filter_is_in_the_disclosure_and_nowhere_else()
+    public async Task The_missing_filter_is_one_control_and_nowhere_else()
     {
         // One control, in the select with the other five ownership filters. It had a button of its
         // own on the always-on bar as well, which is six controls' worth of bar on a phone and the
         // same state said twice: pressed button, and a chip beside it reading "missing only".
+        //
+        // The shell moved -- the controls are in a rail now rather than on a bar and a disclosure
+        // -- and the invariant did not: still one control, wherever the controls live.
         var page = await PageAsync();
 
-        Assert.DoesNotContain(page.FindAll(".grid-toolbar button"),
+        Assert.DoesNotContain(page.FindAll(".page-rail button"),
                               b => b.TextContent.Contains("Missing Only"));
-        Assert.Contains(page.FindAll(".toolbar-more-body option"),
+        Assert.Contains(page.FindAll(".page-rail option"),
                         o => o.TextContent.Contains("Missing Only"));
 
         // A collection that owns nothing has nothing missing to hide, so the filter would pass this
@@ -80,7 +86,7 @@ public class GridFilterTests : AppHost
         var all = Listed(page);
 
         await page.InvokeAsync(() =>
-            page.Find(".toolbar-more-body select").Change("missing"));
+            page.Find(".page-rail select").Change("missing"));
         page.WaitForAssertion(() => Assert.True(Listed(page) < all,
             $"missing-only listed {Listed(page)} of {all}"));
 
@@ -90,14 +96,171 @@ public class GridFilterTests : AppHost
     }
 
     [Fact]
-    public async Task The_layout_switch_is_on_the_always_on_bar()
+    public async Task The_page_stacks_no_more_than_one_bar_of_its_own()
     {
+        // The rule the whole shell exists for. This page used to stack a header, the set row, the
+        // evolution-gap strip and the grid's toolbar under the global nav -- about 300px before
+        // the first card on a phone. One is what is left: the global nav is bar one and this is
+        // bar two, and everything else that used to be a strip is in the rail, in a sheet, or in
+        // this bar's own sentence.
         var page = await PageAsync();
 
-        var bar = page.Find(".grid-toolbar");
-        Assert.Contains("Grid", bar.TextContent);
-        Assert.Contains("List", bar.TextContent);
-        Assert.NotNull(page.Find(".grid-toolbar .layout-switch"));
+        Assert.Single(page.FindAll(".page-head"));
+        Assert.Empty(page.FindAll(".grid-toolbar"));
+        Assert.Empty(page.FindAll(".page-tools"));
+
+        // The set row is a sheet now, opened from the bar rather than sitting under it.
+        Assert.Empty(page.FindAll("details.set-picker"));
+        var opener = page.Find(".page-head .actions [popovertarget='set-sheet']");
+        Assert.Equal("set-sheet", page.Find(".set-sheet").Id);
+        Assert.True(page.Find(".set-sheet").HasAttribute("popover"));
+        Assert.Contains("Change set", opener.TextContent);
+
+        // And the gap strip is in the rail rather than being a strip.
+        var gaps = page.FindAll(".gap-strip").ToArray();
+        if (gaps.Length > 0) Assert.NotNull(gaps[0].Closest(".page-rail"));
+    }
+
+    [Fact]
+    public async Task The_controls_are_one_set_in_the_page_not_two_copies_by_width()
+    {
+        // The rail is a column beside the grid above the fold width and a sheet over it below,
+        // and it is ONE element carrying popover with the stylesheet deciding which. Rendering it
+        // twice and hiding one by width would mean two of every select, two of every generated id,
+        // and two controls on one handler -- a pair that agrees until it does not.
+        var page = await PageAsync();
+
+        var rails = page.FindAll(".page-rail").ToArray();
+        Assert.Single(rails);
+        Assert.True(rails[0].HasAttribute("popover"),
+            "the rail must carry popover; without it the phone has no sheet to open");
+
+        // And the button that opens it points at that one element.
+        var opener = page.Find(".rail-fab.filters");
+        Assert.Equal(rails[0].Id, opener.GetAttribute("popovertarget"));
+    }
+
+    [Fact]
+    public async Task A_tap_changes_nothing_until_you_say_it_should()
+    {
+        // The grid's whole surface is a control: every tile is a button that silently changes a
+        // number read as fact later, with no confirmation and no feedback beyond a badge on a card
+        // you have probably scrolled past. Undo does not help, because you have to know it
+        // happened. So every visit starts in the state where nothing happens.
+        var page = await PageAsync();
+
+        var before = Session.CountOf(Session.Index.All.First(c => c.Set == "A1"));
+
+        var tile = page.Find(".card-tile");
+        var key = tile.GetAttribute("id");
+        await page.InvokeAsync(() => page.Find($"#{key}").Click());
+
+        Assert.Equal(before, Session.CountOf(Session.Index.All.First(c => c.Set == "A1")));
+
+        // And the grid says so rather than looking armed.
+        Assert.Contains("tap-off", page.Find(".grid-wrap").ClassList);
+    }
+
+    [Fact]
+    public async Task Arming_the_mode_makes_a_tap_count_again()
+    {
+        // The off state is a default, not a cage: one press and the grid works as it did.
+        var page = await PageAsync();
+
+        var adds = page.FindAll(".page-rail .rail-group.mode .btn").ToArray()[1];
+        Assert.Equal("Add", adds.TextContent.Trim());
+
+        await page.InvokeAsync(() => adds.Click());
+
+        page.WaitForAssertion(() =>
+            Assert.DoesNotContain("tap-off", page.Find(".grid-wrap").ClassList));
+    }
+
+    [Fact]
+    public async Task A_set_sold_in_one_pack_is_offered_no_pack_filter()
+    {
+        // A filter that cannot narrow anything is worse than no filter: it looks like a control,
+        // it takes a press, and the list it produces is the list that was already there. Most sets
+        // have exactly one pack, so this was the ordinary case rather than an edge of it.
+        var page = await PageAsync();
+
+        // Whichever set the picker is on, the rule is the same: a pack row exists only where there
+        // is a choice in it.
+        var picks = page.FindAll(".pack-picks .pack-pick").Count;
+        Assert.True(picks != 1, "a pack filter offering one pack narrows nothing");
+
+        // Non-vacuous: drive the picker to the set with the most packs in the fixture and check
+        // the row appears there.
+        var best = Session.Index.OpenableSets
+            .Select(set => (Set: set, Packs: Session.Index.All
+                .Where(c => c.Set == set && c.IsPackObtainable)
+                .SelectMany(c => c.Packs!).Distinct().Count()))
+            .OrderByDescending(x => x.Packs)
+            .First();
+
+        if (best.Packs < 2) return;
+
+        await ChooseAsync(page, Session.Sets.SeriesOf(best.Set), best.Set);
+        page.WaitForAssertion(() =>
+            Assert.Equal(best.Packs, page.FindAll(".pack-picks .pack-pick").Count));
+    }
+
+    [Fact]
+    public async Task The_add_remove_mode_is_never_inside_the_sheet()
+    {
+        // The only control in the app that can take a card away. A destructive mode you have to
+        // open a sheet to check is a mode you will be wrong about, so on a phone it is a floating
+        // button that is on screen the whole time -- outside the rail, not within it.
+        var page = await PageAsync();
+
+        var fab = page.Find(".rail-fab.mode");
+        Assert.Null(fab.Closest(".page-rail"));
+
+        // The rail's own copy is marked so the sheet can leave it out at that width.
+        Assert.NotNull(page.Find(".page-rail .rail-group.mode"));
+    }
+
+    [Fact]
+    public async Task The_page_bar_says_what_the_filters_are_set_to()
+    {
+        // The half of the phone treatment that keeps the rest honest. The controls fold into a
+        // sheet, and a count whose filters are out of sight is a lie: "110 cards" means something
+        // else with "missing only" on. A badge reading "2" says there are filters without saying
+        // what they are, which is not the same thing.
+        var page = await PageAsync();
+
+        // Nothing applied, nothing claimed.
+        Assert.Empty(page.FindAll(".page-head .subtitle .filters"));
+        Assert.DoesNotContain("Filters", page.Find(".rail-fab.filters").QuerySelectorAll(".n")
+            .Select(n => n.TextContent));
+
+        await page.InvokeAsync(() => page.Find(".page-rail select").Change("missing"));
+
+        page.WaitForAssertion(() =>
+        {
+            var said = page.Find(".page-head .subtitle .filters").TextContent;
+            Assert.Contains("missing only", said);
+        });
+
+        // And the count on the button agrees with the words, being built from the same state.
+        Assert.Equal("1", page.Find(".rail-fab.filters .n").TextContent.Trim());
+    }
+
+    [Fact]
+    public async Task The_layout_switch_is_not_behind_a_disclosure()
+    {
+        // List mode is not a preference among equals: it is the only view carrying a count per
+        // row, the set and number, type, rarity and the printed text. Behind a summary reading
+        // "filters and layout" it was findable only by someone who already suspected it existed,
+        // so it may never go back behind one -- on a bar or in a rail.
+        var page = await PageAsync();
+
+        var rail = page.Find(".page-rail");
+        Assert.Contains("Grid", rail.TextContent);
+        Assert.Contains("List", rail.TextContent);
+
+        Assert.Empty(page.FindAll(".page-rail details"));
+        Assert.Null(page.Find(".page-rail").QuerySelector("details"));
     }
 
     [Fact]
@@ -120,8 +283,9 @@ public class GridFilterTests : AppHost
         Assert.True(one < everything, "one rarity narrowed nothing");
         Assert.True(two > one, $"a second rarity did not widen the list: {two} vs {one}");
 
-        // And the bar reports the filter, since the count means something different with it on.
-        Assert.Contains("2 rarities", page.Find(".grid-toolbar").TextContent);
+        // And the controls report the filter, since the count means something different with it
+        // on. In the rail the two sit in one group, which is the point of the group.
+        Assert.Contains("2 rarities", page.Find(".page-rail").TextContent);
     }
 
     [Fact]
@@ -133,7 +297,7 @@ public class GridFilterTests : AppHost
         await ChipAsync(page, 0, 0);
         Assert.True(Listed(page) < everything);
 
-        await ClickAsync(page, ".grid-toolbar .chip-filter");
+        await ClickAsync(page, ".page-rail .chip-filter");
         page.WaitForAssertion(() => Assert.Equal(everything, Listed(page)));
     }
 

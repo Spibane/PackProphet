@@ -11,79 +11,135 @@
 }
 else
 {
-    <div class="page-head">
+    <div class="page-head folded">
         <h1 class="title">Wishlist</h1>
-        <span class="subtitle">@GameRules.TradeBoardSlots slots, seen by anyone looking to trade</span>
+        @* The slots, and what the plan was made under. The tuning decides which cards are even
+           eligible, so a board read without it is a board you cannot account for -- and on a phone
+           the controls are behind a button, where a badge reading "3" would say there are settings
+           without saying what they are. *@
+        <span class="subtitle">
+            @GameRules.TradeBoardSlots slots, seen by anyone looking to trade
+            &middot; @TuningSummary
+        </span>
+
+        <span class="actions">
+            @* The plan is computed from what you owned when it ran, and you have just spent a
+               minute retyping the board in the game. Re-running is the natural next act, and it
+               was reachable only by changing a control and changing it back. *@
+            <button class="btn btn-sm btn-outline-secondary" @onclick="Rerun"
+                    aria-label="Work the plan out again" title="Work the plan out again">
+                &#8635;
+            </button>
+        </span>
     </div>
 
-    <div class="page-tools">
-        <ScopePicker Label="What the slots should work toward" Scope="@_scope" OnScope="OnScope" />
+    <PageShell Measure="PageShell.Width.Wide" Class="railed">
 
-        @* Three knobs, each with its own visible label, wrapped this bar to three rows at 375px.
-           The labels go into the options — a dropdown reading "4 slots kept for likely offers"
-           says everything "slots for likely offers [4]" said in one control instead of two — and
-           the knobs themselves fold away behind a summary that states where they are set.
+    <PageRail Id="board-rail" OpenLabel="Tuning" Count="@TuningCount">
+        <div class="rail-group">
+            <span class="ttl">Working toward</span>
+            <ScopePicker Label="What the slots should work toward" Scope="@_scope" OnScope="OnScope" />
+        </div>
 
-           Both knobs stay exposed inside it because neither default suits everyone: a patient
-           collector and someone who wants a trade this week want different boards. *@
-        <details class="board-tuning">
-            <summary>
-                <span class="cur">@TuningSummary</span>
-                <span class="fold-hint">Change</span>
-            </summary>
+        @* Three knobs, each with its own visible label. They wrapped the old bar to three rows at
+           375px, which is what put them behind a disclosure; a column has room for all three and
+           for the heading that says what they are.
 
-            <div class="board-tuning-body">
-                <select id="liquid" class="form-select form-select-sm"
-                        aria-label="How many board slots to keep for cards that attract an offer"
-                        @onchange="OnLiquid">
-                    @for (var n = 0; n <= 8; n++)
-                    {
-                        <option value="@n" selected="@(n == _liquidSlots)">
-                            @(n == 0 ? "No slots kept for likely offers" : $"{n} slot{(n == 1 ? "" : "s")} kept for likely offers")
-                        </option>
-                    }
-                </select>
+           All three stay exposed, because no default suits everyone: a patient collector and
+           someone who wants a trade this week want different boards. *@
+        <div class="rail-group">
+            <span class="ttl">Tuning</span>
 
-                @* Parallel foils are diamond-rarity, so no rarity filter separates them, and they
-                   come only from a limited-time pack, which makes them among the dearest things
-                   here and prone to filling the board. Offered only when they are collected at
-                   all. *@
-                @if (ShowFoilFilter)
-                {
-                    <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
-                            @onclick="CycleFoils"
-                            title="Foils are listed as the 1-3 diamond cards they are printed as. Exclude them if the game will not let you wishlist a foil printing.">
-                        @(_foils == "with" ? "Parallel foils included" : "Parallel foils left out")
-                    </button>
-                }
+        <select id="liquid" class="form-select form-select-sm"
+                aria-label="How many board slots to keep for cards that attract an offer"
+                @onchange="OnLiquid">
+            @for (var n = 0; n <= 8; n++)
+            {
+                @* Short enough to read inside the rail. At the old wording the widest option was
+                   184px of text in a 151px column, so what the control actually said while closed
+                   was "No slots kept for likely o". The aria-label above carries the full sentence,
+                   which is where the long form belongs. *@
+                <option value="@n" selected="@(n == _liquidSlots)">
+                    @(n == 0 ? "No slots for offers" : $"{n} slot{(n == 1 ? "" : "s")} for offers")
+                </option>
+            }
+        </select>
 
-                <select id="floor" class="form-select form-select-sm"
-                        aria-label="Leave out cards cheaper than this" @onchange="OnFloor">
-                    <option value="0" selected="@(_floor == 0)">However cheap the card</option>
-                    <option value="15" selected="@(_floor == 15)">Leave out under 15 packs</option>
-                    <option value="50" selected="@(_floor == 50)">Leave out under 50 packs</option>
-                    <option value="150" selected="@(_floor == 150)">Leave out under 150 packs</option>
-                </select>
+        @* Parallel foils are diamond-rarity, so no rarity filter separates them, and they
+           come only from a limited-time pack, which makes them among the dearest things
+           here and prone to filling the board. Offered only when they are collected at
+           all. *@
+        @if (ShowFoilFilter)
+        {
+            <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
+                    @onclick="CycleFoils"
+                    title="Foils are listed as the 1-3 diamond cards they are printed as. Exclude them if the game will not let you wishlist a foil printing.">
+                @(_foils == "with" ? "Parallel foils included" : "Parallel foils left out")
+            </button>
+        }
+
+        <select id="floor" class="form-select form-select-sm"
+                aria-label="Leave out cards cheaper than this" @onchange="OnFloor">
+            <option value="0" selected="@(_floor == 0)">Any price</option>
+            <option value="15" selected="@(_floor == 15)">15+ packs only</option>
+            <option value="50" selected="@(_floor == 50)">50+ packs only</option>
+            <option value="150" selected="@(_floor == 150)">150+ packs only</option>
+        </select>
+        </div>
+
+        @* Not controls: the two pools a trade actually spends. They are here because the board is
+           a list of trades you are inviting, and "can I afford to accept one" is answered by these
+           two figures and nothing else on the page. A reading, so it goes last. *@
+        <div class="rail-group">
+            <span class="ttl">To spend</span>
+            <div class="pool-read">
+                <span class="lbl">Trade stamina</span>
+                <span class="fig">@Session.Profile.Resources.Trade.Balance of @GameRules.StaminaCap</span>
             </div>
-        </details>
-    </div>
+            <div class="pool-read">
+                <span class="lbl">Shinedust</span>
+                <span class="fig">@Session.Profile.Resources.Shinedust.ToString("N0")</span>
+            </div>
+        </div>
+    </PageRail>
 
-    <PageShell Measure="PageShell.Width.Wide" Class="sections">
+    @* One element for everything beside the rail, because .railed puts every child of the shell
+       in the same grid cell -- so the content has to be one child or it stacks on top of itself.
 
+       It carries `sections`, not the shell. The shell had it, and `.sections > h2` is a CHILD
+       selector: with the headings a level further down inside this wrapper the rule matched
+       nothing, and this page declared a heading style it was not getting. *@
+    <div class="rail-main sections">
+
+
+        @* Null is the plan not worked out yet, not an empty board. It said "Nothing to recommend
+           yet", which reports an answer the page has not finished asking for. *@
         @if (_plan is null)
         {
-            <p class="text-body-secondary">Nothing to recommend yet.</p>
+            <Loading />
+        }
+        else if (_plan.Slots.Count == 0 && _floor > 0)
+        {
+            @* An empty state that names the setting excluding everything and offers no way to
+               change it is a dead end that knows the answer. *@
+            <EmptyState>
+                <ChildContent>
+                    Nothing in this scope can go on the board. The @_floor-pack floor may be
+                    excluding all of it.
+                </ChildContent>
+                <Action>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => SetFloor(0)">
+                        Drop the floor
+                    </button>
+                </Action>
+            </EmptyState>
         }
         else if (_plan.Slots.Count == 0)
         {
-            <p class="text-body-secondary">
-                Nothing in this scope can go on the board: either it is complete, or
-                everything left in it is untradeable.
-                @if (_floor > 0)
-                {
-                    <span>The @_floor-pack floor may also be excluding everything; try "no floor".</span>
-                }
-            </p>
+            <EmptyState>
+                Nothing in this scope can go on the board: either it is complete, or everything
+                left in it is untradeable.
+            </EmptyState>
         }
         else
         {
@@ -91,41 +147,101 @@ else
                the useful output is a couple of edits rather than twenty rows to transcribe. *@
             @if (_plan.Unchanged)
             {
-                <div class="verdict take">
-                    <div class="head"><span class="call">Your board is already right</span></div>
-                    <span class="why">
-                        All @_plan.Keep.Count slots still earn their place. Nothing to retype.
-                    </span>
+                @* The same block as the branch below, because it fills the same slot: this is the
+                   verdict when the answer is "nothing". It was the app's other verdict component,
+                   so the page drew one shape when there were edits to make and a different one
+                   when there were not. *@
+                <div class="verdict-lead">
+                    <span class="micro">What to change</span>
+
+                    <div class="lead-head">
+                        <div class="lead-text">
+                            <h2 class="name take">Your board is already right</h2>
+                            <p class="says">
+                                All @_plan.Keep.Count slots still earn their place. Nothing to retype.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             }
             else
             {
-                <div class="verdict skip">
-                    <div class="head">
-                        <span class="call">@_plan.Add.Count to add, @_plan.Drop.Count to remove</span>
-                        <span class="cost">@_plan.Keep.Count already right</span>
-                    </div>
-                    <span class="why">
-                        @if (_plan.Drop.Count > 0)
-                        {
-                            <span>
-                                <strong>Remove:</strong>
-                                @string.Join(", ", _plan.Drop.Select(c => c.Name)).
-                            </span>
-                        }
-                        @if (_plan.Add.Count > 0)
-                        {
-                            <span>
-                                <strong>Add:</strong>
-                                @string.Join(", ", _plan.Add.Select(s => s.Card.Name)).
-                            </span>
-                        }
-                    </span>
-                </div>
+                @* The verdict is EDITS, not a ranking.
+                   ==================================================================================
+                   Every other Answer page recommends one thing out of many. This one recommends a
+                   diff, because the board already exists and is retyped by hand in the game --
+                   twenty rows of "here is your board" is a transcription job, and five edits is a
+                   minute. So the headline counts the edits and the cost is stated in the only
+                   currency that applies here, which is effort. *@
+                <div class="verdict-lead">
+                    <span class="micro">What to change</span>
 
-                <button class="btn btn-sm btn-primary mb-3" @onclick="AcceptPlan">
-                    I have made these changes in the game
-                </button>
+                    <div class="lead-head">
+                        <div class="lead-text">
+                            <h2 class="name">@Edits(_plan)</h2>
+
+                            <p class="says">
+                                @if (_plan.Drop.Count > 0)
+                                {
+                                    <text>Take down <strong class="key">@Names(_plan.Drop.Select(c => c.Name))</strong>&mdash;</text>
+                                    <text>@DropReason(_plan). </text>
+                                }
+                                @if (_plan.Add.Count > 0)
+                                {
+                                    <text>Put up <strong>@Names(_plan.Add.Select(x => x.Card.Name))</strong>. </text>
+                                }
+                                @if (_plan.Keep.Count > 0)
+                                {
+                                    <text>The other @_plan.Keep.Count still earn their slots.</text>
+                                }
+                            </p>
+
+                            @* The cost, in the currency this page actually spends. Every figure on
+                               the other Answer pages is packs or days; this one is typing. *@
+                            <p class="then">
+                                @EditTotal(_plan) in total, @Minutes(_plan) of retyping in the game.
+                            </p>
+                        </div>
+                    </div>
+
+                    @* The board AND the edits, which is up to forty boxes: twenty coming off and
+                       twenty going on, in the worst case where the whole thing is replaced.
+
+                       It showed the twenty slots you would end up with, and outlined the new ones.
+                       In the accent -- which is red -- so the one thing marked on a picture of a
+                       wishlist was ringed in the colour of a warning, and it read as "take these
+                       down" when it meant the opposite.
+
+                       Colour by direction now and nothing else: green goes on, red comes off, the
+                       ones that stay are left plain. A card being removed is not on the board you
+                       will end up with, so it has no slot number -- the word under it is the act,
+                       not a position.
+
+                       Ten across rather than in a line: a line of twenty is a line nobody reads
+                       the shape of, and this can be twice that. *@
+                    <BoxStrip Label="The board, and what changes"
+                              Clause="@SlotClause(_plan)" Columns="10">
+                        @foreach (var edit in BoardEdits(_plan))
+                        {
+                            <Box State="@(edit.Card is null ? Box.Kind.Dead : Box.Kind.Live)"
+                                 Label="@edit.Label">
+                                @if (edit.Card is { } card)
+                                {
+                                    <span class="slot-art @edit.Mark"
+                                          style="@card.ArtVars"
+                                          title="@card.Name" aria-hidden="true"></span>
+                                    <span class="visually-hidden">@card.Name</span>
+                                }
+                            </Box>
+                        }
+                    </BoxStrip>
+
+                    <div class="lead-actions">
+                        <button class="btn btn-sm btn-primary" @onclick="AcceptPlan">
+                            I have made these changes in the game
+                        </button>
+                    </div>
+                </div>
             }
 
             @* Ordered by set and number rather than by rank: the board is entered by walking the
@@ -274,6 +390,7 @@ else
                 </ul>
             }
         }
+    </div>
     </PageShell>
 }
 
@@ -328,8 +445,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        Session.Changed += OnChanged;
+        // Subscribed AFTER the wait, not before it. InitAsync raises Changed as the data lands,
+        // and each of those ran a full Rebuild -- so arriving here planned the board three times
+        // over and threw the first two away. Nothing is missed by waiting: the Rebuild below runs
+        // once init is done and reads whatever state it finished in.
         await Session.InitAsync();
+        Session.Changed += OnChanged;
         Rebuild();
     }
 
@@ -397,10 +518,190 @@ else
         return Busy.RunAsync("Choosing slots…", Rebuild);
     }
 
-    private Task OnFloor(ChangeEventArgs e)
+    /// <summary>
+    /// How many of the three knobs are narrowing the board, for the phone button's badge.
+    ///
+    /// The same three conditions <see cref="TuningSummary"/> spells out, deliberately: the badge
+    /// and the words are the same fact at two lengths, and a "3" over a sentence naming two
+    /// settings is the kind of disagreement nobody notices until they are wondering why the board
+    /// is short.
+    ///
+    /// The scope is not one of them. It is the question the page is answering rather than a
+    /// narrowing of it, and it is named in full in the subtitle.
+    /// </summary>
+    private int TuningCount =>
+        (_liquidSlots > 0 ? 1 : 0)
+        + (ShowFoilFilter && _foils != "with" ? 1 : 0)
+        + (_floor > 0 ? 1 : 0);
+
+    /// <summary>
+    /// Work the plan out again from what is owned now.
+    ///
+    /// The plan is a reading of the collection at the moment it ran, and the act that follows it is
+    /// retyping twenty slots in the game and then opening more packs. Until this button existed the
+    /// only way to re-run was to change a control and change it back, which also changed the plan.
+    /// </summary>
+    private Task Rerun() => Busy.RunAsync("Choosing slots\u2026", Rebuild);
+
+    private Task OnFloor(ChangeEventArgs e) =>
+        double.TryParse(e.Value?.ToString(), out var n) ? SetFloor(n) : Busy.RunAsync("Choosing slots…", Rebuild);
+
+    /// <summary>
+    /// Set the floor and work the board out again. Its own method because the empty board offers
+    /// to drop the floor: an empty state that names the setting excluding everything and gives no
+    /// way to change it is a dead end that knows the answer.
+    /// </summary>
+    private Task SetFloor(double cost)
     {
-        if (double.TryParse(e.Value?.ToString(), out var n)) Session.SetBoardSettings(minimumCost: n);
+        Session.SetBoardSettings(minimumCost: cost);
         return Busy.RunAsync("Choosing slots…", Rebuild);
+    }
+
+    /// <summary>The edit count, as the phrase the headline uses.</summary>
+    private static string Edits(BoardPlan plan)
+    {
+        var parts = new List<string>(2);
+        if (plan.Add.Count > 0) parts.Add($"{plan.Add.Count} to add");
+        if (plan.Drop.Count > 0) parts.Add($"{plan.Drop.Count} to remove");
+        return string.Join(", ", parts);
+    }
+
+    /// <summary>
+    /// The edits as time at the keyboard, which is the cost this page actually asks of you.
+    ///
+    /// Rough on purpose, and said in words: the figure is not a measurement, it is a reassurance
+    /// that this is a minute's work rather than the twenty-row transcription the page used to
+    /// hand over. Ten seconds an entry is a slow, careful typist searching a card list.
+    /// </summary>
+    private static string Minutes(BoardPlan plan)
+    {
+        var seconds = (plan.Add.Count + plan.Drop.Count) * 10;
+        return seconds < 60 ? "about half a minute"
+             : seconds < 150 ? "a minute or two"
+             : $"about {seconds / 60} minutes";
+    }
+
+    /// <summary>
+    /// The edits counted rather than split. The headline says what KIND of edit -- "3 to add, 2 to
+    /// remove" -- and this line says how much work that is, which is one number; "3 to add, 2 to
+    /// remove in total" counts nothing and reads as the headline said twice.
+    /// </summary>
+    private static string EditTotal(BoardPlan plan)
+    {
+        var n = plan.Add.Count + plan.Drop.Count;
+        return n == 1 ? "One edit" : $"{n} edits";
+    }
+
+    /// <summary>
+    /// Names as a list a person would read out, with an "and" before the last, and cut off before
+    /// it stops being a sentence.
+    ///
+    /// A first run on an empty collection asks for all twenty slots, and twenty names in a row is
+    /// not prose -- it is the transcription job this page exists to replace, printed above the
+    /// table that already lists them properly. Three and a count keeps it a sentence, and the
+    /// table below is where you read the rest.
+    /// </summary>
+    private const int NamesShown = 3;
+
+    private static string Names(IEnumerable<string> names)
+    {
+        var all = names.ToList();
+
+        if (all.Count > NamesShown + 1)
+        {
+            var rest = all.Count - NamesShown;
+            return $"{string.Join(", ", all.Take(NamesShown))} and {rest} more";
+        }
+
+        return all.Count switch
+        {
+            0 => "",
+            1 => all[0],
+            2 => $"{all[0]} and {all[1]}",
+            _ => $"{string.Join(", ", all.Take(all.Count - 1))} and {all[^1]}",
+        };
+    }
+
+    /// <summary>
+    /// Why the drops are being dropped, in one clause.
+    ///
+    /// A diff that says "remove these two" and nothing else is asking to be trusted. The advisor
+    /// drops a card for one of two reasons and they read very differently: you pulled it, so it is
+    /// no longer wanted, or it fell under the floor you set.
+    /// </summary>
+    private string DropReason(BoardPlan plan)
+    {
+        var owned = plan.Drop.Count(c => Session.CountOf(c) > 0);
+
+        if (owned == plan.Drop.Count)
+            return plan.Drop.Count == 1 ? "you have pulled it since" : "you have pulled them since";
+
+        if (owned == 0)
+            return _floor > 0
+                ? $"they fell under the {_floor:0}-pack floor"
+                : "they no longer earn a slot";
+
+        return "you have pulled some, and the rest no longer earn a slot";
+    }
+
+    /// <summary>
+    /// The twenty slots as they will stand once the edits are made: what is kept, plus what is
+    /// being added, then dashed boxes for whatever is left over.
+    ///
+    /// Ordered keep-then-add so the additions cluster at the end, which is what makes the strip
+    /// read as a shape -- solid, then the new ones, then the gaps.
+    /// </summary>
+    /// <param name="Card">The card in this box, or null for a slot that stays empty.</param>
+    /// <param name="Label">What the box is: a slot number for one that stays, the act otherwise.</param>
+    /// <param name="Mark">The direction class the art carries — "off", "on", or nothing.</param>
+    private sealed record BoardEdit(PocketCard? Card, string Label, string Mark);
+
+    /// <summary>
+    /// The board and its edits, in reading order: what stays, what comes off, what goes on, then
+    /// the slots nothing fills. Up to forty boxes where the whole board is replaced.
+    ///
+    /// Keeps first because they are the board — most of it, most of the time — and the shape worth
+    /// seeing is how much of it is changing. Removes before adds because that is the order the
+    /// work happens in: a slot has to be free before anything goes into it.
+    ///
+    /// Only the keeps and the empties are numbered. A card coming off has no position on the board
+    /// you end up with, and numbering it would be numbering a slot twice.
+    /// </summary>
+    private static IReadOnlyList<BoardEdit> BoardEdits(BoardPlan plan)
+    {
+        var edits = new List<BoardEdit>(GameRules.TradeBoardSlots * 2);
+        var n = 1;
+
+        foreach (var slot in plan.Keep.Take(GameRules.TradeBoardSlots))
+            edits.Add(new BoardEdit(slot.Card, n++.ToString(), ""));
+
+        foreach (var card in plan.Drop)
+            edits.Add(new BoardEdit(card, "Off", "off"));
+
+        foreach (var slot in plan.Add.Take(GameRules.TradeBoardSlots - plan.Keep.Count))
+            edits.Add(new BoardEdit(slot.Card, "On", "on"));
+
+        // The gaps are numbered with the slots they are, because that is what makes the row read
+        // as "seventeen of twenty" rather than as a row that ran out of cards.
+        var filled = Math.Min(GameRules.TradeBoardSlots, plan.Keep.Count + plan.Add.Count);
+        for (var i = filled; i < GameRules.TradeBoardSlots; i++)
+            edits.Add(new BoardEdit(null, (i + 1).ToString(), ""));
+
+        return edits;
+    }
+
+    /// <summary>
+    /// Why the strip has gaps, where it has them. Empty slots on a wishlist are not a fault -- the
+    /// scope may simply not hold twenty tradeable cards worth asking for -- and a dashed box with
+    /// no explanation reads as one.
+    /// </summary>
+    private static string? SlotClause(BoardPlan plan)
+    {
+        var filled = plan.Keep.Count + plan.Add.Count;
+        if (filled >= GameRules.TradeBoardSlots) return null;
+
+        return $"{GameRules.TradeBoardSlots - filled} slots stay empty: "
+             + "nothing else in this scope is worth asking for";
     }
 
     /// <summary>

@@ -24,7 +24,7 @@ else
            screen reader to land on when navigating by headings — every other page opens with an
            h1, this one otherwise wouldn't. *@
         <h1 class="visually-hidden">@_draft.Name</h1>
-        <a class="btn btn-sm btn-outline-secondary" href="decks">&larr; decks</a>
+        <BackLink To="decks" Label="Decks" />
         <input class="form-control form-control-sm" style="max-width:16rem"
                value="@_draft.Name" @onchange="Rename" aria-label="Deck name" />
 
@@ -86,10 +86,33 @@ else
         </Notice>
     }
 
+    @* The Record job's signature, on the one deck screen that is recording rather than browsing.
+       ==================================================================================
+       A new deck is being filled in, and it can be saved short -- twenty is the legal size and
+       nothing stops you keeping a draft of nine. So the page says what is left, in the same strip
+       and the same words the pack log uses, and nothing about it is a warning: a deck you are
+       halfway through is not a mistake.
+
+       Not on an existing deck. Opening one you already made is browsing, and a strip telling you
+       it is eleven cards short every time you look at it is the live-warning problem the log
+       screen already solved.
+
+       The three import pages get no strip at all, and that is the same precondition working: you
+       cannot import a file you have not picked, so "still to do: pick a file" would be a strip
+       restating the only control on the page. It belongs where committing early is possible AND
+       consequential. *@
+    @if (IsNew && _draft.DeckBuilderNrs.Count < GameRules.DeckSize)
+    {
+        <div class="todo-strip">
+            <span class="micro">Still to do</span>
+            <span class="say">@DeckTodo</span>
+        </div>
+    }
+
     <PageShell>
     <div class="edit-cols">
         <div>
-            <h2 class="h6">Energy <span class="small fw-normal text-body-secondary">at most @GameRules.MaxEnergyTypes</span></h2>
+            <h2 class="sub-head">Energy <span class="small fw-normal text-body-secondary">at most @GameRules.MaxEnergyTypes</span></h2>
             <div class="energy-chips mb-3">
                 @foreach (var energy in AllEnergies)
                 {
@@ -103,7 +126,7 @@ else
                 }
             </div>
 
-            <h2 class="h6">Cards</h2>
+            <h2 class="sub-head">Cards</h2>
             @if (_draft.DeckBuilderNrs.Count > 0)
             {
                 <p class="small text-body-secondary mb-1">
@@ -130,7 +153,7 @@ else
                                     {
                                         <span class="pack-thumb deck-thumb"
                                               data-tip-img="@entry.Card.ArtUrl" data-tip="@entry.Card.Name"
-                                              style="--art:url('@entry.Card.ArtUrl')"></span>
+                                              style="@entry.Card.ArtVars"></span>
                                     }
                                 </td>
                                 <td style="width:1.8rem">
@@ -167,10 +190,10 @@ else
                 </DataTable>
             }
 
-            <h2 class="mt-3 h6">Legality</h2>
+            <h2 class="sub-head">Legality</h2>
             @if (_report is null || _draft.DeckBuilderNrs.Count == 0)
             {
-                <p class="small text-body-secondary">Nothing to check yet.</p>
+                <EmptyState>Add cards and the deck rules run here.</EmptyState>
             }
             else
             {
@@ -186,7 +209,7 @@ else
                 }
             }
 
-            <h2 class="mt-3 h6">Share</h2>
+            <h2 class="sub-head">Share</h2>
             @if (_shareSvg is null)
             {
                 <p class="small text-body-secondary">
@@ -219,7 +242,7 @@ else
 
             @if (_missingCount > 0)
             {
-                <h2 class="mt-3 h6">What you still need</h2>
+                <h2 class="sub-head">What you still need</h2>
                 <p class="small text-body-secondary">
                     Cheapest route per card. Trade and Wonder Pick are priced in their own
                     currencies, which do not convert into packs.
@@ -243,7 +266,7 @@ else
                     </tbody>
                 </DataTable>
 
-                <h2 class="mt-3 h6">Best packs for this deck</h2>
+                <h2 class="sub-head">Best packs for this deck</h2>
                 @if (_ranked.Count == 0)
                 {
                     <p class="small text-body-secondary">
@@ -304,6 +327,25 @@ else
 
     private static readonly EnergyType[] AllEnergies = Enum.GetValues<EnergyType>();
     private static readonly string[] Stages = ["Basic", "Stage 1", "Stage 2"];
+
+    /// <summary>
+    /// What is left before the deck is a legal twenty, in words.
+    ///
+    /// Progress rather than alarm, as on the pack log: "eleven more cards" is a fact about the
+    /// job, and a deck half built is not a mistake. The legality of what you have is the badge's
+    /// business and the linter's below; this line only counts.
+    /// </summary>
+    private string DeckTodo
+    {
+        get
+        {
+            var left = GameRules.DeckSize - (_draft?.DeckBuilderNrs.Count ?? 0);
+
+            return left == GameRules.DeckSize
+                ? $"Pick the {GameRules.DeckSize} cards this deck is made of."
+                : left == 1 ? "One more card." : $"{left} more cards.";
+        }
+    }
 
     /// <summary>The working copy. Nothing is persisted until Save.</summary>
     private SavedDeck? _draft;

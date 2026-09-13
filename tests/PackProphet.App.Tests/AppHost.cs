@@ -135,7 +135,14 @@ public abstract class AppHost : TestContext
             BaseAddress = new Uri("https://test.local/")
         });
 
-        Services.AddSingleton<CardDataLoader>();
+        // Built by hand rather than by the container, for the deadline. The app gives the art
+        // manifest three seconds, which is a budget rather than a measurement: on a machine
+        // running this suite in parallel it can fire on a response that is already sitting there,
+        // and the loader then reports "no vendored art" -- indistinguishable from the 404 that
+        // means it. No page test asserts on that today; this is so none of them starts flaking the
+        // day one does.
+        Services.AddSingleton(sp => new CardDataLoader(sp.GetRequiredService<HttpClient>(),
+                                                       TimeSpan.FromSeconds(30)));
         Services.AddSingleton<LocalStorageStateStore>();
         // A factory, not an instance: passing Store() here would call it during
         // construction, which is the very thing the laziness below exists to avoid.

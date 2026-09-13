@@ -131,7 +131,7 @@ else
                 else
                 {
                     <a class="hit-art" href="card/@_showcase.Card.Key"
-                       style="--art:url('@_showcase.Card.ArtUrl')"
+                       style="@_showcase.Card.ArtVars"
                        aria-label="Detail for @_showcase.Card.Name"></a>
 
                     <div class="hit-detail">
@@ -166,7 +166,7 @@ else
                             {
                                 <a class="thumb @(hit == _showcase ? "on" : "")"
                                    href="card/@hit.Card.Key"
-                                   style="--art:url('@hit.Card.ArtUrl')"
+                                   style="@hit.Card.ArtVars"
                                    title="@hit.Card.Name, @hit.Rung.Symbol"
                                    aria-label="@hit.Card.Name"></a>
                             }
@@ -208,10 +208,16 @@ else
             </details>
 
             <h2>Packs per day</h2>
+            @* The caption carries the READING, not the fact. "The free allowance is 2 a day"
+               states a rule and leaves the reader to apply it to thirty bars; saying what a bar of
+               two means is the same rule already applied, which is the only form of it that helps
+               while looking at the picture.
+
+               And it is a reading rather than a verdict, which is the line this page does not
+               cross: it says what a bar of two IS, not whether you should have opened more. *@
             <p class="small text-body-secondary">
-                Last @DaysShown days. The free allowance is
-                @GameRules.PacksPerDay(Session.Profile.Resources.Premium) a day
-                @(Session.Profile.Resources.Premium ? "with premium" : "without premium").
+                Last @DaysShown days. @Allowance a day is the free allowance@(Session.Profile.Resources.Premium ? " with premium" : ""),
+                so a bar of @AllowanceWord is a day you kept up.
             </p>
             @* The label carries the shape of the chart, not just its title. "Packs opened per
                day" names the picture and says nothing about it; a reader who cannot see the bars
@@ -305,8 +311,20 @@ else
                 </tbody>
             </DataTable>
 
+            @* The check and the record, side by side.
+               ==================================================================================
+               They answer the two halves of one question -- did the model hold up, and what did I
+               actually open -- and reading either without the other is how a rarity a fifth out
+               looks like a broken engine rather than eleven packs of one set.
+
+               The recent list on the right is a summary; the editable table below it is the record
+               itself, with its dates, its delete buttons and the switch for whether deleting also
+               takes the cards back. Half a page is not enough for that, and a summary is what you
+               want beside a comparison anyway. *@
+            <div class="check-cols">
+            <div class="check-odds">
             <div class="section-head">
-                <h3 class="mb-0 h6">Did the odds hold up?</h3>
+                <h3 class="sub-head">Did the odds hold up?</h3>
                 @* Only offered once there is a baseline to scale to and logged packs to scale
                    from. Without both, the option is a button that cannot answer. *@
                 @* One slice at a time. Series and sets sit in the same dropdown under their own
@@ -349,10 +367,20 @@ else
             </div>
             @if (!_lifetime)
             {
+                @* The caveat names its own sample. "Small samples swing wildly" is true of every
+                   sample ever taken and tells a reader nothing about THIS one; the number is what
+                   decides whether a row that is a fifth out is worth a second look or is exactly
+                   what a hundred-odd packs would be expected to do.
+
+                   Only where there is a sample to name. With nothing priceable in scope the
+                   section below already says so, and "0 packs is a small sample" above it is the
+                   page hedging about a comparison it has not made. *@
                 <p class="small text-body-secondary">
                     What you pulled against what the engine predicted for the packs you opened.
-                    Small samples swing wildly, so read it as a check on the model, not on your
-                    luck.
+                    @if (_scopePacks >= 1)
+                    {
+                        <text>@SampleCaveat</text>
+                    }
                 </p>
             }
             else
@@ -446,8 +474,37 @@ else
                 </DataTable>
             }
 
+            </div>
+
+            <div class="check-recent">
+                <span class="micro">Every pack, newest first</span>
+                <div class="recent-rows">
+                    @foreach (var entry in _recent.Take(RecentBeside))
+                    {
+                        <div class="recent-row">
+                            <span class="art" aria-hidden="true"
+                                  style="--art:url('@Session.PackArtUrl($"{entry.Set}:{entry.Pack}")')"></span>
+                            <span class="nm">@entry.Pack</span>
+                            <span class="cards">
+                                @entry.OwnershipKeys.Count cards
+                                @if (NewIn(entry) is > 0 and var fresh)
+                                {
+                                    <text> &middot; </text><strong>@fresh new</strong>
+                                }
+                            </span>
+                            <span class="when">@Ago(entry.At)</span>
+                        </div>
+                    }
+                </div>
+                @if (_log.Count > RecentBeside)
+                {
+                    <p class="note">@(_log.Count - RecentBeside) more, in the table below.</p>
+                }
+            </div>
+            </div>
+
             <div class="section-head">
-                <h3 class="mb-0 h6">Recent packs</h3>
+                <h3 class="sub-head">Recent packs</h3>
                 <button class="btn btn-sm @(_clearingAll ? "btn-danger" : "btn-outline-danger") ms-auto"
                         @onclick="ClearAll">
                     @(_clearingAll ? $"Really delete all {_log.Count}?" : "Delete All")
@@ -521,7 +578,90 @@ else
 
 @code {
     private const int DaysShown = 30;
+
+    /// <summary>Free packs a day at the current subscription, for the bar chart's reading.</summary>
+    private int Allowance => GameRules.PacksPerDay(Session.Profile.Resources.Premium);
+
+    /// <summary>The same figure as a word, because the caption is a sentence rather than a stat.</summary>
+    private string AllowanceWord => Allowance switch
+    {
+        1 => "one", 2 => "two", 3 => "three", 4 => "four", _ => Allowance.ToString()
+    };
+
+    /// <summary>
+    /// How much weight the odds check can bear, given how many packs are behind it.
+    ///
+    /// The figure decides the sentence. Under a hundred packs a rarity that turns up once instead
+    /// of twice moves the whole row, so the honest reading is that nothing here is evidence yet;
+    /// past a few hundred a persistent gap starts to mean something. Either way it is a check on
+    /// the MODEL rather than on the user's luck, which is the distinction the old wording made and
+    /// this keeps.
+    /// </summary>
+    private string SampleCaveat => CaveatFor((int)Math.Round(_scopePacks));
+
+    /// <summary>
+    /// The wording for a given sample size.
+    ///
+    /// Public and static so the thresholds can be tested directly: reaching them through the page
+    /// needs a fixture whose logged packs are priceable, which is a property of the card data
+    /// rather than of the sentence this returns.
+    /// </summary>
+    public static string CaveatFor(int packs)
+    {
+        {
+            if (packs < 100)
+                return $"{packs} packs is a small sample, so a rarity a fifth off is ordinary "
+                     + "variance rather than evidence the model is wrong.";
+
+            if (packs < 500)
+                return $"{packs} packs is enough to notice a persistent gap and not enough to "
+                     + "trust a single row. Read it as a check on the model, not on your luck.";
+
+            return $"{packs} packs is a large enough sample that a gap which does not close is "
+                 + "worth reporting. It is still a check on the model, not on your luck.";
+        }
+    }
     private const int RecentShown = 25;
+
+    /// <summary>
+    /// How many packs the summary beside the odds check lists.
+    ///
+    /// A handful, not the log: the table below is the log, with its dates and its delete buttons.
+    /// This is the "and what did I actually open" that makes the comparison next to it readable.
+    /// </summary>
+    private const int RecentBeside = 5;
+
+    /// <summary>
+    /// Cards in this pack that were not already in the collection when it was logged.
+    ///
+    /// Recomputed against the collection as it stands now rather than stored, so it answers "how
+    /// many of these would be new today" -- which is what the figure beside a pack in a list of
+    /// packs is read as. An exact was-new-then would need a snapshot per pack that nothing keeps.
+    /// </summary>
+    private int NewIn(PackOpenEvent entry) =>
+        entry.OwnershipKeys
+            .Distinct()
+            .Select(k => Session.Index.ByOwnershipKey.GetValueOrDefault(k)?.FirstOrDefault())
+            .Count(c => c is not null && Session.CountOf(c) <= 1);
+
+    /// <summary>
+    /// How long ago, in the words a list of recent things uses. Not a date: the point of this
+    /// column is recency, and "Today" reads faster than a date you have to subtract.
+    /// </summary>
+    private static string Ago(DateTimeOffset at)
+    {
+        var days = (DateTimeOffset.Now.Date - at.ToLocalTime().Date).Days;
+
+        return days switch
+        {
+            <= 0 => "Today",
+            1 => "Yesterday",
+            < 7 => $"{days} days ago",
+            < 14 => "Last week",
+            < 60 => $"{days / 7} weeks ago",
+            _ => at.ToLocalTime().ToString("d MMM"),
+        };
+    }
 
     private IReadOnlyList<PackOpenEvent> _log = [];
     private IReadOnlyList<PackOpenEvent> _recent = [];

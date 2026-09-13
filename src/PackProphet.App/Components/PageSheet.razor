@@ -1,0 +1,50 @@
+@* A page's controls behind a button on its own bar, at every width.
+
+   THE OTHER HALF OF PageRail
+   ==================================================================================
+   Two shells fold a page's controls away, and which one a page wants is decided by what the page
+   is for. A Browse page is content you scan and narrow, so its controls earn a column beside that
+   content and are worth a thumb's reach mid-scroll: <see cref="PageRail"/>. An Answer page leads
+   with a verdict, and its controls set what the verdict is OF -- reached once on arrival and then
+   not again -- so they fold behind a button on the bar and the page spends none of its width on
+   them.
+
+   What they SHARE is this file's reason to exist. The handle, the grabber, the Done button and
+   the group headings were pasted into four pages as twelve lines of markup apiece, under a
+   `target-sheet` class that had no stylesheet rule at all -- it did nothing but sit beside `sheet`,
+   which is where the behaviour actually was. So the four drifted: not one of them grouped its
+   controls under a heading, and two still carried a `bar-sep`, the vertical rule that separated
+   items on the horizontal toolbar these replaced.
+
+   Group the contents in `rail-group`, the same way a rail does, and for the same reason: a column
+   has room for the heading, so the control says what it sets rather than leaving a reader to infer
+   it from the options. Trades opened to five bare selects -- "Everything, Ranked", "Hardest to
+   Pull", "Any Rarity" -- with nothing saying which was the grouping and which the sort.
+
+   The opener is <see cref="SheetOpener"/> and goes in the bar's own actions, because a button
+   inside this element would be a `.page-head .btn` and take the bar's button styling into the
+   sheet. *@
+
+<div class="page-sheet sheet" popover id="@Id">
+    <SheetHandle For="@Id" Label="@Label" />
+
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>
+    /// DOM id, which the opener points at. Unique per page: two popovers sharing one id means
+    /// popovertarget resolves to the first and the second can never be opened.
+    /// </summary>
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+
+    /// <summary>
+    /// What this sheet is, for its own heading row. The same word the <see cref="SheetOpener"/>
+    /// that opens it carries — they are two halves of one control, and a sheet titled differently
+    /// from the button that produced it is a sheet you are not sure you meant to open.
+    /// </summary>
+    [Parameter] public string Label { get; set; } = "";
+
+    /// <summary>The groups themselves, in the order the sheet presents them.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

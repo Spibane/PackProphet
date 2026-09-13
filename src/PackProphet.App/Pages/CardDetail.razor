@@ -540,11 +540,13 @@ else
     /// correct rather than a shortcut: the game evolves on the printed name, so every Charmeleon
     /// is as good as every other. The ambiguity that killed name-based decklist import does not
     /// apply to a question phrased this way.
+    ///
+    /// Through CardName, because the name being looked up came from the facts dataset and the
+    /// names being searched come from the card index, and the two write an apostrophe with
+    /// different characters — which badged every Team Rocket evolution "You own none".
     /// </summary>
     private bool OwnsAnyNamed(string name) =>
-        Session.Index.All.Any(c =>
-            string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)
-            && Session.CountOf(c) > 0);
+        Session.Index.All.Any(c => CardName.Same(c.Name, name) && Session.CountOf(c) > 0);
 
     /// <summary>
     /// The figure for a route, in whichever currency prices it.

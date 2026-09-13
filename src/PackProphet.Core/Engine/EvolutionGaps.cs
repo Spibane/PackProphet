@@ -3,6 +3,7 @@ namespace PackProphet.Engine;
 using PackProphet.Data;
 using PackProphet.Deck;
 using PackProphet.Domain;
+using PackProphet.Text;
 
 /// <param name="Blocks">
 /// Cards you already own that cannot be played without it. Deduplicated by identity, because
@@ -84,8 +85,12 @@ public sealed class EvolutionGaps
         _facts = facts;
         _rates = odds.BestRatesByCard();
 
-        _byName = new Dictionary<string, List<PocketCard>>(StringComparer.OrdinalIgnoreCase);
-        _evolvesFrom = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // CardName rather than a plain ordinal comparer, and it matters here more than anywhere:
+        // the names on the LEFT of these tables come from the card index and the names on the
+        // right come from the facts dataset, which punctuate an apostrophe differently. See
+        // PackProphet.Text.CardName.
+        _byName = new Dictionary<string, List<PocketCard>>(CardName.Comparer);
+        _evolvesFrom = new Dictionary<string, string>(CardName.Comparer);
 
         // Trainers are not excluded here, because of the fossils: Omanyte evolves from Helix
         // Fossil, which is a Trainer card. Excluding trainers from the name tables reported eleven
@@ -117,7 +122,7 @@ public sealed class EvolutionGaps
 
     public EvolutionReport Find(Collection owned)
     {
-        var ownedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var ownedNames = new HashSet<string>(CardName.Comparer);
         var held = new List<PocketCard>();
 
         foreach (var card in _index.All.DistinctBy(c => c.OwnershipKey))
@@ -127,7 +132,7 @@ public sealed class EvolutionGaps
             held.Add(card);
         }
 
-        var blocks = new Dictionary<string, List<PocketCard>>(StringComparer.OrdinalIgnoreCase);
+        var blocks = new Dictionary<string, List<PocketCard>>(CardName.Comparer);
         var unverified = 0;
 
         foreach (var card in held)

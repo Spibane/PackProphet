@@ -2,6 +2,7 @@ namespace PackProphet.Deck;
 
 using PackProphet.Data;
 using PackProphet.Domain;
+using PackProphet.Text;
 
 public enum LintSeverity
 {
@@ -122,7 +123,10 @@ public sealed class DeckLinter
 
     private void CheckEvolutionChains(IReadOnlyList<int> nrs, List<LintFinding> findings)
     {
-        var names = nrs.Select(NameOf).Where(n => n is not null).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Both sides of this comparison are the same printed name spelled by two datasets --
+        // the deck's cards come from the index and EvolvesFrom comes from the facts. See
+        // PackProphet.Text.CardName.
+        var names = nrs.Select(NameOf).Where(n => n is not null).ToHashSet(CardName.Comparer!);
 
         foreach (var nr in nrs.Distinct())
         {

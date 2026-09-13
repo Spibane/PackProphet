@@ -55,8 +55,12 @@ else
                 @onchange="OnLiquid">
             @for (var n = 0; n <= 8; n++)
             {
+                @* Short enough to read inside the rail. At the old wording the widest option was
+                   184px of text in a 151px column, so what the control actually said while closed
+                   was "No slots kept for likely o". The aria-label above carries the full sentence,
+                   which is where the long form belongs. *@
                 <option value="@n" selected="@(n == _liquidSlots)">
-                    @(n == 0 ? "No slots kept for likely offers" : $"{n} slot{(n == 1 ? "" : "s")} kept for likely offers")
+                    @(n == 0 ? "No slots for offers" : $"{n} slot{(n == 1 ? "" : "s")} for offers")
                 </option>
             }
         </select>
@@ -76,10 +80,10 @@ else
 
         <select id="floor" class="form-select form-select-sm"
                 aria-label="Leave out cards cheaper than this" @onchange="OnFloor">
-            <option value="0" selected="@(_floor == 0)">However cheap the card</option>
-            <option value="15" selected="@(_floor == 15)">Leave out under 15 packs</option>
-            <option value="50" selected="@(_floor == 50)">Leave out under 50 packs</option>
-            <option value="150" selected="@(_floor == 150)">Leave out under 150 packs</option>
+            <option value="0" selected="@(_floor == 0)">Any price</option>
+            <option value="15" selected="@(_floor == 15)">15+ packs only</option>
+            <option value="50" selected="@(_floor == 50)">50+ packs only</option>
+            <option value="150" selected="@(_floor == 150)">150+ packs only</option>
         </select>
         </div>
 
@@ -441,8 +445,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        Session.Changed += OnChanged;
+        // Subscribed AFTER the wait, not before it. InitAsync raises Changed as the data lands,
+        // and each of those ran a full Rebuild -- so arriving here planned the board three times
+        // over and threw the first two away. Nothing is missed by waiting: the Rebuild below runs
+        // once init is done and reads whatever state it finished in.
         await Session.InitAsync();
+        Session.Changed += OnChanged;
         Rebuild();
     }
 

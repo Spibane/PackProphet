@@ -2999,6 +2999,26 @@ h1[tabindex="-1"]:focus-visible { outline: none; }
     outline-offset: -2px;
 }
 
+/* SIDEWAYS, NEVER UP AND DOWN.
+   ==================================================================================
+   Bootstrap sets overflow-x and leaves the other axis alone, and CSS does not leave it alone: an
+   overflow that is `visible` on one axis and not the other computes to `auto`. So every one of
+   these wrappers is a scroll container in BOTH directions, on every page, whether or not anything
+   in it overflows at all.
+
+   Nothing ever overflows them vertically -- a table's height is its rows -- so this costs nothing
+   to look at and is invisible on a pointer. On a phone it is the whole problem: a finger that
+   comes down inside one is inside a scroll view, and a vertical drag has to be handed off to the
+   page before the page moves. The handoff is unreliable, so the page moves sometimes, which reads
+   as having to find a particular part of the screen to drag from. Measured on the log screen's
+   card list at 375px: 343 wide in a 343 box, 403 tall in a 403 box, nothing to scroll on either
+   axis, and a scroller on both.
+
+   `hidden` rather than `clip`: clip would do the same to the layout, and hidden is what tells the
+   platform there is nothing on this axis to claim a gesture for. Nothing is cut off, because there
+   is nothing there to cut off. */
+.table-responsive { overflow-y: hidden; }
+
 /* Vertical padding only. Horizontal padding was `px-3` at all three call sites, which is a flat
    1rem and does not clear a display cutout -- the same bug the toolbars had in landscape, in a
    band that also spans the screen. Rather than repeating the inset here, the block sits inside

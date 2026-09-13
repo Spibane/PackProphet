@@ -158,42 +158,40 @@
             </Notice>
         }
 
-        <DataTable Label="@($"Cards read from {shot.Name}")" Fit="true" Class="mb-3">
-            <table class="table table-sm mb-0">
-                <tbody>
+        <DataTable Label="@($"What {shot.Name} came to")" Fit="true" Class="mb-3">
+            <tbody>
+                <tr>
+                    <th scope="row" class="fw-normal">Cards recognised</th>
+                    <td class="text-end fw-semibold">@reading.RecognisedCount.ToString("N0")</td>
+                </tr>
+                @if (reading.Screen == CardScreen.OwnershipGrid)
+                {
                     <tr>
-                        <th scope="row" class="fw-normal">Cards recognised</th>
-                        <td class="text-end fw-semibold">@reading.RecognisedCount.ToString("N0")</td>
+                        <th scope="row" class="fw-normal">Named by their place in the list</th>
+                        <td class="text-end">
+                            @reading.Matches.Count(m => m.Source == MatchSource.GridPosition).ToString("N0")
+                        </td>
                     </tr>
-                    @if (reading.Screen == CardScreen.OwnershipGrid)
-                    {
-                        <tr>
-                            <th scope="row" class="fw-normal">Named by their place in the list</th>
-                            <td class="text-end">
-                                @reading.Matches.Count(m => m.Source == MatchSource.GridPosition).ToString("N0")
-                            </td>
-                        </tr>
-                    }
-                    @if (shot.Picks.Count > 0)
-                    {
-                        <tr>
-                            <th scope="row" class="fw-normal">Named by hand</th>
-                            <td class="text-end">@shot.Picks.Count.ToString("N0")</td>
-                        </tr>
-                    }
-                    @if (reading.UnreadCells > 0)
-                    {
-                        <tr>
-                            <th scope="row" class="fw-normal text-warning-emphasis">
-                                Card slots not recognised
-                            </th>
-                            <td class="text-end text-warning-emphasis">
-                                @reading.UnreadCells.ToString("N0")
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                }
+                @if (shot.Picks.Count > 0)
+                {
+                    <tr>
+                        <th scope="row" class="fw-normal">Named by hand</th>
+                        <td class="text-end">@shot.Picks.Count.ToString("N0")</td>
+                    </tr>
+                }
+                @if (reading.UnreadCells > 0)
+                {
+                    <tr>
+                        <th scope="row" class="fw-normal text-warning-emphasis">
+                            Card slots not recognised
+                        </th>
+                        <td class="text-end text-warning-emphasis">
+                            @reading.UnreadCells.ToString("N0")
+                        </td>
+                    </tr>
+                }
+            </tbody>
         </DataTable>
 
         @foreach (var note in reading.Notes)
@@ -223,56 +221,56 @@
 
         @if (reading.Matches.Count > 0)
         {
-            <div class="table-responsive mb-3">
-                <table class="table table-sm align-middle mb-0">
-                    <caption class="visually-hidden">Cards read from @shot.Name</caption>
-                    <thead>
+            @* DataTable, like the app's other twenty-six. This one was a hand-written wrapper --
+               the same div with the same class and without the focus ring, the name or the
+               keyboard stop the component exists to give it. *@
+            <DataTable Label="@($"Cards read from {shot.Name}")" Class="mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col" colspan="2">Card</th>
+                        <th scope="col">Read as</th>
+                        @* Only the three-across list prints a count, so the column is only worth its
+                           width on that screen. *@
+                        @if (ShowsCopies(reading))
+                        {
+                            <th scope="col" class="text-end">Copies</th>
+                        }
+                        <th scope="col" class="text-end">You have</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var match in reading.Matches)
+                    {
                         <tr>
-                            <th scope="col" colspan="2">Card</th>
-                            <th scope="col">Read as</th>
-                            @* Only the three-across list prints a count, so the column is only worth its
-                               width on that screen. *@
+                            <td style="width: 2.5rem">
+                                <span class="thumb"
+                                      style="@match.Card.ArtVars"
+                                      role="img" aria-label="@match.Card.Name"></span>
+                            </td>
+                            <td>
+                                <a href="card/@match.Card.Key">@match.Card.Name</a>
+                                <span class="d-block small text-body-secondary">@match.Card.Key</span>
+                            </td>
+                            <td class="small">@ReadAs(match)</td>
                             @if (ShowsCopies(reading))
                             {
-                                <th scope="col" class="text-end">Copies</th>
+                                <td class="text-end">
+                                    @if (match.Copies is { } copies)
+                                    {
+                                        @copies
+                                    }
+                                    else
+                                    {
+                                        @* Said, not left blank. A blank cell reads as "none". *@
+                                        <span class="text-body-secondary" title="The badge could not be read">Not read</span>
+                                    }
+                                </td>
                             }
-                            <th scope="col" class="text-end">You have</th>
+                            <td class="text-end">@Session.CountOf(match.Card)</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var match in reading.Matches)
-                        {
-                            <tr>
-                                <td style="width: 2.5rem">
-                                    <span class="thumb"
-                                          style="@match.Card.ArtVars"
-                                          role="img" aria-label="@match.Card.Name"></span>
-                                </td>
-                                <td>
-                                    <a href="card/@match.Card.Key">@match.Card.Name</a>
-                                    <span class="d-block small text-body-secondary">@match.Card.Key</span>
-                                </td>
-                                <td class="small">@ReadAs(match)</td>
-                                @if (ShowsCopies(reading))
-                                {
-                                    <td class="text-end">
-                                        @if (match.Copies is { } copies)
-                                        {
-                                            @copies
-                                        }
-                                        else
-                                        {
-                                            @* Said, not left blank. A blank cell reads as "none". *@
-                                            <span class="text-body-secondary" title="The badge could not be read">Not Read</span>
-                                        }
-                                    </td>
-                                }
-                                <td class="text-end">@Session.CountOf(match.Card)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </DataTable>
         }
 
         @* The slots the reader gave up on, each with its picture and a box to name it.

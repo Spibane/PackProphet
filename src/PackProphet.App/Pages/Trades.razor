@@ -17,10 +17,12 @@ else
            what it is of -- which scope, ordered by what -- is a different answer to the one it
            appears to be. The two pools go here too: they are what a trade actually spends, and the
            page cannot be acted on without them. *@
+        @* Segments, so a phone breaks this at a dot rather than inside a reading. See the note
+           over the collection's subtitle, which has the same shape. *@
         <span class="subtitle">
-            <span class="lbl">Target:</span> @Session.ScopeLabel(_scope)
-            &middot; <strong>@_stamina.Balance of @_stamina.Cap</strong> stamina
-            &middot; @Session.Profile.Resources.Shinedust.ToString("N0") dust
+            <span class="seg"><span class="lbl">Target:</span> @Session.ScopeLabel(_scope)</span>
+            <span class="seg"><strong>@_stamina.Balance of @_stamina.Cap</strong> stamina</span>
+            <span class="seg">@Session.Profile.Resources.Shinedust.ToString("N0") dust</span>
 
             @* What the rail is set to, once any of it is off the default. The collection's bar has
                carried this since the rail went in and this one did not: the rail's badge says how
@@ -28,7 +30,7 @@ else
                all there is. *@
             @if (FilterWords is { Length: > 0 } words)
             {
-                <span class="filters">showing @words</span>
+                <span class="seg filters">showing @words</span>
             }
         </span>
 

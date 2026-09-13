@@ -30,10 +30,10 @@ else
            time and the filter changes which rows exist, so a reader who cannot see either is
            reading a list that means something other than what it says. *@
         <span class="subtitle">
-            @Session.Profile.Name against @(Others.FirstOrDefault(o => o.Id == _otherId)?.Name ?? "your other collections")
+            <span class="seg">@Session.Profile.Name against @(Others.FirstOrDefault(o => o.Id == _otherId)?.Name ?? "your other collections")</span>
             @if (_readyOnly)
             {
-                <span class="filters">affordable today only</span>
+                <span class="seg filters">affordable today only</span>
             }
         </span>
 

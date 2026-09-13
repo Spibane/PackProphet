@@ -161,14 +161,38 @@
    collect" and left a reader to work out which of the buttons beside it governed that. */
 .page-head .subtitle .lbl { color: var(--bs-secondary-color); }
 
-/* The separator is drawn rather than written, because Razor collapses the whitespace between an
-   element and the markup before it and the clause arrived welded to the word in front of it --
-   "53 short of target· showing missing only". Generated content keeps its spaces.
+/* One reading of a page-bar sentence: "412 copies", "53 short of target", "showing missing only".
+   The dots between them are drawn here rather than written in the markup.
 
-   The character itself rather than \00b7: a CSS escape eats the whitespace that terminates it, so
-   the escaped form put the space back only on the near side and read "· showing" welded again on
-   the far one. */
-.page-head .subtitle .filters::before { content: " · "; }
+   WHY THE SENTENCE IS SEGMENTS
+   ----------------------------------------------------------------------------------
+   On a phone this line wraps to two, and as a run of text it broke wherever the width ran out --
+   "412" on one line and "copies" on the next, a figure separated from its unit, which reads as two
+   facts rather than one. A reading is indivisible; a sentence made of them is not, so the break
+   opportunities are exactly the joins.
+
+   Drawn rather than written for the older reason too: Razor collapses the whitespace between an
+   element and the markup before it, and the clause arrived welded to the word in front of it --
+   "53 short of target· showing missing only". Generated content keeps its own spacing, and here
+   that is margins rather than spaces in the string, because in the folded bar these are flex items
+   and a trailing space at the end of a flex line hangs at zero width.
+
+   AFTER rather than before, so a line that wraps ENDS with the dot. Leading a line with one reads
+   as a bullet, which is a list -- and this is a sentence.
+
+   Nothing here says `white-space: nowrap`, and that is deliberate. The break opportunities come
+   from the flex items in the folded bar (below), which already prefer to keep an item whole and
+   only wrap inside one that will not fit a line by itself -- so a segment longer than the bar,
+   like a pair of profile names on the compare page, still wraps rather than running off the edge.
+   Nowrap would have made that case unbreakable.
+
+   .filters is still on the segment that states them, and still means what it meant -- it just no
+   longer draws its own separator, because every segment gets one now. */
+.page-head .subtitle > .seg:not(:last-child)::after {
+    content: "\00b7";
+    margin-inline: .32rem;
+    color: var(--bs-tertiary-color);
+}
 
 /* the rail
    ==================================================================================
@@ -2704,7 +2728,14 @@ h1[tabindex="-1"]:focus-visible { outline: none; }
     .page-head.folded > .actions { grid-area: actions; }
     .page-head.folded > .subtitle {
         grid-area: subtitle;
-        display: block;
+        /* A wrapping row of readings rather than a run of text. Flex because the break has to fall
+           between segments whatever Razor did with the whitespace around them -- there is not
+           reliably a space between two spans to break at, and flex items wrap between themselves
+           regardless. Spacing is the separator's own margins, so no column-gap. */
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0;
         font-size: .76rem;
         line-height: 1.3;
         /* It has to WRAP here, where everywhere else it is one line that ellipsises. The base rule

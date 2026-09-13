@@ -18,6 +18,27 @@ public class CollectionPageTests : AppHost
     }
 
     [Fact]
+    public async Task The_bar_sentence_is_readings_rather_than_a_run_of_text()
+    {
+        // On a phone this line wraps to two, and as a run of text it broke wherever the width ran
+        // out -- "204" on one line and "copies" on the next, a figure separated from its unit,
+        // which reads as two facts rather than one. Each reading is its own element, so the only
+        // places the line can break are the joins between them.
+        var page = await PageAsync();
+
+        var subtitle = page.Find(".page-head .subtitle");
+        Assert.NotEmpty(subtitle.Children);
+        Assert.All(subtitle.Children, c =>
+            Assert.True(c.ClassList.Contains("seg"),
+                $"<{c.TagName.ToLowerInvariant()} class=\"{c.ClassName}\"> is loose in the "
+                + "sentence, so the line can break inside it"));
+
+        // And no separator written into the markup: a dot in a text node belongs to neither
+        // reading, and the space beside it is a break opportunity in the middle of the sentence.
+        Assert.DoesNotContain("\u00b7", subtitle.TextContent);
+    }
+
+    [Fact]
     public async Task Every_filter_renders()
     {
         // Each of these is a different predicate over the card list, and one of them — the

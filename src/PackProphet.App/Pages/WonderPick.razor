@@ -137,184 +137,6 @@ else
                phone-width row. Which also put the commit row 40px under the tab bar. *@
             <button class="btn btn-sm btn-link offer-clear" @onclick="Clear">Clear these five</button>
 
-            @if (_appraisal is { } a)
-            {
-                <div class="verdict-lead" aria-live="polite">
-                    <span class="micro">The call</span>
-
-                    <div class="lead-head">
-                        <div class="lead-text">
-                            <h2 class="name @VerdictClass(a.Verdict)">@Call(a.Verdict)</h2>
-
-                            <p class="says">@Why(a)</p>
-
-                            @* Where the bar came from, and why it is where it is.
-                               ==================================================================
-                               The threshold is the page's whole contribution and it is computed
-                               from the user's own logged offers, so a verdict that states it
-                               without sourcing it is asking to be trusted about the one number
-                               nobody else could check. It also moves at the cap, which looks like
-                               a bug unless the page says so first. *@
-                            <p class="then">
-                                @if (_history.Count >= MinSamplesForThreshold)
-                                {
-                                    <text>
-                                        That bar comes from your own @_history.Count logged offers.
-                                    </text>
-                                    @if (Session.WonderStamina >= GameRules.StaminaCap)
-                                    {
-                                        <text>
-                                            It is lowered right now because you are at the cap: the
-                                            fifth regenerates whether you spend or not, so holding
-                                            out costs you one.
-                                        </text>
-                                    }
-                                }
-                                else
-                                {
-                                    <text>
-                                        @_history.Count of @MinSamplesForThreshold logged offers so
-                                        far, so this takes anything useful until there is a
-                                        distribution worth trusting. Log every offer, taken or
-                                        skipped &mdash; the bar is only as good as what is behind it.
-                                    </text>
-                                }
-                            </p>
-
-                            <p class="then">
-                                Costs @a.StaminaCost of @GameRules.StaminaCap stamina.
-                                @if (a.StaminaCost > Session.WonderStamina)
-                                {
-                                    <strong class="key">You have @Session.WonderStamina.</strong>
-                                }
-                            </p>
-                        </div>
-
-                        @Histogram(a)
-                    </div>
-                </div>
-
-                @* The action, directly under the answer.
-
-                   Everything below this is working: what the offer is worth, how that was arrived
-                   at, what each card contributed. It is all worth keeping and none of it is worth
-                   putting between a verdict and the button that acts on it -- this is a
-                   five-second decision made with the game in the other hand, and on a phone the
-                   stat grid and the contributions table pushed the commit row 1,378px down a
-                   812px screen. *@
-                @* The two outcomes, and they get equal weight.
-                   ==================================================================================
-                   Taking and skipping are equally likely and equally consequential -- the bar is
-                   built from BOTH, and an offer skipped and not logged is a sample the threshold
-                   never sees. The old bar made "Skipped" a small outline button at the end of a row
-                   and "Took it" a green one behind a dropdown, which quietly says one of them is
-                   the real answer.
-
-                   On a phone they become full-width rows rather than a side-by-side pair, for the
-                   same reason: neither gets the smaller target. *@
-                <div class="offer-commit">
-                    <span class="took">
-                        <select class="form-select form-select-sm" @bind="_received"
-                                aria-label="Which card you received">
-                            <option value="">Which card did you get?</option>
-                            @foreach (var c in _offer)
-                            {
-                                <option value="@c.OwnershipKey">@c.Name</option>
-                            }
-                        </select>
-                        <button class="btn btn-primary" disabled="@(_received.Length == 0)"
-                                @onclick="LogTaken">
-                            Took it &mdash; log and spend a stamina
-                        </button>
-                    </span>
-
-                    <button class="btn btn-outline-secondary" @onclick="LogSkipped">
-                        Skipped it &mdash; log anyway
-                    </button>
-                </div>
-
-                <p class="commit-note">
-                    Log every offer, taken or skipped. The bar is only as good as the distribution
-                    behind it.
-                </p>
-
-                <div class="summary">
-                    <div class="stat">
-                        <span class="label">Expected Value</span>
-                        <span class="value">@Fmt(a.ExpectedValue) packs</span>
-                        @* Averaged over the 1-in-5 rather than the best card in the offer. *@
-                        <span class="sub">Averaged over the 1-in-@GameRules.WonderPickCardsShown</span>
-                    </div>
-                    <div class="stat">
-                        <span class="label">Per Stamina</span>
-                        <span class="value">@Fmt(a.ValuePerStamina)</span>
-                        @* Never called a price. Wonder Stamina and Pack Hourglasses are separate
-                           currencies with no exchange rate, so packs-per-stamina only ranks one
-                           offer against another. *@
-                        <span class="sub">For comparing offers, not a price</span>
-                    </div>
-                    <div class="stat">
-                        <span class="label">The price is set by</span>
-                        <span class="value">@(a.CostDriver.Length > 0 ? a.CostDriver : "—")</span>
-                        <span class="sub">
-                            @(a.CostDriverWanted ? "which you still want" : "which you do not need")
-                        </span>
-                    </div>
-                </div>
-
-                @* The two count columns are inputs to the last one, not the point of the table.
-                   Named as what they do to the figure beside them, and dropped first on a phone,
-                   so the column that is this page's own answer is the one that survives. *@
-                <h2 class="sub-head">What each card contributes</h2>
-                <DataTable Label="What each card in the offer contributes to its value">
-                    <thead>
-                        <tr>
-                            <th scope="col">Card</th>
-                            <th scope="col" class="num" data-pri="3">You Hold</th>
-                            <th scope="col" class="num" data-pri="3">Still Want</th>
-                            <th scope="col" class="num">Worth to You</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var c in a.Cards.OrderByDescending(c => c.Value))
-                        {
-                            <tr class="@(c.Value <= 0 ? "text-body-secondary" : "")">
-                                <td>
-                                    <span class="pack-thumb deck-thumb"
-                                          data-tip-img="@c.Card.ArtUrl" data-tip="@c.Card.Name"
-                                          style="@c.Card.ArtVars"></span>
-                                    <strong>@c.Card.Name</strong>
-                                    <span class="small text-body-secondary ms-1">@c.Card.Set</span>
-                                    @if (Session.Index.Rung(c.Card) is { } rung)
-                                    {
-                                        <span class="glyphs @rung.GlyphClass ms-1" title="@rung.Symbol">@rung.Glyphs</span>
-                                    }
-                                </td>
-                                <td class="num" data-pri="3">@(c.Owned > 0 ? c.Owned.ToString() : "—")</td>
-                                <td class="num" data-pri="3">@(c.Wanted > 0 ? c.Wanted.ToString() : "—")</td>
-                                <td class="num">
-                                    @if (c.Value > 0)
-                                    {
-                                        <span>@Fmt(c.Value) packs</span>
-                                    }
-                                    else
-                                    {
-                                        <span>Nothing</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </DataTable>
-
-                @* Logging is what makes the threshold work, so it is offered on every offer —
-                   including the ones skipped. *@
-
-                @if (_logged is not null)
-                {
-                    <Notice Severity="Notice.Level.Success" Class="mt-2 mb-0">@_logged</Notice>
-                }
-            }
         }
 
         @* Reading the offer off a screenshot, above the picker, because it replaces the slow part:
@@ -377,6 +199,201 @@ else
                             OnPick="Add" />
             </div>
         }
+
+        @* THE ANSWER COMES AFTER THE WORK, UNTIL THE WORK IS DONE.
+           ==================================================================================
+           This block sat directly under the strip, above the screenshot reader and the picker.
+           So naming the first card pushed the second search about a screen and a half down: the
+           verdict, the commit row and the per-card table all stood between the five boxes and the
+           control the boxes tell you to use. "Tap a card below" was true and useless.
+
+           A verdict over a two-card offer is provisional by definition -- it is an average over
+           cards not yet named -- so while the offer is incomplete the page leads with filling it
+           in. Once all five are in, the picker and the screenshot reader stop rendering and this
+           follows the strip directly, which is the ordinary Answer shape reached by finishing
+           rather than by a second layout.
+
+           It stays live throughout: the figures update as each card lands, so the answer is
+           there to scroll to, just not in front of the work. *@
+        @if (_appraisal is { } a)
+        {
+            <div class="verdict-lead" aria-live="polite">
+                <span class="micro">The call</span>
+
+                <div class="lead-head">
+                    <div class="lead-text">
+                        <h2 class="name @VerdictClass(a.Verdict)">@Call(a.Verdict)</h2>
+
+                        <p class="says">@Why(a)</p>
+
+                        @* Where the bar came from, and why it is where it is.
+                           ==================================================================
+                           The threshold is the page's whole contribution and it is computed
+                           from the user's own logged offers, so a verdict that states it
+                           without sourcing it is asking to be trusted about the one number
+                           nobody else could check. It also moves at the cap, which looks like
+                           a bug unless the page says so first. *@
+                        <p class="then">
+                            @if (_history.Count >= MinSamplesForThreshold)
+                            {
+                                <text>
+                                    That bar comes from your own @_history.Count logged offers.
+                                </text>
+                                @if (Session.WonderStamina >= GameRules.StaminaCap)
+                                {
+                                    <text>
+                                        It is lowered right now because you are at the cap: the
+                                        fifth regenerates whether you spend or not, so holding
+                                        out costs you one.
+                                    </text>
+                                }
+                            }
+                            else
+                            {
+                                <text>
+                                    @_history.Count of @MinSamplesForThreshold logged offers so
+                                    far, so this takes anything useful until there is a
+                                    distribution worth trusting. Log every offer, taken or
+                                    skipped &mdash; the bar is only as good as what is behind it.
+                                </text>
+                            }
+                        </p>
+
+                        <p class="then">
+                            Costs @a.StaminaCost of @GameRules.StaminaCap stamina.
+                            @if (a.StaminaCost > Session.WonderStamina)
+                            {
+                                <strong class="key">You have @Session.WonderStamina.</strong>
+                            }
+                        </p>
+                    </div>
+
+                    @Histogram(a)
+                </div>
+            </div>
+
+            @* The action, directly under the answer.
+
+               Everything below this is working: what the offer is worth, how that was arrived
+               at, what each card contributed. It is all worth keeping and none of it is worth
+               putting between a verdict and the button that acts on it -- this is a
+               five-second decision made with the game in the other hand, and on a phone the
+               stat grid and the contributions table pushed the commit row 1,378px down a
+               812px screen. *@
+            @* The two outcomes, and they get equal weight.
+               ==================================================================================
+               Taking and skipping are equally likely and equally consequential -- the bar is
+               built from BOTH, and an offer skipped and not logged is a sample the threshold
+               never sees. The old bar made "Skipped" a small outline button at the end of a row
+               and "Took it" a green one behind a dropdown, which quietly says one of them is
+               the real answer.
+
+               On a phone they become full-width rows rather than a side-by-side pair, for the
+               same reason: neither gets the smaller target. *@
+            <div class="offer-commit">
+                <span class="took">
+                    <select class="form-select form-select-sm" @bind="_received"
+                            aria-label="Which card you received">
+                        <option value="">Which card did you get?</option>
+                        @foreach (var c in _offer)
+                        {
+                            <option value="@c.OwnershipKey">@c.Name</option>
+                        }
+                    </select>
+                    <button class="btn btn-primary" disabled="@(_received.Length == 0)"
+                            @onclick="LogTaken">
+                        Took it &mdash; log and spend a stamina
+                    </button>
+                </span>
+
+                <button class="btn btn-outline-secondary" @onclick="LogSkipped">
+                    Skipped it &mdash; log anyway
+                </button>
+            </div>
+
+            <p class="commit-note">
+                Log every offer, taken or skipped. The bar is only as good as the distribution
+                behind it.
+            </p>
+
+            <div class="summary">
+                <div class="stat">
+                    <span class="label">Expected Value</span>
+                    <span class="value">@Fmt(a.ExpectedValue) packs</span>
+                    @* Averaged over the 1-in-5 rather than the best card in the offer. *@
+                    <span class="sub">Averaged over the 1-in-@GameRules.WonderPickCardsShown</span>
+                </div>
+                <div class="stat">
+                    <span class="label">Per Stamina</span>
+                    <span class="value">@Fmt(a.ValuePerStamina)</span>
+                    @* Never called a price. Wonder Stamina and Pack Hourglasses are separate
+                       currencies with no exchange rate, so packs-per-stamina only ranks one
+                       offer against another. *@
+                    <span class="sub">For comparing offers, not a price</span>
+                </div>
+                <div class="stat">
+                    <span class="label">The price is set by</span>
+                    <span class="value">@(a.CostDriver.Length > 0 ? a.CostDriver : "—")</span>
+                    <span class="sub">
+                        @(a.CostDriverWanted ? "which you still want" : "which you do not need")
+                    </span>
+                </div>
+            </div>
+
+            @* The two count columns are inputs to the last one, not the point of the table.
+               Named as what they do to the figure beside them, and dropped first on a phone,
+               so the column that is this page's own answer is the one that survives. *@
+            <h2 class="sub-head">What each card contributes</h2>
+            <DataTable Label="What each card in the offer contributes to its value">
+                <thead>
+                    <tr>
+                        <th scope="col">Card</th>
+                        <th scope="col" class="num" data-pri="3">You Hold</th>
+                        <th scope="col" class="num" data-pri="3">Still Want</th>
+                        <th scope="col" class="num">Worth to You</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in a.Cards.OrderByDescending(c => c.Value))
+                    {
+                        <tr class="@(c.Value <= 0 ? "text-body-secondary" : "")">
+                            <td>
+                                <span class="pack-thumb deck-thumb"
+                                      data-tip-img="@c.Card.ArtUrl" data-tip="@c.Card.Name"
+                                      style="@c.Card.ArtVars"></span>
+                                <strong>@c.Card.Name</strong>
+                                <span class="small text-body-secondary ms-1">@c.Card.Set</span>
+                                @if (Session.Index.Rung(c.Card) is { } rung)
+                                {
+                                    <span class="glyphs @rung.GlyphClass ms-1" title="@rung.Symbol">@rung.Glyphs</span>
+                                }
+                            </td>
+                            <td class="num" data-pri="3">@(c.Owned > 0 ? c.Owned.ToString() : "—")</td>
+                            <td class="num" data-pri="3">@(c.Wanted > 0 ? c.Wanted.ToString() : "—")</td>
+                            <td class="num">
+                                @if (c.Value > 0)
+                                {
+                                    <span>@Fmt(c.Value) packs</span>
+                                }
+                                else
+                                {
+                                    <span>Nothing</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </DataTable>
+
+            @* Logging is what makes the threshold work, so it is offered on every offer —
+               including the ones skipped. *@
+
+            @if (_logged is not null)
+            {
+                <Notice Severity="Notice.Level.Success" Class="mt-2 mb-0">@_logged</Notice>
+            }
+        }
+
     </PageShell>
 }
 

@@ -48,10 +48,18 @@ else
     <div class="card-detail">
         <div class="art">
             @* Background rather than <img>: a failed load leaves the placeholder instead of a
-               broken-image gap, with no error handling needed. *@
-            <div class="big-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
-                 style="@_card.ArtVars"
-                 role="img" aria-label="@_card.Name"></div>
+               broken-image gap, with no error handling needed.
+
+               A button rather than an image, because it opens the art larger and a thing you press
+               has to be reachable by something other than a mouse. Its label says what pressing it
+               does rather than naming the card again -- the page's own h1 is the card's name, two
+               lines above, and role="img" with the same text made a screen reader read it twice. *@
+            <button type="button"
+                    class="big-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
+                    style="@_card.ArtVars"
+                    popovertarget="card-zoom"
+                    aria-label="@($"See the art for {_card.Name} at twice the size")"
+                    title="See it larger"></button>
 
             @* Said in words as well as drawn: the ring alone does not explain itself, and being
                two copies away is worth knowing. *@
@@ -397,6 +405,28 @@ else
     </PageShell>
 
     </div>@* .detail-keys *@
+
+    @* The art at twice the size, over the page.
+
+       OUTSIDE .detail-keys, deliberately. That div answers Escape by navigating back, and while
+       this is open Escape means "close this" -- inside it, one key would do both and you would
+       land on the previous page. Out here the keydown never reaches it, because the popover takes
+       focus when it opens.
+
+       Twice the size the page draws it, which is twice the 15rem column above 760px and twice the
+       width of the shell below it -- the breakpoint .card-detail itself switches on, so the two
+       cannot disagree about which layout the art is in. On a phone that comes out wider than the
+       screen and the box scrolls, which is the point: a card you are looking at closely is one
+       whose printed text you are trying to read.
+
+       Three ways out, none of them a glyph in a corner: the picture itself, the backdrop around
+       it, and Escape. An X would be a 24px target over a surface that is entirely a target. *@
+    <div class="art-zoom" popover id="card-zoom">
+        <button type="button" class="zoom-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
+                style="@_card.ArtVars"
+                popovertarget="card-zoom" popovertargetaction="hide"
+                aria-label="@($"Close the larger art for {_card.Name}")" autofocus></button>
+    </div>
 }
 
 @code {

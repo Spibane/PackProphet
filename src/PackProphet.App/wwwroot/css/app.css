@@ -1691,6 +1691,49 @@ main {
     padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* pull down to reload
+   ==================================================================================
+   Why the app draws this itself is in js/pulldown.js: installed to a Home Screen there is no
+   browser around it to own the gesture, and nothing takes its place.
+
+   Drawn as the system would rather than as a page would -- one ring, over everything, following
+   the finger. It is not a control and never takes a tap: the gesture IS the control, and something
+   that can be pressed here would be pressed by the scroll that starts at the top of the page. */
+.pulldown {
+    position: fixed;
+    inset-block-start: env(safe-area-inset-top);
+    inset-inline: 0;
+    z-index: 1040;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    /* Parked above the top edge, so at zero pull it is off screen and the whole of its travel is
+       the gesture. */
+    transform: translateY(calc(var(--pull, 0px) - 2.4rem));
+}
+.pulldown.on { opacity: 1; }
+.pulldown .ring {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border: 2px solid var(--bs-tertiary-color);
+    border-radius: 50%;
+    background: var(--bs-tertiary-bg);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+}
+/* Far enough. The ring says so before you let go, because a gesture that only reports its result
+   after the fact is one you have to learn by failing at it. */
+.pulldown.ready .ring { border-color: var(--bs-primary); }
+.pulldown.going .ring {
+    border-color: var(--bs-primary);
+    border-block-start-color: transparent;
+    animation: pulldown-spin .7s linear infinite;
+}
+@keyframes pulldown-spin { to { rotate: 360deg; } }
+@media (prefers-reduced-motion: reduce) {
+    .pulldown.going .ring { animation: none; }
+}
+
 /* Flex items shrink by default, and a shrunk item does not make its container scroll — it
    just squashes and lets its own content spill out of view. That is what cut the bottom off
    the Packs page: everything below the ranking table was compressed to fit instead of pushing

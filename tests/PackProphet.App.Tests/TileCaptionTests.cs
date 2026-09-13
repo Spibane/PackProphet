@@ -398,17 +398,30 @@ public class TileCaptionTests : AppHost
     }
 
     [Fact]
-    public async Task How_to_get_it_is_addressable_so_it_can_span_the_width_on_a_tablet()
+    public async Task The_card_page_leads_with_how_to_get_it_not_with_what_is_printed_on_it()
     {
-        // Two columns at tablet widths puts the third child on a second row — in column one, the
-        // 12rem art column, where a four-route table was rendered 192px wide. The stylesheet spans
-        // it across both; this is the hook that lets it.
+        // It was three columns -- art, printed statistics, routes -- so the answer someone opened
+        // this page for was the third of three, and the first two thirds were a picture of the
+        // card and a table of the facts printed on that picture.
+        //
+        // Two columns now, and the order in the second one is the order of the question: what it
+        // costs to get, where that came from, then the card itself.
         await ReadyAsync();
         var card = Session.Index.All.First(c => !c.IsPromo);
 
         var page = RenderComponent<CardDetail>(p => p.Add(c => c.Key, card.Key));
 
-        var routes = page.Find(".card-detail .routes");
-        Assert.Contains("How to get it", routes.TextContent);
+        // The answer is a display line, the same shape every other Answer page leads with, rather
+        // than a heading over a strip.
+        var lead = page.Find(".card-detail .verdict-lead");
+        Assert.Contains("How to get it", lead.TextContent);
+        Assert.False(string.IsNullOrWhiteSpace(lead.QuerySelector(".name")?.TextContent));
+
+        // And it comes first. Compared by position in the markup, because what is being asserted
+        // is reading order -- on a phone the columns stack and this is all there is.
+        var markup = page.Markup;
+        Assert.True(markup.IndexOf("verdict-lead", StringComparison.Ordinal)
+                    < markup.IndexOf("fact-row", StringComparison.Ordinal),
+            "the printed facts must follow the answer, not precede it");
     }
 }

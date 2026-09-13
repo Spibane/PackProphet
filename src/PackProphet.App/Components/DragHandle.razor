@@ -8,15 +8,25 @@
 
    They are also faster than dragging for the common case, which is one item moved one place.
 
-   The glyph is the braille-pattern grip, which is what a grabbable edge looks like everywhere else;
-   the label is what says which deck or list it belongs to, since the glyph is the same six dots on
+   THE GLYPH IS DRAWN, NOT TYPED
+   ----------------------------------------------------------------------------------
+   It was U+283F, the braille grip. Braille cells are ROUND and they are laid out 2 wide by 4 tall
+   with the bottom row empty, so it sat high in its own line box and read as a pattern of holes
+   rather than as something to hold. Six square dots, 2 by 3, is what a grip is everywhere else,
+   and an SVG is the only way to get one that is the same shape in every font.
+
+   The label is what says which deck or list it belongs to, since the grip is the same six dots on
    all of them. *@
 
 <button type="button" class="drag-handle" data-drag-handle
         aria-label="@($"Reorder {Name}, {Index + 1} of {Count}")"
         title="Drag to reorder, or use the arrow keys"
         @onkeydown="OnKey"
-        @onclick:preventDefault="true">&#10287;</button>
+        @onclick:preventDefault="true">
+    <svg viewBox="0 0 8 13" width="8" height="13" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M0 0h3v3H0zM5 0h3v3H5zM0 5h3v3H0zM5 5h3v3H5zM0 10h3v3H0zM5 10h3v3H5z" />
+    </svg>
+</button>
 
 @code {
     /// <summary>The item this grips, for the label — the glyph is identical on every row.</summary>

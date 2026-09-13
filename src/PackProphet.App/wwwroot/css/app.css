@@ -1417,8 +1417,6 @@ main > .page-head {
     border-radius: var(--pp-r-xs);
     background: none;
     color: var(--bs-tertiary-color);
-    font-size: 1.05rem;
-    line-height: 1;
     /* The gesture is the point: without this a vertical drag on a phone scrolls the page and the
        item never moves. dragsort.js only claims the gesture once it is definitely a drag, so a
        scroll that happens to start on the grip is still a scroll. */
@@ -1431,11 +1429,35 @@ main > .page-head {
 /* The narrow column the grip sits in, so a row of a table does not give it a quarter of the width. */
 .grip { inline-size: 1px; padding-inline-end: 0; white-space: nowrap; }
 
+/* On a showcase card the grip goes against the card's trailing EDGE, full height, rather than
+   inline in the body under the name -- where it read as one more fact about the deck and sat in
+   the middle of the card, which is not where you reach for something you are about to pick up.
+
+   Out of flow, so the two-column card keeps its two columns; the room it needs is bought with
+   padding on the card instead, and only while the shelf is one you can reorder. */
+.showcase-grid.dragsort .showcase { position: relative; padding-inline-end: 1.9rem; }
+.showcase-grid.dragsort .showcase > .drag-handle {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    block-size: auto;
+    inline-size: 1.6rem;
+    border-radius: 0 var(--pp-r) var(--pp-r) 0;
+}
+
 /* The item being carried. Lifted rather than hidden: what is being dragged has to stay legible,
-   because where it lands is judged against the items it is passing. */
+   because where it lands is judged against the items it is passing.
+
+   It also follows the finger -- dragsort.js writes the transform -- so the shelf opening a space
+   for it is the RESULT of a move you can see, rather than the whole of it. Above its neighbours
+   while it travels, or it slides under the card it is passing. */
 .dragsort .dragging {
-    opacity: .85;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+    position: relative;
+    z-index: 5;
+    opacity: .9;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .45);
+    cursor: grabbing;
+    will-change: transform;
 }
 .dragsort .dragging .drag-handle { cursor: grabbing; }
 

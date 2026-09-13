@@ -126,12 +126,6 @@ else
                         <div class="body">
                             <a class="nm" href="decks/@deck.Id">@deck.Name</a>
 
-                            @if (_order == "custom")
-                            {
-                                <DragHandle Name="@deck.Name" Index="@at" Count="@_decks.Count"
-                                            OnMove="MoveTo" Id="@deck.Id" />
-                            }
-
                             <div class="meta">
                                 @foreach (var energy in deck.Energies)
                                 {
@@ -191,6 +185,15 @@ else
                                 </button>
                             </div>
                         </div>
+
+                        @* On the card rather than in its body: it grips the whole card, so it
+                           belongs against the card's own edge. Last, so tabbing through a shelf
+                           reaches what a card SAYS before what you can do to its position. *@
+                        @if (_order == "custom")
+                        {
+                            <DragHandle Name="@deck.Name" Index="@at" Count="@_decks.Count"
+                                        OnMove="MoveTo" Id="@deck.Id" />
+                        }
                     </div>
                 }
             </div>

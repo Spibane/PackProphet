@@ -77,17 +77,17 @@
                         <button class="btn btn-sm @(Mode == Tap.Off ? "btn-secondary" : "btn-outline-secondary")"
                                 @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)"
                                 title="@($"A {Gesture} changes nothing. Right-click or shift-click still removes one.")">
-                            Nothing
+                            Off
                         </button>
                         <button class="btn btn-sm @(Mode == Tap.Add ? "btn-success" : "btn-outline-secondary")"
                                 @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)"
                                 title="@($"{GestureVerb} adds a copy")">
-                            Adds
+                            Add
                         </button>
                         <button class="btn btn-sm @(Mode == Tap.Remove ? "btn-danger" : "btn-outline-secondary")"
                                 @onclick="() => SetMode(Tap.Remove)" aria-pressed="@Aria.Flag(Mode == Tap.Remove)"
                                 title="@($"{GestureVerb} removes a copy")">
-                            Removes
+                            Remove
                         </button>
                     </div>
                 </div>
@@ -205,7 +205,7 @@ else
                 <button class="btn @(Mode == Tap.Off ? "btn-secondary" : "btn-outline-secondary")"
                         @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)"
                         title="@($"A {Gesture} changes nothing")">
-                    Nothing
+                    Off
                 </button>
                 <button class="btn @(Mode == Tap.Add ? "btn-success" : "btn-outline-secondary")"
                         @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)"
@@ -1050,9 +1050,9 @@ else
 
     private string ModeLabel => Mode switch
     {
-        Tap.Add => "Tap adds",
-        Tap.Remove => "Tap removes",
-        _ => "Tap does nothing",
+        Tap.Add => $"{Gesture} adds",
+        Tap.Remove => $"{Gesture} removes",
+        _ => $"{Gesture} off",
     };
 
     private string ModeTitle => Mode switch

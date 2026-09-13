@@ -223,6 +223,6 @@ public class TwoBarRuleTests : AppHost
         // renamed. The deck editor kept a visually-hidden h1 beside it so the page still has a
         // heading to land on; the chase list, with the same bar, had none -- so navigating by
         // headings went straight past the page's own name.
-        Assert.Equal(1, page.FindAll("h1").Count);
+        Assert.Single(page.FindAll("h1"));
     }
 }

@@ -293,13 +293,16 @@ else
                either of these two packs" is nearly the whole set and answers nothing; the question
                this filter exists for is "what is still missing from the pack I am about to open".
                Tapping the chosen pack again clears it. *@
-            @if (!ViewingAll && !CardIndex.IsPromoSet(_set))
+            @* Two or more, because one is not a filter. A set with a single pack put a button in
+               the rail whose whole effect was to narrow 110 cards to the same 110 -- it looked
+               like a control and answered nothing, which is worse than not offering it. *@
+            @if (!ViewingAll && !CardIndex.IsPromoSet(_set) && PackChoices.Count > 1)
             {
                 <span class="bar-sep" aria-hidden="true"></span>
                 <div class="chip-group">
                     <span class="ttl" id="pack-picks-label">Pack</span>
                     <div class="pack-picks" role="group" aria-labelledby="pack-picks-label">
-                    @foreach (var p in PacksInSet)
+                    @foreach (var p in PackChoices)
                     {
                         <button class="pack-pick @(_pack == p ? "on" : "")"
                                 @onclick="() => TogglePack(p)" aria-pressed="@Aria.Flag(_pack == p)"
@@ -817,9 +820,14 @@ else
             .Select(k => Session.PackArt.UrlFor(k))
             .FirstOrDefault(u => !string.IsNullOrEmpty(u)) ?? "";
 
-    private IEnumerable<string> PacksInSet =>
+    /// <summary>
+    /// The packs this set is sold in. A list rather than a lazy sequence: the markup asks how many
+    /// there are before deciding to offer the filter at all, and then walks them -- which on an
+    /// IEnumerable is two passes over every card in the set, per render.
+    /// </summary>
+    private List<string> PackChoices =>
         InSet.Where(c => c.IsPackObtainable).SelectMany(c => c.Packs!)
-             .Distinct().OrderBy(p => p, StringComparer.Ordinal);
+             .Distinct().OrderBy(p => p, StringComparer.Ordinal).ToList();
 
     /// <param name="Cards">Distinct ownable cards in scope.</param>
     /// <param name="Owned">How many of those you hold at least one of.</param>

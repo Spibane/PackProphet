@@ -2796,18 +2796,70 @@ h1[tabindex="-1"]:focus-visible { outline: none; }
     background: var(--bs-border-color);
 }
 
+/* Both sizes as values rather than as literals, because the baseline correction further down is
+   the DIFFERENCE between them: a rule that restates a number is a rule that drifts from it, and
+   the drift here would be silent and sub-pixel. */
+.page-head { --title-fs: 1.05rem; --subtitle-fs: .85rem; }
+
 /* The title is the one thing every header has, so it gets one definition rather than a <strong>
    styled slightly differently on each page. */
 .page-head .title {
     /* An h1, so its user-agent margin and size have to be neutralised: the header is a
        fixed-height single row and must not change because the element became a heading. */
     margin: 0;
-    font-weight: 700; font-size: 1.05rem;
+    font-weight: 700; font-size: var(--title-fs);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .page-head .subtitle {
-    font-size: .85rem; color: var(--bs-secondary-color);
+    font-size: var(--subtitle-fs); color: var(--bs-secondary-color);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+
+/* THE SUBTITLE SAT 1.13px ABOVE THE TITLE, on every page in the app.
+   ==================================================================================
+   Measured, not estimated: the same figure on Which pack, the collection, the log, the wishlist
+   and History, because it does not depend on anything a page decides.
+
+   WHY. The bar centres its children, and centring is done on BOXES. For a single-line item the
+   text baseline then lands at the line's centre plus fontSize x (ascent - descent) / 2 -- so the
+   baseline is a function of the font SIZE, and two items at different sizes cannot share one. At
+   1.05rem against .85rem that is 3.2px of font size and 1.2px of baseline.
+
+   Line-height cannot fix it, which is the part worth writing down, because it is the first thing
+   anyone tries. The line-height cancels out of that expression, and it does so visibly: a strut
+   at the title's size grew the subtitle's box by 1px and moved the baseline 1px down INSIDE it,
+   and the centring handed back exactly half of each. Delta unchanged, both times.
+
+   WHY NOT baseline alignment, which is the right tool and does not fit here. `align-items:
+   baseline` on the pair does align them -- and places the baseline group at the line's
+   cross-start, so the title and subtitle jump to the top of the bar. Measured at 7.8px up. There
+   is nothing to re-centre them with: the bar must stay `nowrap` (a wrapped second line in a
+   fixed-height, overflow-hidden bar is a control you cannot reach), which rules out the
+   wrap + align-content pairing, and `margin: auto` on a baseline-aligned item goes back to
+   centring its box.
+
+   WHY NOT a wrapper, which would give the two a real line box and the browser's own baseline
+   layout for free. Below 600px this bar becomes a grid that puts the title and the subtitle in two
+   separate ROWS, and a wrapper is one grid item. The pair has to stay siblings.
+
+   So the correction is applied, and it is the difference in font size times the font's
+   (ascent - descent) / 2. That ratio is the one platform-dependent part -- the stack starts at
+   system-ui, so it is SF Pro, Segoe UI or Roboto -- and it barely matters at this scale: measured
+   0.38 for the macOS system font, and across the whole range (Roboto .34, Segoe UI .40) the
+   residual stays under 0.15px against the 1.13px it removes. .36 is the middle of it and measures
+   0.02px here.
+
+   inset-block-start rather than padding or margin, so the number written is the number applied. On
+   a centred flex item either of those grows the box and the centring gives half of it straight
+   back, so a 1px margin moves the text half a pixel.
+
+   Above 600px only: below it the subtitle is either hidden or on its own row, where it shares no
+   baseline with anything. */
+@media (width >= 600px) {
+    .page-head .subtitle {
+        position: relative;
+        inset-block-start: calc((var(--title-fs) - var(--subtitle-fs)) * .36);
+    }
 }
 /* Actions never shrink; the title and subtitle give way instead. Stated as a rule for every
    child rather than per page, because the failure it prevents is a squashed button rather than

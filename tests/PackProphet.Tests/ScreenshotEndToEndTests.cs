@@ -764,8 +764,8 @@ public class ScreenshotEndToEndTests
         // unreadable is not.
         var reading = new ScreenshotReader(Ix, Table).Read(PaleRevealScan(), CardScreen.PackReveal);
 
-        // Ix is the snapshot and predates B4a, so the reader cannot name these cards -- it has no
-        // card to name. The fingerprints are the half this fixed, and they are what is asserted.
+        // The fingerprints are the half this was written for, and they are asserted first, on
+        // their own terms: a crop matches one card and one card only.
         var matched = PaleReveal
             .Select(c => c.Nearby.Prepend(c.Hash)
                           .SelectMany(text => ArtHash.TryParse(text, out var h)
@@ -787,10 +787,24 @@ public class ScreenshotEndToEndTests
         Assert.Equal(["B4a-48", "B4a-64", "B4a-65", "B4a-49", "B4a-51"],
                      matched.Select(m => m[0]));
 
-        // And no cell is offered as a match against the snapshot, because the snapshot has no B4a
-        // cards for a fingerprint to point at. The reader is right to hold them back; a deploy
-        // takes the live card data and the same five become named.
-        Assert.Empty(reading.Matches);
+        // And now the reader names them, which is what this test used to assert the absence of.
+        //
+        // It was written when the snapshot predated B4a: the fingerprints pointed at cards the
+        // index had never heard of, so the reader held all five back and the test asserted an
+        // empty result, with a comment saying "a deploy takes the live card data and the same
+        // five become named". Refreshing the snapshot to 2.10.0 is that deploy. The assertion is
+        // inverted rather than deleted, because holding a card back and naming it are the two
+        // halves of one rule and this fixture is the only place the second half is reachable.
+        Assert.Equal(["B4a-48", "B4a-64", "B4a-65", "B4a-49", "B4a-51"],
+                     reading.Matches
+                            .OrderBy(m => m.Row).ThenBy(m => m.Col)
+                            .Select(m => m.Card.Key));
+
+        // Two of the five are marginal -- a pale screenshot is what this fixture is of, and a
+        // reading the reader is unsure about is offered for confirmation rather than applied. The
+        // count is not asserted: which crops fall the wrong side of the threshold is a property of
+        // the art, and pinning it here would make a sharper fingerprint look like a regression.
+        Assert.All(reading.Matches, m => Assert.Equal(MatchSource.Art, m.Source));
     }
 
     /// <summary>

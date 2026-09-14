@@ -335,7 +335,9 @@
     /// </summary>
     private IEnumerable<Item> Cards(string q) =>
         Session.Index.All
-            .Where(c => c.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase))
+            // Folded, so "poke ball" reaches Poké Ball and "rockets meowth" reaches Team
+            // Rocket’s Meowth. Every search box in the app matches the same way.
+            .Where(c => SearchKey.Has(c.Name, SearchKey.Fold(q)))
             .DistinctBy(c => c.OwnershipKey)
             .OrderBy(c => c.Name.Length)           // an exact-ish match first
             .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)

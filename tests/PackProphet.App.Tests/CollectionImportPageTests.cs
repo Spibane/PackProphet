@@ -315,8 +315,8 @@ public class CollectionImportPageTests : AppHost
         var page = await PageAsync();
         var markup = Text(page);
 
-        Assert.Contains("3,761 rows", markup);
-        Assert.Contains("3,546 cards", markup);
+        Assert.Contains("3,879 rows", markup);
+        Assert.Contains("3,664 cards", markup);
     }
 
     /// <summary>

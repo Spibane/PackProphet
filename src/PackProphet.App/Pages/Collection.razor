@@ -1025,7 +1025,12 @@ else
             var q = InSet.AsEnumerable();
 
             if (!string.IsNullOrWhiteSpace(_search))
-                q = q.Where(c => c.Name.Contains(_search, StringComparison.OrdinalIgnoreCase));
+            {
+                // Folded once for the whole pass rather than per card, which matters here: this
+                // walks thousands of names. See SearchKey — "poke ball" has to reach Poké Ball.
+                var search = SearchKey.Fold(_search);
+                q = q.Where(c => SearchKey.Has(c.Name, search));
+            }
 
             if (_rarities.Count > 0)
                 q = q.Where(c => Session.Index.Ladder.IndexOf(c.Rarity) is { } tier

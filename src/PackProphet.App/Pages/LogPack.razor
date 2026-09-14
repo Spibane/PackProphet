@@ -730,10 +730,18 @@ else
     /// the filter runs on a keystroke, where the collection grid's cache exists because that one
     /// re-filters thousands on every tap.
     /// </summary>
-    private IReadOnlyList<PocketCard> Shown =>
-        string.IsNullOrWhiteSpace(_find)
-            ? _inPack
-            : _inPack.Where(c => c.Name.Contains(_find, StringComparison.OrdinalIgnoreCase)).ToArray();
+    private IReadOnlyList<PocketCard> Shown
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_find)) return _inPack;
+
+            // Folded once for the whole pass rather than per card. See SearchKey: "poke ball"
+            // has to reach Poké Ball.
+            var find = SearchKey.Fold(_find);
+            return _inPack.Where(c => SearchKey.Has(c.Name, find)).ToArray();
+        }
+    }
 
     private void OnFind(ChangeEventArgs e) => _find = e.Value?.ToString() ?? "";
 

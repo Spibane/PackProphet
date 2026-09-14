@@ -1,6 +1,7 @@
 namespace PackProphet.Data;
 
 using PackProphet.Domain;
+using PackProphet.Text;
 
 /// <summary>
 /// One search across every facet a deck builder actually asks about.
@@ -93,7 +94,10 @@ public static class CardSearch
         if (text is not { Length: > 0 }) return;
 
         if (sb.Length > 0) sb.Append('\n');
-        sb.Append(text.ToLowerInvariant());
+        // Folded here rather than at the comparison, because this blob is built once per card and
+        // the comparison runs on every keystroke. See SearchKey: "poke ball" has to reach Poké
+        // Ball, and rules text names cards.
+        sb.Append(SearchKey.Fold(text).ToLowerInvariant());
     }
 
     /// <param name="rulesBlob">
@@ -115,18 +119,24 @@ public static class CardSearch
             return Hit.None;
         if (query.Stage is { Length: > 0 } stage && !Equals(fact?.Stage, stage)) return Hit.None;
 
-        var text = query.Text?.Trim() ?? "";
+        // Folded on both sides, so what a keyboard produces reaches what a publisher printed:
+        // "poke ball" finds Poké Ball and "rockets meowth" finds Team Rocket’s Meowth. See
+        // SearchKey for why this is a different fold from CardName's.
+        var text = SearchKey.Fold(query.Text?.Trim());
         if (text.Length == 0) return Hit.RulesText;   // facets alone matched
 
-        if (card.Name.Equals(text, Ci)) return Hit.NameExact;
-        if (card.Name.StartsWith(text, Ci)) return Hit.NamePrefix;
-        if (card.Name.Contains(text, Ci)) return Hit.NameContains;
+        var name = SearchKey.Fold(card.Name);
+
+        if (name.Equals(text, Ci)) return Hit.NameExact;
+        if (name.StartsWith(text, Ci)) return Hit.NamePrefix;
+        if (name.Contains(text, Ci)) return Hit.NameContains;
 
         // Rules text is searched only for terms of three characters or more. Two-letter
         // fragments match inside almost every card's text, which turns the result list into
         // noise exactly when the user has typed too little to disambiguate.
         if (text.Length < 3) return Hit.None;
 
+        // The blob arrives already folded, so it is compared against the folded term directly.
         var found = rulesBlob is null
             ? RulesTextContains(fact, text)
             : rulesBlob.Contains(text, Ci);
@@ -160,8 +170,8 @@ public static class CardSearch
         return false;
     }
 
-    private static bool Has(string? haystack, string needle) =>
-        haystack is { Length: > 0 } && haystack.Contains(needle, Ci);
+    /// <param name="needle">Already folded by <see cref="Rank"/>.</param>
+    private static bool Has(string? haystack, string needle) => SearchKey.Has(haystack, needle);
 
     private static bool Equals(string? value, string other) =>
         value is { Length: > 0 } && value.Equals(other, Ci);

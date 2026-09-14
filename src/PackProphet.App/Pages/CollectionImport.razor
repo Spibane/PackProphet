@@ -75,33 +75,31 @@ else
                answered by the counts. *@
             <h2>What this file says</h2>
             <DataTable Label="Import summary" Fit="true" Class="mb-3">
-                <table class="table table-sm mb-0">
-                    <tbody>
+                <tbody>
+                    <tr>
+                        <th scope="row" class="fw-normal">Cards owned</th>
+                        <td class="text-end fw-semibold">@p.DistinctOwned.ToString("N0")</td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="fw-normal">Copies in total</th>
+                        <td class="text-end">@p.TotalCopies.ToString("N0")</td>
+                    </tr>
+                    <tr>
+                        <th scope="row" class="fw-normal">Rows read</th>
+                        <td class="text-end">@p.RowsRead.ToString("N0")</td>
+                    </tr>
+                    @if (p.RowsUnmatched > 0)
+                    {
                         <tr>
-                            <th scope="row" class="fw-normal">Cards owned</th>
-                            <td class="text-end fw-semibold">@p.DistinctOwned.ToString("N0")</td>
+                            <th scope="row" class="fw-normal text-warning-emphasis">
+                                Rows not recognised
+                            </th>
+                            <td class="text-end text-warning-emphasis">
+                                @p.RowsUnmatched.ToString("N0")
+                            </td>
                         </tr>
-                        <tr>
-                            <th scope="row" class="fw-normal">Copies in total</th>
-                            <td class="text-end">@p.TotalCopies.ToString("N0")</td>
-                        </tr>
-                        <tr>
-                            <th scope="row" class="fw-normal">Rows read</th>
-                            <td class="text-end">@p.RowsRead.ToString("N0")</td>
-                        </tr>
-                        @if (p.RowsUnmatched > 0)
-                        {
-                            <tr>
-                                <th scope="row" class="fw-normal text-warning-emphasis">
-                                    Rows not recognised
-                                </th>
-                                <td class="text-end text-warning-emphasis">
-                                    @p.RowsUnmatched.ToString("N0")
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                    }
+                </tbody>
             </DataTable>
 
             @if (p.DistinctOwned == 0)

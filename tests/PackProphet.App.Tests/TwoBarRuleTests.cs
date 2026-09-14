@@ -287,4 +287,107 @@ public class TwoBarRuleTests : AppHost
             Assert.DoesNotContain("width", style, StringComparison.OrdinalIgnoreCase);
         }
     }
+    // ---- the shell's rules, checked where they are written rather than where they show ------
+    //
+    // Each of the three below is a rule the app already follows almost everywhere, and the whole
+    // cost of the exception was that nobody could see it. A unification pass that reaches
+    // twenty-five of twenty-six places leaves one, and the one is where the next bug lives:
+    //
+    //   - the pack ranking was the page whose bar was not pinned, and iOS 27 blurred it
+    //   - the screenshot review was the table still hand-rolling its wrapper, and it swallowed
+    //     the vertical drag on a phone
+    //   - two of the converted tables kept the <table> they used to have inside the one the
+    //     component renders
+    //
+    // None of the three throws, fails to render, or looks wrong on the machine it was written on.
+
+    private static IEnumerable<(string File, string Text)> Markup()
+    {
+        var root = Path.Combine(AppContext.BaseDirectory, "markup");
+
+        foreach (var file in Directory.GetFiles(root, "*.razor.txt", SearchOption.AllDirectories))
+            yield return (Path.GetFileName(file), File.ReadAllText(file));
+    }
+
+    [Fact]
+    public void The_markup_is_there_so_a_pass_below_means_something()
+    {
+        // A scan that found no files would pass every assertion below by scanning nothing.
+        Assert.True(Markup().Count() > 20, "the razor sources were not copied for scanning");
+    }
+
+    [Theory]
+    [MemberData(nameof(ParameterlessPages))]
+    public async Task A_page_bar_is_the_page_s_own_top_level_element(string typeName)
+    {
+        // The stylesheet pins it with `main > .page-head`, and a child combinator is the whole
+        // point: a bar is chrome, and chrome is not something the content can nest.
+        //
+        // A page that wrapped its bar in a div would still LOOK right -- until it was scrolled,
+        // and on iOS 27 until it was scrolled in an installed app, where the system blurs the top
+        // of the scrolling content and leaves a pinned bar alone. The pack ranking was that page
+        // for as long as the rule only covered railed ones.
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        var roots = page.Nodes.ToArray();
+
+        foreach (var bar in page.FindAll(".page-head").ToArray())
+            Assert.True(roots.Any(n => ReferenceEquals(n, bar)),
+                $"{type.Name} renders its page bar inside <{bar.ParentElement?.TagName.ToLowerInvariant()} "
+                + $"class=\"{bar.ParentElement?.ClassName}\">. It has to be a top-level element of "
+                + "the page, or it is not a child of <main> and the rule that pins it never "
+                + "matches.");
+    }
+
+    [Fact]
+    public void No_page_hand_rolls_the_table_wrapper()
+    {
+        // DataTable exists because twenty-six tables across thirteen pages were wrapped seven
+        // different ways, and it owns four things at once: the sideways scroll, the focus ring,
+        // the accessible name, and the keyboard stop a scroller needs to be reachable at all.
+        //
+        // A hand-written `<div class="table-responsive">` gets the first of those and silently
+        // drops the other three.
+        var offenders = Markup()
+            .Where(m => m.File != "DataTable.razor.txt")
+            .Where(m => m.Text.Contains("class=\"table-responsive", StringComparison.Ordinal))
+            .Select(m => m.File)
+            .ToArray();
+
+        Assert.True(offenders.Length == 0,
+            $"{string.Join(", ", offenders)} wraps a table by hand. Use <DataTable>, which is the "
+            + "only place that class belongs.");
+    }
+
+    [Fact]
+    public void A_table_inside_a_DataTable_is_two_tables()
+    {
+        // The component renders the <table> itself, so its child content is thead and tbody. A
+        // page that kept its own <table> as well nests one inside the other, which no browser
+        // renders as written and bUnit's parser does not complain about either.
+        var offenders = new List<string>();
+
+        foreach (var (file, text) in Markup())
+        {
+            var at = 0;
+            while ((at = text.IndexOf("<DataTable", at, StringComparison.Ordinal)) >= 0)
+            {
+                var end = text.IndexOf("</DataTable>", at, StringComparison.Ordinal);
+                if (end < 0) break;
+
+                if (text[at..end].Contains("<table", StringComparison.Ordinal))
+                    offenders.Add(file);
+
+                at = end + 1;
+            }
+        }
+
+        Assert.True(offenders.Count == 0,
+            $"{string.Join(", ", offenders.Distinct())} puts a <table> inside a <DataTable>, which "
+            + "already renders one. Its child content is the thead and the tbody.");
+    }
+
 }

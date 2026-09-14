@@ -116,17 +116,27 @@ declare
     held_written timestamptz;
     next_version bigint;
 
-    -- Who is calling, as PostgREST saw them.
+    -- THE CALLER'S ADDRESS IS DELIBERATELY NOT READ HERE.
     --
-    -- The database is behind the API gateway, so inet_client_addr() is always the loopback
-    -- address of PostgREST itself and says nothing. PostgREST does pass the request's headers
-    -- through as a setting, and that is the only place inside Postgres where the caller is
-    -- visible at all. The second argument to current_setting means "null rather than an error if
-    -- it is not set", which is what happens when this is called from the SQL editor.
-    req_agent    text := coalesce(
-        nullif(current_setting('request.headers', true), '')::json ->> 'user-agent', '?');
-    req_ip       text := coalesce(
-        nullif(current_setting('request.headers', true), '')::json ->> 'x-forwarded-for', '?');
+    -- It can be. The database sits behind the API gateway, so inet_client_addr() is PostgREST's
+    -- own loopback address and says nothing, but PostgREST passes the request's headers through
+    -- as a setting, and for one night this function read them:
+    --
+    --     coalesce(nullif(current_setting('request.headers', true), '')::json ->> 'x-forwarded-for', '?')
+    --     coalesce(nullif(current_setting('request.headers', true), '')::json ->> 'user-agent', '?')
+    --
+    -- appended to the refusal below. It is what found a browser on a university network that had
+    -- been writing to one document 180 times a second for ten days, after two days of looking in
+    -- the wrong places -- so it earns being written down rather than forgotten.
+    --
+    -- It is out because this app is built so the host cannot read what it stores, and logging a
+    -- stranger's IP address is collecting the one thing about them it otherwise never sees. With
+    -- a single user that cost nothing. With anyone else on it, it is a promise quietly broken in a
+    -- log nobody reads.
+    --
+    -- Put it back for a session if a document misbehaves again, then take it out. The writer id
+    -- below is enough to tell devices apart and is a random per-install string that means nothing
+    -- off this server.
 
     -- How many documents may exist at once.
     --
@@ -239,9 +249,8 @@ begin
     end if;
 
     if held_version <> expected_version then
-        raise exception 'writer % expected version %, stored is % | from % | %',
-            doc_writer, expected_version, held_version, req_ip, req_agent
-            using errcode = '40001';
+        raise exception 'writer % expected version %, stored is %',
+            doc_writer, expected_version, held_version using errcode = '40001';
     end if;
 
     update public.sync_docs

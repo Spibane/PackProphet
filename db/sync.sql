@@ -128,6 +128,22 @@ declare
     req_ip       text := coalesce(
         nullif(current_setting('request.headers', true), '')::json ->> 'x-forwarded-for', '?');
 
+    -- How many documents may exist at once.
+    --
+    -- The key the app talks to this database with is published inside the app, because that is
+    -- the only way a page with no sign-in can reach anything. So creating a document needs no
+    -- pairing code: anyone may call this with an id nobody has used and get a row. The floor
+    -- above does not apply, since there is nothing yet to have been written recently.
+    --
+    -- A ceiling is the cheap half of the answer. Storage is the failure that is painful to undo --
+    -- a full database goes read-only and has to be emptied by hand -- and at 2 MB a document this
+    -- bounds the table to a size the free tier does not notice. It does nothing about request
+    -- volume, which only the platform in front of the database can refuse.
+    --
+    -- Fifty, against one real user and a few hundred KB per collection. Raise it if this is ever
+    -- shared with more than a household.
+    max_docs     constant integer := 50;
+
     -- The floor between two accepted writes to ONE document.
     --
     -- Every throttle the app has lives in the browser -- a six-second debounce, one sync at a
@@ -166,6 +182,11 @@ begin
             -- The client expected a document that is gone. Almost certainly abandoned-document
             -- cleanup ran; it has to be told rather than silently starting a new one.
             raise exception 'document no longer exists' using errcode = 'P0002';
+        end if;
+
+        if (select count(*) from public.sync_docs) >= max_docs then
+            raise exception 'the host is holding as many collections as it will'
+                using errcode = '53400';
         end if;
 
         insert into public.sync_docs (id, auth, payload, nonce, writer)
@@ -266,7 +287,13 @@ grant execute on function public.sync_forget(text, text) to anon;
 -- holiday, so the window is long. Enable pg_cron and schedule this, or run it by hand
 -- occasionally; either way the app warns that an unused pairing expires.
 
-create or replace function public.sync_sweep(older_than interval default '180 days')
+create or replace function public.sync_sweep(
+    older_than interval default '180 days',
+    -- A document written once and never again is not somebody on holiday: a real pairing is
+    -- written by the device that made it within the minute, because the second device has to pull
+    -- it. So version 1 and untouched is either a burst of junk or a pairing abandoned the moment
+    -- it was made, and neither is worth holding a slot against the ceiling for two days.
+    never_used   interval default '2 days')
 returns integer
 language plpgsql
 security definer
@@ -275,7 +302,10 @@ as $$
 declare
     removed integer;
 begin
-    delete from public.sync_docs where updated_at < now() - older_than;
+    delete from public.sync_docs
+    where updated_at < now() - older_than
+       or (version = 1 and created_at < now() - never_used);
+
     get diagnostics removed = row_count;
     return removed;
 end;

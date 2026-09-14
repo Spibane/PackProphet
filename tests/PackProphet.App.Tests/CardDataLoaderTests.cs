@@ -142,8 +142,22 @@ public class CardDataLoaderTests
     private static readonly string[] Vendored =
     [
         "A1", "A1a", "A2", "A2a", "A2b", "A3", "A3a", "A3b", "A4", "A4a", "A4b",
-        "B1", "B1a", "B2", "B2a", "B2b", "B3", "B3a", "B3b", "B4", "PROMO-A", "PROMO-B",
+        "B1", "B1a", "B2", "B2a", "B2b", "B3", "B3a", "B3b", "B4", "B4a", "PROMO-A", "PROMO-B",
     ];
+
+    /// <summary>
+    /// A set code upstream will never publish, standing in for "released since the last deploy".
+    ///
+    /// These three tests used B4a, which was that set when they were written and stopped being it
+    /// the moment the snapshot was refreshed: its detail arrived, the gap closed, and three tests
+    /// about how a gap behaves had no gap left to describe. A code that cannot exist keeps them
+    /// about the behaviour rather than about the calendar.
+    ///
+    /// MissingSets is a set difference and nothing more -- no release check, no known-set filter --
+    /// so an invented code is a gap by the same rule a real one is, and MirrorSetCode lowercases
+    /// anything it does not recognise, which is what builds the URL.
+    /// </summary>
+    private const string Unpublished = "Z9z";
 
     private static (CardDataLoader Loader, SnapshotHandler Handler) Detail(
         IReadOnlyDictionary<string, string>? remoteFiles)
@@ -157,16 +171,16 @@ public class CardDataLoaderTests
     [Fact]
     public async Task Detail_for_a_set_released_since_the_last_deploy_is_fetched_on_its_own()
     {
-        // The whole point. B4a's cards exist in the live card data and its detail is not in the
-        // vendored table, so its attacks and abilities were blank until somebody redeployed.
+        // The whole point. A set's cards exist in the live card data and its detail is not in
+        // the vendored table, so its attacks and abilities were blank until somebody redeployed.
         var (loader, handler) = Detail(new Dictionary<string, string>
         {
-            ["/b4a/b4a.min.json"] = SetFile("b4a", 90001, "Volbeat", "Tackle"),
+            ["/z9z/z9z.min.json"] = SetFile("z9z", 90001, "Volbeat", "Tackle"),
         });
 
-        var facts = await loader.LoadFactsAsync([.. Vendored, "B4a"]);
+        var facts = await loader.LoadFactsAsync([.. Vendored, Unpublished]);
 
-        var added = facts.ForPrinting("B4a-1");
+        var added = facts.ForPrinting($"{Unpublished}-1");
         Assert.NotNull(added);
         Assert.Equal("Volbeat", added.Name);
         Assert.Equal("Tackle", added.Attacks!["1"].Name);
@@ -178,7 +192,7 @@ public class CardDataLoaderTests
         // for any set already covered.
         var remote = handler.Requests.Where(u => !u.Contains("data/snapshot/")).ToList();
         Assert.Single(remote);
-        Assert.EndsWith("/b4a/b4a.min.json", remote[0], StringComparison.Ordinal);
+        Assert.EndsWith("/z9z/z9z.min.json", remote[0], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -191,7 +205,7 @@ public class CardDataLoaderTests
 
         var facts = await loader.LoadFactsAsync(Vendored);
 
-        // Count is distinct CARDS, not rows: the 3,761 entries collapse to about 2,244 identities,
+        // Count is distinct CARDS, not rows: the entries collapse to rather fewer identities,
         // since alternate arts share a card and trainers carry no deck-builder number at all.
         Assert.True(facts.Count > 2000, $"only {facts.Count} facts");
         Assert.NotNull(facts.ForPrinting("A1-1"));
@@ -214,29 +228,28 @@ public class CardDataLoaderTests
     [Fact]
     public async Task A_set_upstream_has_not_published_yet_is_not_a_failure()
     {
-        // Which is B4a's actual state at the time of writing: its cards exist, its detail does not
-        // anywhere. A 404 has to leave the vendored table intact rather than emptying it.
+        // A set whose cards exist and whose detail does not exist anywhere. A 404 has to leave
+        // the vendored table intact rather than emptying it.
         var (loader, _) = Detail(null);
 
-        var facts = await loader.LoadFactsAsync([.. Vendored, "B4a"]);
+        var facts = await loader.LoadFactsAsync([.. Vendored, Unpublished]);
 
-        // Count is distinct CARDS, not rows: the 3,761 entries collapse to about 2,244 identities,
+        // Count is distinct CARDS, not rows: the entries collapse to rather fewer identities,
         // since alternate arts share a card and trainers carry no deck-builder number at all.
         Assert.True(facts.Count > 2000, $"only {facts.Count} facts");
         Assert.NotNull(facts.ForPrinting("A1-1"));
-        Assert.Null(facts.ForPrinting("B4a-1"));
+        Assert.Null(facts.ForPrinting($"{Unpublished}-1"));
     }
 
     [Fact]
     public async Task A_definite_404_stops_it_asking_the_second_route()
     {
-        // B4a's state at the time of writing. The npm package is published FROM the repository, so
-        // it is never ahead of the branch -- a file the branch does not have cannot be in the
-        // package. Asking anyway would double the cost of a gap that upstream simply has not
+        // The npm package is published FROM the repository, so it is never ahead of the branch --
+        // a file the branch does not have cannot be in the package. Asking anyway would double the cost of a gap that upstream simply has not
         // filled, on every single visit.
         var (loader, handler) = Detail(null);
 
-        await loader.LoadFactsAsync([.. Vendored, "B4a"]);
+        await loader.LoadFactsAsync([.. Vendored, Unpublished]);
 
         var remote = handler.Requests.Where(u => !u.Contains("data/snapshot/")).ToList();
         Assert.Single(remote);
@@ -321,7 +334,7 @@ public class CardDataLoaderTests
 
         var facts = await loader.LoadFactsAsync();
 
-        // Count is distinct CARDS, not rows: the 3,761 entries collapse to about 2,244 identities,
+        // Count is distinct CARDS, not rows: the entries collapse to rather fewer identities,
         // since alternate arts share a card and trainers carry no deck-builder number at all.
         Assert.True(facts.Count > 2000, $"only {facts.Count} facts");
         Assert.NotNull(facts.ForPrinting("A1-1"));

@@ -77,9 +77,16 @@ public class GridFilterTests : AppHost
         Assert.Contains(page.FindAll(".page-rail option"),
                         o => o.TextContent.Contains("Missing Only"));
 
-        // A collection that owns nothing has nothing missing to hide, so the filter would pass this
-        // test by doing nothing at all. Own one card first.
-        var owned = Session.Index.All.First(c => c.Set == "B4");
+        // A collection that owns nothing has nothing missing to hide, so the filter would pass
+        // this test by doing nothing at all. Own one card first.
+        //
+        // The set is pinned rather than left to the page's own default, which is the newest one
+        // and therefore moves under this test every time the snapshot is refreshed. It owned a B4
+        // card while the grid had moved on to B4a, so the filter had nothing owned on screen to
+        // hide and reported 110 of 110 either way. A1 is the oldest set and will not move.
+        await ChooseAsync(page, "A", "A1");
+
+        var owned = Session.Index.All.First(c => c.Set == "A1");
         Session.Adjust([owned.OwnershipKey], 1);
         page.Render();
 
@@ -347,6 +354,10 @@ public class GridFilterTests : AppHost
 
         // Narrowed to a couple of cards first: the grid is virtualised, and with no browser to
         // report a viewport height it renders a window of nothing until the list is small.
+        // Across every set, not whichever one the page opened on: the default is the newest set
+        // and Wurmple is not in it, so the search found nothing and the heart there was none to
+        // click. Left implicit, these broke on a card snapshot refresh.
+        await ChooseAsync(page, "*", "All cards");
         page.Find(".grid-search").Input("wurmple");
 
         var hearts = page.FindAll(".card-tile .want");
@@ -384,6 +395,10 @@ public class GridFilterTests : AppHost
         var mine = Session.CreateChaseList("Deck cards");
         page.Render();
 
+        // Across every set, not whichever one the page opened on: the default is the newest set
+        // and Wurmple is not in it, so the search found nothing and the heart there was none to
+        // click. Left implicit, these broke on a card snapshot refresh.
+        await ChooseAsync(page, "*", "All cards");
         page.Find(".grid-search").Input("wurmple");
         await ClickAsync(page, ".card-tile .want");
 
@@ -401,6 +416,10 @@ public class GridFilterTests : AppHost
         // which is what makes the list safe to delete from the chase lists page.
         var page = await PageAsync();
 
+        // Across every set, not whichever one the page opened on: the default is the newest set
+        // and Wurmple is not in it, so the search found nothing and the heart there was none to
+        // click. Left implicit, these broke on a card snapshot refresh.
+        await ChooseAsync(page, "*", "All cards");
         page.Find(".grid-search").Input("wurmple");
         await ClickAsync(page, ".card-tile .want");
 

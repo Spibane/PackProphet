@@ -1,6 +1,8 @@
 namespace PackProphet.App.Tests;
 
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Components;
+using Bunit;
 
 /// <summary>
 /// One rule for how a piece of UI text is capitalised, checked over the markup of every page and
@@ -17,7 +19,7 @@ using System.Text.RegularExpressions;
 /// Nothing about either is wrong enough to notice on the page it is on. They are only wrong next
 /// to each other, which is exactly what no one is ever looking at.
 /// </summary>
-public class LabelCaseTests
+public class LabelCaseTests : AppHost
 {
     /// <summary>
     /// Lowercase inside a title: articles, the seven coordinating conjunctions, and the short
@@ -28,6 +30,14 @@ public class LabelCaseTests
         "a", "an", "and", "as", "at", "but", "by", "for", "from", "in", "into", "nor", "of",
         "off", "on", "onto", "or", "over", "per", "so", "the", "to", "up", "via", "with", "yet",
     };
+
+    /// <summary>
+    /// Words that are lowercase because the game prints them that way, not because anyone chose
+    /// sentence case. Exactly one, measured rather than guessed: "ex" appears in 1,301 card names
+    /// in the shipped snapshot and in set names like "Deluxe Pack: ex". Every other lowercase word
+    /// in that data ("of", "for", "the", "a", "and", "to", "in", "into") is already small.
+    /// </summary>
+    private static readonly HashSet<string> Printed = new(StringComparer.Ordinal) { "ex" };
 
     /// <summary>
     /// The elements whose text is a label by definition. Deliberately not every element that can
@@ -138,5 +148,42 @@ public class LabelCaseTests
         Assert.True(offenders.Count == 0,
             "UI text with no full stop at the end of it is a label, and a label is capitalised "
             + "like a title:\n  " + string.Join("\n  ", offenders));
+    }
+
+    [Theory]
+    [MemberData(nameof(TwoBarRuleTests.ParameterlessPages), MemberType = typeof(TwoBarRuleTests))]
+    public async Task A_label_the_page_assembles_at_run_time_is_capitalised_the_same_way(string typeName)
+    {
+        // The scan above reads the markup, so it only sees words that were typed there. A label
+        // built in the @code block is invisible to it -- and that is where the last one hid: the
+        // grid's mode button is `$"{Gesture} off"`, which rendered as "tap off" for as long as
+        // nobody looked at a phone.
+        //
+        // So the same rule is applied a second time to what a page actually renders. It costs a
+        // render per page and catches the composed case, which is the half that gets missed.
+        await ReadyAsync();
+
+        var type = typeof(PackProphet.Services.AppSession).Assembly.GetType(typeName)!;
+        var page = RenderComponent<DynamicComponent>(p => p.Add(c => c.Type, type));
+
+        var offenders = new List<string>();
+
+        foreach (var tag in Labels)
+            foreach (var el in page.FindAll(tag))
+            {
+                var text = Regex.Replace(el.TextContent, @"\s+", " ").Trim();
+                if (text.Length == 0) continue;
+
+                var wrong = NotTitleCased(text, whole: true)
+                    .Where(w => !Printed.Contains(w))
+                    .ToArray();
+
+                if (wrong.Length > 0)
+                    offenders.Add($"<{tag}> \"{text}\" ({string.Join(", ", wrong)})");
+            }
+
+        Assert.True(offenders.Count == 0,
+            $"{type.Name} renders a label in sentence case:\n  "
+            + string.Join("\n  ", offenders.Distinct()));
     }
 }

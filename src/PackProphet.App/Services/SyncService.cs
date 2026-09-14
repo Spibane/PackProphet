@@ -74,6 +74,17 @@ public sealed class SyncService : IAsyncDisposable
     /// </summary>
     private static readonly TimeSpan RetryBase = TimeSpan.FromMilliseconds(250);
 
+    /// <summary>
+    /// The floor db/sync.sql keeps between two writes to one document. Coming back inside it is
+    /// guaranteed to be refused again, so a retry that does not clear it is a wasted round trip on
+    /// a host that has just said it is taking too many.
+    ///
+    /// Duplicated from the schema rather than read from it: there is no way to ask, and a client
+    /// that waited too little would be refused and a client that waited too long would only be
+    /// slower. If the two ever disagree, this is the one to raise.
+    /// </summary>
+    private static readonly TimeSpan WriteFloor = TimeSpan.FromSeconds(1);
+
     private readonly SyncOptions _options;
     private readonly AppSession _session;
     private readonly SyncCrypto _crypto;
@@ -436,9 +447,9 @@ public sealed class SyncService : IAsyncDisposable
                     Done(fromElsewhere: false, MergeReport.None);
                     return;
                 }
-                if (restored == PushOutcome.Superseded)
+                if (restored is PushOutcome.Superseded or PushOutcome.TooFast)
                 {
-                    await BackOffAsync(attempt);                    // it came back under us
+                    await BackOffAsync(attempt, restored);          // it came back under us
                     continue;
                 }
 
@@ -497,9 +508,13 @@ public sealed class SyncService : IAsyncDisposable
             // Another device got there first. Its work is now in the stored copy, so going round
             // again merges it in rather than overwriting it -- after a pause, because it is still
             // writing and the next round would land on top of the same lock.
-            if (pushed == PushOutcome.Superseded)
+            //
+            // TooFast is the host's own floor rather than a race, and it is handled the same way
+            // for the same reason: nothing was lost, and the answer is to come back later with the
+            // same work.
+            if (pushed is PushOutcome.Superseded or PushOutcome.TooFast)
             {
-                await BackOffAsync(attempt);
+                await BackOffAsync(attempt, pushed);
                 continue;
             }
 
@@ -511,8 +526,15 @@ public sealed class SyncService : IAsyncDisposable
     }
 
     /// <summary>Wait out the device that beat us, for longer each time and never in step with it.</summary>
-    private static Task BackOffAsync(int attempt) =>
-        Task.Delay(RetryBase * attempt + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 250)));
+    private static Task BackOffAsync(int attempt, PushOutcome why)
+    {
+        var wait = RetryBase * attempt;
+
+        // A refused rate is a stated one: coming back before it has elapsed is refused again.
+        if (why == PushOutcome.TooFast && wait < WriteFloor) wait = WriteFloor;
+
+        return Task.Delay(wait + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 250)));
+    }
 
     /// <summary>
     /// Seal and store, recording the result as the new ancestor when it lands.
@@ -643,6 +665,8 @@ public sealed class SyncService : IAsyncDisposable
             "The server refused that code.",
         PushOutcome.Superseded =>
             "Another device is writing right now. Try again in a moment.",
+        PushOutcome.TooFast =>
+            "Too many saves too quickly. Nothing was lost; try again in a moment.",
         _ => "Sync did not finish.",
     };
 

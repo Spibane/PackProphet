@@ -34,6 +34,14 @@ public enum PushOutcome
 
     /// <summary>Bigger than the host will accept.</summary>
     TooLarge,
+
+    /// <summary>
+    /// Written to too recently. The host enforces a floor between writes to one document, because
+    /// every other throttle in this app is in the browser and therefore advisory. Like
+    /// <see cref="Superseded"/> it is not a lost edit -- the caller waits and comes back with the
+    /// same state -- but it needs a longer wait and no second merge.
+    /// </summary>
+    TooFast,
 }
 
 public sealed record PushResult(PushOutcome Outcome, long Version = 0);
@@ -140,6 +148,7 @@ public sealed class SyncTransport
             "P0002" => PushOutcome.Gone,
             "42501" => PushOutcome.Refused,
             "22001" => PushOutcome.TooLarge,
+            "53400" => PushOutcome.TooFast,
             _ => PushOutcome.Unreachable,
         });
     }

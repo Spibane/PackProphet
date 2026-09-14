@@ -113,7 +113,21 @@ as $$
 declare
     held_auth    text;
     held_version bigint;
+    held_written timestamptz;
     next_version bigint;
+
+    -- The floor between two accepted writes to ONE document.
+    --
+    -- Every throttle the app has lives in the browser -- a six-second debounce, one sync at a
+    -- time, three attempts -- and none of it is enforceable: the anon key ships in the published
+    -- page, so anything holding a pairing code can call this in a loop and none of that applies.
+    -- This is the only place a limit can be made to stick.
+    --
+    -- One second, because the legitimate ceiling is far below it. A device pushes at most once
+    -- every six seconds and a person has a handful of devices, so even three of them syncing hard
+    -- is a write every two seconds. A rejection here is not a lost edit either: the client waits
+    -- and comes back with the same merge.
+    write_floor  constant interval := interval '1 second';
 begin
     -- A whole collection with several thousand logged packs is a few hundred KB. Two megabytes is
     -- far above any real save and far below anything that could be used to fill the database.
@@ -130,7 +144,7 @@ begin
         raise exception 'malformed request' using errcode = '22023';
     end if;
 
-    select d.auth, d.version into held_auth, held_version
+    select d.auth, d.version, d.updated_at into held_auth, held_version, held_written
     from public.sync_docs d
     where d.id = doc_id
     for update;                                 -- serialises two devices racing on one document
@@ -155,6 +169,15 @@ begin
     -- papered over with a hand-rolled comparison that would be slower and no more honest.
     if held_auth <> doc_auth then
         raise exception 'wrong pairing code for this document' using errcode = '42501';
+    end if;
+
+    -- After the auth check, so the rate of writes to a document is not something a caller without
+    -- the pairing code can measure, and before the version compare, so a caller that is simply
+    -- going too fast is told that rather than being told it lost a race it never entered. The
+    -- client waits out the floor and retries; 40001 asks it to pull and merge first, which would
+    -- be a wasted round trip here.
+    if now() - held_written < write_floor then
+        raise exception 'too many writes to this document' using errcode = '53400';
     end if;
 
     if expected_version is null or held_version <> expected_version then

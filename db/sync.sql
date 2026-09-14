@@ -116,6 +116,18 @@ declare
     held_written timestamptz;
     next_version bigint;
 
+    -- Who is calling, as PostgREST saw them.
+    --
+    -- The database is behind the API gateway, so inet_client_addr() is always the loopback
+    -- address of PostgREST itself and says nothing. PostgREST does pass the request's headers
+    -- through as a setting, and that is the only place inside Postgres where the caller is
+    -- visible at all. The second argument to current_setting means "null rather than an error if
+    -- it is not set", which is what happens when this is called from the SQL editor.
+    req_agent    text := coalesce(
+        nullif(current_setting('request.headers', true), '')::json ->> 'user-agent', '?');
+    req_ip       text := coalesce(
+        nullif(current_setting('request.headers', true), '')::json ->> 'x-forwarded-for', '?');
+
     -- The floor between two accepted writes to ONE document.
     --
     -- Every throttle the app has lives in the browser -- a six-second debounce, one sync at a
@@ -206,8 +218,9 @@ begin
     end if;
 
     if held_version <> expected_version then
-        raise exception 'writer % expected version %, stored is %',
-            doc_writer, expected_version, held_version using errcode = '40001';
+        raise exception 'writer % expected version %, stored is % | from % | %',
+            doc_writer, expected_version, held_version, req_ip, req_agent
+            using errcode = '40001';
     end if;
 
     update public.sync_docs

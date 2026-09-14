@@ -429,6 +429,15 @@ public sealed class SyncService : IAsyncDisposable
             {
                 remote = await _transport.PullAsync(_keys);
             }
+            catch (SyncRefusedException refused)
+            {
+                // The host answered and said no, which is not the same as being unreachable and
+                // must not be reported as it. Told apart because the two ask different things of
+                // the reader: one waits for a signal, the other waits a minute or changes a
+                // setting, and "Offline" sent people to check their wifi either way.
+                Fail(refused.Message);
+                return;
+            }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 // Offline is the common case, not a fault: the app works without this, and the

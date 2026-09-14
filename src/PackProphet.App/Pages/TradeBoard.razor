@@ -115,7 +115,7 @@ else
                 @foreach (var group in _plan.Excluded.GroupBy(x => x.Reason).OrderBy(g => g.Key))
                 {
                     <div class="rail-note">
-                        <span class="lbl">@group.Count() card(s), @group.Key</span>
+                        <span class="lbl">@group.Count() @Fmt.S(group.Count(), "card"), @group.Key</span>
                         <span class="who">
                             @string.Join(", ", group.Select(x => x.Card.Name)
                                                     .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase))
@@ -343,7 +343,7 @@ else
                                     @* What the number means, spelled out: these are your surplus
                                        cards at the same rarity, one of which the trade would cost
                                        you. A bare count next to a rarity glyph read as neither. *@
-                                    <span title="You hold @slot.SparesAtRarity surplus @Session.Index.Symbol(slot.Card) card(s), and a trade would cost you one of them">
+                                    <span title="You hold @slot.SparesAtRarity surplus @Session.Index.Symbol(slot.Card) @Fmt.S(slot.SparesAtRarity, "card"), and a trade would cost you one of them">
                                         Yes, @slot.SparesAtRarity spare
                                         @Session.Index.Symbol(slot.Card) to give
                                     </span>

@@ -318,7 +318,7 @@
             .Select(d => new Item("Deck", d.Name, Sub(Session.MissingCount(d)), $"decks/{d.Id}"));
 
     private static string Sub(int missing) =>
-        missing == 0 ? "Buildable" : $"{missing} card(s) missing";
+        missing == 0 ? "Buildable" : $"{missing} {Fmt.S(missing, "card")} missing";
 
     private IEnumerable<Item> ChaseListItems(string q) =>
         Session.ChaseLists

@@ -497,7 +497,7 @@ else
                                 }
                                 else
                                 {
-                                    <span>reaches the cap in @warning.PacksUntilCap more pack(s).</span>
+                                    <span>reaches the cap in @warning.PacksUntilCap more @Text.Fmt.S(warning.PacksUntilCap, "pack").</span>
                                 }
                             </div>
                         }
@@ -536,7 +536,7 @@ else
                                     }
                                     else
                                     {
-                                        <span>@row.AffordableNow.Count card(s)</span>
+                                        <span>@row.AffordableNow.Count @Text.Fmt.S(row.AffordableNow.Count, "card")</span>
                                         <span class="text-body-secondary">
                                             (dearest: @row.AffordableNow[0].Name)
                                         </span>
@@ -728,7 +728,7 @@ else
                                 else
                                 {
                                     <div class="small text-body-secondary mb-1">
-                                        @supplied.Count card(s) you still need, cheapest route each.
+                                        @supplied.Count @Text.Fmt.S(supplied.Count, "card") you still need, cheapest route each.
                                         Trade and Wonder Pick are priced in their own currencies
                                         and never converted into packs.
                                     </div>
@@ -807,7 +807,7 @@ else
             {
                 <div class="stat">
                     <span class="label">Assumed Rates</span>
-                    <span class="value">@Session.AssumedRates.Count set(s)</span>
+                    <span class="value">@Session.AssumedRates.Count @Text.Fmt.S(Session.AssumedRates.Count, "set")</span>
                     <span class="sub">
                         @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
                         {
@@ -830,8 +830,9 @@ else
 
         @if (_unreachable.Count > 0)
         {
+            var stuck = _unreachable.Sum(d => d.Remaining);
             <Notice Severity="Notice.Level.Warning">
-                <strong>@_unreachable.Sum(d => d.Remaining) card(s) cannot be obtained right
+                <strong>@stuck @Text.Fmt.S(stuck, "card") cannot be obtained right
                 now,</strong> so the estimate above covers @_priceable of @_outstanding.
             </Notice>
         }
@@ -842,7 +843,7 @@ else
                routes are a trade or another event, so they are called out rather than left to be
                inferred from an empty ranking. *@
             <Notice Severity="Notice.Level.Info">
-                <strong>@_neverInPack.Count card(s) never came from a pack.</strong>
+                <strong>@_neverInPack.Count @Text.Fmt.S(_neverInPack.Count, "card") never came from a pack.</strong>
                 An event or a promo only.
                 <div class="supplied mt-2">
                     @foreach (var (card, remaining) in _neverInPack.Take(UnreachableShown))

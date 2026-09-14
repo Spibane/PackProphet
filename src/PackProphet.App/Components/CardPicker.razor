@@ -184,7 +184,7 @@ else if (_results.Count == 0)
     {
         <Notice Severity="Notice.Level.Info">
             None of the cards <strong>you own</strong> match, but
-            <strong>@_elsewhere</strong> card(s) in the game do.
+            <strong>@_elsewhere</strong> @Fmt.S(_elsewhere, "card") in the game @Fmt.S(_elsewhere, "does", "do").
             <button class="btn btn-sm btn-outline-primary ms-1 py-0"
                     @onclick="() => SetPool(false)">Search All Cards</button>
         </Notice>

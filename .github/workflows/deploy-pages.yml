@@ -3,6 +3,11 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main, master]
+  # Build and test a pull request, without publishing it. Nothing checked a branch before it
+  # reached main, so a merge was the first time the runner saw it -- which is how a card snapshot
+  # refresh with 21 failing tests got as far as a red deploy on the live site.
+  pull_request:
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -11,9 +16,13 @@ permissions:
   id-token: write
 
 # Let a newer push cancel an in-flight deploy, but never interrupt one mid-publish.
+#
+# A pull request gets its own group, and must: sharing `pages` would let a PR build sit in front of
+# a real deploy, holding the publish queue for a run that publishes nothing. Superseded PR builds
+# ARE cancelled, since a new commit makes the previous check pointless.
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.number) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -206,6 +215,9 @@ jobs:
 
   deploy:
     needs: build
+    # The build above is the check; this is the publish, and a pull request wants the first
+    # without the second.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -107,7 +107,7 @@ else
             }
             @if (ShowFoilFilter && _foils != "with")
             {
-                <button class="chip-filter" @onclick="ResetFoils" aria-label="Include parallel foils">Foils: @_foils &times;</button>
+                <button class="chip-filter" @onclick="ResetFoils" aria-label="Include parallel foils">Foils: @FoilWord &times;</button>
             }
             @if (_readyOnly)
             {
@@ -132,7 +132,7 @@ else
                 <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
                         @onclick="() => SetFoils(NextFoilMode())"
                         title="Parallel foils are diamond-rarity but come only from the limited-time Deluxe pack, so they dominate any ranking by pull difficulty">
-                    Parallel foils: @_foils
+                    Parallel Foils: @FoilWord
                 </button>
             }
 
@@ -419,6 +419,14 @@ else
 
     /// <summary>with / without / only. Three states because all three are useful views.</summary>
     private string _foils = "with";
+
+    /// <summary>The mode as the chip and the button say it, rather than as the state stores it.</summary>
+    private string FoilWord => _foils switch
+    {
+        "without" => "Without",
+        "only" => "Only",
+        _ => "With",
+    };
 
     /// <summary>
     /// Whether the filter can do anything. Two conditions, and the second is the one that matters:

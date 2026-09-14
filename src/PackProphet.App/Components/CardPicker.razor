@@ -40,7 +40,7 @@
         <button class="btn @(_ownedOnly ? "btn-secondary" : "btn-outline-secondary")"
                 @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@Aria.Flag(_ownedOnly)"
                 title="Only cards you already own">
-            I own
+            I Own
         </button>
         <button class="btn @(_ownedOnly ? "btn-outline-secondary" : "btn-secondary")"
                 @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@Aria.Flag(!_ownedOnly)"
@@ -412,7 +412,7 @@ else
     /// <summary>Word after the count on a chosen row: "in deck", "wanted".</summary>
     [Parameter] public string PickedLabel { get; set; } = "in deck";
 
-    [Parameter] public string Heading { get; set; } = "Add cards";
+    [Parameter] public string Heading { get; set; } = "Add Cards";
 
     /// <summary>
     /// Heading level for the title above, matching where this sits in the page's outline. Two

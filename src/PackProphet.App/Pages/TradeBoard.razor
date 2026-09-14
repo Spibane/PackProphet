@@ -60,7 +60,7 @@ else
                    was "No slots kept for likely o". The aria-label above carries the full sentence,
                    which is where the long form belongs. *@
                 <option value="@n" selected="@(n == _liquidSlots)">
-                    @(n == 0 ? "No slots for offers" : $"{n} slot{(n == 1 ? "" : "s")} for offers")
+                    @(n == 0 ? "No Slots for Offers" : $"{n} Slot{(n == 1 ? "" : "s")} for Offers")
                 </option>
             }
         </select>
@@ -589,8 +589,8 @@ else
     private static string Edits(BoardPlan plan)
     {
         var parts = new List<string>(2);
-        if (plan.Add.Count > 0) parts.Add($"{plan.Add.Count} to add");
-        if (plan.Drop.Count > 0) parts.Add($"{plan.Drop.Count} to remove");
+        if (plan.Add.Count > 0) parts.Add($"{plan.Add.Count} to Add");
+        if (plan.Drop.Count > 0) parts.Add($"{plan.Drop.Count} to Remove");
         return string.Join(", ", parts);
     }
 

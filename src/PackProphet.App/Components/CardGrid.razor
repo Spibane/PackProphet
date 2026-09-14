@@ -1048,11 +1048,15 @@ else
         _ => "off",
     };
 
+    /// <summary>
+    /// The button's own name for the state it is in, so it is capitalised like one. The tooltip
+    /// below says the same thing as a sentence and keeps the lowercase <see cref="Gesture"/>.
+    /// </summary>
     private string ModeLabel => Mode switch
     {
-        Tap.Add => $"{Gesture} adds",
-        Tap.Remove => $"{Gesture} removes",
-        _ => $"{Gesture} off",
+        Tap.Add => $"{GestureName} Adds",
+        Tap.Remove => $"{GestureName} Removes",
+        _ => $"{GestureName} Off",
     };
 
     private string ModeTitle => Mode switch
@@ -1068,6 +1072,9 @@ else
     /// that has no effect on the thing in front of you.
     /// </summary>
     private string Gesture => ListView ? "drag" : "tap";
+
+    /// <summary>The same word as a name rather than as part of a sentence.</summary>
+    private string GestureName => ListView ? "Drag" : "Tap";
 
     /// <summary>The same distinction as a sentence opener: "Dragging across cards", "Tapping a card".</summary>
     private string GestureVerb => ListView ? "Dragging across cards" : "Tapping a card";

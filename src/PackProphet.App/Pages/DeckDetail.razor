@@ -112,7 +112,7 @@ else
     <PageShell>
     <div class="edit-cols">
         <div>
-            <h2 class="sub-head">Energy <span class="small fw-normal text-body-secondary">at most @GameRules.MaxEnergyTypes</span></h2>
+            <h2 class="sub-head">Energy <span class="small fw-normal text-body-secondary">at Most @GameRules.MaxEnergyTypes</span></h2>
             <div class="energy-chips mb-3">
                 @foreach (var energy in AllEnergies)
                 {
@@ -399,7 +399,7 @@ else
         {
             // Unsaved until the user says so, so a mis-tap on "new deck" leaves nothing behind.
             _saved = null;
-            _draft ??= new SavedDeck(Guid.NewGuid().ToString("n")[..10], "New deck", [], []);
+            _draft ??= new SavedDeck(Guid.NewGuid().ToString("n")[..10], "New Deck", [], []);
         }
         else if (_draft?.Id != Id)
         {
@@ -423,7 +423,7 @@ else
         {
             if (_draft is null) return false;
             if (_saved is null) return _draft.DeckBuilderNrs.Count > 0 || _draft.Energies.Count > 0
-                                     || _draft.Name != "New deck";
+                                     || _draft.Name != "New Deck";
 
             return _draft.Name != _saved.Name
                    || !_draft.DeckBuilderNrs.Order().SequenceEqual(_saved.DeckBuilderNrs.Order())
@@ -501,7 +501,7 @@ else
 
         if (_saved is null)
         {
-            _draft = new SavedDeck(Guid.NewGuid().ToString("n")[..10], "New deck", [], []);
+            _draft = new SavedDeck(Guid.NewGuid().ToString("n")[..10], "New Deck", [], []);
         }
         else
         {

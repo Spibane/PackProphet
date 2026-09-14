@@ -4605,7 +4605,20 @@ tr.row-best {
     font-size: 1.1rem;
     font-weight: 700;
 }
+/* space-between rather than an auto margin on the action, because this row wraps.
+   `ms-auto` pushes an item to the end of ITS OWN line, so once the heading filled the first line
+   the controls landed on the second one still jammed against the right edge -- a lone dropdown
+   floating off to the right with the segmented buttons left-aligned under it. space-between puts
+   a single item on a wrapped line at the start, so the controls line up with the heading on a
+   phone and sit out to the right of it on a laptop, with no width to guess at. */
 .sections > .section-head {
+    display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
+    justify-content: space-between;
+}
+
+/* The controls as one item, so they wrap together rather than one at a time: the dropdown and the
+   sample toggle set the same reading, and a line break between them reads as two questions. */
+.sections > .section-head > .acts {
     display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
 }
 

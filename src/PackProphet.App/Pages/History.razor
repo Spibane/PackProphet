@@ -331,7 +331,8 @@ else
                    headings rather than behind a second control: they are the same question at two
                    zoom levels, and a set is as fine as the data goes, since pull rates are
                    published per set. *@
-                <select class="form-select form-select-sm ms-auto" style="max-width:12rem"
+                <div class="acts">
+                <select class="form-select form-select-sm" style="max-width:12rem"
                         @onchange="OnScope" aria-label="Which sets to check">
                     <option value="" selected="@(_scope.Length == 0)">Every Set</option>
                     <optgroup label="Series">
@@ -364,6 +365,7 @@ else
                         </button>
                     </div>
                 }
+                </div>
             </div>
             @if (!_lifetime)
             {
@@ -505,7 +507,7 @@ else
 
             <div class="section-head">
                 <h3 class="sub-head">Recent Packs</h3>
-                <button class="btn btn-sm @(_clearingAll ? "btn-danger" : "btn-outline-danger") ms-auto"
+                <button class="btn btn-sm @(_clearingAll ? "btn-danger" : "btn-outline-danger")"
                         @onclick="ClearAll">
                     @(_clearingAll ? $"Really delete all {_log.Count}?" : "Delete All")
                 </button>

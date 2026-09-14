@@ -57,6 +57,34 @@ public class SyncTransportTests
         Assert.True(Configured.Configured);
     }
 
+    [Theory]
+    [InlineData(429, "Too many requests")]
+    [InlineData(403, "refused this app")]
+    [InlineData(503, "having trouble")]
+    public async Task A_refused_pull_says_what_the_host_said(int status, string expected)
+    {
+        // EnsureSuccessStatusCode throws the same exception a browser raises when it cannot reach
+        // anything, so every one of these used to arrive as "Offline. Nothing was synced" -- told
+        // to someone whose internet was working, about a host that had answered.
+        var transport = new SyncTransport(Configured, new RpcHandler((HttpStatusCode)status, "{}"));
+
+        var refused = await Assert.ThrowsAsync<SyncRefusedException>(() => transport.PullAsync(Keys));
+
+        Assert.Contains(expected, refused.Message);
+    }
+
+    [Fact]
+    public async Task A_pull_refused_by_the_database_is_named_by_its_code_not_its_status()
+    {
+        // A SQLSTATE is the more specific of the two and says something the status cannot.
+        var transport = new SyncTransport(
+            Configured, new RpcHandler(HttpStatusCode.BadRequest, "{\"code\":\"42501\"}"));
+
+        var refused = await Assert.ThrowsAsync<SyncRefusedException>(() => transport.PullAsync(Keys));
+
+        Assert.Contains("pairing code", refused.Message);
+    }
+
     [Fact]
     public void A_proxy_alone_is_enough_to_be_configured()
     {

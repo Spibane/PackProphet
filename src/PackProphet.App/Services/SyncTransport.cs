@@ -1,5 +1,6 @@
 namespace PackProphet.Services;
 
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -53,6 +54,18 @@ public enum PushOutcome
 }
 
 public sealed record PushResult(PushOutcome Outcome, long Version = 0);
+
+/// <summary>
+/// The host answered, and the answer was no.
+///
+/// Its own type because a pull had no way to say this. EnsureSuccessStatusCode throws
+/// HttpRequestException, which is the same exception a browser raises when it cannot reach
+/// anything at all -- so every deliberate refusal on the way in arrived at the user as "Offline.
+/// Nothing was synced", including a rate limit, a blocked origin and an oversized body. A person
+/// with working internet was told their connection was the problem, and the one thing that would
+/// have identified the real cause was the status code being thrown away.
+/// </summary>
+public sealed class SyncRefusedException(string reason) : Exception(reason);
 
 /// <summary>
 /// The three calls this app makes to Supabase, and nothing else.
@@ -111,7 +124,9 @@ public sealed class SyncTransport
         var response = await _http.PostAsJsonAsync(
             "sync_pull", new { doc_id = keys.Id, doc_auth = keys.Auth }, Json, ct);
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+            throw new SyncRefusedException(
+                Refusal(response.StatusCode, await response.Content.ReadAsStringAsync(ct)));
 
         // A table-returning function answers with an array; no document is an empty one rather
         // than a 404.
@@ -187,6 +202,27 @@ public sealed class SyncTransport
             return false;
         }
     }
+
+    /// <summary>
+    /// What to tell someone whose sync was turned away, in the terms that decide what they do next.
+    ///
+    /// The status is the host's, not Postgres's: a proxy in front of the database refuses on its
+    /// own account -- too many requests, an origin it does not serve, a body over its cap -- and
+    /// those never reach a SQLSTATE. Where one is present it is more specific, so it wins.
+    /// </summary>
+    private static string Refusal(HttpStatusCode status, string body) => CodeOf(body) switch
+    {
+        "42501" => "The stored copy did not accept that pairing code.",
+        "22001" => "That collection is larger than the host will accept.",
+        _ => (int)status switch
+        {
+            429 => "Too many requests in a short time. Nothing was synced; try again in a minute.",
+            403 => "The host refused this app. If sync is behind a proxy, check the origin it allows.",
+            413 => "That collection is larger than the host will accept.",
+            >= 500 => "The sync host is having trouble. Nothing was synced; your collection here is unaffected.",
+            _ => $"The sync host refused the request ({(int)status}). Your collection here is unaffected.",
+        },
+    };
 
     private static string? CodeOf(string body)
     {

@@ -87,7 +87,7 @@ else if (_pack is null)
 
            A disclosure rather than the whole screen, because picking a pack by hand always works and
            this does not: a set released since the last fingerprint refresh cannot be recognised. *@
-        <details class="mb-3">
+        <details class="mb-3" open="@_shotsOpen">
             <summary class="small text-body-secondary">Read It Off a Screenshot Instead</summary>
             <div class="pt-2">
                 <ShotImport @ref="_shots" Group="pack" Choices="@ShotChoices">
@@ -159,7 +159,11 @@ else if (_pack is null)
                         {
                             var plan = Plan(readings);
 
-                            <section class="mt-3 border-top pt-3">
+                            @* Padded below as well as above. This block ends in a button, and its
+                               bottom edge was sitting against whatever the page put next -- the
+                               logged notice, or the pack grid once the disclosure closes -- so the
+                               button read as belonging to the thing under it. *@
+                            <section class="mt-3 border-top pt-3 pb-2">
                                 <h2 class="sub-head">All @readings.Count Pictures</h2>
 
                                 @if (plan.Unidentified > 0)
@@ -195,7 +199,7 @@ else if (_pack is null)
                                     @* Named so it can be checked before it is pressed. Twelve packs
                                        logged in one press is twelve events and sixty cards, and
                                        "which packs" is the thing you would want to have seen. *@
-                                    <p class="small text-body-secondary mb-0 mt-1">
+                                    <p class="small text-body-secondary mb-0 mt-2">
                                         @string.Join(", ", plan.Ready
                                             .GroupBy(r => r.Pack.Split(':')[1])
                                             .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
@@ -365,7 +369,15 @@ else
             <span class="say">@TodoSay</span>
             @if (_picked.Count == 0)
             {
-                <a class="escape" href="collection/screenshot">Read It Off a Screenshot</a>
+                @* Back to this page's own reader, not the collection's. The collection one records
+                   cards and nothing else, so a pack read through it never reaches the pack log --
+                   which is the whole of what someone on the Log page is here to write. Nothing has
+                   been typed yet (that is the condition above), so dropping the picked pack costs
+                   nothing: the picture names its own pack anyway. *@
+                <button type="button" class="btn btn-link btn-sm p-0 align-baseline escape"
+                        @onclick="ToShots">
+                    Read It Off a Screenshot
+                </button>
             }
         </div>
     }
@@ -658,6 +670,26 @@ else
     }
 
     private void Reset() { _pack = null; _picked.Clear(); _justLogged = null; _miscount = null; _find = ""; }
+
+    /// <summary>
+    /// Whether the screenshot reader on the picker screen starts open.
+    ///
+    /// Only ever set by the way in from the pack screen, and never read back: the disclosure is the
+    /// user's to close after that, and a field that followed their toggling would reopen it on the
+    /// next render for no reason they could see.
+    /// </summary>
+    private bool _shotsOpen;
+
+    /// <summary>
+    /// The way from a picked pack to this page's own screenshot reader, which lives on the picker
+    /// screen. Drops the pack on the way, because the picture names its own pack -- and because a
+    /// pack picked by hand cannot be carried into a reading that may say a different one.
+    /// </summary>
+    private void ToShots()
+    {
+        _shotsOpen = true;
+        Reset();
+    }
 
     /// <summary>
     /// One choice, so <see cref="ShotImport"/> renders no picker: on this page the picture is a

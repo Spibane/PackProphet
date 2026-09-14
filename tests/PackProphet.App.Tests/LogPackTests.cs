@@ -106,6 +106,30 @@ public class LogPackTests : AppHost
     }
 
     [Fact]
+    public async Task The_way_out_of_typing_leads_to_this_page_s_own_reader()
+    {
+        // It used to point at the collection's screenshot import, which records cards and nothing
+        // else -- so a pack read that way never reached the pack log, which is the one thing
+        // someone on this page came to write. It has to land on this page's own reader instead.
+        var page = await PageAsync();
+        page.FindAll(".pack-choice").First().Click();
+
+        var escape = page.WaitForElement(".todo-strip .escape");
+        Assert.Null(escape.GetAttribute("href"));
+
+        escape.Click();
+
+        // Back on the picker, with the reader already open rather than folded away: it is what was
+        // asked for, so it must not need finding again.
+        page.WaitForAssertion(() =>
+        {
+            var shots = page.Find("details");
+            Assert.NotNull(shots.GetAttribute("open"));
+            Assert.Contains("Screenshot", shots.TextContent);
+        });
+    }
+
+    [Fact]
     public async Task The_strip_only_warns_when_the_commit_is_actually_short()
     {
         // The existing finding this had to keep: a live warning about the count is wrong for the

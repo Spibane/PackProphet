@@ -289,11 +289,17 @@ grant execute on function public.sync_forget(text, text) to anon;
 
 create or replace function public.sync_sweep(
     older_than interval default '180 days',
-    -- A document written once and never again is not somebody on holiday: a real pairing is
-    -- written by the device that made it within the minute, because the second device has to pull
-    -- it. So version 1 and untouched is either a burst of junk or a pairing abandoned the moment
-    -- it was made, and neither is worth holding a slot against the ceiling for two days.
-    never_used   interval default '2 days')
+    -- A document nobody has written to twice. Junk from a burst looks like this, and so does a
+    -- pairing made and then not used -- but only PUSHING moves the version, and pulling does not,
+    -- so a perfectly real pairing sits at version 1 for as long as nobody edits anything. Set up
+    -- on a Friday and left over a weekend is version 1 on Monday.
+    --
+    -- A week, therefore. The ceiling is what stops a burst; this only recycles the slots
+    -- afterwards, so it can afford to be slow and wrong in the safe direction. Sweeping one of
+    -- these costs nothing anyway: the device re-creates it under the same code on its next sync,
+    -- without the user being asked. It is the second device joining inside that window that gets
+    -- the messy path, and a week makes that vanishingly rare.
+    never_used   interval default '7 days')
 returns integer
 language plpgsql
 security definer

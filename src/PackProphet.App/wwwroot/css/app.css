@@ -223,9 +223,9 @@
    The scroller only appears when the rail actually overflows, which on the decks shelf's two
    groups is never.
 
-   Pinned under the page bar rather than at the viewport top, using the same measurement the strip
-   below it parks on -- gridspy publishes --bars-h on this container, and the rail reads it from
-   the same place.
+   Pinned under the page bar rather than at the viewport top, and as tall as what is left of the
+   window -- js/railfold.js measures where the bars end and publishes --rail-top on the rail, which
+   is the one number the geometry below cannot work out for itself.
 
    Placement is explicit rather than by flow order, because three of this container's four
    children go in the second column and the fourth is fixed and in no column at all. */
@@ -410,12 +410,28 @@ main > .page-head {
            inside a row as tall as the grid beside it -- which is what .railed's align-items: start
            gives it -- so there is room for it to travel. */
         position: sticky;
-        top: var(--bars-h, 0px);
+        top: var(--rail-top, 0px);
         inset-inline: auto;
         bottom: auto;
         inline-size: auto;
-        block-size: auto;
-        max-block-size: calc(100dvh - var(--bars-h, 0px));
+
+        /* AS TALL AS THE WINDOW, not as tall as its controls.
+           ------------------------------------------------------------------------------
+           This was `auto` under a max of the same calc, so a rail only reached the bottom of the
+           window when it had enough controls to overflow -- true of the collection's seven groups
+           and false of the shelves' two. On those the panel and the hairline down its edge stopped
+           about 400px in and the page's background took over for the remaining thousands of
+           pixels, which reads as a column that failed to finish rather than one that ran out of
+           controls.
+
+           A floor and a ceiling at the same value, so `auto` is gone in both directions: the
+           short rail grows to the window and the long one still scrolls inside it.
+
+           --rail-top is where the pinned bars above this end, published by js/railfold.js -- see
+           there for why it is measured and why it is not gridspy's --bars-h. Given the top, the
+           bottom is the window's edge, so the two read from one number and cannot disagree. The
+           0 fallback is the frame before the script has run. */
+        block-size: calc(100dvh - var(--rail-top, 0px));
         margin: 0;
         /* 18 rather than 14, on both sides. The scroller only appears when the rail overflows and
            it is an overlay one, drawn inside the padding at the right edge -- expanded on hover it

@@ -1,0 +1,25 @@
+name = "packprophet-sync"
+main = "worker.js"
+compatibility_date = "2026-09-14"
+
+# Where the app is served from. Only this origin may call the worker; anything else is refused
+# before the rate limiter, since a page on another domain driving a visitor's browser is not a
+# request this endpoint exists to serve.
+#
+# Comma-separated if you need a second one -- a preview deploy, say. Not a wildcard.
+[vars]
+ALLOWED_ORIGIN = "https://packprophet.spibane.com"
+
+# Requests per address per period, refused at the edge before Supabase is touched.
+#
+# Sixty a minute against an app that pushes at most once every six seconds and pulls once beside
+# it: a device syncing hard uses about twenty, so this is roughly three times what the app can
+# produce and far below what makes a dent in anyone's quota.
+#
+# `period` accepts 10 or 60, and namespace_id is any number you pick that stays put -- changing it
+# starts the counting again.
+[[unsafe.bindings]]
+name = "RATE_LIMIT"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 60, period = 60 }

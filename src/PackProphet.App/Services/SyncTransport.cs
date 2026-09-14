@@ -85,6 +85,15 @@ public sealed class SyncTransport
 
         if (!options.Configured) return;
 
+        // Behind a proxy there is no key to send, and that is the whole reason for the proxy: a
+        // credential the page does not hold is one nobody can lift out of it. The call names stay
+        // the same, so the worker's paths and Supabase's line up and only the host differs.
+        if (options.Proxied)
+        {
+            _http.BaseAddress = new Uri(options.ProxyUrl.TrimEnd('/') + "/");
+            return;
+        }
+
         _http.BaseAddress = new Uri(options.Url.TrimEnd('/') + "/rest/v1/rpc/");
         _http.DefaultRequestHeaders.Add("apikey", options.AnonKey);
         _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {options.AnonKey}");

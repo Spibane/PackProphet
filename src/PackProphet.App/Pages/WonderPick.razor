@@ -620,8 +620,8 @@ else
     /// </summary>
     private string PickHeading =>
         OfferFrom is { Length: > 0 } from
-            ? $"Add card {_offer.Count + 1} of {GameRules.WonderPickCardsShown} \u00b7 {from}"
-            : $"Add card {_offer.Count + 1} of {GameRules.WonderPickCardsShown}";
+            ? $"Add Card {_offer.Count + 1} of {GameRules.WonderPickCardsShown} \u00b7 {from}"
+            : $"Add Card {_offer.Count + 1} of {GameRules.WonderPickCardsShown}";
 
     /// <summary>Packs every named card appears in. Empty means nothing has narrowed it yet.</summary>
     private string[] OfferPacks()

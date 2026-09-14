@@ -72,7 +72,7 @@ public class WonderPickPageTests : AppHost
 
         var markup = page.Markup;
         var strip = markup.IndexOf("box-strip", StringComparison.Ordinal);
-        var search = markup.IndexOf("Add card 2 of", StringComparison.Ordinal);
+        var search = markup.IndexOf("Add Card 2 of", StringComparison.Ordinal);
         var verdict = markup.IndexOf("verdict-lead", StringComparison.Ordinal);
 
         Assert.True(strip >= 0 && search > strip, "the picker must follow the strip");
@@ -89,7 +89,7 @@ public class WonderPickPageTests : AppHost
         await ReadyAsync();
         var page = WithOffer();
 
-        Assert.DoesNotContain("Add card", page.Markup);
+        Assert.DoesNotContain("Add Card", page.Markup);
         Assert.Empty(page.FindComponents<PackProphet.Components.CardPicker>());
 
         var markup = page.Markup;
@@ -233,7 +233,7 @@ public class WonderPickPageTests : AppHost
         var heading = () => Flat(page.Find(".sub-head").TextContent);
 
         // Nothing named yet, so nothing to restrict to and nothing to say.
-        Assert.Equal("Add card 1 of 5", heading());
+        Assert.Equal("Add Card 1 of 5", heading());
 
         var (_, cards) = AnOfferFrom();
         var picker = page.FindComponent<PackProphet.Components.CardPicker>();
@@ -241,7 +241,7 @@ public class WonderPickPageTests : AppHost
 
         page.WaitForAssertion(() =>
         {
-            Assert.StartsWith("Add card 2 of 5", heading());
+            Assert.StartsWith("Add Card 2 of 5", heading());
             Assert.Contains("\u00b7", heading());
         }, TimeSpan.FromSeconds(10));
     }
@@ -258,7 +258,7 @@ public class WonderPickPageTests : AppHost
         await page.InvokeAsync(() => page.Find(".offer-clear").Click());
 
         page.WaitForAssertion(() =>
-            Assert.Equal("Add card 1 of 5", Flat(page.Find(".sub-head").TextContent)),
+            Assert.Equal("Add Card 1 of 5", Flat(page.Find(".sub-head").TextContent)),
             TimeSpan.FromSeconds(10));
     }
 

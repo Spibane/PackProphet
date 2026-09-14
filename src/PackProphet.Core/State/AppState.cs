@@ -398,7 +398,7 @@ public sealed record Profile(
     /// merge has to recognise it: a device still carrying the default name has not chosen anything,
     /// so it yields to a device that has, and that check cannot be allowed to drift from this.
     /// </summary>
-    public const string DefaultName = "My collection";
+    public const string DefaultName = "My Collection";
 
     public static Profile NewDefault(string id = "default", string name = DefaultName) =>
         new(id, name, new(), TargetSettings.Default, [], [], [], [], Resources.Empty);

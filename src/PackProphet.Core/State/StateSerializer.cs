@@ -114,7 +114,7 @@ public static class StateSerializer
     private static Profile Normalise(Profile p, string id) => p with
     {
         Id = id,
-        Name = string.IsNullOrWhiteSpace(p.Name) ? "My collection" : p.Name,
+        Name = string.IsNullOrWhiteSpace(p.Name) ? "My Collection" : p.Name,
 
         // Zero and negative counts are dropped rather than kept, matching what Collection does
         // with them at runtime - otherwise the saved state and the live one disagree about how

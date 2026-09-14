@@ -237,20 +237,20 @@
     {
         var actions = new List<Item>
         {
-            new("Action", "Import a deck from a screenshot", "Scan the in-game code", "decks/import"),
+            new("Action", "Import a Deck from a Screenshot", "Scan the in-game code", "decks/import"),
             // Three imports in three places, because the same five cards mean different things
             // depending on where you are. Named by the in-game screen rather than by what the app
             // does with it, since the screen is what the user is looking at.
-            new("Action", "Import cards from a My Cards screenshot", "Read your card list off the game",
+            new("Action", "Import Cards from a My Cards Screenshot", "Read your card list off the game",
                 "collection/screenshot"),
-            new("Action", "Log a pack from a screenshot", "Reads the pack from the cards", "log"),
-            new("Action", "Read a Wonder Pick from a screenshot", "Appraise the offer", "wonder"),
-            new("Action", "Import a collection from another tracker", "Read a CSV export",
+            new("Action", "Log a Pack from a Screenshot", "Reads the pack from the cards", "log"),
+            new("Action", "Read a Wonder Pick from a Screenshot", "Appraise the offer", "wonder"),
+            new("Action", "Import a Collection from Another Tracker", "Read a CSV export",
                 "collection/import"),
-            new("Action", "Export this collection as CSV", "For a spreadsheet or another tracker",
+            new("Action", "Export This Collection as CSV", "For a spreadsheet or another tracker",
                 "collection/export"),
-            new("Action", "New deck", "Build one by hand", "decks/new"),
-            new("Action", "New chase list", null, null, () => Nav.NavigateTo($"chase/{Session.CreateChaseList()}")),
+            new("Action", "New Deck", "Build one by hand", "decks/new"),
+            new("Action", "New Chase List", null, null, () => Nav.NavigateTo($"chase/{Session.CreateChaseList()}")),
             new("Action", $"Theme: {ThemeName(Session.Theme)}", "Switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),
             new("Action", $"Colours: {SkinName(Session.Skin)}", "Switch paper or slate", null, () => _ = Session.SetSkinAsync(NextSkin())),
         };
@@ -259,7 +259,7 @@
         // the palette reaches it without the top bar growing a menu.
         if (Session.MultipleProfiles)
         {
-            actions.Add(new("Action", "Compare collections", "Trades you could make with yourself", "compare"));
+            actions.Add(new("Action", "Compare Collections", "Trades you could make with yourself", "compare"));
 
             foreach (var profile in Session.Profiles.Where(x => x.Id != Session.ActiveProfileId))
             {
@@ -274,7 +274,7 @@
         // the nav, so it is discoverable.
         if (Focus.Available)
         {
-            actions.Add(new("Action", "Jump to the cards",
+            actions.Add(new("Action", "Jump to the Cards",
                             "Keyboard entry: arrows to move, digits to set a count", null,
                             () => _ = Focus.FocusAsync()));
         }

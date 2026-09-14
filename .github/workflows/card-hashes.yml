@@ -64,9 +64,23 @@ jobs:
       # By path, not through the solution. CardHashGen is deliberately not in PackProphet.slnx so
       # that the deploy workflow's `dotnet test` never restores a native image decoder it has no
       # use for.
+      #
+      # --cards points at the VENDORED snapshot, not the CDN the generator defaults to.
+      #
+      # Without it this job fingerprints whatever the community database holds today while the app
+      # loads a snapshot committed weeks ago, and the two drift. CommittedArtHashesTests is written
+      # to catch exactly that -- "a generator that read different card data than the app loads" --
+      # and it did: a run added eight new PROMO-B cards, a set the snapshot already knew, so they
+      # were not a whole new set the table is allowed to run ahead by. They were eight fingerprints
+      # naming cards the app had never heard of, and the deploy went red.
+      #
+      # Reading the snapshot makes the two agree by construction. New cards get fingerprinted on
+      # the first run after the snapshot is refreshed, which is the right order: the app cannot use
+      # a fingerprint for a card it does not know about.
       - name: Generate
         run: |
           dotnet run --project tools/CardHashGen/CardHashGen.csproj -c Release -- \
+            --cards src/PackProphet.App/wwwroot/data/snapshot/cards.min.json \
             --out src/PackProphet.App/wwwroot/data/card-hashes.txt \
             --art-dir /tmp/gap-art \
             --report /tmp/coverage.json \

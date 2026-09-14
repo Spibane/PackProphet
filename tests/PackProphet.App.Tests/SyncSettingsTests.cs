@@ -96,6 +96,7 @@ public class SyncTransportTests
     [InlineData("42501", PushOutcome.Refused)]
     [InlineData("22001", PushOutcome.TooLarge)]
     [InlineData("53400", PushOutcome.TooFast)]
+    [InlineData("55000", PushOutcome.AlreadyThere)]
     public async Task Each_refusal_from_the_database_is_told_apart(string sqlState, PushOutcome expected)
     {
         // Matched on SQLSTATE, never on the message: the wording in db/sync.sql is for a human

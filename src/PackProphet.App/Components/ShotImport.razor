@@ -70,7 +70,7 @@
     </fieldset>
 }
 
-<label class="form-label" for="@FileId">@(Together is null ? "The screenshot" : "The screenshots")</label>
+<label class="form-label" for="@FileId">@(Together is null ? "The Screenshot" : "The Screenshots")</label>
 <InputFile id="@FileId" class="form-control mb-1" OnChange="Read"
            accept="image/*" multiple disabled="@_busy" />
 
@@ -131,7 +131,7 @@
             }
             else
             {
-                <text>What this picture says</text>
+                <text>What This Picture Says</text>
             }
         </h2>
 
@@ -161,13 +161,13 @@
         <DataTable Label="@($"What {shot.Name} came to")" Fit="true" Class="mb-3">
             <tbody>
                 <tr>
-                    <th scope="row" class="fw-normal">Cards recognised</th>
+                    <th scope="row" class="fw-normal">Cards Recognised</th>
                     <td class="text-end fw-semibold">@reading.RecognisedCount.ToString("N0")</td>
                 </tr>
                 @if (reading.Screen == CardScreen.OwnershipGrid)
                 {
                     <tr>
-                        <th scope="row" class="fw-normal">Named by their place in the list</th>
+                        <th scope="row" class="fw-normal">Named by Their Place in the List</th>
                         <td class="text-end">
                             @reading.Matches.Count(m => m.Source == MatchSource.GridPosition).ToString("N0")
                         </td>
@@ -176,7 +176,7 @@
                 @if (shot.Picks.Count > 0)
                 {
                     <tr>
-                        <th scope="row" class="fw-normal">Named by hand</th>
+                        <th scope="row" class="fw-normal">Named by Hand</th>
                         <td class="text-end">@shot.Picks.Count.ToString("N0")</td>
                     </tr>
                 }
@@ -184,7 +184,7 @@
                 {
                     <tr>
                         <th scope="row" class="fw-normal text-warning-emphasis">
-                            Card slots not recognised
+                            Card Slots Not Recognised
                         </th>
                         <td class="text-end text-warning-emphasis">
                             @reading.UnreadCells.ToString("N0")
@@ -228,14 +228,14 @@
                 <thead>
                     <tr>
                         <th scope="col" colspan="2">Card</th>
-                        <th scope="col">Read as</th>
+                        <th scope="col">Read As</th>
                         @* Only the three-across list prints a count, so the column is only worth its
                            width on that screen. *@
                         @if (ShowsCopies(reading))
                         {
                             <th scope="col" class="text-end">Copies</th>
                         }
-                        <th scope="col" class="text-end">You have</th>
+                        <th scope="col" class="text-end">You Have</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -378,7 +378,7 @@
     public IReadOnlyList<(CardScreen? Value, string Label, string Hint)> Choices { get; set; } = [];
 
     /// <summary>The legend over the picker, where there is one.</summary>
-    [Parameter] public string ChoiceLegend { get; set; } = "What is in the picture";
+    [Parameter] public string ChoiceLegend { get; set; } = "What Is in the Picture";
 
     /// <summary>Host-specific instructions: which screen to photograph, and how to get to it.</summary>
     [Parameter] public RenderFragment? Intro { get; set; }

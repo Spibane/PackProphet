@@ -95,7 +95,7 @@ public class LogPackTests : AppHost
         page.FindAll(".pack-choice").First().Click();
 
         var strip = page.WaitForElement(".todo-strip");
-        Assert.Contains("Still to do", strip.TextContent);
+        Assert.Contains("Still to Do", strip.TextContent);
 
         // Nothing picked yet, so it says what to do rather than what is wrong.
         Assert.DoesNotContain("short", strip.GetAttribute("class") ?? "");
@@ -151,7 +151,7 @@ public class LogPackTests : AppHost
         Assert.True(said.Contains("points to") || said.Contains("cap"),
                     $"the foot should say where the points land: {said}");
         Assert.Contains("One undo step", said);
-        Assert.Contains("Log another", said);
+        Assert.Contains("Log Another", said);
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class LogPackTests : AppHost
 
         var head = page.WaitForElement(".page-head.sticky-head");
         Assert.Contains("sticky-head", head.GetAttribute("class"));
-        Assert.Contains("Add to collection", head.TextContent);
+        Assert.Contains("Add to Collection", head.TextContent);
 
         // The count went with it, as progress against what a pack holds rather than a bare tally:
         // "picked 3" is a fact about your typing and "3 of 5 named" is a fact about the job.

@@ -61,7 +61,7 @@
 
     <select class="form-select form-select-sm" @bind="_subtype" @bind:after="OnFilterChanged"
             aria-label="@SubtypeLabel">
-        <option value="">@("any " + SubtypeLabel.ToLowerInvariant())</option>
+        <option value="">@("Any " + SubtypeLabel)</option>
         @* Built from the data rather than hardcoded, so a new element or trainer kind becomes
            filterable on its own. Grouped only when both kinds are in play — with one chosen, the
            group heading repeats the dropdown to the left. *@
@@ -186,7 +186,7 @@ else if (_results.Count == 0)
             None of the cards <strong>you own</strong> match, but
             <strong>@_elsewhere</strong> card(s) in the game do.
             <button class="btn btn-sm btn-outline-primary ms-1 py-0"
-                    @onclick="() => SetPool(false)">Search all cards</button>
+                    @onclick="() => SetPool(false)">Search All Cards</button>
         </Notice>
     }
     else
@@ -210,7 +210,7 @@ else
     {
         <div class="d-flex align-items-center gap-2 mb-2">
             <button class="btn btn-sm btn-primary" @onclick="PickAll">
-                Add all @_matches.Count
+                Add All @_matches.Count
             </button>
             <span class="small text-body-secondary">
                 Everything matching these filters, in one step
@@ -742,9 +742,9 @@ else
 
     private string SubtypeLabel => _kind switch
     {
-        "Trainer" => "Trainer kind",
+        "Trainer" => "Trainer Kind",
         "Pokémon" => "Element",
-        _ => "Element or kind"
+        _ => "Element or Kind"
     };
 
     private IReadOnlySet<string> SubtypeValues =>

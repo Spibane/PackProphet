@@ -55,7 +55,7 @@
                checked="@Session.ShowGapStrip"
                @onchange="e => Session.SetShowGapStrip((bool)(e.Value ?? false))" />
         <label class="form-check-label" for="gapstrip">
-            Show the evolution-gap bar on the Collection page
+            Show the Evolution-Gap Bar on the Collection Page
             <span class="d-block small text-body-secondary">
                 Names the cards you own that cannot evolve yet. Worth leaving on with a large
                 collection, where the list is short and specific; early on almost every chain is
@@ -72,7 +72,7 @@
                checked="@Session.ShowWonderIntro"
                @onchange="e => Session.SetShowWonderIntro((bool)(e.Value ?? false))" />
         <label class="form-check-label" for="wonderintro">
-            Explain what Wonder Pick decides
+            Explain What Wonder Pick Decides
             <span class="d-block small text-body-secondary">
                 A paragraph on the Wonder Pick page separating what it works out (the bar an
                 offer has to clear to be worth a stamina) from what the game's own offer
@@ -83,7 +83,7 @@
 
     @* The plan drives every estimate in the app — the ranking, the completion figures, the point
        shop, the trade board — so it is editable here as well as on the Packs page. *@
-    <h2>What counts as complete</h2>
+    <h2>What Counts as Complete</h2>
     <p class="small text-body-secondary">
         One chip per rarity, carrying how many copies you want; tap to cycle none, one, two. This
         is the <strong>default</strong>, followed by every set without its own plan.
@@ -110,7 +110,7 @@
                         <span class="ttl">@set</span>
                         <span class="small"><PlanSummary Plan="Session.Profile.Targets.PlanFor(set)" /></span>
                         <button class="chip-link" @onclick="() => ClearOverride(set)"
-                                title="Follow the default plan again">Use default</button>
+                                title="Follow the default plan again">Use Default</button>
                     </span>
                 }
             </div>
@@ -119,14 +119,14 @@
         {
             <p class="small text-body-secondary mb-4">
                 Every set follows this default. Give one its own from
-                <a href="packs">Which pack</a>, with that set selected.
+                <a href="packs">Which Pack</a>, with that set selected.
             </p>
         }
     }
 
     @* Placed before "your data" because it is the first thing a returning player is offered:
        without it every count on the History page reads as a fraction of the truth. *@
-    <h2>What the game already counted</h2>
+    <h2>What the Game Already Counted</h2>
     <p class="small text-body-secondary">
         Open your profile in PTCGP and read off its lifetime totals. Everything you log from now
         on is <strong>added</strong> to these, so nothing is counted twice.
@@ -146,7 +146,7 @@
             <input type="number" min="0" class="form-control form-control-sm"
                    style="width:8rem" value="@_wonder" @onchange="OnWonder" />
         </label>
-        <button class="btn btn-sm btn-primary" @onclick="SaveLifetime">Save totals</button>
+        <button class="btn btn-sm btn-primary" @onclick="SaveLifetime">Save Totals</button>
         @if (Session.Lifetime is not null)
         {
             <button class="btn btn-sm btn-outline-secondary" @onclick="ClearLifetime">Clear</button>
@@ -190,7 +190,7 @@
                 <th scope="col">Collection</th>
                 @* The name people find you by in the game. A shared chase list is unusable without
                    it -- whoever reads the list knows what you want and has no way to send it. *@
-                <th scope="col" data-pri="2">In-game Name</th>
+                <th scope="col" data-pri="2">In-Game Name</th>
                 <th scope="col" class="text-end">Cards</th>
                 <th scope="col"><span class="visually-hidden">Actions</span></th>
             </tr>
@@ -261,7 +261,7 @@
     </p>
 
     <div class="input-group input-group-sm mb-2" style="max-width:22rem">
-        <label class="visually-hidden" for="new-profile">Name for the new collection</label>
+        <label class="visually-hidden" for="new-profile">Name for the New Collection</label>
         <input class="form-control" id="new-profile" placeholder="Name a new collection"
                @bind="_newProfile"
                @bind:event="oninput" @onkeydown="NewProfileKey" />
@@ -285,7 +285,7 @@
        the answer for someone who owns two devices. *@
     @if (Sync.Available)
     {
-        <h2>Sync across devices</h2>
+        <h2>Sync Across Devices</h2>
 
         @if (!Sync.Paired)
         {
@@ -300,11 +300,11 @@
 
             <div class="d-flex gap-2 flex-wrap mb-3">
                 <button class="btn btn-sm btn-primary" disabled="@Busy" @onclick="StartSync">
-                    Set up sync
+                    Set Up Sync
                 </button>
                 <button class="btn btn-sm btn-outline-primary" disabled="@Busy"
                         @onclick="() => _joining = !_joining">
-                    I have a code
+                    I Have a Code
                 </button>
             </div>
 
@@ -338,11 +338,11 @@
 
             <div class="d-flex gap-2 flex-wrap mb-3">
                 <button class="btn btn-sm btn-primary" disabled="@Busy" @onclick="SyncNow">
-                    @(Busy ? "Syncing…" : "Sync now")
+                    @(Busy ? "Syncing…" : "Sync Now")
                 </button>
                 <button class="btn btn-sm btn-outline-secondary" disabled="@Busy"
                         @onclick="() => _unpairing = !_unpairing">
-                    Stop syncing
+                    Stop Syncing
                 </button>
             </div>
 
@@ -355,11 +355,11 @@
                     <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-sm btn-outline-secondary"
                                 @onclick="() => Unpair(false)">
-                            Stop on this device
+                            Stop on This Device
                         </button>
                         <button class="btn btn-sm btn-outline-danger"
                                 @onclick="() => Unpair(true)">
-                            Stop and delete the stored copy
+                            Stop and Delete the Stored Copy
                         </button>
                         <button class="btn btn-sm btn-link" @onclick="() => _unpairing = false">
                             Cancel
@@ -400,12 +400,12 @@
         }
 
         <p class="small text-body-secondary mb-4">
-            Syncs on open, and a few seconds after any change. Press <strong>Sync now</strong> to
+            Syncs on open, and a few seconds after any change. Press <strong>Sync Now</strong> to
             pull in a device someone is using right now.
         </p>
     }
 
-    <h2>Your data</h2>
+    <h2>Your Data</h2>
     @if (Sync.Paired)
     {
         <p class="small text-body-secondary">
@@ -426,19 +426,19 @@
         page. The last @AppSession.UndoDepth changes are kept, for this session only.
     </p>
     <div class="d-flex gap-2 flex-wrap mb-4">
-        <button class="btn btn-sm btn-primary" @onclick="Export">Export backup</button>
+        <button class="btn btn-sm btn-primary" @onclick="Export">Export Backup</button>
         <label class="btn btn-sm btn-outline-primary mb-0">
-            Import backup
+            Import Backup
             <InputFile OnChange="Import" style="display:none" accept=".json" />
         </label>
         <a class="btn btn-sm btn-outline-primary" href="collection/screenshot">
-            Import from a screenshot
+            Import from a Screenshot
         </a>
         <a class="btn btn-sm btn-outline-primary" href="collection/import">
-            Import from another tracker
+            Import from Another Tracker
         </a>
         <a class="btn btn-sm btn-outline-primary" href="collection/export">
-            Export collection as CSV
+            Export Collection as CSV
         </a>
         <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmReset" aria-live="polite">
             @* Names the collection once there is more than one: "erase collection" beside a list
@@ -459,7 +459,7 @@
                 @if (_offerUndo && Session.CanUndo)
                 {
                     <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoLast">
-                        Undo that
+                        Undo That
                     </button>
                 }
             </div>
@@ -468,7 +468,7 @@
 
     @if (Session.Ready)
     {
-        <h2>Card data</h2>
+        <h2>Card Data</h2>
         <DataTable Label="Card data sources" Fit="true">
             <tbody>
                 <tr><td>Source</td><td><strong>@SourceLabel</strong></td></tr>
@@ -496,7 +496,7 @@
                             @string.Join(", ", Session.SetsAwaitingRates)
                             <div class="text-body-secondary small">
                                 Out now, but nobody has published their pull rates. The
-                                <a href="packs">Which pack</a> page offers to estimate them from
+                                <a href="packs">Which Pack</a> page offers to estimate them from
                                 the newest measured set.
                             </div>
                         </td>
@@ -527,7 +527,7 @@
         @* This app is AGPL-3.0-or-later, and section 13 requires that anyone interacting with it
            over a network be offered its Corresponding Source. That obligation applies to the
            running app rather than to the repository, so the offer is made here. *@
-        <h2>Licence and source</h2>
+        <h2>Licence and Source</h2>
         <p class="small text-body-secondary">
             PackProphet is free software under the
             <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">

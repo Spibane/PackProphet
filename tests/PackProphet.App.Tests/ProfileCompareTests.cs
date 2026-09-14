@@ -45,8 +45,8 @@ public class ProfileCompareTests : AppHost
 
         var cut = RenderComponent<ProfileCompare>();
 
-        Assert.Contains("can just be sent", cut.Markup);
-        Assert.Contains("Free to send", cut.Markup);
+        Assert.Contains("Can Just Be Sent", cut.Markup);
+        Assert.Contains("Free to Send", cut.Markup);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class ProfileCompareTests : AppHost
         Session.SwitchProfile(main);
 
         var cut = RenderComponent<ProfileCompare>();
-        Assert.Contains("can just be sent", cut.Markup);
+        Assert.Contains("Can Just Be Sent", cut.Markup);
 
         // Now from the alt's side: it is the one with the spare, so nothing comes IN to it.
         Session.SwitchProfile(alt);

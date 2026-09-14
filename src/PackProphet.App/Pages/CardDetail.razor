@@ -14,7 +14,7 @@ else if (_card is null)
 {
     <PageShell Measure="PageShell.Width.Text">
         <p>No card with the code <code>@Key</code>.</p>
-        <a class="btn btn-sm btn-primary" href="collection">Back to the collection</a>
+        <a class="btn btn-sm btn-primary" href="collection">Back to the Collection</a>
     </PageShell>
 }
 else
@@ -174,7 +174,7 @@ else
            The cheapest route is the answer, so it is the display line, and the strip underneath is
            where it came from. Same lead, same micro label, same box strip as Which pack. *@
         <div class="verdict-lead">
-            <span class="micro">How to get it</span>
+            <span class="micro">How to Get It</span>
 
             <div class="lead-head">
                 <div class="lead-text">
@@ -246,7 +246,7 @@ else
             </dl>
         }
 
-        <h2 class="sub-head">Packs that can give it</h2>
+        <h2 class="sub-head">Packs That Can Give It</h2>
         @if (_packs.Count == 0)
         {
             <p class="small text-body-secondary">
@@ -292,7 +292,7 @@ else
            Printed facts are reference. They do not change, they are on the card itself, and the
            art is right there. So they read as one line under the answer -- and a line is what they
            are, rather than six rows of two cells where the left cell is always a label. *@
-        <span class="micro">The card</span>
+        <span class="micro">The Card</span>
 
         @if (_fact is null)
         {
@@ -396,7 +396,7 @@ else
 
             @if (_fact.CardText is { Length: > 0 } text)
             {
-                <h2 class="sub-head">Card text</h2>
+                <h2 class="sub-head">Card Text</h2>
                 <p class="small">@text</p>
             }
         }

@@ -115,7 +115,7 @@
                            failed, rather than as a switch beside every box. *@
                         <text>No @_text.Trim() in @OnlyLabel.</text>
                         <button type="button" class="btn btn-sm btn-link p-0 align-baseline ms-1"
-                                @onclick="Widen">Search every card</button>
+                                @onclick="Widen">Search Every Card</button>
                     }
                     else
                     {
@@ -195,7 +195,7 @@
         _id = $"{Group}-r{Slot.Row}c{Slot.Col}";
 
     /// <summary>Where in the picture this slot is, in the terms someone looking at it would use.</summary>
-    private string Where => $"Row {Slot.Row + 1}, card {Slot.Col + 1}";
+    private string Where => $"Row {Slot.Row + 1}, Card {Slot.Col + 1}";
 
     private async Task OnTyped(ChangeEventArgs e)
     {

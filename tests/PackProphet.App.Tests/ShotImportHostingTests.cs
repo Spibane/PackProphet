@@ -536,7 +536,7 @@ public class ShotImportHostingTests : AppHost
         // be of it.
         box.Input(OutsideTheMewtwoPack());
         page.WaitForAssertion(
-            () => Assert.Contains("Search every card", page.Markup),
+            () => Assert.Contains("Search Every Card", page.Markup),
             TimeSpan.FromSeconds(3));
         Assert.Empty(page.FindAll(".btn-outline-primary"));
 
@@ -569,10 +569,10 @@ public class ShotImportHostingTests : AppHost
         var box = page.Find("input[type=search]");
         box.Input(OutsideTheMewtwoPack());
         page.WaitForAssertion(
-            () => Assert.Contains("Search every card", page.Markup),
+            () => Assert.Contains("Search Every Card", page.Markup),
             TimeSpan.FromSeconds(3));
 
-        page.FindAll("button").First(b => b.TextContent.Contains("Search every card")).Click();
+        page.FindAll("button").First(b => b.TextContent.Contains("Search Every Card")).Click();
 
         page.WaitForAssertion(
             () => Assert.NotEmpty(page.FindAll(".btn-outline-primary")),

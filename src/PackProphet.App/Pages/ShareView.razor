@@ -3,7 +3,7 @@
 @inject AppSession Session
 @inject NavigationManager Nav
 
-<PageTitle>Shared chase list · PackProphet</PageTitle>
+<PageTitle>Shared Chase List · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -12,7 +12,7 @@
 else if (_shared is null)
 {
     <div class="page-head">
-        <h1 class="title">Shared chase list</h1>
+        <h1 class="title">Shared Chase List</h1>
     </div>
     <PageShell Measure="PageShell.Width.Wide">
         <p>
@@ -63,11 +63,11 @@ else
     {
         <div class="summary">
             <div class="stat">
-                <span class="label">Cards wanted</span>
+                <span class="label">Cards Wanted</span>
                 <span class="value">@_rows.Count</span>
             </div>
             <div class="stat">
-                <span class="label">You could help with</span>
+                <span class="label">You Could Help With</span>
                 <span class="value">@_canHelpWith</span>
                 <span class="sub">Cards you already own at least one of</span>
             </div>
@@ -95,7 +95,7 @@ else
                             </span>
                             @if (row.YouOwn > 0)
                             {
-                                <span class="badge text-bg-primary ms-1">You can offer this</span>
+                                <span class="badge text-bg-primary ms-1">You Can Offer This</span>
                             }
                         </td>
                         <td class="num">@row.Wanted</td>

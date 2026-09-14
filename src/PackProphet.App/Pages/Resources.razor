@@ -34,7 +34,7 @@ else
                 <div class="pool-figures">
                     <div class="fig">
                         <span class="v">@_pack.FromHourglasses</span>
-                        <span class="l">Packs your hourglasses cover</span>
+                        <span class="l">Packs Your Hourglasses Cover</span>
                     </div>
                     <div class="fig">
                         <span class="v">@(_pack.UntilNextFree is { } t ? Short(t) : "Ready")</span>
@@ -47,7 +47,7 @@ else
                 <label class="form-check form-switch small mt-2">
                     <input class="form-check-input" type="checkbox" checked="@_premium"
                            @onchange="OnPremium" />
-                    Premium membership
+                    Premium Membership
                 </label>
                 <p class="small text-body-secondary mb-0">
                     @if (_premium)
@@ -93,11 +93,11 @@ else
            Not a pool and not a currency you hold: points accrue as a byproduct of opening, five a
            pack, and can only be spent inside the set that earned them. There is nothing to
            regenerate and nothing to time — only a cap that stops paying you. *@
-        <h2>Pack points</h2>
+        <h2>Pack Points</h2>
         <p class="small text-body-secondary">
             Five per pack, spendable only in the set that earned them, capped at
             @GameRules.PackPointsCap.ToString("N0"). <strong>Packs opened at the cap earn
-            nothing.</strong> What they are worth buying is on <a href="packs">Which pack</a>.
+            nothing.</strong> What they are worth buying is on <a href="packs">Which Pack</a>.
         </p>
         <p class="small text-body-secondary">
             Balances here grow from the packs you log, so they start behind reality. Correct
@@ -121,7 +121,7 @@ else
                         @* The goal per set: points are only spendable inside the set that earned
                            them, so "how far off" is a per-set question with a per-set answer. *@
                         <th scope="col">Rarest Still Wanted</th>
-                        <th scope="col" class="num" title="Packs of this set, and only this set, to open before that card is affordable. Points cannot cross-fund">Packs to afford it</th>
+                        <th scope="col" class="num" title="Packs of this set, and only this set, to open before that card is affordable. Points cannot cross-fund">Packs to Afford It</th>
                         <th scope="col" class="num" title="Cards from this set you still need that the balance already covers">Can Buy Now</th>
                     </tr>
                 </thead>
@@ -187,7 +187,7 @@ else
         @if (_pointsAddable.Count > 0)
         {
             <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-                <span class="small text-body-secondary">Add rows for</span>
+                <span class="small text-body-secondary">Add Rows For</span>
                 @foreach (var series in _pointsAddable
                     .GroupBy(Session.Sets.SeriesOf)
                     .OrderBy(g => g.Key, StringComparer.Ordinal))
@@ -201,7 +201,7 @@ else
                 @if (_pointsAddable.Count > 1)
                 {
                     <button class="btn btn-sm btn-outline-secondary py-0" @onclick="AddEverySet">
-                        Every set (@_pointsAddable.Count)
+                        Every Set (@_pointsAddable.Count)
                     </button>
                 }
             </div>

@@ -20,7 +20,7 @@ else
         {
             <EmptyState>
                 Nothing logged yet. Every pack you record on
-                <a href="log">Log a pack</a> lands here, and this page also checks the odds
+                <a href="log">Log a Pack</a> lands here, and this page also checks the odds
                 engine against what you actually pulled.
             </EmptyState>
             @* A returning player has a real history the app has not seen, so the empty page says
@@ -52,18 +52,18 @@ else
                 @if (Session.Lifetime is { } baseline)
                 {
                     <div class="stat">
-                        <span class="label">Packs, all time</span>
+                        <span class="label">Packs, All Time</span>
                         <span class="value">@Session.LifetimePacks</span>
                         <span class="sub">@baseline.PacksOpened imported</span>
                     </div>
                     <div class="stat">
-                        <span class="label">Wonder Picks, all time</span>
+                        <span class="label">Wonder Picks, All Time</span>
                         <span class="value">@Session.LifetimeWonderPicks</span>
                         <span class="sub">@baseline.WonderPicks imported</span>
                     </div>
                 }
                 <div class="stat">
-                    <span class="label">Packs logged</span>
+                    <span class="label">Packs Logged</span>
                     <span class="value">@_log.Count</span>
                     <span class="sub">@_cards cards recorded</span>
                 </div>
@@ -73,7 +73,7 @@ else
                     <span class="sub">@Rate()</span>
                 </div>
                 <div class="stat">
-                    <span class="label">Cards per pack</span>
+                    <span class="label">Cards per Pack</span>
                     <span class="value">@_perPack.ToString("0.0")</span>
                     @* A pack yields 4-6 cards, so a figure well below that means packs were logged
                        without all their pulls, and every number on this page derived from cards is
@@ -95,21 +95,21 @@ else
                     </span>
                 </div>
                 <div class="stat">
-                    <span class="label">Busiest day</span>
+                    <span class="label">Busiest Day</span>
                     <span class="value">@_busiest.Count</span>
                     <span class="sub">@_busiest.Date.ToString("d MMM yyyy")</span>
                 </div>
                 <div class="stat">
-                    <span class="label">Most opened</span>
+                    <span class="label">Most Opened</span>
                     <span class="value fs-6">@_favouritePack</span>
                     <span class="sub">@_favouriteCount pack(s) · @_sets set(s) touched</span>
                 </div>
                 <div class="stat">
-                    <span class="label">Points earned</span>
+                    <span class="label">Points Earned</span>
                     <span class="value">@((_log.Count * GameRules.PackPointsPerPack).ToString("N0"))</span>
                     @* Earned over all time, not held: the balance after spending lives on the
                        Which pack page, and conflating the two would misreport both. *@
-                    <span class="sub">Across every set, all time</span>
+                    <span class="sub">Across Every Set, All Time</span>
                 </div>
             </div>
 
@@ -155,7 +155,7 @@ else
                                page under the reader, and re-rolling on every render would make it
                                flicker on unrelated updates. *@
                             <button class="btn btn-sm btn-outline-secondary align-self-start"
-                                    @onclick="Shuffle">Show me another</button>
+                                    @onclick="Shuffle">Show Me Another</button>
                         }
                     </div>
 
@@ -207,7 +207,7 @@ else
                 </div>
             </details>
 
-            <h2>Packs per day</h2>
+            <h2>Packs per Day</h2>
             @* The caption carries the READING, not the fact. "The free allowance is 2 a day"
                states a rule and leaves the reader to apply it to thirty bars; saying what a bar of
                two means is the same rule already applied, which is the only form of it that helps
@@ -257,7 +257,7 @@ else
                worse answer than a control that says what it opens, and sighted users who want the
                exact figure off a bar have the same problem. *@
             <details class="mb-4">
-                <summary class="small text-body-secondary">Show these as numbers</summary>
+                <summary class="small text-body-secondary">Show These as Numbers</summary>
                 <div class="pt-2">
                     <DataTable Label="Packs opened per day" Fit="true">
                         <thead>
@@ -279,7 +279,7 @@ else
                 </div>
             </details>
 
-            <h2>Packs per set</h2>
+            <h2>Packs per Set</h2>
             <DataTable Label="Packs opened per set" Fit="true">
                 <thead>
                     <tr>
@@ -333,7 +333,7 @@ else
                    published per set. *@
                 <select class="form-select form-select-sm ms-auto" style="max-width:12rem"
                         @onchange="OnScope" aria-label="Which sets to check">
-                    <option value="" selected="@(_scope.Length == 0)">Every set</option>
+                    <option value="" selected="@(_scope.Length == 0)">Every Set</option>
                     <optgroup label="Series">
                         @foreach (var series in ScopedSeries())
                         {
@@ -452,7 +452,7 @@ else
                     <thead>
                         <tr>
                             <th scope="col">Rarity</th>
-                            <th scope="col" class="num">@(_lifetimeActive ? "held" : "pulled")</th>
+                            <th scope="col" class="num">@(_lifetimeActive ? "Held" : "Pulled")</th>
                             <th scope="col" class="num">Expected</th>
                             <th scope="col" class="num">Difference</th>
                         </tr>
@@ -477,7 +477,7 @@ else
             </div>
 
             <div class="check-recent">
-                <span class="micro">Every pack, newest first</span>
+                <span class="micro">Every Pack, Newest First</span>
                 <div class="recent-rows">
                     @foreach (var entry in _recent.Take(RecentBeside))
                     {
@@ -504,10 +504,10 @@ else
             </div>
 
             <div class="section-head">
-                <h3 class="sub-head">Recent packs</h3>
+                <h3 class="sub-head">Recent Packs</h3>
                 <button class="btn btn-sm @(_clearingAll ? "btn-danger" : "btn-outline-danger") ms-auto"
                         @onclick="ClearAll">
-                    @(_clearingAll ? $"Really delete all {_log.Count}?" : "Delete all")
+                    @(_clearingAll ? $"Really delete all {_log.Count}?" : "Delete All")
                 </button>
             </div>
 
@@ -518,7 +518,7 @@ else
             <label class="form-check form-switch small mb-2">
                 <input class="form-check-input" type="checkbox" checked="@_alsoRemoveCards"
                        @onchange="e => _alsoRemoveCards = e.Value is true" />
-                also take the cards back out of my collection when deleting
+                Also Remove the Cards
             </label>
             <p class="small text-body-secondary">
                 Deleting returns the @GameRules.PackPointsPerPack pack points that opening earned,

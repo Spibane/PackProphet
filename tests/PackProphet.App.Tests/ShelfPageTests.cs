@@ -86,8 +86,8 @@ public class ShelfPageTests : AppHost
         var order = page.Find(".page-rail select[aria-label='Order the decks']");
         var options = order.QuerySelectorAll("option").Select(o => Flat(o.TextContent)).ToArray();
 
-        Assert.Contains("Closest to buildable", options);
-        Assert.Contains("By name", options);
+        Assert.Contains("Closest to Buildable", options);
+        Assert.Contains("By Name", options);
 
         // And it actually reorders: by name puts Articuno before Zapdos, buildability does not.
         // The value is the stored vocabulary rather than the page's own enum -- an order outlives

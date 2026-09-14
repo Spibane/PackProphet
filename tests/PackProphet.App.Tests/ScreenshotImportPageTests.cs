@@ -62,7 +62,7 @@ public class ScreenshotImportPageTests : AppHost
 
         Assert.Empty(page.FindAll("button:contains('apply')"));
         Assert.Empty(page.FindAll("input[type=checkbox]"));
-        Assert.DoesNotContain("What this picture says", page.Markup);
+        Assert.DoesNotContain("What This Picture Says", page.Markup);
     }
 
     [Fact]
@@ -236,7 +236,7 @@ public class ScreenshotImportPageTests : AppHost
             .UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3], "cards.png"));
 
         var fix = Assert.Single(page.FindComponents<SlotFix>());
-        Assert.Equal("Row 1, card 3", fix.Find("label").TextContent);
+        Assert.Equal("Row 1, Card 3", fix.Find("label").TextContent);
 
         // Typed and then waited on, because the search is debounced -- a scan of every card in the
         // game on each keystroke is what that delay is there to avoid.
@@ -263,7 +263,7 @@ public class ScreenshotImportPageTests : AppHost
         page.WaitForAssertion(() =>
         {
             Assert.Contains("you named it", page.Markup);
-            Assert.Contains("Named by hand", page.Markup);
+            Assert.Contains("Named by Hand", page.Markup);
         });
         Assert.DoesNotContain("could not be named", page.Markup);
 
@@ -381,7 +381,7 @@ public class ScreenshotImportPageTests : AppHost
 
         Assert.DoesNotContain("Ctrl", page.Markup);
 
-        page.Find("button:contains('Undo that')").Click();
+        page.Find("button:contains('Undo That')").Click();
 
         Assert.Equal(0, Session.Owned.DistinctOwned);
         Assert.DoesNotContain("Recorded 13 cards", page.Markup);

@@ -82,8 +82,8 @@ else
                the thing the bar is for -- so the button gives up a word instead. The aria label
                keeps the full one either way. *@
             <button class="btn btn-sm btn-outline-secondary" popovertarget="set-sheet"
-                    aria-label="Change set" title="@CurrentSetLabel">
-                <span class="wide-only">Change set</span>
+                    aria-label="Change Set" title="@CurrentSetLabel">
+                <span class="wide-only">Change Set</span>
                 <span class="narrow-only" aria-hidden="true">Set</span>
             </button>
         </span>
@@ -232,7 +232,7 @@ else
                    returns nothing reads as a broken control. *@
                 @if (Session.Gaps is { Complete: false })
                 {
-                    <option value="gaps">Fills an evolution gap</option>
+                    <option value="gaps">Fills an Evolution Gap</option>
                 }
             </select>
 
@@ -351,16 +351,16 @@ else
             @if (!ViewingAll)
             {
                 <div class="rail-group">
-                    <span class="ttl">This set</span>
+                    <span class="ttl">This Set</span>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="MarkTargetOwned"
                             disabled="@Busy.IsBusy"
                             title="Mark every card this set's plan wants as owned">
-                        Fill target
+                        Fill Target
                     </button>
                     <button class="btn btn-sm btn-outline-danger" @onclick="ClearSet"
                             disabled="@Busy.IsBusy" aria-live="polite"
                             title="Set every card in this set back to zero. Undo works.">
-                        @(_confirmClear ? "Clear. Sure?" : "Clear set")
+                        @(_confirmClear ? "Clear. Sure?" : "Clear Set")
                     </button>
                 </div>
             }
@@ -430,7 +430,7 @@ else
                             @if (_own != "gaps")
                             {
                                 <button class="btn btn-sm btn-outline-primary py-0 ms-1"
-                                        @onclick="ShowGapFills">Show them in the grid</button>
+                                        @onclick="ShowGapFills">Show Them in the Grid</button>
                             }
                         </p>
 
@@ -453,7 +453,7 @@ else
                                     {
                                         <span class="badge text-bg-warning"
                                               title="No printing of it comes from a pack you can open, so opening will never produce one">
-                                            No pack has it
+                                            No Pack Has It
                                         </span>
                                     }
 

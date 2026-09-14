@@ -136,6 +136,6 @@ public class HistoryPageTests : AppHost
         Assert.False(string.IsNullOrWhiteSpace(bars.GetAttribute("aria-label")));
 
         Assert.Contains(page.FindAll("summary"),
-                        s => s.TextContent.Contains("Show these as numbers"));
+                        s => s.TextContent.Contains("Show These as Numbers"));
     }
 }

@@ -57,27 +57,27 @@ else
        rather than "what should I do about each pack, each rarity, each set". *@
     <PageRail Id="trades-rail" OpenLabel="Filters" Count="@ActiveFilters">
         <div class="rail-group">
-            <span class="ttl">Trading for</span>
+            <span class="ttl">Trading For</span>
             <ScopePicker Label="What to trade for" Scope="@_scope" OnScope="OnScope" />
         </div>
 
         <div class="rail-group">
             <span class="ttl">Grouped</span>
             <select class="form-select form-select-sm" aria-label="Group the rows by" @onchange="OnView">
-                <option value="all" selected="@(_view == "all")">Everything, ranked</option>
-                <option value="rarity" selected="@(_view == "rarity")">Best per rarity</option>
-                <option value="pack" selected="@(_view == "pack")">Best per pack</option>
-                <option value="set" selected="@(_view == "set")">Best per set</option>
+                <option value="all" selected="@(_view == "all")">Everything, Ranked</option>
+                <option value="rarity" selected="@(_view == "rarity")">Best per Rarity</option>
+                <option value="pack" selected="@(_view == "pack")">Best per Pack</option>
+                <option value="set" selected="@(_view == "set")">Best per Set</option>
             </select>
         </div>
 
         <div class="rail-group">
-            <span class="ttl">Ranked by</span>
+            <span class="ttl">Ranked By</span>
             <select class="form-select form-select-sm" aria-label="Rank by" @onchange="OnSort">
-                <option value="packs" selected="@(_sort == "packs")">Hardest to pull</option>
-                <option value="points" selected="@(_sort == "points")">Furthest off by points</option>
-                <option value="dust" selected="@(_sort == "dust")">Dearest in dust</option>
-                <option value="cheap" selected="@(_sort == "cheap")">Cheapest in dust</option>
+                <option value="packs" selected="@(_sort == "packs")">Hardest to Pull</option>
+                <option value="points" selected="@(_sort == "points")">Furthest Off by Points</option>
+                <option value="dust" selected="@(_sort == "dust")">Dearest in Dust</option>
+                <option value="cheap" selected="@(_sort == "cheap")">Cheapest in Dust</option>
             </select>
         </div>
 
@@ -111,11 +111,11 @@ else
             }
             @if (_readyOnly)
             {
-                <button class="chip-filter" @onclick="ResetReady" aria-label="Show all rows">Doable only &times;</button>
+                <button class="chip-filter" @onclick="ResetReady" aria-label="Show all rows">Doable Only &times;</button>
             }
 
             <select class="form-select form-select-sm" aria-label="Filter by rarity" @onchange="OnRarity">
-                <option value="" selected="@(_rarity.Length == 0)">Any rarity</option>
+                <option value="" selected="@(_rarity.Length == 0)">Any Rarity</option>
                 @foreach (var rung in Session.Index.Ladder.Rungs)
                 {
                     <option value="@rung.Index" selected="@(_rarity == rung.Index.ToString())">
@@ -139,7 +139,7 @@ else
             <button class="btn btn-sm @(_readyOnly ? "btn-secondary" : "btn-outline-secondary")"
                     @onclick="() => SetReadyOnly(!_readyOnly)" aria-pressed="@Aria.Flag(_readyOnly)"
                     title="Hide trades you cannot make today">
-                @(_readyOnly ? "Doable only" : "All rows")
+                @(_readyOnly ? "Doable Only" : "All Rows")
             </button>
         </div>
     </PageRail>
@@ -186,7 +186,7 @@ else
                    data, which is the precondition BoxStrip documents -- so this page gets a
                    verdict, a sentence and a list, and no picture. *@
                 <div class="verdict-lead" aria-live="polite">
-                    <span class="micro">Make this trade</span>
+                    <span class="micro">Make This Trade</span>
                     <div class="lead-head">
                       <div class="lead-text">
                         <h2 class="name take">Trade for @_shown[0].Candidate.Want.Name</h2>
@@ -224,7 +224,7 @@ else
                     <span class="micro">The call</span>
                     <div class="lead-head">
                       <div class="lead-text">
-                        <h2 class="name skip">No trade to make right now</h2>
+                        <h2 class="name skip">No Trade to Make Right Now</h2>
                         <p class="says">
                             The best target is @_shown[0].Candidate.Want.Name, and @Explain(_shown[0].Candidate).
                         </p>
@@ -287,7 +287,7 @@ else
                         <th scope="col" class="num" data-pri="2" title="Expected packs you would not have to open">Packs Saved</th>
                         <th scope="col" class="num" data-pri="3" title="Pack points still to earn in this card's own set before the shop could sell it">Points Short</th>
                         <th scope="col" class="num" data-pri="3">Dust</th>
-                        <th scope="col" data-pri="3">What you could offer</th>
+                        <th scope="col" data-pri="3">What You Could Offer</th>
                         <th scope="col" data-pri="1">Status</th>
                     </tr>
                 </thead>
@@ -351,7 +351,7 @@ else
                             <td class="small" data-pri="3">
                                 @if (row.Candidate.CouldOffer.Count == 0)
                                 {
-                                    <span class="text-body-secondary">No spare at this rarity</span>
+                                    <span class="text-body-secondary">No Spare at This Rarity</span>
                                 }
                                 else
                                 {
@@ -614,17 +614,17 @@ else
 
     private string ViewLabel => _view switch
     {
-        "rarity" => "best per rarity",
-        "pack"   => "best per pack",
-        "set"    => "best per set",
+        "rarity" => "Best per Rarity",
+        "pack"   => "Best per Pack",
+        "set"    => "Best per Set",
         _        => _view,
     };
 
     private string SortLabel => _sort switch
     {
-        "points" => "furthest off by points",
-        "dust"   => "dearest in dust",
-        "cheap"  => "cheapest in dust",
+        "points" => "Furthest Off by Points",
+        "dust"   => "Dearest in Dust",
+        "cheap"  => "Cheapest in Dust",
         _        => _sort,
     };
 

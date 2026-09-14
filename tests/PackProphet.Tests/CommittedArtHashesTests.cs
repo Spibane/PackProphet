@@ -103,7 +103,7 @@ public class CommittedArtHashesTests
         var distinct = InSnapshotSets.Select(e => e.Hash).Distinct().Count();
 
         Assert.Equal(Ix.DistinctOwnableCards, distinct);
-        Assert.Equal(3546, distinct);
+        Assert.Equal(3664, distinct);
     }
 
     [Fact]

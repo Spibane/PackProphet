@@ -56,7 +56,7 @@ public class TrackerExportTests
 
         Assert.Empty(back.Problems);
         Assert.Equal(index.DistinctOwnableCards, back.DistinctOwned);
-        Assert.Equal(3546, back.DistinctOwned);
+        Assert.Equal(3664, back.DistinctOwned);
 
         // Every re-listing goes out as its own row and folds back in on the way home.
         Assert.Equal(215, back.RowsCollapsed);
@@ -123,7 +123,7 @@ public class TrackerExportTests
     {
         var lines = Lines(TrackerExport.ToCsv(Sample(), Snapshot.Index()));
 
-        Assert.Equal(3761, lines.Length - 1);
+        Assert.Equal(3879, lines.Length - 1);
         Assert.Contains("A1,5,A1-5,Caterpie,C,0", lines);
     }
 
@@ -184,8 +184,8 @@ public class TrackerExportTests
         var csv = TrackerExport.ToCsv(new Collection(), index);
         var back = TrackerImport.FromCsv(csv, index);
 
-        Assert.Equal(3761, Lines(csv).Length - 1);
-        Assert.Equal(3761, back.RowsMatched);
+        Assert.Equal(3879, Lines(csv).Length - 1);
+        Assert.Equal(3879, back.RowsMatched);
         Assert.Equal(0, back.DistinctOwned);
     }
 

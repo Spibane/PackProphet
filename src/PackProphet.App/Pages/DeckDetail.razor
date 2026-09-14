@@ -24,7 +24,7 @@ else
            screen reader to land on when navigating by headings — every other page opens with an
            h1, this one otherwise wouldn't. *@
         <h1 class="visually-hidden">@_draft.Name</h1>
-        <BackLink To="decks" Label="Decks" />
+        <BackLink To="decks" Label="Decks" Compact="true" />
         <input class="form-control form-control-sm" style="max-width:16rem"
                value="@_draft.Name" @onchange="Rename" aria-label="Deck name" />
 
@@ -35,13 +35,16 @@ else
 
         @if (_draft.DeckBuilderNrs.Count > 0)
         {
+            @* Readings rather than controls, and the first thing the bar gives up on a phone:
+               the legality section below says the same in full, and the buttons cannot be given
+               up -- a Save that does not fit is a deck you cannot keep. *@
             @if (_missingCount > 0)
             {
-                <span class="badge text-bg-warning">@_missingCount Missing</span>
+                <span class="badge text-bg-warning wide-only">@_missingCount Missing</span>
             }
             else
             {
-                <span class="badge text-bg-success">You Own Every Card</span>
+                <span class="badge text-bg-success wide-only">You Own Every Card</span>
             }
         }
 
@@ -49,7 +52,7 @@ else
            every tap, which left no way to tell whether a change had stuck and no way to back out
            of one. *@
         <span class="actions">
-            <span class="save-state @(Dirty ? "dirty" : "")">
+            <span class="save-state wide-only @(Dirty ? "dirty" : "")">
                 @if (Dirty)
                 {
                     <span class="small">Unsaved Changes</span>
@@ -61,18 +64,31 @@ else
             </span>
 
             <button class="btn btn-sm btn-primary" @onclick="Save" disabled="@(!Dirty)">Save</button>
+
+            @* The rest behind the sheet every other page already uses for what will not fit.
+               This bar needed 526px of a 375px one, and it is `overflow: hidden`, so Save itself
+               was off the end of it: you could build a deck on a phone and not keep it. Saving is
+               the one act that has to be a thumb away mid-scroll, so it is what stays. *@
+            <SheetOpener For="deck-actions" Label="Deck" />
+        </span>
+    </div>
+
+    <PageSheet Id="deck-actions" Label="Deck">
+        <div class="rail-group">
+            <span class="ttl">This Draft</span>
             <button class="btn btn-sm btn-outline-secondary" @onclick="Discard" disabled="@(!Dirty)">
                 @(IsNew ? "Start Over" : "Discard")
             </button>
 
             @if (!IsNew)
             {
-                <button class="btn btn-sm btn-outline-danger" @onclick="ConfirmDelete" aria-live="polite">
+                <button class="btn btn-sm @(_confirmingDelete ? "btn-danger" : "btn-outline-danger")"
+                        @onclick="ConfirmDelete" aria-live="polite">
                     @(_confirmingDelete ? "Really delete?" : "Delete")
                 </button>
             }
-        </span>
-    </div>
+        </div>
+    </PageSheet>
 
     @if (_pendingUrl is not null)
     {

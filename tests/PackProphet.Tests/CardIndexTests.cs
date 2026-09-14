@@ -9,7 +9,7 @@ public class CardIndexTests
     [Fact]
     public void IndexesEveryCard_AndKeysAreUnique()
     {
-        Assert.Equal(3761, Ix.All.Count);
+        Assert.Equal(3879, Ix.All.Count);
         Assert.Equal(Ix.All.Count, Ix.ByKey.Count); // no duplicate set+number upstream
         Assert.Equal("A1-1", Ix.All[0].Key);
     }
@@ -45,7 +45,7 @@ public class CardIndexTests
         // Both promo sets are entirely unobtainable from packs, plus one A1 Immersive.
         var bySet = unobtainable.GroupBy(c => c.Set).ToDictionary(g => g.Key, g => g.Count());
         Assert.Equal(50, bySet["PROMO-A"]);
-        Assert.Equal(31, bySet["PROMO-B"]);
+        Assert.Equal(34, bySet["PROMO-B"]);
         Assert.Equal(1, bySet["A1"]);
     }
 
@@ -116,8 +116,8 @@ public class CardIndexTests
     {
         // The game treats owning a card as owning it for every set it appears in.
         var ix = Ix;
-        Assert.Equal(3761, ix.All.Count);
-        Assert.Equal(3546, ix.DistinctOwnableCards);
+        Assert.Equal(3879, ix.All.Count);
+        Assert.Equal(3664, ix.DistinctOwnableCards);
         Assert.Equal(215, ix.All.Count - ix.DistinctOwnableCards);
     }
 

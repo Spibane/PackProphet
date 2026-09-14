@@ -245,11 +245,15 @@ else
                        comparing them across the row is the point. *@
                     <BoxStrip Label="Where the Chance Is" Clause="@SlotClause(slots)"
                               Columns="@slots.Count">
+                        @* The number and its sign as separate rows, which is what Box is for.
+                           "P1" hands over "4.1 %" as one string, and at six columns on a phone
+                           each box is about 53px wide -- so some of them wrapped between the
+                           figure and the % and some did not, which staggered the bars. *@
                         @foreach (var slot in slots)
                         {
                             <Box State="@(slot.Chance > 0 ? Box.Kind.Live : Box.Kind.Dead)"
                                  Label="@Ordinal(slot.Position)"
-                                 Figure="@slot.Chance.ToString("P1")"
+                                 Figure="@((slot.Chance * 100).ToString("0.0"))" Unit="%"
                                  Bar="@slot.Chance" />
                         }
                     </BoxStrip>

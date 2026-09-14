@@ -1066,12 +1066,18 @@ main > .page-head {
     text-wrap: pretty;
 }
 /* The bar area keeps its height whether or not there is a bar in it, so the row is one shape
-   rather than a stagger that implies an order the boxes do not have. */
+   rather than a stagger that implies an order the boxes do not have.
+   
+   And it sits at the BOTTOM of the box rather than a fixed distance under the figure. Its own
+   height was already constant; its position was not, so a figure that wrapped to two lines pushed
+   its bar 16px below its neighbours' and the row read as a stagger that meant nothing. The boxes
+   are equal height already -- they are grid items -- so an auto margin is all it takes. */
 .box .bar {
     display: flex;
     align-items: flex-end;
     block-size: 52px;
-    margin-block-start: 6px;
+    margin-block-start: auto;
+    padding-block-start: 6px;
 }
 .box .bar > span {
     inline-size: 100%;

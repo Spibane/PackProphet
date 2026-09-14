@@ -59,6 +59,21 @@ public sealed class SyncService : IAsyncDisposable
     /// </summary>
     private const int Attempts = 3;
 
+    /// <summary>
+    /// How long to wait before trying a contended document again, multiplied by the attempt and
+    /// jittered.
+    ///
+    /// Losing a push means somebody else is mid-write, and retrying immediately is the one thing
+    /// guaranteed to collide with them again: the database takes a row lock per call, so every
+    /// collision is a held transaction and a rolled-back write rather than a cheap refusal. Two
+    /// devices both retrying the instant they lose is a tight loop between them that fills the
+    /// server's log with 40001 and costs it far more than the edit is worth.
+    ///
+    /// Jittered because a fixed wait keeps two devices in step: they lose together, wait the same
+    /// amount and collide again.
+    /// </summary>
+    private static readonly TimeSpan RetryBase = TimeSpan.FromMilliseconds(250);
+
     private readonly SyncOptions _options;
     private readonly AppSession _session;
     private readonly SyncCrypto _crypto;
@@ -421,7 +436,11 @@ public sealed class SyncService : IAsyncDisposable
                     Done(fromElsewhere: false, MergeReport.None);
                     return;
                 }
-                if (restored == PushOutcome.Superseded) continue;   // it came back under us
+                if (restored == PushOutcome.Superseded)
+                {
+                    await BackOffAsync(attempt);                    // it came back under us
+                    continue;
+                }
 
                 Fail(Explain(restored));
                 return;
@@ -476,8 +495,13 @@ public sealed class SyncService : IAsyncDisposable
             }
 
             // Another device got there first. Its work is now in the stored copy, so going round
-            // again merges it in rather than overwriting it.
-            if (pushed == PushOutcome.Superseded) continue;
+            // again merges it in rather than overwriting it -- after a pause, because it is still
+            // writing and the next round would land on top of the same lock.
+            if (pushed == PushOutcome.Superseded)
+            {
+                await BackOffAsync(attempt);
+                continue;
+            }
 
             Fail(Explain(pushed));
             return;
@@ -485,6 +509,10 @@ public sealed class SyncService : IAsyncDisposable
 
         Fail("Another device kept writing while this one tried to. Try again in a moment.");
     }
+
+    /// <summary>Wait out the device that beat us, for longer each time and never in step with it.</summary>
+    private static Task BackOffAsync(int attempt) =>
+        Task.Delay(RetryBase * attempt + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 250)));
 
     /// <summary>
     /// Seal and store, recording the result as the new ancestor when it lands.

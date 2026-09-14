@@ -120,7 +120,18 @@ public class CrossValidationTests
             if (fact is null) continue;
 
             if (fact.IsPokemon && fact.Stage is null) wrong.Add($"{fact.Id} {fact.Name}: Pokémon with no stage");
-            if (!fact.IsPokemon && fact.Stage is not null) wrong.Add($"{fact.Id} {fact.Name}: Trainer with stage {fact.Stage}");
+
+            // A Trainer may carry "Basic" and nothing else, because a handful of them are played
+            // AS Basic Pokémon: the Fossils -- Helix, Dome, Old Amber, Skull, Armor -- are Item
+            // cards that go to the bench and take damage. Upstream started stating that in 2.10.0
+            // and it is right to, so the rule is now "a Trainer is never a Stage 1 or a Stage 2"
+            // rather than "a Trainer has no stage".
+            //
+            // Not an allowlist of names, which would need editing every time a Fossil is
+            // reprinted -- fourteen printings already. The shape of the claim is what matters: a
+            // Trainer that evolves from something is nonsense whatever it is called.
+            if (!fact.IsPokemon && fact.Stage is { } stage && stage != "Basic")
+                wrong.Add($"{fact.Id} {fact.Name}: Trainer with stage {stage}");
         }
 
         Assert.Empty(wrong.Take(20));

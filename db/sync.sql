@@ -180,7 +180,22 @@ begin
         raise exception 'too many writes to this document' using errcode = '53400';
     end if;
 
-    if expected_version is null or held_version <> expected_version then
+    -- Two different things, and they used to share one SQLSTATE.
+    --
+    -- A null expected_version means "I pulled and found nothing here". Reaching this line proves
+    -- that was wrong, and it is not a race: no other device has to have written for it to happen,
+    -- and the client is told "another device wrote first" about a device that does not exist. It
+    -- then retries, which cannot help -- its next pull returns nothing again -- and every attempt
+    -- is another rejected write in the log under a name that sends anyone reading it looking for a
+    -- second device.
+    --
+    -- Told apart so the log says which one happened. 55000 is object_not_in_prerequisite_state:
+    -- the document is not in the state the caller believed it was.
+    if expected_version is null then
+        raise exception 'document exists but the caller expected none' using errcode = '55000';
+    end if;
+
+    if held_version <> expected_version then
         raise exception 'another device wrote first' using errcode = '40001';
     end if;
 

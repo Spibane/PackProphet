@@ -42,6 +42,14 @@ public enum PushOutcome
     /// same state -- but it needs a longer wait and no second merge.
     /// </summary>
     TooFast,
+
+    /// <summary>
+    /// We pushed believing nothing was stored, and something is. Not a race -- no other device has
+    /// to have written for this to happen -- so it is told apart from <see cref="Superseded"/>:
+    /// the pull that came back empty is the thing that was wrong, and a retry only helps if the
+    /// document really did appear between the two calls.
+    /// </summary>
+    AlreadyThere,
 }
 
 public sealed record PushResult(PushOutcome Outcome, long Version = 0);
@@ -149,6 +157,7 @@ public sealed class SyncTransport
             "42501" => PushOutcome.Refused,
             "22001" => PushOutcome.TooLarge,
             "53400" => PushOutcome.TooFast,
+            "55000" => PushOutcome.AlreadyThere,
             _ => PushOutcome.Unreachable,
         });
     }

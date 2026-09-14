@@ -447,9 +447,11 @@ public sealed class SyncService : IAsyncDisposable
                     Done(fromElsewhere: false, MergeReport.None);
                     return;
                 }
-                if (restored is PushOutcome.Superseded or PushOutcome.TooFast)
+                // It came back under us, or it was there all along and the pull did not see it.
+                // Going round again is worth one try either way: the next pull settles which.
+                if (restored is PushOutcome.Superseded or PushOutcome.TooFast or PushOutcome.AlreadyThere)
                 {
-                    await BackOffAsync(attempt, restored);          // it came back under us
+                    await BackOffAsync(attempt, restored);
                     continue;
                 }
 
@@ -667,6 +669,10 @@ public sealed class SyncService : IAsyncDisposable
             "Another device is writing right now. Try again in a moment.",
         PushOutcome.TooFast =>
             "Too many saves too quickly. Nothing was lost; try again in a moment.",
+        PushOutcome.AlreadyThere =>
+            "There is a stored copy this device could not read. That is usually a different "
+            + "pairing code: set sync up again with the code from the device that has your "
+            + "collection.",
         _ => "Sync did not finish.",
     };
 

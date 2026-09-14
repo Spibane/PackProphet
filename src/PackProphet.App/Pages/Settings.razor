@@ -18,7 +18,18 @@
     </span>
 </div>
 
-<PageShell Measure="PageShell.Width.Text" Class="sections">
+@* Wide, like every other page built out of sections.
+   ==================================================================================
+   This was Text -- 44rem, the reading measure -- which made Settings visibly narrower than
+   History and Resources, the two pages that are laid out exactly the same way: a column of
+   sections divided by rules, each with a heading, a note and some controls or a table. Three
+   pages of the same shape at two different widths reads as the shell moving under you as you
+   navigate, which is the thing .page-body's three named measures exist to stop.
+
+   Text is the right measure for prose meant to be read start to finish -- a card's facts, a
+   deck's detail -- and the notes under these headings are not that. They are labels on controls,
+   a line or two each, and the widest thing on this page is the pairing panel's table. *@
+<PageShell Measure="PageShell.Width.Wide" Class="sections">
     <h2>Appearance</h2>
     <p class="small text-body-secondary">
         The same control sits in the top bar. <strong>Auto</strong> follows this device's

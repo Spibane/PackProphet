@@ -20,7 +20,7 @@ else
         @* Segments, so a phone breaks this at a dot rather than inside a reading. See the note
            over the collection's subtitle, which has the same shape. *@
         <span class="subtitle">
-            <span class="seg"><span class="lbl">Target:</span> @Session.ScopeLabel(_scope)</span>
+            <span class="seg"><span class="lbl">Target:</span> @Session.ScopeLabel(Scope)</span>
             <span class="seg"><strong>@_stamina.Balance of @_stamina.Cap</strong> stamina</span>
             <span class="seg">@Session.Profile.Resources.Shinedust.ToString("N0") dust</span>
 
@@ -58,7 +58,7 @@ else
     <PageRail Id="trades-rail" OpenLabel="Filters" Count="@ActiveFilters">
         <div class="rail-group">
             <span class="ttl">Trading For</span>
-            <ScopePicker Label="What to trade for" Scope="@_scope" OnScope="OnScope" />
+            <ScopePicker Label="What to trade for" Scope="@Scope" OnScope="OnScope" />
         </div>
 
         <div class="rail-group">
@@ -390,7 +390,12 @@ else
 }
 
 @code {
-    private string _scope = "everything";
+    /// <summary>
+    /// What this page works toward, shared with the other three Answer pages and persisted. See
+    /// <see cref="AppSession.Target"/>: it is one question asked on four screens, and four copies
+    /// of the answer meant setting it here changed nothing anywhere else.
+    /// </summary>
+    private string Scope => Session.Target;
 
     /// <summary>Every candidate for the scope, unfiltered. Filtering is a view, not a re-rank.</summary>
     private IReadOnlyList<TradeCandidate> _all = [];
@@ -613,12 +618,12 @@ else
     /// they are looking at two different things.
     /// </summary>
     private string ScopeLabel =>
-        _scope == "chases" ? "all chase lists"
-        : _scope.StartsWith("chase:", StringComparison.Ordinal)
-            ? Session.ChaseListById(_scope[6..])?.Name ?? "a chase list"
-        : _scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {_scope[7..]}"
-        : _scope == "everything" ? "everything you collect"
-        : $"{_scope}: {Session.Sets.DisplayName(_scope)}";
+        Scope == "chases" ? "all chase lists"
+        : Scope.StartsWith("chase:", StringComparison.Ordinal)
+            ? Session.ChaseListById(Scope[6..])?.Name ?? "a chase list"
+        : Scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {Scope[7..]}"
+        : Scope == "everything" ? "everything you collect"
+        : $"{Scope}: {Session.Sets.DisplayName(Scope)}";
 
     private string ViewLabel => _view switch
     {
@@ -657,11 +662,11 @@ else
         _ => "with"
     };
 
-    private ICompletionTarget CurrentTarget() => Session.TargetForScope(_scope);
+    private ICompletionTarget CurrentTarget() => Session.TargetForScope(Scope);
 
     private Task OnScope(ChangeEventArgs e)
     {
-        _scope = e.Value?.ToString() ?? "everything";
+        Session.SetTarget(e.Value?.ToString() ?? "everything");
 
         // Ranking walks every outstanding demand and the whole surplus pool, so "everything"
         // is real work rather than a filter change.

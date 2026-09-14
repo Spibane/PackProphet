@@ -63,10 +63,15 @@
     }
     else
     {
+        @* The same spelling as the grouped branch above. These two emitted "set:A1" and "A1" for
+           one set, which cost nothing while each page kept its own scope -- TargetForScope reads
+           both -- and broke the moment the four pages shared one: Packs wrote "A1", this control
+           looked for "set:A1", found no match and fell back to showing "Everything" while the bar
+           above it correctly said Genetic Apex. *@
         <optgroup label="Sets">
             @foreach (var set in Session.Index.OpenableSets.OrderBy(Session.Sets.SortKey, StringComparer.Ordinal))
             {
-                <option value="set:@set" selected="@(Scope == $"set:{set}")">@set</option>
+                <option value="@set" selected="@(Scope == set)">@set</option>
             }
         </optgroup>
     }

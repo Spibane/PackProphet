@@ -38,7 +38,7 @@ else
     <PageRail Id="board-rail" OpenLabel="Tuning" Count="@TuningCount">
         <div class="rail-group">
             <span class="ttl">Working Toward</span>
-            <ScopePicker Label="What the slots should work toward" Scope="@_scope" OnScope="OnScope" />
+            <ScopePicker Label="What the slots should work toward" Scope="@Scope" OnScope="OnScope" />
         </div>
 
         @* Three knobs, each with its own visible label. They wrapped the old bar to three rows at
@@ -411,7 +411,12 @@ else
 }
 
 @code {
-    private string _scope = "everything";
+    /// <summary>
+    /// What this page works toward, shared with the other three Answer pages and persisted. See
+    /// <see cref="AppSession.Target"/>: it is one question asked on four screens, and four copies
+    /// of the answer meant setting it here changed nothing anywhere else.
+    /// </summary>
+    private string Scope => Session.Target;
     private BoardPlan? _plan;
 
     @* Read straight from saved settings rather than copied into local fields: all three change what
@@ -486,7 +491,7 @@ else
         _plan = Session.RecommendBoard(CurrentTarget(), _liquidSlots, _floor, _foils);
     }
 
-    private ICompletionTarget CurrentTarget() => Session.TargetForScope(_scope);
+    private ICompletionTarget CurrentTarget() => Session.TargetForScope(Scope);
 
     /// <summary>
     /// Newest set first, then collector number. Selection order is by value, which is no use for
@@ -523,7 +528,7 @@ else
 
     private Task OnScope(ChangeEventArgs e)
     {
-        _scope = e.Value?.ToString() ?? "everything";
+        Session.SetTarget(e.Value?.ToString() ?? "everything");
         return Busy.RunAsync("Choosing slots…", Rebuild);
     }
 

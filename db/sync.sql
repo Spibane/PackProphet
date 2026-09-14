@@ -191,12 +191,23 @@ begin
     --
     -- Told apart so the log says which one happened. 55000 is object_not_in_prerequisite_state:
     -- the document is not in the state the caller believed it was.
+    -- The values go in the message, not just the code.
+    --
+    -- Postgres logs the parameters as $1, so a refusal says which rule fired and nothing about
+    -- what fired it -- and these two are only meaningful against the numbers involved. A caller
+    -- sending the same stale version on every call looks identical in the log to two devices
+    -- genuinely racing, until you can see that the expected version never moves.
+    --
+    -- Safe to write down: the writer is a random per-install string and the versions are counters.
+    -- Neither says anything about the collection, which the database cannot read in any case.
     if expected_version is null then
-        raise exception 'document exists but the caller expected none' using errcode = '55000';
+        raise exception 'document exists (version %) but writer % expected none',
+            held_version, doc_writer using errcode = '55000';
     end if;
 
     if held_version <> expected_version then
-        raise exception 'another device wrote first' using errcode = '40001';
+        raise exception 'writer % expected version %, stored is %',
+            doc_writer, expected_version, held_version using errcode = '40001';
     end if;
 
     update public.sync_docs

@@ -25,6 +25,8 @@
    The page still has to say in its own bar what the controls are set to. A count whose filters are
    out of sight is a lie, and on a phone they are all out of sight. *@
 
+@inject IJSRuntime JS
+
 <div class="page-rail sheet" popover id="@Id">
     @* Sheet only, by the stylesheet: on a column there is nothing to dismiss. *@
     <SheetHandle For="@Id" Label="@OpenLabel" />
@@ -56,6 +58,39 @@
 </div>
 
 @code {
+    /// <summary>
+    /// Where the pinned bars above this rail end, published for the stylesheet after every render.
+    ///
+    /// The rail pins under them and is as tall as what is left of the window, and neither number
+    /// is one CSS has: the page header's height is a title, an optional sentence and whatever
+    /// controls the page put on it. js/railfold.js does the measuring and owns the property — see
+    /// there for why it is measured rather than assumed, and why it is not the card grid's
+    /// --bars-h.
+    ///
+    /// Called from here rather than from an observer in that file because this is the moment it
+    /// wants: the rail and the header it measures against are both in the DOM, on the page that
+    /// has just rendered. The alternative is watching the app root's subtree for a page swap,
+    /// which fires for every row a virtualised grid renders while you scroll.
+    ///
+    /// Failures are swallowed. This is geometry: the stylesheet's fallback puts the rail at the
+    /// top of the window, which is where it sat before any of this existed, and a page that
+    /// cannot reach JS at all has larger problems than a rail pinned 95px high.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("ppRail.pin");
+        }
+        catch (JSException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+            // Prerendering, where there is no JS to call yet.
+        }
+    }
+
     /// <summary>
     /// DOM id, which the opening buttons point at. Unique per page: two popovers sharing one id
     /// means popovertarget resolves to the first and the second can never be opened.

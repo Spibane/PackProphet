@@ -17,11 +17,15 @@ internal sealed class RpcHandler(HttpStatusCode status, string body) : HttpMessa
 {
     public string? LastPath { get; private set; }
     public string? LastBody { get; private set; }
+    public string? LastApiKey { get; private set; }
+    public string? LastAuthorization { get; private set; }
 
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken ct)
     {
         LastPath = request.RequestUri!.AbsolutePath;
+        LastApiKey = request.Headers.TryGetValues("apikey", out var key) ? key.First() : null;
+        LastAuthorization = request.Headers.Authorization?.ToString();
         LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(ct);
 
         return new HttpResponseMessage(status)
@@ -51,6 +55,46 @@ public class SyncTransportTests
         Assert.False(new SyncOptions().Configured);
         Assert.False(new SyncOptions { Url = "https://YOUR-PROJECT.supabase.co", AnonKey = "k" }.Configured);
         Assert.True(Configured.Configured);
+    }
+
+    [Fact]
+    public void A_proxy_alone_is_enough_to_be_configured()
+    {
+        // The key is the worker's, not the app's, so a build that has a proxy and nothing else is
+        // fully set up. Requiring a key here would mean shipping one to be ignored.
+        var proxied = new SyncOptions { ProxyUrl = "https://sync.example.workers.dev" };
+
+        Assert.True(proxied.Configured);
+        Assert.True(proxied.Proxied);
+        Assert.False(Configured.Proxied);
+    }
+
+    [Fact]
+    public async Task Behind_a_proxy_the_app_carries_no_key()
+    {
+        // The point of the worker. A key in the page is one anyone can read and use to call the
+        // project directly, at any rate they like, going round every limit the worker enforces.
+        var handler = new RpcHandler(HttpStatusCode.OK, "[]");
+        var transport = new SyncTransport(
+            new SyncOptions { ProxyUrl = "https://sync.example.workers.dev" }, handler);
+
+        await transport.PullAsync(Keys);
+
+        Assert.Equal("/sync_pull", handler.LastPath);
+        Assert.Null(handler.LastApiKey);
+        Assert.Null(handler.LastAuthorization);
+    }
+
+    [Fact]
+    public async Task Talking_to_Supabase_directly_still_sends_the_key()
+    {
+        var handler = new RpcHandler(HttpStatusCode.OK, "[]");
+        var transport = new SyncTransport(Configured, handler);
+
+        await transport.PullAsync(Keys);
+
+        Assert.Equal("/rest/v1/rpc/sync_pull", handler.LastPath);
+        Assert.Equal("test-anon-key", handler.LastApiKey);
     }
 
     [Fact]

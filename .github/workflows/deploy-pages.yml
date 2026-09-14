@@ -60,19 +60,44 @@ jobs:
       #
       # Unset variables are a supported state rather than a failure: the deploy ships with sync
       # switched off, which is what a fork wants.
+      #
+      # PACKPROPHET_SYNC_PROXY takes precedence over both, and is the shape to prefer: the worker
+      # in workers/sync-proxy holds the key, so the deployed app carries no credential at all and
+      # requests over the rate are refused before Supabase is reached. See that folder's readme.
       - name: Point sync at the project
         env:
           SYNC_URL: ${{ vars.PACKPROPHET_SYNC_URL }}
           SYNC_KEY: ${{ vars.PACKPROPHET_SYNC_KEY }}
+          SYNC_PROXY: ${{ vars.PACKPROPHET_SYNC_PROXY }}
           SETTINGS: src/PackProphet.App/wwwroot/appsettings.json
           INDEX: src/PackProphet.App/wwwroot/index.html
         run: |
           set -euo pipefail
 
+          if [ -n "${SYNC_PROXY}" ]; then
+            host=${SYNC_PROXY#https://}
+            host=${host%/}
+            export HOST="${host}"
+
+            python3 -c "import json, os; p = os.environ['SETTINGS']; d = json.load(open(p)); d['Sync']['ProxyUrl'] = os.environ['SYNC_PROXY']; open(p, 'w').write(json.dumps(d, indent=2) + '\n')"
+            python3 -c "import os; p = os.environ['INDEX']; t = open(p).read(); open(p, 'w').write(t.replace('YOUR-PROJECT.supabase.co', os.environ['HOST']))"
+
+            # The key must NOT have been written. A build that carried both would send the app's
+            # requests through the worker and hand anyone reading the page the means to go round it.
+            python3 -c "import json, os, sys; d = json.load(open(os.environ['SETTINGS'])); sys.exit(0 if not d['Sync'].get('AnonKey') else 1)" \
+              || { echo "::error::a proxied build must ship no anon key"; exit 1; }
+
+            grep -q "${host}" "${INDEX}" || { echo "::error::connect-src does not name ${host}"; exit 1; }
+            echo "sync proxied through ${host}"
+            exit 0
+          fi
+
           if [ -z "${SYNC_URL}" ] || [ -z "${SYNC_KEY}" ]; then
             echo "::notice::PACKPROPHET_SYNC_URL/KEY not set - deploying with cloud sync off"
             exit 0
           fi
+
+          echo "::warning::deploying with the anon key in the page - see workers/sync-proxy"
 
           host=${SYNC_URL#https://}
           host=${host%/}

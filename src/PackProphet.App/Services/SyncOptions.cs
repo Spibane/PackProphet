@@ -21,11 +21,30 @@ public sealed class SyncOptions
     public string AnonKey { get; set; } = "";
 
     /// <summary>
+    /// A proxy in front of the project, e.g. https://packprophet-sync.someone.workers.dev.
+    ///
+    /// Set, and the app sends its three calls here and carries no key at all. That is the point:
+    /// the key above has to be in the page for the app to reach Supabase directly, so anyone can
+    /// read it and call the project as fast as they like, and a call spends the quota whether or
+    /// not it succeeds. Nothing in the database can refuse a request that has already arrived.
+    /// Behind a proxy the key is a secret the page does not hold, and requests over the rate are
+    /// turned away before Supabase is involved.
+    ///
+    /// See workers/sync-proxy. Blank keeps the direct path, which is right for a fork that would
+    /// rather not run one.
+    /// </summary>
+    public string ProxyUrl { get; set; } = "";
+
+    /// <summary>True when the calls go through <see cref="ProxyUrl"/> rather than to Supabase.</summary>
+    public bool Proxied => !string.IsNullOrWhiteSpace(ProxyUrl);
+
+    /// <summary>
     /// True when this build has somewhere to sync to. False hides the feature rather than offering
     /// a button that cannot work -- a fork of this repo gets a working app, not a broken setting.
     /// </summary>
     public bool Configured =>
-        !string.IsNullOrWhiteSpace(Url)
-        && !string.IsNullOrWhiteSpace(AnonKey)
-        && !Url.Contains("YOUR-PROJECT", StringComparison.OrdinalIgnoreCase);
+        Proxied
+        || (!string.IsNullOrWhiteSpace(Url)
+            && !string.IsNullOrWhiteSpace(AnonKey)
+            && !Url.Contains("YOUR-PROJECT", StringComparison.OrdinalIgnoreCase));
 }

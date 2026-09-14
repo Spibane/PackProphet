@@ -45,7 +45,7 @@ public sealed class RarityLadderTarget : ICompletionTarget
     public static RarityLadderTarget UpTo(string set, int topTierIndex, CardIndex index, int copies = 1) =>
         new(set, RarityPlan.UpTo(index.Ladder, topTierIndex, copies));
 
-    public string Describe() => $"{_set}, {_plan.WantedTiers.Count} rarity tier(s)";
+    public string Describe() => $"{_set}, {_plan.WantedTiers.Count} rarity {Text.Fmt.S(_plan.WantedTiers.Count, "tier")}";
 
     /// <summary>
     /// Copies of one card this target asks for, or zero if it wants none.

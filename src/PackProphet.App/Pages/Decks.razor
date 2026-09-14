@@ -155,8 +155,9 @@ else
 
                                 @if (deck.Report is { HasErrors: true })
                                 {
+                                    var errors = deck.Report.Of(LintSeverity.Error).Count();
                                     <span class="badge text-bg-danger">
-                                        @deck.Report.Of(LintSeverity.Error).Count() error(s)
+                                        @errors @Text.Fmt.S(errors, "error")
                                     </span>
                                 }
                                 else if (deck.Report is { FullyVerified: false })
@@ -261,8 +262,9 @@ else
                                 }
                                 else if (deck.Report.HasErrors)
                                 {
+                                    var errors = deck.Report.Of(LintSeverity.Error).Count();
                                     <span class="badge text-bg-danger">
-                                        @deck.Report.Of(LintSeverity.Error).Count() error(s)
+                                        @errors @Text.Fmt.S(errors, "error")
                                     </span>
                                 }
                                 else if (!deck.Report.FullyVerified)

@@ -65,7 +65,7 @@ else
                 <div class="stat">
                     <span class="label">Packs Logged</span>
                     <span class="value">@_log.Count</span>
-                    <span class="sub">@_cards cards recorded</span>
+                    <span class="sub">@_cards @Fmt.S(_cards, "card") recorded</span>
                 </div>
                 <div class="stat">
                     <span class="label">Since</span>
@@ -85,13 +85,13 @@ else
                 <div class="stat">
                     <span class="label">Duplicates</span>
                     <span class="value">@_duplicateShare.ToString("P0")</span>
-                    <span class="sub">@_distinctPulled distinct card(s) pulled</span>
+                    <span class="sub">@_distinctPulled distinct @Fmt.S(_distinctPulled, "card") pulled</span>
                 </div>
                 <div class="stat">
                     <span class="label">Streak</span>
                     <span class="value">@_streak</span>
                     <span class="sub">
-                        day(s) in a row@(_bestStreak > _streak ? $" · best {_bestStreak}" : "")
+                        @Fmt.S(_streak, "day") in a row@(_bestStreak > _streak ? $" · best {_bestStreak}" : "")
                     </span>
                 </div>
                 <div class="stat">
@@ -102,7 +102,7 @@ else
                 <div class="stat">
                     <span class="label">Most Opened</span>
                     <span class="value fs-6">@_favouritePack</span>
-                    <span class="sub">@_favouriteCount pack(s) · @_sets set(s) touched</span>
+                    <span class="sub">@_favouriteCount @Fmt.S(_favouriteCount, "pack") · @_sets @Fmt.S(_sets, "set") touched</span>
                 </div>
                 <div class="stat">
                     <span class="label">Points Earned</span>
@@ -124,7 +124,7 @@ else
                     <div class="hits-empty">
                         <span class="value">No Hits Yet</span>
                         <span class="sub">
-                            @_log.Count pack(s) in. Adjust what counts below if this is too strict.
+                            @_log.Count @Fmt.S(_log.Count, "pack") in. Adjust what counts below if this is too strict.
                         </span>
                     </div>
                 }
@@ -226,7 +226,7 @@ else
             <div class="bars" role="img" aria-label="@BarsSummary">
                 @foreach (var day in _perDay)
                 {
-                    <div class="bar-col" data-tip="@day.Date.ToString("ddd d MMM"): @day.Count pack(s)">
+                    <div class="bar-col" data-tip="@day.Date.ToString("ddd d MMM"): @day.Count @Fmt.S(day.Count, "pack")">
                         <div class="bar" style="height:@Height(day.Count, _perDayMax)%"></div>
                     </div>
                 }
@@ -430,7 +430,7 @@ else
             @if (_unpriceable > 0)
             {
                 <Notice Severity="Notice.Level.Info" Dense="true">
-                    @_unpriceable logged pack(s) came from a set with no published pull rates, so
+                    @_unpriceable logged @Fmt.S(_unpriceable, "pack") came from a set with no published pull rates, so
                     they are left out of the comparison entirely rather than counted as zero.
                 </Notice>
             }
@@ -447,7 +447,7 @@ else
                 <div class="small fw-semibold mt-2">
                     @ScopeLabel()
                     <span class="text-body-secondary fw-normal ms-1">
-                        @_scopePacks.ToString("0.#") pack(s)@(_lifetimeActive ? " estimated" : "")
+                        @_scopePacks.ToString("0.#") @Fmt.S(_scopePacks, "pack")@(_lifetimeActive ? " estimated" : "")
                     </span>
                 </div>
                 <DataTable Label="Pulls against expected, by rarity" Fit="true">
@@ -488,7 +488,7 @@ else
                                   style="--art:url('@Session.PackArtUrl($"{entry.Set}:{entry.Pack}")')"></span>
                             <span class="nm">@entry.Pack</span>
                             <span class="cards">
-                                @entry.OwnershipKeys.Count cards
+                                @entry.OwnershipKeys.Count @Fmt.S(entry.OwnershipKeys.Count, "card")
                                 @if (NewIn(entry) is > 0 and var fresh)
                                 {
                                     <text> &middot; </text><strong>@fresh new</strong>
@@ -612,14 +612,14 @@ else
     {
         {
             if (packs < 100)
-                return $"{packs} packs is a small sample, so a rarity a fifth off is ordinary "
+                return $"{packs} {Fmt.S(packs, "pack")} is a small sample, so a rarity a fifth off is ordinary "
                      + "variance rather than evidence the model is wrong.";
 
             if (packs < 500)
-                return $"{packs} packs is enough to notice a persistent gap and not enough to "
+                return $"{packs} {Fmt.S(packs, "pack")} is enough to notice a persistent gap and not enough to "
                      + "trust a single row. Read it as a check on the model, not on your luck.";
 
-            return $"{packs} packs is a large enough sample that a gap which does not close is "
+            return $"{packs} {Fmt.S(packs, "pack")} is a large enough sample that a gap which does not close is "
                  + "worth reporting. It is still a check on the model, not on your luck.";
         }
     }

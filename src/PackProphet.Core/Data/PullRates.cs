@@ -130,7 +130,7 @@ public sealed class PullRates
         // collection.
         if (total <= 0)
             throw new InvalidOperationException(
-                $"Set '{set}' has {vs.Count} pack variant(s) but their appearance rates sum to {total}. " +
+                $"Set '{set}' has {vs.Count} pack {Text.Fmt.S(vs.Count, "variant")} but their appearance rates sum to {total}. " +
                 "This usually means appearance_rate failed to deserialize.");
 
         return vs.Select(kv => (kv.Key, kv.Value.AppearanceRate / total, kv.Value)).ToArray();

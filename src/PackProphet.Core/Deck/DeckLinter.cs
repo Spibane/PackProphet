@@ -187,7 +187,7 @@ public sealed class DeckLinter
 
         if (missing.Count > 0)
             findings.Add(new(LintSeverity.Info, "not-owned",
-                $"You are missing {missing.Count} card(s): {string.Join(", ", missing)}."));
+                $"You are missing {missing.Count} {Text.Fmt.S(missing.Count, "card")}: {string.Join(", ", missing)}."));
     }
 
     private string? NameOf(int nr) =>

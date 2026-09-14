@@ -137,7 +137,7 @@ else if (Id is null)
 
                             <div class="meta">
                                 <span class="small text-body-secondary">
-                                    @list.Wanted card(s) wanted
+                                    @list.Wanted @Text.Fmt.S(list.Wanted, "card") wanted
                                 </span>
                             </div>
 
@@ -559,7 +559,7 @@ else
             @if (_added > 0)
             {
                 <Notice Severity="Notice.Level.Success">
-                    Added @_added card(s) to <strong>@_list.Name</strong>.
+                    Added @_added @Text.Fmt.S(_added, "card") to <strong>@_list.Name</strong>.
                     <button class="btn btn-sm btn-link p-0 align-baseline"
                             @onclick="UndoAdd">Undo</button>
                 </Notice>

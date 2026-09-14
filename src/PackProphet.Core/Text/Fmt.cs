@@ -63,6 +63,14 @@ public static class Fmt
     /// <summary>Plural helper, for the many places a count is read aloud in a sentence.</summary>
     public static string S(int n, string singular, string? plural = null) =>
         n == 1 ? singular : plural ?? singular + "s";
+
+    /// <summary>
+    /// The same, for a figure that is printed with a decimal. It agrees with what is SHOWN rather
+    /// than with the underlying double: 1.04 packs prints as "1" at one decimal place, and "1
+    /// packs" is the bug this exists to stop.
+    /// </summary>
+    public static string S(double n, string singular, string? plural = null) =>
+        Math.Round(n, 1) == 1d ? singular : plural ?? singular + "s";
 }
 
 /// <summary>

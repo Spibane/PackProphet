@@ -197,6 +197,24 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     /// </summary>
     public string? ChaseOrder { get; init; }
 
+    /// <summary>
+    /// What the four Answer pages work toward: "everything", a set, "series:X", a chase list, or
+    /// "chases". One setting rather than four, because it is one question -- the pack ranking, the
+    /// trade queue, the wishlist and the Wonder Pick bar all answer "given what I am collecting,
+    /// what should I do next", and they were each keeping their own copy of what that was. Four
+    /// buttons labelled Target, four sheets behind them, and setting one changed nothing anywhere
+    /// else.
+    ///
+    /// Here rather than on the profile, like the shelf orders above, even though a chase list
+    /// belongs to one collection: switching collections leaves a scope naming a list that is not
+    /// there, and <c>NormalizeScope</c> already answers that with "everything" rather than an
+    /// empty target.
+    ///
+    /// Null means never chosen, and the reader supplies the default -- so this needs no schema
+    /// bump, and a scope written by a later version falls back rather than throwing.
+    /// </summary>
+    public string? Target { get; init; }
+
     /// <summary>The v3 spelling of <see cref="ChaseGrid"/>. Read and cleared, as on the profile.</summary>
     public bool? WishGrid { get; init; }
 

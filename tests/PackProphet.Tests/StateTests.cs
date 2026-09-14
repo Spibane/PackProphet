@@ -79,6 +79,21 @@ public class StateTests
     /// empty grid. Zero is the "never chosen" sentinel and readers substitute a default.
     /// </summary>
     [Fact]
+    public void Prefs_RoundTripTheSharedTarget()
+    {
+        // The point of sharing it across the four Answer pages is that it is set once. A target
+        // that came back as "everything" on the next visit would be the per-page scope again.
+        var state = AppState.Fresh() with { Prefs = new Prefs() with { Target = "series:A" } };
+
+        var reloaded = StateSerializer.Deserialize(StateSerializer.Serialize(state))!;
+
+        Assert.Equal("series:A", reloaded.Prefs.Target);
+        // Null rather than a written default, so an older save reads as never chosen and the
+        // reader supplies "everything".
+        Assert.Null(StateSerializer.Deserialize(StateSerializer.Serialize(AppState.Fresh()))!.Prefs.Target);
+    }
+
+    [Fact]
     public void Prefs_RoundTripColumnCounts_AndOlderSavesReadAsUnset()
     {
         var state = AppState.Fresh() with

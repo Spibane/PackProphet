@@ -1206,6 +1206,34 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// What the Answer pages are working toward, normalised: a scope naming a chase list that has
+    /// since been deleted reads as "everything", so the picker and the figures under it cannot
+    /// disagree about what is being ranked.
+    /// </summary>
+    public string Target => NormalizeScope(Canonical(State.Prefs.Target ?? "everything"));
+
+    /// <summary>
+    /// One spelling for a set. TargetForScope accepts "set:A1" and "A1" alike, which was harmless
+    /// while each page kept its own scope and is not once they share one: a picker comparing the
+    /// stored string against its own option values has to be looking at the same string.
+    /// </summary>
+    private static string Canonical(string scope) =>
+        scope.StartsWith("set:", StringComparison.Ordinal) ? scope[4..] : scope;
+
+    /// <summary>
+    /// Set it once, for every page that asks. Raises Changed like any other edit, which is how the
+    /// page that did the setting gets its own recompute.
+    /// </summary>
+    public void SetTarget(string scope)
+    {
+        scope = Canonical(scope);
+        if (scope == State.Prefs.Target) return;
+        State = State with { Prefs = State.Prefs with { Target = scope } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
     public bool ChaseGrid => State.Prefs.ChaseGrid;
 
     public void SetChaseGrid(bool on)

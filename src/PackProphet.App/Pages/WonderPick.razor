@@ -20,7 +20,7 @@ else
            which is on screen exactly when there is nothing else to show. The bar's job is the
            setting: what counts as wanted decides every figure here, and it is folded away. *@
         <span class="subtitle">
-            <span class="lbl">Target:</span> @Session.ScopeLabel(_scope)
+            <span class="lbl">Target:</span> @Session.ScopeLabel(Scope)
         </span>
 
         <span class="actions">
@@ -47,7 +47,7 @@ else
         <div class="rail-group">
             <span class="ttl">What Counts as Wanted</span>
             <ScopePicker Label="What Counts as Wanted"
-                         Grouped="true" Scope="@_scope" OnScope="OnScope" />
+                         Grouped="true" Scope="@Scope" OnScope="OnScope" />
         </div>
     </PageSheet>
 
@@ -504,7 +504,12 @@ else
 
     private readonly List<PocketCard> _offer = [];
     private OfferAppraisal? _appraisal;
-    private string _scope = "everything";
+    /// <summary>
+    /// What this page works toward, shared with the other three Answer pages and persisted. See
+    /// <see cref="AppSession.Target"/>: it is one question asked on four screens, and four copies
+    /// of the answer meant setting it here changed nothing anywhere else.
+    /// </summary>
+    private string Scope => Session.Target;
     private string _received = "";
     private string? _logged;
 
@@ -551,7 +556,7 @@ else
         InvokeAsync(StateHasChanged);
     }
 
-    private ICompletionTarget Target() => Session.TargetForScope(_scope);
+    private ICompletionTarget Target() => Session.TargetForScope(Scope);
 
     /// <summary>
     /// Rebuilt from the log rather than kept as a running figure: the value of a past offer
@@ -769,7 +774,7 @@ else
 
     private void OnScope(ChangeEventArgs e)
     {
-        _scope = e.Value?.ToString() ?? "everything";
+        Session.SetTarget(e.Value?.ToString() ?? "everything");
         RebuildHistory();
         Appraise();
     }

@@ -21,7 +21,7 @@ else
            Led by the word on the button that changes it, so the reading and its control are named
            the same thing. *@
         <span class="subtitle">
-            <span class="lbl">Target:</span> @Session.ScopeLabel(_scope)
+            <span class="lbl">Target:</span> @Session.ScopeLabel(Scope)
             @if (!IsChaseScope)
             {
                 <text> &middot; </text>
@@ -71,7 +71,7 @@ else
         <div class="rail-group">
             <span class="ttl">Ranking For</span>
             <ScopePicker Label="What to rank packs against"
-                         Grouped="true" Merged="true" Scope="@_scope" OnScope="OnScope" />
+                         Grouped="true" Merged="true" Scope="@Scope" OnScope="OnScope" />
         </div>
 
         @* One chip per rarity, carrying its own copy count. Selection and quantity are the same
@@ -652,7 +652,7 @@ else
                             @if (row.Best)
                             {
                                 <span class="badge text-bg-primary ms-1"
-                                      title="Best pack for @Session.ScopeLabel(_scope) right now">Open This</span>
+                                      title="Best pack for @Session.ScopeLabel(Scope) right now">Open This</span>
                             }
                             @if (row.Mark is { Length: > 0 } mark)
                             {
@@ -864,7 +864,12 @@ else
 }
 
 @code {
-    private string _scope = "everything";
+    /// <summary>
+    /// What this page works toward, shared with the other three Answer pages and persisted. See
+    /// <see cref="AppSession.Target"/>: it is one question asked on four screens, and four copies
+    /// of the answer meant setting it here changed nothing anywhere else.
+    /// </summary>
+    private string Scope => Session.Target;
     private string[] _sets = [];
 
     /// <summary>
@@ -926,7 +931,7 @@ else
     /// hidden under it: both talk about rungs, which a hand-picked list of cards does not.
     /// </summary>
     private bool IsChaseScope =>
-        _scope == "chases" || _scope.StartsWith("chase:", StringComparison.Ordinal);
+        Scope == "chases" || Scope.StartsWith("chase:", StringComparison.Ordinal);
 
     /// <summary>
     /// Which plan the chips edit: one set's, or the default that the rest follow. A set only
@@ -934,7 +939,7 @@ else
     /// an override — that would fork every set the moment it was looked at.
     /// </summary>
     /// <summary>The scoped set, if the scope is one at all. Null for "everything" and chase lists.</summary>
-    private string? ScopedSet => !IsChaseScope && _sets.Contains(_scope) ? _scope : null;
+    private string? ScopedSet => !IsChaseScope && _sets.Contains(Scope) ? Scope : null;
 
     private string? PlanScope =>
         ScopedSet is { } set && Session.HasPlanOverride(set) ? set : null;
@@ -976,7 +981,12 @@ else
         if (!Session.Ready) return;
 
         _sets = Session.Index.OpenableSets.ToArray();
-        if (Chase is { Length: > 0 } id && Session.ChaseListById(id) is not null) _scope = $"chase:{id}";
+        // Arriving from a chase list's own "Rank Packs" button. It SETS the shared target rather
+        // than overriding it for this visit: following that link is a deliberate statement of what
+        // you are working toward, and a ranking that disagreed with the bar above it would be the
+        // old per-page scope back again under a different name.
+        if (Chase is { Length: > 0 } id && Session.ChaseListById(id) is not null)
+            Session.SetTarget($"chase:{id}");
 
         // Arriving from another page still costs a full ranking, so it needs the same
         // indicator as changing a filter does — otherwise navigation looks like a hang.
@@ -997,7 +1007,7 @@ else
     private string _rankedFor = "";
 
     private string RankSignature() =>
-        $"{_scope}|{PlanScope}|{string.Join('.', Plan.CopiesByTier.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}:{kv.Value}"))}|" +
+        $"{Scope}|{PlanScope}|{string.Join('.', Plan.CopiesByTier.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}:{kv.Value}"))}|" +
         $"{Session.CollectionRevision}|{string.Join(',', Session.UnavailablePacks)}|" +
         // Borrowed rates change every number, so they belong in the signature — otherwise
         // arriving back on the page after assuming a set's rates would show the old ranking.
@@ -1023,7 +1033,7 @@ else
     /// itself, so what the user currently collects cannot change these numbers.
     /// </summary>
     private string Signature() =>
-        $"{_scope}|{string.Join(',', Session.UnavailablePacks)}|{Session.CollectionRevision}|" +
+        $"{Scope}|{string.Join(',', Session.UnavailablePacks)}|{Session.CollectionRevision}|" +
         $"foils:{Session.FoilCopies}|" +
         $"{string.Join(',', Session.AssumedRates.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}<{kv.Value}"))}";
 
@@ -1248,8 +1258,9 @@ else
     /// </summary>
     private ICompletionTarget CurrentTarget()
     {
-        _scope = Session.NormalizeScope(_scope);
-        return Session.TargetForScope(_scope);
+        // No normalising here any more: Session.Target does it on the way out, so the picker and
+        // the figures read the same string.
+        return Session.TargetForScope(Scope);
     }
 
     /// <summary>
@@ -1258,8 +1269,8 @@ else
     /// all of them.
     /// </summary>
     private string[] ScopeSets() =>
-        _scope.StartsWith("series:", StringComparison.Ordinal) ? Session.SetsInSeries(_scope[7..])
-        : _sets.Contains(_scope) ? [_scope]
+        Scope.StartsWith("series:", StringComparison.Ordinal) ? Session.SetsInSeries(Scope[7..])
+        : _sets.Contains(Scope) ? [Scope]
         : _sets;
 
     private void Recompute()
@@ -1574,9 +1585,12 @@ else
         var scope = e.Value?.ToString() ?? "everything";
         return Busy.RunAsync("Ranking packs\u2026", () =>
         {
-            _scope = scope;
             _advisor = [];      // stale for the new scope; repriced only if reopened
-            Recompute();
+
+            // The recompute comes from OnChanged, which this raises: the rank signature carries
+            // the scope, so setting it is what makes the page stale. Calling Recompute here as
+            // well would rank everything twice.
+            Session.SetTarget(scope);
         });
     }
 
@@ -1638,7 +1652,7 @@ else
             if (foilSets.Count == 0) return false;
 
             if (IsChaseScope) return false;
-            if (_scope == "everything") return true;
+            if (Scope == "everything") return true;
             if (ScopedSet is { } set) return foilSets.Contains(set);
 
             return ScopeSets().Any(foilSets.Contains);
@@ -1665,13 +1679,13 @@ else
 
     private Task StartOverride()
     {
-        if (IsChaseScope || !_sets.Contains(_scope)) return Task.CompletedTask;
+        if (IsChaseScope || !_sets.Contains(Scope)) return Task.CompletedTask;
 
         var seed = Session.Plan();
-        return Busy.RunAsync($"Giving {_scope} its own plan\u2026", () =>
+        return Busy.RunAsync($"Giving {Scope} its own plan\u2026", () =>
         {
             _draft = null;
-            Session.SetPlan(seed, _scope);
+            Session.SetPlan(seed, Scope);
             _advisor = [];
             Recompute();
         });
@@ -1679,9 +1693,9 @@ else
 
     private Task ClearOverride()
     {
-        if (IsChaseScope || !_sets.Contains(_scope)) return Task.CompletedTask;
+        if (IsChaseScope || !_sets.Contains(Scope)) return Task.CompletedTask;
 
-        var set = _scope;
+        var set = Scope;
         return Busy.RunAsync($"Returning {set} to the default plan\u2026", () =>
         {
             _draft = null;

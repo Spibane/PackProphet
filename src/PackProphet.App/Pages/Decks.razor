@@ -27,7 +27,7 @@ else
 
         <span class="actions">
             <a class="btn btn-sm btn-outline-primary" href="decks/import">Import</a>
-            <a class="btn btn-sm btn-primary" href="decks/new">New deck</a>
+            <a class="btn btn-sm btn-primary" href="decks/new">New Deck</a>
         </span>
     </div>
 
@@ -72,14 +72,14 @@ else
                 <select class="form-select form-select-sm" aria-label="Order the decks"
                         @onchange="OnOrder">
                     <option value="buildable" selected="@(_order == "buildable")">
-                        Closest to buildable
+                        Closest to Buildable
                     </option>
-                    <option value="name" selected="@(_order == "name")">By name</option>
-                    <option value="size" selected="@(_order == "size")">Fullest first</option>
+                    <option value="name" selected="@(_order == "name")">By Name</option>
+                    <option value="size" selected="@(_order == "size")">Fullest First</option>
                     @* Your own arrangement, which no computed key can express: the three above rank
                        decks by a property, and "these two first because I am playing them this
                        week" is not a property of a deck. *@
-                    <option value="custom" selected="@(_order == "custom")">My own order</option>
+                    <option value="custom" selected="@(_order == "custom")">My Own Order</option>
                 </select>
 
                 @if (_order == "custom")
@@ -96,13 +96,13 @@ else
         {
             <EmptyState>
                 No decks yet. <a href="decks/import">Import one</a> from the game's share code,
-                or <a href="decks/new">Build one from scratch</a>.
+                or <a href="decks/new">build one from scratch</a>.
             </EmptyState>
         }
         else if (Session.DeckGrid)
         {
             <h2 class="sub-head">
-                Your decks
+                Your Decks
                 @* What the shelf is actually in, rather than the default said unconditionally. It
                    read "Closest to buildable first" under every order the rail could pick. *@
                 <span class="small text-body-secondary fw-normal">@OrderSaid</span>
@@ -206,7 +206,7 @@ else
         else
         {
             <h2 class="sub-head">
-                Your decks
+                Your Decks
                 <span class="small text-body-secondary fw-normal">@OrderSaid</span>
             </h2>
             <DataTable Label="Saved decks">
@@ -324,10 +324,10 @@ else
     /// <summary>The order in words, under the heading, so the shelf says what it is in.</summary>
     private string OrderSaid => _order switch
     {
-        "name" => "By name",
-        "size" => "Fullest first",
-        "custom" => "Your own order",
-        _ => "Closest to buildable first",
+        "name" => "By Name",
+        "size" => "Fullest First",
+        "custom" => "Your Own Order",
+        _ => "Closest to Buildable First",
     };
 
     /// <summary>

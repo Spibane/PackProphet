@@ -414,7 +414,7 @@ public class TileCaptionTests : AppHost
         // The answer is a display line, the same shape every other Answer page leads with, rather
         // than a heading over a strip.
         var lead = page.Find(".card-detail .verdict-lead");
-        Assert.Contains("How to get it", lead.TextContent);
+        Assert.Contains("How to Get It", lead.TextContent);
         Assert.False(string.IsNullOrWhiteSpace(lead.QuerySelector(".name")?.TextContent));
 
         // And it comes first. Compared by position in the markup, because what is being asserted

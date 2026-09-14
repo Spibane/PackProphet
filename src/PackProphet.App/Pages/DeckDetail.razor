@@ -14,7 +14,7 @@ else if (_draft is null)
 {
     <PageShell Measure="PageShell.Width.Text">
         <p>That deck no longer exists.</p>
-        <a class="btn btn-sm btn-primary" href="decks">Back to decks</a>
+        <a class="btn btn-sm btn-primary" href="decks">Back to Decks</a>
     </PageShell>
 }
 else
@@ -37,11 +37,11 @@ else
         {
             @if (_missingCount > 0)
             {
-                <span class="badge text-bg-warning">@_missingCount missing</span>
+                <span class="badge text-bg-warning">@_missingCount Missing</span>
             }
             else
             {
-                <span class="badge text-bg-success">You own every card</span>
+                <span class="badge text-bg-success">You Own Every Card</span>
             }
         }
 
@@ -62,7 +62,7 @@ else
 
             <button class="btn btn-sm btn-primary" @onclick="Save" disabled="@(!Dirty)">Save</button>
             <button class="btn btn-sm btn-outline-secondary" @onclick="Discard" disabled="@(!Dirty)">
-                @(IsNew ? "Start over" : "Discard")
+                @(IsNew ? "Start Over" : "Discard")
             </button>
 
             @if (!IsNew)
@@ -79,9 +79,9 @@ else
         <Notice Severity="Notice.Level.Warning" Class="m-3">
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <strong>This deck has unsaved changes.</strong>
-                <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">Save and leave</button>
-                <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">Discard and leave</button>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">Stay here</button>
+                <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">Save and Leave</button>
+                <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">Discard and Leave</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">Stay Here</button>
             </div>
         </Notice>
     }
@@ -104,7 +104,7 @@ else
     @if (IsNew && _draft.DeckBuilderNrs.Count < GameRules.DeckSize)
     {
         <div class="todo-strip">
-            <span class="micro">Still to do</span>
+            <span class="micro">Still to Do</span>
             <span class="say">@DeckTodo</span>
         </div>
     }
@@ -229,7 +229,7 @@ else
                         @* Newer game versions no longer offer text codes, so this is for older
                            clients rather than the normal route. *@
                         <details>
-                            <summary class="small text-body-secondary">Show the code as text</summary>
+                            <summary class="small text-body-secondary">Show the Code as Text</summary>
                             <textarea class="form-control form-control-sm mt-1" rows="3" readonly>@_shareCode</textarea>
                         </details>
                     </div>
@@ -242,7 +242,7 @@ else
 
             @if (_missingCount > 0)
             {
-                <h2 class="sub-head">What you still need</h2>
+                <h2 class="sub-head">What You Still Need</h2>
                 <p class="small text-body-secondary">
                     Cheapest route per card. Trade and Wonder Pick are priced in their own
                     currencies, which do not convert into packs.
@@ -266,7 +266,7 @@ else
                     </tbody>
                 </DataTable>
 
-                <h2 class="sub-head">Best packs for this deck</h2>
+                <h2 class="sub-head">Best Packs for This Deck</h2>
                 @if (_ranked.Count == 0)
                 {
                     <p class="small text-body-secondary">
@@ -275,7 +275,7 @@ else
                 }
                 else
                 {
-                    <DataTable Label="Best packs for this deck" Class="pack-table">
+                    <DataTable Label="Best Packs for This Deck" Class="pack-table">
                         <thead>
                             @* The percentage and the same figure as packs, in the wording the
                                Which-pack table uses. A bare "6.9%" is not a number anyone acts on;
@@ -284,12 +284,12 @@ else
                                the packs figure is what decides. *@
                             <tr>
                                 <th scope="col">Pack</th>
-                                <th scope="col" class="num">Chance of a hit</th>
+                                <th scope="col" class="num">Chance of a Hit</th>
                                 <th scope="col" class="num"
                                     title="1 / the chance of a hit: how many packs, on average, before this one gives you something for the deck">
-                                    Packs per new card
+                                    Packs per New Card
                                 </th>
-                                <th scope="col" class="num">Cards it can give</th>
+                                <th scope="col" class="num">Cards It Can Give</th>
                             </tr>
                         </thead>
                         <tbody>

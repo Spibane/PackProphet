@@ -4,7 +4,7 @@
 @inject LocalStorageStateStore Store
 @implements IDisposable
 
-<PageTitle>Import and export · PackProphet</PageTitle>
+<PageTitle>Import and Export · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -14,7 +14,7 @@ else
 {
     <div class="page-head">
         <BackLink To="settings" Label="Settings" />
-        <h1 class="title">Import and export</h1>
+        <h1 class="title">Import and Export</h1>
         <span class="subtitle">Move a collection between trackers</span>
     </div>
 
@@ -44,7 +44,7 @@ else
             }
 
             <details class="mt-3">
-                <summary class="small text-body-secondary">Which files work</summary>
+                <summary class="small text-body-secondary">Which Files Work</summary>
                 <div class="pt-2 small text-body-secondary">
                     <p>
                         Any CSV or <code>.xlsx</code> with a column naming the card
@@ -73,26 +73,26 @@ else
             @* The figures come before the destination on purpose. The question the user is being
                asked is not "where should this go" but "is this the right file", and that is
                answered by the counts. *@
-            <h2>What this file says</h2>
+            <h2>What This File Says</h2>
             <DataTable Label="Import summary" Fit="true" Class="mb-3">
                 <tbody>
                     <tr>
-                        <th scope="row" class="fw-normal">Cards owned</th>
+                        <th scope="row" class="fw-normal">Cards Owned</th>
                         <td class="text-end fw-semibold">@p.DistinctOwned.ToString("N0")</td>
                     </tr>
                     <tr>
-                        <th scope="row" class="fw-normal">Copies in total</th>
+                        <th scope="row" class="fw-normal">Copies in Total</th>
                         <td class="text-end">@p.TotalCopies.ToString("N0")</td>
                     </tr>
                     <tr>
-                        <th scope="row" class="fw-normal">Rows read</th>
+                        <th scope="row" class="fw-normal">Rows Read</th>
                         <td class="text-end">@p.RowsRead.ToString("N0")</td>
                     </tr>
                     @if (p.RowsUnmatched > 0)
                     {
                         <tr>
                             <th scope="row" class="fw-normal text-warning-emphasis">
-                                Rows not recognised
+                                Rows Not Recognised
                             </th>
                             <td class="text-end text-warning-emphasis">
                                 @p.RowsUnmatched.ToString("N0")
@@ -136,17 +136,17 @@ else
 
             @if (p.DistinctOwned > 0)
             {
-                <h2>Where it should go</h2>
+                <h2>Where It Should Go</h2>
 
                 <fieldset class="mb-3">
-                    <legend class="visually-hidden">Import destination</legend>
+                    <legend class="visually-hidden">Import Destination</legend>
 
                     <div class="form-check">
                         <input class="form-check-input" type="radio" id="dest-new"
                                name="dest" checked="@(_destination == Destination.NewCollection)"
                                @onchange="@(() => _destination = Destination.NewCollection)" />
                         <label class="form-check-label" for="dest-new">
-                            <strong>A new collection</strong>
+                            <strong>A New Collection</strong>
                             <span class="d-block small text-body-secondary">
                                 Nothing already here is touched. The safe choice, and the one to
                                 take if you are not sure the file is right.
@@ -157,7 +157,7 @@ else
                     @if (_destination == Destination.NewCollection)
                     {
                         <div class="ms-4 mb-2" style="max-width: 22rem">
-                            <label class="form-label small mb-1" for="dest-name">Call it</label>
+                            <label class="form-label small mb-1" for="dest-name">Call It</label>
                             <input class="form-control form-control-sm" id="dest-name"
                                    @bind="_newName" @bind:event="oninput" />
                         </div>
@@ -199,7 +199,7 @@ else
                         @ApplyLabel
                     </button>
                     <button class="btn btn-outline-secondary" @onclick="Discard">
-                        Pick a different file
+                        Pick a Different File
                     </button>
                 </div>
 
@@ -215,12 +215,12 @@ else
             else
             {
                 <button class="btn btn-outline-secondary" @onclick="Discard">
-                    Pick a different file
+                    Pick a Different File
                 </button>
             }
         }
 
-        <h2>Send this collection somewhere else</h2>
+        <h2>Send This Collection Somewhere Else</h2>
         <p class="small text-body-secondary">
             A plain CSV, aimed at no site in particular: one row per card with
             <code>set</code>, <code>number</code>, <code>card_id</code>, <code>name</code>,
@@ -254,11 +254,11 @@ else
                     @if (Session.CanUndo)
                     {
                         <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoImport">
-                            Undo that
+                            Undo That
                         </button>
                     }
                     <a class="btn btn-sm btn-outline-primary py-0" href="collection">
-                        See the collection
+                        See the Collection
                     </a>
                 </div>
             </Notice>

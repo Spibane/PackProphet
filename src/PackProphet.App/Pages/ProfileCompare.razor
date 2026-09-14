@@ -2,7 +2,7 @@
 @implements IDisposable
 @inject AppSession Session
 
-<PageTitle>Compare collections · PackProphet</PageTitle>
+<PageTitle>Compare Collections · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -11,7 +11,7 @@
 else if (!Session.MultipleProfiles)
 {
     <div class="page-head">
-        <h1 class="title">Compare collections</h1>
+        <h1 class="title">Compare Collections</h1>
         <span class="subtitle">Trades you could make with yourself</span>
     </div>
     <PageShell Measure="PageShell.Width.Wide">
@@ -19,13 +19,13 @@ else if (!Session.MultipleProfiles)
             Only one collection, so nothing to compare yet. You can trade with your own alt
             account, which is what this page is for.
         </p>
-        <a class="btn btn-sm btn-primary" href="settings">Add a collection</a>
+        <a class="btn btn-sm btn-primary" href="settings">Add a Collection</a>
     </PageShell>
 }
 else
 {
     <div class="page-head folded">
-        <h1 class="title">Compare collections</h1>
+        <h1 class="title">Compare Collections</h1>
         @* Which two, and what is currently narrowing the answer. The page compares one pair at a
            time and the filter changes which rows exist, so a reader who cannot see either is
            reading a list that means something other than what it says. *@
@@ -46,7 +46,7 @@ else
        controls do not earn a strip across a page whose answer is two verdicts and two lists. *@
     <PageSheet Id="compare-target" Label="Pairing">
         <div class="rail-group">
-            <span class="ttl">Compare with</span>
+            <span class="ttl">Compare With</span>
             <select class="form-select form-select-sm" aria-label="Collection to compare with" @onchange="OnPick">
                 @foreach (var profile in Others)
                 {
@@ -60,7 +60,7 @@ else
             <label class="small">
                 <input type="checkbox" class="form-check-input me-1" checked="@_readyOnly"
                        @onchange="e => _readyOnly = (bool)(e.Value ?? false)" />
-                Only what both can afford today
+                Only What Both Can Afford Today
             </label>
         </div>
     </PageSheet>
@@ -103,7 +103,7 @@ else
 
                     <div class="lead-head">
                       <div class="lead-text">
-                        <h2 class="name take">@ShareTotal @Card(ShareTotal) can just be sent</h2>
+                        <h2 class="name take">@ShareTotal @Card(ShareTotal) Can Just Be Sent</h2>
                         <p class="then">No card back, no dust, no stamina</p>
                         <p class="says">
                         @if (_swaps.IncomingShares.Count > 0)
@@ -124,7 +124,7 @@ else
                     </div>
                 </div>
 
-                <h2>Free to send</h2>
+                <h2>Free to Send</h2>
                 <p class="small text-body-secondary">
                     Diamonds only, one way, and free. The accounts have to be friends in-game.
                 </p>
@@ -149,7 +149,7 @@ else
 
                 @if (_swaps.Swaps.Count > 0 || _swaps.Unpayable.Count > 0)
                 {
-                    <h2>Trades, for what a Share cannot carry</h2>
+                    <h2>Trades, for What a Share Cannot Carry</h2>
                 }
             }
 
@@ -158,7 +158,7 @@ else
                 <div class="verdict-lead" aria-live="polite">
                     <div class="lead-head">
                       <div class="lead-text">
-                        <h2 class="name skip">No trade is possible yet</h2>
+                        <h2 class="name skip">No Trade Is Possible Yet</h2>
                         <p class="says">
                             @_swaps.Unpayable.Count @Card(_swaps.Unpayable.Count) in
                             @_swaps.Theirs.Name would fill a gap here, but they are above the
@@ -223,8 +223,8 @@ else
                 <DataTable Label="Possible swaps">
                     <thead>
                         <tr>
-                            <th scope="col">@_swaps.Mine.Name gets</th>
-                            <th scope="col">@_swaps.Theirs.Name gets</th>
+                            <th scope="col">@_swaps.Mine.Name Gets</th>
+                            <th scope="col">@_swaps.Theirs.Name Gets</th>
                             <th scope="col">Rarity</th>
                             <th scope="col" class="num" title="Expected packs the receiving account would not have to open">Packs Saved</th>
                             <th scope="col" class="num">Dust Each</th>
@@ -294,7 +294,7 @@ else
                reads as a bug rather than as a rule. *@
             @if (_swaps.Unpayable.Count > 0)
             {
-                <h2>Wanted, but nothing to pay with</h2>
+                <h2>Wanted, but Nothing to Pay With</h2>
                 <p class="small text-body-secondary">
                     @_swaps.Theirs.Name holds these spare and @_swaps.Mine.Name wants them, but
                     they are above 4 diamonds and there is no spare at that rarity to send back.
@@ -327,7 +327,7 @@ else
 
             @if (_swaps.Unwanted.Count > 0)
             {
-                <h2>Yours to send, once something comes back</h2>
+                <h2>Yours to Send, Once Something Comes Back</h2>
                 <p class="small text-body-secondary">
                     @_swaps.Theirs.Name wants these and @_swaps.Mine.Name has them spare, but every
                     swap at those rarities is already paired above.

@@ -6,7 +6,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
-<PageTitle>@(_list?.Name ?? "Chase lists") · PackProphet</PageTitle>
+<PageTitle>@(_list?.Name ?? "Chase Lists") · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -15,7 +15,7 @@
 else if (Id is null)
 {
     <div class="page-head folded">
-        <h1 class="title">Chase lists</h1>
+        <h1 class="title">Chase Lists</h1>
         @* The useful count rather than the saved one, as on the decks shelf beside it: how many
            are finished is what you came to find out, and it is the figure that moves when you open
            a pack. *@
@@ -28,7 +28,7 @@ else if (Id is null)
             }
         </span>
         <span class="actions">
-            <button class="btn btn-sm btn-primary" @onclick="NewList">New chase list</button>
+            <button class="btn btn-sm btn-primary" @onclick="NewList">New Chase List</button>
         </span>
     </div>
 
@@ -67,12 +67,12 @@ else if (Id is null)
                 <select class="form-select form-select-sm" aria-label="Order the chase lists"
                         @onchange="OnOrder">
                     <option value="closest" selected="@(_order == "closest")">
-                        Closest to complete
+                        Closest to Complete
                     </option>
-                    <option value="name" selected="@(_order == "name")">By name</option>
-                    <option value="size" selected="@(_order == "size")">Biggest first</option>
+                    <option value="name" selected="@(_order == "name")">By Name</option>
+                    <option value="size" selected="@(_order == "size")">Biggest First</option>
                     @* Your own arrangement, which no computed key can express. *@
-                    <option value="custom" selected="@(_order == "custom")">My own order</option>
+                    <option value="custom" selected="@(_order == "custom")">My Own Order</option>
                 </select>
 
                 @if (_order == "custom")
@@ -104,7 +104,7 @@ else if (Id is null)
                 <ChildContent>No chase lists yet.</ChildContent>
                 <Action>
                     <button class="btn btn-sm btn-primary" @onclick="NewList">
-                        Start your first list
+                        Start Your First List
                     </button>
                 </Action>
             </EmptyState>
@@ -128,7 +128,7 @@ else if (Id is null)
                            aria-label="Open @list.Name">
                             @if (list.Face is null)
                             {
-                                <span class="empty">Nothing on this list</span>
+                                <span class="empty">Nothing on This List</span>
                             }
                         </a>
 
@@ -303,7 +303,7 @@ else if (_list is null)
 {
     <PageShell Measure="PageShell.Width.Text">
         <p>That chase list no longer exists.</p>
-        <BackLink To="chase" Label="Chase lists" />
+        <BackLink To="chase" Label="Chase Lists" />
     </PageShell>
 }
 else
@@ -313,7 +313,7 @@ else
            screen reader to land on when navigating by headings. The deck editor has carried a
            hidden one for this since it was written; this page has the same bar and had none. *@
         <h1 class="visually-hidden">@_list.Name</h1>
-        <BackLink To="chase" Label="Chase lists" />
+        <BackLink To="chase" Label="Chase Lists" />
 
         @* Renaming in place, saved on blur rather than per keystroke: the name is persisted state,
            and a save per character would serialise the whole profile as you type. The input is this
@@ -323,17 +323,17 @@ else
 
         <span class="actions">
             <a class="btn btn-sm btn-outline-primary" href="packs?chase=@_list.Id">
-                Rank packs for this list
+                Rank Packs for This List
             </a>
             <button class="btn btn-sm btn-outline-secondary" @onclick="MakeShareLink">
-                Share this list
+                Share This List
             </button>
             @* The link is the better artefact and the wrong shape for where these trades actually
                happen. A Discord thread or a subreddit comment takes a few lines of text: nobody
                opens a stranger's link, and a reader on a phone with the game open cannot follow
                one and come back. Same list, in the form the conversation is already in. *@
             <button class="btn btn-sm btn-outline-secondary" @onclick="MakeTradeText">
-                Copy as text
+                Copy as Text
             </button>
             @* Two taps, like the deck editor's delete: the list took work to build and there
                is no undo prompt after the fact. *@
@@ -402,15 +402,15 @@ else
     <PageShell>
     <div class="summary">
         <div class="stat">
-            <span class="label">Cards wanted</span>
+            <span class="label">Cards Wanted</span>
             <span class="value">@Session.WantedTotal(_list)</span>
         </div>
         <div class="stat">
-            <span class="label">Still missing</span>
+            <span class="label">Still Missing</span>
             <span class="value">@_missing</span>
         </div>
         <div class="stat">
-            <span class="label">Expected packs</span>
+            <span class="label">Expected Packs</span>
             <span class="value">@Fmt(_packs)</span>
             @* As on the Packs page, an estimate never appears without saying what it covers, since
                a card no pack sells changes the scope. *@

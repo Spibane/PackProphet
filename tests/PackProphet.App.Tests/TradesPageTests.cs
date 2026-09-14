@@ -33,9 +33,9 @@ public class TradesPageTests : AppHost
             .ToArray();
 
         Assert.Equal(4, headings.Length);
-        Assert.Equal("Trading for", headings[0]);
+        Assert.Equal("Trading For", headings[0]);
         Assert.Equal("Grouped", headings[1]);
-        Assert.Equal("Ranked by", headings[2]);
+        Assert.Equal("Ranked By", headings[2]);
         Assert.StartsWith("Showing", headings[3]);
     }
 

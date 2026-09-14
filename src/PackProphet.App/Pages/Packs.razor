@@ -3,7 +3,7 @@
 @inject AppSession Session
 @inject UiBusy Busy
 
-<PageTitle>Which pack · PackProphet</PageTitle>
+<PageTitle>Which Pack · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -12,7 +12,7 @@
 else
 {
     <div class="page-head folded">
-        <h1 class="title">Which pack</h1>
+        <h1 class="title">Which Pack</h1>
         @* What the ranking is OF, said in words, because every figure below means something
            different once it changes. It was "Ranked for <scope>" with the plan itself a line
            further down inside the bar that set it -- so the page named half of its own premise and
@@ -69,7 +69,7 @@ else
 
         @* Grouped by series so this stays usable as sets accumulate. *@
         <div class="rail-group">
-            <span class="ttl">Ranking for</span>
+            <span class="ttl">Ranking For</span>
             <ScopePicker Label="What to rank packs against"
                          Grouped="true" Merged="true" Scope="@_scope" OnScope="OnScope" />
         </div>
@@ -83,7 +83,7 @@ else
         @if (!IsChaseScope)
         {
             <div class="rail-group">
-            <span class="ttl">Copies wanted</span>
+            <span class="ttl">Copies Wanted</span>
             <span class="rarity-chips">
                 <RarityChips Plan="Draft" OnCycle="CycleTier"
                              ShowFoils="ScopeHasFoils" OnCycleFoils="CycleFoils" />
@@ -98,14 +98,14 @@ else
                 {
                     <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
                     <button class="chip-link" @onclick="ClearOverride"
-                            title="Follow the default plan again">Use the default here</button>
+                            title="Follow the default plan again">Use the Default Here</button>
                 }
                 else if (ScopedSet is not null)
                 {
                     <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
                     <button class="chip-link" @onclick="StartOverride"
                             title="Give @ScopedSet its own plan, starting from the default">
-                        Give @ScopedSet its own
+                        Give @ScopedSet Its Own
                     </button>
                 }
                 else
@@ -127,7 +127,7 @@ else
         @if (Session.LimitedPacks.Count > 0)
         {
             <div class="rail-group">
-            <span class="ttl">On sale now</span>
+            <span class="ttl">On Sale Now</span>
             <span class="avail">
                 @foreach (var pack in Session.LimitedPacks)
                 {
@@ -155,7 +155,7 @@ else
         <EmptyState>
             <ChildContent>Nothing outstanding for this target.</ChildContent>
             <Action>
-                <SheetOpener For="target-sheet" Label="Aim higher" />
+                <SheetOpener For="target-sheet" Label="Aim Higher" />
             </Action>
         </EmptyState>
     }
@@ -243,7 +243,7 @@ else
                     @* The set is literal -- a pack has five cards -- which is the precondition
                        BoxStrip documents. Bars, because these five figures are one quantity and
                        comparing them across the row is the point. *@
-                    <BoxStrip Label="Where the chance is" Clause="@SlotClause(slots)"
+                    <BoxStrip Label="Where the Chance Is" Clause="@SlotClause(slots)"
                               Columns="@slots.Count">
                         @foreach (var slot in slots)
                         {
@@ -257,7 +257,7 @@ else
 
                 <div class="lead-actions">
                     <a class="btn btn-sm btn-primary" href="log?pack=@Uri.EscapeDataString(lead.PackKey)">
-                        Log a @lead.PackName pack
+                        Log a @lead.PackName Pack
                     </a>
                     <span class="served">@CardCount(st.DemandsServed) it can give</span>
                 </div>
@@ -270,7 +270,7 @@ else
            had -- this is the shape you read the shortlist in, and that is the shape you read one
            pack's detail in. *@
         <div class="answer-ranked">
-            <span class="micro">Everything else, ranked</span>
+            <span class="micro">Everything Else, Ranked</span>
             <div class="ranked-rows">
                 @foreach (var row in _rows.Where(r => r.Standing is not null).Take(RankedShown))
                 {
@@ -309,14 +309,14 @@ else
             @if (!IsChaseScope)
             {
                 <button class="btn btn-sm @Toggled(_advisorOpen)" aria-pressed="@Aria.Flag(_advisorOpen)"
-                        @onclick="ToggleAdvisor">Cost per rarity</button>
+                        @onclick="ToggleAdvisor">Cost per Rarity</button>
             }
             <button class="btn btn-sm @Toggled(_batchOpen)" aria-pressed="@Aria.Flag(_batchOpen)"
-                    @onclick="ToggleBatch">Buying @GameRules.PacksPerBatch at once</button>
+                    @onclick="ToggleBatch">Buying @GameRules.PacksPerBatch at Once</button>
             <button class="btn btn-sm @Toggled(_allocateOpen)" aria-pressed="@Aria.Flag(_allocateOpen)"
-                    @onclick="ToggleAllocate">Splitting a budget</button>
+                    @onclick="ToggleAllocate">Splitting a Budget</button>
             <button class="btn btn-sm @Toggled(_pointsOpen)" aria-pressed="@Aria.Flag(_pointsOpen)"
-                    @onclick="TogglePoints">Pack points</button>
+                    @onclick="TogglePoints">Pack Points</button>
         </div>
 
         @if (_advisorOpen && !IsChaseScope)
@@ -324,7 +324,7 @@ else
             <div class="mb-3">
                 <DataTable Label="Cost per rarity, at one copy and two" Fit="true">
                     <thead>
-                        <tr><th scope="col">Rarity</th><th scope="col" class="num">1 copy</th><th scope="col" class="num">2 copies</th></tr>
+                        <tr><th scope="col">Rarity</th><th scope="col" class="num">1 Copy</th><th scope="col" class="num">2 Copies</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var (rung, one, two) in _advisor)
@@ -366,9 +366,9 @@ else
                     <DataTable Label="Expected result per batch of packs" Fit="true">
                         <thead>
                             <tr>
-                                <th scope="col">@GameRules.PacksPerBatch packs of</th>
+                                <th scope="col">@GameRules.PacksPerBatch Packs Of</th>
                                 <th scope="col" class="num">New Cards Expected</th>
-                                <th scope="col" class="num">Chance of nothing new</th>
+                                <th scope="col" class="num">Chance of Nothing New</th>
                                 <th scope="col" class="num">Against the Best</th>
                             </tr>
                         </thead>
@@ -532,7 +532,7 @@ else
                                 <td class="small">
                                     @if (row.AffordableNow.Count == 0)
                                     {
-                                        <span class="text-body-tertiary">Nothing you still need</span>
+                                        <span class="text-body-tertiary">Nothing You Still Need</span>
                                     }
                                     else
                                     {
@@ -547,7 +547,7 @@ else
                     </tbody>
                 </DataTable>
 
-                <h2 class="sub-head">Where points are worth spending</h2>
+                <h2 class="sub-head">Where Points Are Worth Spending</h2>
                 @if (_pointsShop.Count == 0)
                 {
                     <p class="small text-body-secondary mb-0">
@@ -561,13 +561,13 @@ else
                         a Crown returns about 2.5, an Immersive 0.3. Anything at or below 1.0 is
                         left out.
                     </p>
-                    <DataTable Label="Where points are worth spending" Fit="true">
+                    <DataTable Label="Where Points Are Worth Spending" Fit="true">
                         <thead>
                             <tr>
                                 <th scope="col">Card</th>
                                 <th scope="col" class="num">Pull</th>
                                 <th scope="col" class="num">Points</th>
-                                <th scope="col" class="num">Packs saved per pack of points</th>
+                                <th scope="col" class="num">Packs Saved per Pack of Points</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -601,10 +601,10 @@ else
             <thead>
                 <tr>
                     <th scope="col" data-pri="1">Pack</th>
-                    <th scope="col" class="num" data-pri="1">Chance of a hit</th>
-                    <th scope="col" class="num" data-pri="2">Packs per new card</th>
-                    <th scope="col" class="num" data-pri="3">To finish its share</th>
-                    <th scope="col" class="num" data-pri="3">Cards it can give</th>
+                    <th scope="col" class="num" data-pri="1">Chance of a Hit</th>
+                    <th scope="col" class="num" data-pri="2">Packs per New Card</th>
+                    <th scope="col" class="num" data-pri="3">To Finish Its Share</th>
+                    <th scope="col" class="num" data-pri="3">Cards It Can Give</th>
                     @* The action, in its own column rather than among the badges in the name cell:
                        it sits in the same place on every row, and the name cell already carries up
                        to four badges. *@
@@ -744,7 +744,7 @@ else
                                     @if (slots.Count > 1)
                                     {
                                         <div class="slot-odds">
-                                            <span class="ttl">Where the chance is</span>
+                                            <span class="ttl">Where the Chance Is</span>
                                             @foreach (var slot in slots)
                                             {
                                                 <span class="slot @(slot.Chance <= 0 ? "none" : "")">
@@ -790,7 +790,7 @@ else
            control only reachable by scrolling past all of them may as well not exist. *@
         <div class="summary">
             <div class="stat">
-                <span class="label">Cards still needed</span>
+                <span class="label">Cards Still Needed</span>
                 <span class="value">@_outstanding</span>
             </div>
             <div class="stat">
@@ -806,7 +806,7 @@ else
             @if (Session.AssumedRates.Count > 0)
             {
                 <div class="stat">
-                    <span class="label">Assumed rates</span>
+                    <span class="label">Assumed Rates</span>
                     <span class="value">@Session.AssumedRates.Count set(s)</span>
                     <span class="sub">
                         @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
@@ -822,7 +822,7 @@ else
             }
 
             <div class="stat">
-                <span class="label">Time at your rate</span>
+                <span class="label">Time at Your Rate</span>
                 <span class="value">@Days(_bestCase, Premium)</span>
                 <span class="sub">@RateNote()</span>
             </div>

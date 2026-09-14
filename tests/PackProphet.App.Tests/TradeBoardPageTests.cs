@@ -262,12 +262,12 @@ public class TradeBoardPageTests : AppHost
         var page = await PageAsync();
 
         var accept = page.FindAll(".lead-actions button")
-                         .First(b => b.TextContent.Contains("made these changes"));
+                         .First(b => b.TextContent.Contains("Made These Changes"));
         await page.InvokeAsync(() => accept.Click());
         page.WaitForState(() => page.FindAll(".verdict-lead .name.take").Count == 1,
                           TimeSpan.FromSeconds(10));
 
-        Assert.Contains("already right", page.Find(".verdict-lead .name").TextContent);
+        Assert.Contains("Already Right", page.Find(".verdict-lead .name").TextContent);
         Assert.NotEmpty(page.FindAll(".box-strip .box.live .slot-cap"));
 
         // No edits, so nothing is marked and there is nothing to confirm having done.

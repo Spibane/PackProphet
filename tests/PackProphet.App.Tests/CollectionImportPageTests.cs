@@ -69,7 +69,7 @@ public class CollectionImportPageTests : AppHost
 
         Pick(page, $"{Header}\nA1-3,Venusaur,4\nA1-4,Venusaur ex,1\n");
 
-        Assert.Contains("What this file says", Text(page));
+        Assert.Contains("What This File Says", Text(page));
 
         // Two cards in the file, and the collection is still the two it started with.
         Assert.Equal(2, Session.Owned.DistinctOwned);
@@ -196,7 +196,7 @@ public class CollectionImportPageTests : AppHost
         Pick(page, $"{Header}\nA1-3,Venusaur,4\nZ9-999,Nothing,1\n");
 
         var markup = Text(page);
-        Assert.Contains("Rows not recognised", markup);
+        Assert.Contains("Rows Not Recognised", markup);
         Assert.Contains("Line 3", markup);
         Assert.Contains("Z9-999", markup);
 
@@ -213,7 +213,7 @@ public class CollectionImportPageTests : AppHost
         Pick(page, "name,hp\nPikachu,60\n");
 
         Assert.Contains("no rows this could read as a collection", Text(page));
-        Assert.DoesNotContain("What this file says", Text(page));
+        Assert.DoesNotContain("What This File Says", Text(page));
         Assert.Equal(2, Session.Owned.DistinctOwned);
     }
 
@@ -244,8 +244,8 @@ public class CollectionImportPageTests : AppHost
 
         PickFile(page, Workbook(), "user_genetic_apex.xlsx");
 
-        Assert.Contains("What this file says", Text(page));
-        Assert.DoesNotContain("Rows not recognised", Text(page));
+        Assert.Contains("What This File Says", Text(page));
+        Assert.DoesNotContain("Rows Not Recognised", Text(page));
 
         page.Find(".btn-primary").Click();
 

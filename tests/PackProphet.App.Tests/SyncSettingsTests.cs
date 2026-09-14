@@ -158,8 +158,8 @@ public class SyncSettingsPageTests : AppHost
         await ReadyAsync();
         var page = RenderComponent<PackProphet.Pages.Settings>();
 
-        Assert.DoesNotContain("Sync across devices", page.Markup);
-        Assert.DoesNotContain("Set up sync", page.Markup);
+        Assert.DoesNotContain("Sync Across Devices", page.Markup);
+        Assert.DoesNotContain("Set Up Sync", page.Markup);
     }
 }
 
@@ -177,9 +177,9 @@ public class SyncOfferedPageTests : AppHost
         await ReadyAsync();
         var page = RenderComponent<PackProphet.Pages.Settings>();
 
-        Assert.Contains("Sync across devices", page.Markup);
-        Assert.Contains("Set up sync", page.Markup);
-        Assert.Contains("I have a code", page.Markup);
+        Assert.Contains("Sync Across Devices", page.Markup);
+        Assert.Contains("Set Up Sync", page.Markup);
+        Assert.Contains("I Have a Code", page.Markup);
 
         // The one thing a user must be told before they rely on it: there is no account behind
         // this, so nobody can send them the code again.
@@ -206,7 +206,7 @@ public class SyncOfferedPageTests : AppHost
 
         Assert.DoesNotContain("XXXX-XXXX-XXXX", page.Markup);
 
-        page.FindAll("button").First(b => b.TextContent.Contains("I have a code")).Click();
+        page.FindAll("button").First(b => b.TextContent.Contains("I Have a Code")).Click();
 
         Assert.Contains("XXXX-XXXX-XXXX", page.Markup);
     }
@@ -259,7 +259,7 @@ public class SyncOfferedPageTests : AppHost
         await ReadyAsync();
         var page = RenderComponent<PackProphet.Pages.Settings>();
 
-        page.FindAll("button").First(b => b.TextContent.Contains("I have a code")).Click();
+        page.FindAll("button").First(b => b.TextContent.Contains("I Have a Code")).Click();
         page.Find("input[placeholder='XXXX-XXXX-XXXX']").Input("nope");
         page.FindAll("button").First(b => b.TextContent.Trim() == "Join").Click();
 

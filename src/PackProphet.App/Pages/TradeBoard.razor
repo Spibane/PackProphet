@@ -37,7 +37,7 @@ else
 
     <PageRail Id="board-rail" OpenLabel="Tuning" Count="@TuningCount">
         <div class="rail-group">
-            <span class="ttl">Working toward</span>
+            <span class="ttl">Working Toward</span>
             <ScopePicker Label="What the slots should work toward" Scope="@_scope" OnScope="OnScope" />
         </div>
 
@@ -74,16 +74,16 @@ else
             <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
                     @onclick="CycleFoils"
                     title="Foils are listed as the 1-3 diamond cards they are printed as. Exclude them if the game will not let you wishlist a foil printing.">
-                @(_foils == "with" ? "Parallel foils included" : "Parallel foils left out")
+                @(_foils == "with" ? "Parallel Foils Included" : "Parallel Foils Left Out")
             </button>
         }
 
         <select id="floor" class="form-select form-select-sm"
                 aria-label="Leave out cards cheaper than this" @onchange="OnFloor">
-            <option value="0" selected="@(_floor == 0)">Any price</option>
-            <option value="15" selected="@(_floor == 15)">15+ packs only</option>
-            <option value="50" selected="@(_floor == 50)">50+ packs only</option>
-            <option value="150" selected="@(_floor == 150)">150+ packs only</option>
+            <option value="0" selected="@(_floor == 0)">Any Price</option>
+            <option value="15" selected="@(_floor == 15)">15+ Packs Only</option>
+            <option value="50" selected="@(_floor == 50)">50+ Packs Only</option>
+            <option value="150" selected="@(_floor == 150)">150+ Packs Only</option>
         </select>
         </div>
 
@@ -91,9 +91,9 @@ else
            a list of trades you are inviting, and "can I afford to accept one" is answered by these
            two figures and nothing else on the page. A reading, so it goes last. *@
         <div class="rail-group">
-            <span class="ttl">To spend</span>
+            <span class="ttl">To Spend</span>
             <div class="pool-read">
-                <span class="lbl">Trade stamina</span>
+                <span class="lbl">Trade Stamina</span>
                 <span class="fig">@Session.Profile.Resources.Trade.Balance of @GameRules.StaminaCap</span>
             </div>
             <div class="pool-read">
@@ -111,7 +111,7 @@ else
         @if (_plan is { Excluded.Count: > 0 })
         {
             <div class="rail-group">
-                <span class="ttl">Cannot be listed</span>
+                <span class="ttl">Cannot Be Listed</span>
                 @foreach (var group in _plan.Excluded.GroupBy(x => x.Reason).OrderBy(g => g.Key))
                 {
                     <div class="rail-note">
@@ -152,7 +152,7 @@ else
                 </ChildContent>
                 <Action>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="() => SetFloor(0)">
-                        Drop the floor
+                        Drop the Floor
                     </button>
                 </Action>
             </EmptyState>
@@ -187,7 +187,7 @@ else
                 {
                     <div class="lead-head">
                         <div class="lead-text">
-                            <h2 class="name take">Your board is already right</h2>
+                            <h2 class="name take">Your Board Is Already Right</h2>
                             <p class="says">
                                 All @_plan.Keep.Count slots still earn their place.
                             </p>
@@ -278,7 +278,7 @@ else
                 {
                     <div class="lead-actions">
                         <button class="btn btn-sm btn-primary" @onclick="AcceptPlan">
-                            I have made these changes in the game
+                            I Have Made These Changes in the Game
                         </button>
                     </div>
                 }
@@ -288,14 +288,14 @@ else
                reading them back, because the game's wishlist has no order of its own -- it shows
                what you want from a set, in number order -- and the set you are opening now is the
                one you are checking. *@
-            <h2>The board</h2>
+            <h2>The Board</h2>
             <DataTable Label="In-game wishlist board">
                 <thead>
                     <tr>
                         <th scope="col" data-pri="1">Card</th>
                         <th scope="col" data-pri="1">Set</th>
                         <th scope="col" data-pri="2">Rarity</th>
-                        <th scope="col" class="num" data-pri="2" title="On average, how many packs before you get it, or the packs' worth of points to buy it outright, whichever is fewer">Packs to get it</th>
+                        <th scope="col" class="num" data-pri="2" title="On average, how many packs before you get it, or the packs' worth of points to buy it outright, whichever is fewer">Packs to Get It</th>
                         <th scope="col" data-pri="3" title="A pull figure is an average you could beat or miss badly; a points figure is a guarantee after that many packs of the set">How</th>
                         <th scope="col" class="num" data-pri="3">Dust to Trade</th>
                         <th scope="col" data-pri="3">A card to give?</th>

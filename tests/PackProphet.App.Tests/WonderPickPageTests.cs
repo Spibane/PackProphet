@@ -169,8 +169,8 @@ public class WonderPickPageTests : AppHost
         var page = WithOffer();
 
         var commit = page.Find(".offer-commit");
-        Assert.Contains("Took it", commit.TextContent);
-        Assert.Contains("Skipped it", commit.TextContent);
+        Assert.Contains("Took It", commit.TextContent);
+        Assert.Contains("Skipped It", commit.TextContent);
 
         // Both are top-level buttons of the commit row rather than one being tucked behind the
         // other's control.
@@ -178,8 +178,8 @@ public class WonderPickPageTests : AppHost
             .Select(b => Flat(b.TextContent))
             .ToArray();
 
-        Assert.Contains(buttons, b => b.StartsWith("Took it", StringComparison.Ordinal));
-        Assert.Contains(buttons, b => b.StartsWith("Skipped it", StringComparison.Ordinal));
+        Assert.Contains(buttons, b => b.StartsWith("Took It", StringComparison.Ordinal));
+        Assert.Contains(buttons, b => b.StartsWith("Skipped It", StringComparison.Ordinal));
     }
 
     /// <summary>

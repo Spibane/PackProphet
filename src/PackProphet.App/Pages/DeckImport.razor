@@ -4,7 +4,7 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<PageTitle>Import a deck · PackProphet</PageTitle>
+<PageTitle>Import a Deck · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -14,7 +14,7 @@ else
 {
     <div class="page-head">
         <BackLink To="decks" Label="Decks" />
-        <h1 class="title">Import a deck</h1>
+        <h1 class="title">Import a Deck</h1>
         <span class="subtitle">From a screenshot of the in-game code</span>
     </div>
 
@@ -28,7 +28,7 @@ else
 
         @* A placeholder is not a label and a file input has neither, so the control is named
            here. Without it the only thing announced is "Browse", on a page with two ways in. *@
-        <label class="form-label" for="deck-shot">The screenshot</label>
+        <label class="form-label" for="deck-shot">The Screenshot</label>
         <InputFile id="deck-shot" class="form-control mb-2" OnChange="ImportShot"
                    accept="image/*" disabled="@_scanning" />
 
@@ -58,22 +58,22 @@ else
         @* Share codes are no longer offered in newer versions of the game, so this is for older
            clients and pasted codes rather than the main route. *@
         <details class="mt-3">
-            <summary class="small text-body-secondary">I have the code as text instead</summary>
+            <summary class="small text-body-secondary">I Have the Code as Text Instead</summary>
             <div class="pt-2">
                 @* The placeholder said what this was and went away as soon as anyone typed
                    into it, which is also when a screen reader stopped having a name for it. *@
-                <label class="form-label small" for="deck-code">Share code</label>
+                <label class="form-label small" for="deck-code">Share Code</label>
                 <textarea class="form-control form-control-sm mb-2" rows="2" id="deck-code"
                           placeholder="Paste the share code"
                           @bind="_codeText" @bind:event="oninput"></textarea>
                 <button class="btn btn-sm btn-outline-primary" @onclick="ImportCode"
-                        disabled="@string.IsNullOrWhiteSpace(_codeText)">Import code</button>
+                        disabled="@string.IsNullOrWhiteSpace(_codeText)">Import Code</button>
             </div>
         </details>
 
         <hr />
         <p class="small text-body-secondary mb-0">
-            Nothing to import? <a href="decks/new">Build a deck from scratch</a> instead.
+            Nothing to import? <a href="decks/new">Build a Deck from Scratch</a> instead.
         </p>
     </PageShell>
 }

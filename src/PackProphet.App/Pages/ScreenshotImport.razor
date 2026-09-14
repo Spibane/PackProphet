@@ -2,7 +2,7 @@
 @inject AppSession Session
 @implements IDisposable
 
-<PageTitle>Import from a screenshot · PackProphet</PageTitle>
+<PageTitle>Import from a Screenshot · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -12,7 +12,7 @@ else
 {
     <div class="page-head">
         <BackLink To="collection" Label="Collection" />
-        <h1 class="title">Import from a screenshot</h1>
+        <h1 class="title">Import from a Screenshot</h1>
         <span class="subtitle">Read your cards straight off the game</span>
     </div>
 
@@ -21,7 +21,7 @@ else
         @* Only the two card lists here. A pack's five cards belong on the log screen, where the
            pack gets logged as well as the cards, and a Wonder Pick's line-up belongs on the Wonder
            Pick screen, where it is an offer to weigh up rather than anything to record. *@
-        <ShotImport Group="cards" Choices="@Layouts" ChoiceLegend="Which card list">
+        <ShotImport Group="cards" Choices="@Layouts" ChoiceLegend="Which Card List">
             <Intro>
                 In the game: the <strong>My Cards</strong> screen, in either layout. The list runs
                 past one screenful, so scroll and shoot it in several goes. They are read
@@ -100,10 +100,10 @@ else
                     @if (Session.CanUndo)
                     {
                         <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoApply">
-                            Undo that
+                            Undo That
                         </button>
                     }
-                    <a href="collection">Back to the collection</a>
+                    <a href="collection">Back to the Collection</a>
                 </div>
             </Notice>
         }
@@ -111,7 +111,7 @@ else
         @* Folded away, and short even so. Someone who opens this wants to know whether to trust
            the reading, not how the reading is done. *@
         <details class="mt-4">
-            <summary class="small text-body-secondary">How this works, and where it fails</summary>
+            <summary class="small text-body-secondary">How This Works, and Where It Fails</summary>
             <div class="pt-2 small text-body-secondary">
                 <p>
                     Each card's artwork was reduced to 128 bits offline, and those fingerprints ship

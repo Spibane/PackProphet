@@ -45,8 +45,8 @@ else
 
     <PageSheet Id="wonder-target" Label="Target">
         <div class="rail-group">
-            <span class="ttl">What counts as wanted</span>
-            <ScopePicker Label="What counts as wanted"
+            <span class="ttl">What Counts as Wanted</span>
+            <ScopePicker Label="What Counts as Wanted"
                          Grouped="true" Scope="@_scope" OnScope="OnScope" />
         </div>
     </PageSheet>
@@ -134,7 +134,7 @@ else
                it is an edit to the input rather than a third way the decision can go, and beside
                the two outcomes it read as one, on the row where every target has to be a full
                phone-width row. Which also put the commit row 40px under the tab bar. *@
-            <button class="btn btn-sm btn-link offer-clear" @onclick="Clear">Clear these five</button>
+            <button class="btn btn-sm btn-link offer-clear" @onclick="Clear">Clear These Five</button>
 
         }
 
@@ -146,7 +146,7 @@ else
         @if (_offer.Count == 0)
         {
             <details class="mt-3">
-                <summary class="small text-body-secondary">Read the offer off a screenshot instead</summary>
+                <summary class="small text-body-secondary">Read the Offer Off a Screenshot Instead</summary>
                 <div class="pt-2">
                     <ShotImport @ref="_shots" Group="wonder" Choices="@ShotChoices">
                         <Intro>
@@ -305,12 +305,12 @@ else
                     </select>
                     <button class="btn btn-primary" disabled="@(_received.Length == 0)"
                             @onclick="LogTaken">
-                        Took it &mdash; spend a stamina
+                        Took It &mdash; Spend a Stamina
                     </button>
                 </span>
 
                 <button class="btn btn-outline-secondary" @onclick="LogSkipped">
-                    Skipped it
+                    Skipped It
                 </button>
             </div>
 
@@ -321,13 +321,13 @@ else
 
             <div class="summary">
                 <div class="stat">
-                    <span class="label">Expected value</span>
+                    <span class="label">Expected Value</span>
                     <span class="value">@Fmt(a.ExpectedValue) packs</span>
                     @* Averaged over the 1-in-5 rather than the best card in the offer. *@
                     <span class="sub">Averaged over the 1-in-@GameRules.WonderPickCardsShown</span>
                 </div>
                 <div class="stat">
-                    <span class="label">Per stamina</span>
+                    <span class="label">Per Stamina</span>
                     <span class="value">@Fmt(a.ValuePerStamina)</span>
                     @* Never called a price. Wonder Stamina and Pack Hourglasses are separate
                        currencies with no exchange rate, so packs-per-stamina only ranks one
@@ -335,7 +335,7 @@ else
                     <span class="sub">For comparing offers, not a price</span>
                 </div>
                 <div class="stat">
-                    <span class="label">The price is set by</span>
+                    <span class="label">The Price Is Set By</span>
                     <span class="value">@(a.CostDriver.Length > 0 ? a.CostDriver : "—")</span>
                     <span class="sub">
                         @(a.CostDriverWanted ? "which you still want" : "which you do not need")
@@ -346,7 +346,7 @@ else
             @* The two count columns are inputs to the last one, not the point of the table.
                Named as what they do to the figure beside them, and dropped first on a phone,
                so the column that is this page's own answer is the one that survives. *@
-            <h2 class="sub-head">What each card contributes</h2>
+            <h2 class="sub-head">What Each Card Contributes</h2>
             <DataTable Label="What each card in the offer contributes to its value">
                 <thead>
                     <tr>
@@ -809,10 +809,10 @@ else
 
     private static string Call(OfferVerdict verdict) => verdict switch
     {
-        OfferVerdict.NothingWanted => "Skip: nothing here you need",
-        OfferVerdict.Overpriced => "Skip: you are paying for the wrong card",
-        OfferVerdict.BelowThreshold => "Skip: better offers come along",
-        _ => "Take it"
+        OfferVerdict.NothingWanted => "Skip: Nothing Here You Need",
+        OfferVerdict.Overpriced => "Skip: You Are Paying for the Wrong Card",
+        OfferVerdict.BelowThreshold => "Skip: Better Offers Come Along",
+        _ => "Take It"
     };
 
     private static string VerdictClass(OfferVerdict verdict) =>

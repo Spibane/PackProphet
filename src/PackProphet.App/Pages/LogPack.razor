@@ -5,7 +5,7 @@
 @inject UiBusy Busy
 @inject IJSRuntime JS
 
-<PageTitle>Log a pack · PackProphet</PageTitle>
+<PageTitle>Log a Pack · PackProphet</PageTitle>
 
 @if (!Session.Ready)
 {
@@ -14,7 +14,7 @@
 else if (_pack is null)
 {
     <div class="page-head folded">
-        <h1 class="title">Log a pack</h1>
+        <h1 class="title">Log a Pack</h1>
         <span class="subtitle">Which pack did you open?</span>
     </div>
 
@@ -61,7 +61,7 @@ else if (_pack is null)
                                 @onclick="() => Session.SetLimitedPackAvailable(pack, !on)"
                                 title="@(pack.Split(':')[1]) packs come and go. This only affects which packs the Which pack page recommends. You can log one either way.">
                             <span class="nm">@pack.Split(':')[1]</span>
-                            <span class="st">@(on ? "on sale" : "off sale")</span>
+                            <span class="st">@(on ? "On Sale" : "Off Sale")</span>
                         </button>
                     }
                 </span>
@@ -88,7 +88,7 @@ else if (_pack is null)
            A disclosure rather than the whole screen, because picking a pack by hand always works and
            this does not: a set released since the last fingerprint refresh cannot be recognised. *@
         <details class="mb-3">
-            <summary class="small text-body-secondary">Read it off a screenshot instead</summary>
+            <summary class="small text-body-secondary">Read It Off a Screenshot Instead</summary>
             <div class="pt-2">
                 <ShotImport @ref="_shots" Group="pack" Choices="@ShotChoices">
                     <Intro>
@@ -160,7 +160,7 @@ else if (_pack is null)
                             var plan = Plan(readings);
 
                             <section class="mt-3 border-top pt-3">
-                                <h2 class="sub-head">All @readings.Count pictures</h2>
+                                <h2 class="sub-head">All @readings.Count Pictures</h2>
 
                                 @if (plan.Unidentified > 0)
                                 {
@@ -179,7 +179,7 @@ else if (_pack is null)
                                         @query
                                         <button class="btn btn-sm btn-warning ms-2 py-0"
                                                 disabled="@Busy.IsBusy" @onclick="LogAllAnyway">
-                                            Log @plan.Ready.Count anyway
+                                            Log @plan.Ready.Count Anyway
                                         </button>
                                     </Notice>
                                 }
@@ -306,7 +306,7 @@ else
            full label here and "picked N" beside the button, a 375px header left the title about
            ten pixels and "Mega Altaria" rendered as "M.". The arrow is still the same control and
            still the same size to tap -- the aria-label carries the wording the eye loses. *@
-        <BackLink Label="Change pack" OnBack="Reset" Compact="true"
+        <BackLink Label="Change Pack" OnBack="Reset" Compact="true"
                   Title="Pick a different pack. Nothing typed here is kept." />
         <h1 class="title">@_pack.Split(':')[1]</h1>
         @* The instruction has to match the view. In the tile grid a tap on a card picks it; in
@@ -323,7 +323,7 @@ else
                thing in the words that matter. *@
             <span class="small wide-only">@ProgressLabel</span>
             <button class="btn btn-sm btn-success" disabled="@(_picked.Count == 0 || Busy.IsBusy)" @onclick="Commit">
-                Add to collection
+                Add to Collection
             </button>
         </span>
     </div>
@@ -349,23 +349,23 @@ else
     @if (_miscount is { } warning)
     {
         <div class="todo-strip short">
-            <span class="micro">Still to do</span>
+            <span class="micro">Still to Do</span>
             <span class="say">
                 @warning
             </span>
             <button class="btn btn-sm btn-warning" @onclick="CommitAnyway">
-                Log @_picked.Count anyway
+                Log @_picked.Count Anyway
             </button>
         </div>
     }
     else if (!PackFull)
     {
         <div class="todo-strip">
-            <span class="micro">Still to do</span>
+            <span class="micro">Still to Do</span>
             <span class="say">@TodoSay</span>
             @if (_picked.Count == 0)
             {
-                <a class="escape" href="collection/screenshot">Read it off a screenshot</a>
+                <a class="escape" href="collection/screenshot">Read It Off a Screenshot</a>
             }
         </div>
     }
@@ -435,7 +435,7 @@ else
                 <div class="mt-1">
                     You just opened a limited-time pack that the ranking is leaving out.
                     <button class="btn btn-sm btn-outline-success py-0 ms-1"
-                            @onclick="MarkPackOnSale">Mark @(_pack.Split(':')[1]) on sale</button>
+                            @onclick="MarkPackOnSale">Mark @(_pack.Split(':')[1]) on Sale</button>
                 </div>
             }
         </Notice>
@@ -488,7 +488,7 @@ else
     <div class="commit-foot">
         <span>@PointsAfter</span>
         <span>One undo step, <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</span>
-        <button class="btn btn-sm btn-link again" @onclick="Reset">Log another after this</button>
+        <button class="btn btn-sm btn-link again" @onclick="Reset">Log Another After This</button>
     </div>
 }
 

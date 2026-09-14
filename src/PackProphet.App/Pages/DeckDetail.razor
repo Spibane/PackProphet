@@ -432,6 +432,12 @@ else
     /// <summary>
     /// True when the draft differs from what is stored. Card order is irrelevant — a deck is a
     /// multiset — so it is compared as sorted copies rather than element-wise.
+    ///
+    /// EVERY field a control on this page can change, which is the whole of it and not the
+    /// interesting part of it. The face card was missing: starring a row edited the draft and left
+    /// Dirty false, so Save stayed disabled and the star was lost on the next reload — a control
+    /// that appears to work and silently does nothing. A deck has four fields and all four are
+    /// editable here, so the comparison names all four.
     /// </summary>
     private bool Dirty
     {
@@ -442,6 +448,7 @@ else
                                      || _draft.Name != "New Deck";
 
             return _draft.Name != _saved.Name
+                   || _draft.FaceNr != _saved.FaceNr
                    || !_draft.DeckBuilderNrs.Order().SequenceEqual(_saved.DeckBuilderNrs.Order())
                    || !_draft.Energies.Order().SequenceEqual(_saved.Energies.Order());
         }

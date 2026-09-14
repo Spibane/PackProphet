@@ -792,48 +792,19 @@ main > .page-head {
     }
 }
 
-/* the odds check and the record, side by side
+/* History is one column, and the odds check is not a special case in it.
    ----------------------------------------------------------------------------------
-   Two halves of one question: did the model hold up, and what did I actually open. Reading either
-   without the other is how a rarity a fifth out looks like a broken engine rather than eleven
-   packs of one set.
+   The odds check used to sit in a two-column grid with a five-pack summary beside it, on the
+   argument that "did the model hold up" and "what did I actually open" are two halves of one
+   question. The summary was the wrong half: the record is the table at the bottom of this page,
+   with its dates, its delete buttons and the switch for whether deleting takes the cards back --
+   and a list of the same five packs, one screen above it, without any of that, answered nothing
+   the table did not.
 
-   The left column is a table of four rows and the right a list of five, so they are close to equal
-   -- unlike the Answer pages, where a sentence sits beside a ranking and the weighting is 1.55 to
-   1. */
-.check-cols {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 24px;
-    align-items: start;
-}
-.check-recent { min-inline-size: 0; }
-.recent-rows { display: flex; flex-direction: column; margin-block-start: 8px; }
-.recent-row {
-    display: grid;
-    grid-template-columns: 26px minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: .55rem;
-    padding: 8px 0;
-    border-block-end: 1px solid var(--pp-hairline, var(--bs-border-color));
-    font-size: .88rem;
-}
-.recent-row:last-child { border-block-end: 0; }
-.recent-row > .art {
-    inline-size: 26px;
-    block-size: 36px;
-    border-radius: var(--pp-r-xs);
-}
-.recent-row .nm { min-inline-size: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.recent-row .cards { color: var(--bs-secondary-color); white-space: nowrap; }
-.recent-row .when { color: var(--bs-secondary-color); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.check-recent .note { margin: 10px 0 0; font-size: .8rem; color: var(--bs-secondary-color); }
-
-/* One under the other below the desk width: two tables of figures at half a phone is neither. */
-@media (width <= 900px) {
-    .check-cols { grid-template-columns: minmax(0, 1fr); gap: 0; }
-    .check-recent { margin-block-start: 18px; }
-}
+   Removing it left the check alone in a half-width column, which is the state this replaced: two
+   of the page's five sections were shrink-wrapped tables at half the measure while the bars and
+   the record spanned it, so the page read as three different layouts. Every section now takes the
+   page's width, and there is no grid here to describe. */
 
 /* the Answer page's two columns
    ==================================================================================

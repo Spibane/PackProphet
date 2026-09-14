@@ -280,7 +280,7 @@ else
             </details>
 
             <h2>Packs per Set</h2>
-            <DataTable Label="Packs opened per set" Fit="true">
+            <DataTable Label="Packs opened per set">
                 <thead>
                     <tr>
                         <th scope="col">Set</th>
@@ -311,20 +311,11 @@ else
                 </tbody>
             </DataTable>
 
-            @* The check and the record, side by side.
-               ==================================================================================
-               They answer the two halves of one question -- did the model hold up, and what did I
-               actually open -- and reading either without the other is how a rarity a fifth out
-               looks like a broken engine rather than eleven packs of one set.
-
-               The recent list on the right is a summary; the editable table below it is the record
-               itself, with its dates, its delete buttons and the switch for whether deleting also
-               takes the cards back. Half a page is not enough for that, and a summary is what you
-               want beside a comparison anyway. *@
-            <div class="check-cols">
-            <div class="check-odds">
             <div class="section-head">
-                <h3 class="sub-head">Did the odds hold up?</h3>
+                @* Sentence case, and it stays that way: it ends in a question mark, which by this
+                   app's one casing rule makes it a sentence rather than a label. See
+                   LabelCaseTests. *@
+                <h2>Did the odds hold up?</h2>
                 @* Only offered once there is a baseline to scale to and logged packs to scale
                    from. Without both, the option is a button that cannot answer. *@
                 @* One slice at a time. Series and sets sit in the same dropdown under their own
@@ -450,7 +441,7 @@ else
                         @_scopePacks.ToString("0.#") @Fmt.S(_scopePacks, "pack")@(_lifetimeActive ? " estimated" : "")
                     </span>
                 </div>
-                <DataTable Label="Pulls against expected, by rarity" Fit="true">
+                <DataTable Label="Pulls against expected, by rarity">
                     <thead>
                         <tr>
                             <th scope="col">Rarity</th>
@@ -476,37 +467,8 @@ else
                 </DataTable>
             }
 
-            </div>
-
-            <div class="check-recent">
-                <span class="micro">Every Pack, Newest First</span>
-                <div class="recent-rows">
-                    @foreach (var entry in _recent.Take(RecentBeside))
-                    {
-                        <div class="recent-row">
-                            <span class="art" aria-hidden="true"
-                                  style="--art:url('@Session.PackArtUrl($"{entry.Set}:{entry.Pack}")')"></span>
-                            <span class="nm">@entry.Pack</span>
-                            <span class="cards">
-                                @entry.OwnershipKeys.Count @Fmt.S(entry.OwnershipKeys.Count, "card")
-                                @if (NewIn(entry) is > 0 and var fresh)
-                                {
-                                    <text> &middot; </text><strong>@fresh new</strong>
-                                }
-                            </span>
-                            <span class="when">@Ago(entry.At)</span>
-                        </div>
-                    }
-                </div>
-                @if (_log.Count > RecentBeside)
-                {
-                    <p class="note">@(_log.Count - RecentBeside) more, in the table below.</p>
-                }
-            </div>
-            </div>
-
             <div class="section-head">
-                <h3 class="sub-head">Recent Packs</h3>
+                <h2>Recent Packs</h2>
                 <button class="btn btn-sm @(_clearingAll ? "btn-danger" : "btn-outline-danger")"
                         @onclick="ClearAll">
                     @(_clearingAll ? $"Really delete all {_log.Count}?" : "Delete All")
@@ -624,46 +586,6 @@ else
         }
     }
     private const int RecentShown = 25;
-
-    /// <summary>
-    /// How many packs the summary beside the odds check lists.
-    ///
-    /// A handful, not the log: the table below is the log, with its dates and its delete buttons.
-    /// This is the "and what did I actually open" that makes the comparison next to it readable.
-    /// </summary>
-    private const int RecentBeside = 5;
-
-    /// <summary>
-    /// Cards in this pack that were not already in the collection when it was logged.
-    ///
-    /// Recomputed against the collection as it stands now rather than stored, so it answers "how
-    /// many of these would be new today" -- which is what the figure beside a pack in a list of
-    /// packs is read as. An exact was-new-then would need a snapshot per pack that nothing keeps.
-    /// </summary>
-    private int NewIn(PackOpenEvent entry) =>
-        entry.OwnershipKeys
-            .Distinct()
-            .Select(k => Session.Index.ByOwnershipKey.GetValueOrDefault(k)?.FirstOrDefault())
-            .Count(c => c is not null && Session.CountOf(c) <= 1);
-
-    /// <summary>
-    /// How long ago, in the words a list of recent things uses. Not a date: the point of this
-    /// column is recency, and "Today" reads faster than a date you have to subtract.
-    /// </summary>
-    private static string Ago(DateTimeOffset at)
-    {
-        var days = (DateTimeOffset.Now.Date - at.ToLocalTime().Date).Days;
-
-        return days switch
-        {
-            <= 0 => "Today",
-            1 => "Yesterday",
-            < 7 => $"{days} days ago",
-            < 14 => "Last week",
-            < 60 => $"{days / 7} weeks ago",
-            _ => at.ToLocalTime().ToString("d MMM"),
-        };
-    }
 
     private IReadOnlyList<PackOpenEvent> _log = [];
     private IReadOnlyList<PackOpenEvent> _recent = [];

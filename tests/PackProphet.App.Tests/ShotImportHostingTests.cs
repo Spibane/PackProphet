@@ -264,6 +264,98 @@ public class ShotImportHostingTests : AppHost
     }
 
     [Fact]
+    public async Task The_only_picture_can_be_logged_without_opening_the_pack()
+    {
+        // The gap this closes: one picture had only the button that loads the pack into the picker,
+        // so logging a single pack off a screenshot meant a detour through a grid whose five cards
+        // were already filled in. A run of two or more had the direct route all along.
+        StubScan(HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        Upload(page);
+
+        // Re-found inside InvokeAsync and waited for, because logging runs through UiBusy, which
+        // defers the work off the click -- see GridFilterTests.
+        await page.InvokeAsync(() => page.Find("#log-one").Click());
+        page.WaitForAssertion(() => Assert.Single(Session.Profile.PackLog));
+
+        var logged = Assert.Single(Session.Profile.PackLog);
+        Assert.Equal("Mewtwo", logged.Pack);
+        Assert.Equal(5, logged.OwnershipKeys.Count);
+        Assert.Equal(1, Session.CountOf(Session.Index.ByKey["A1-1"]));
+        Assert.Equal(GameRules.PackPointsPerPack, Session.Profile.Resources.PackPointsBySet["A1"]);
+
+        // Never went near the workspace: the picker's own progress line is what being in it looks
+        // like, and the point of this button is that it is skipped.
+        Assert.DoesNotContain("picked 5 of 5", page.Markup);
+
+        // And the reading is spent, with the account of it left behind.
+        page.WaitForAssertion(() =>
+            Assert.Contains("Logged 1 pack and 5 cards", Collapse(page.Markup)));
+        Assert.Empty(page.FindAll("#log-one"));
+    }
+
+    [Fact]
+    public async Task One_picture_holding_a_wrong_sized_pack_asks_once_before_logging()
+    {
+        // The same question the batch and the single-pack commit ask. Four cards is not a size an
+        // A1 pack comes in, and a miscount recorded here reads on History as the model being wrong.
+        StubScan(HandScan(["A1-1", "A1-2", "A1-3", "A1-4"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        Upload(page);
+
+        await page.InvokeAsync(() => page.Find("#log-one").Click());
+        page.WaitForAssertion(() =>
+            Assert.Contains("holds a number of cards that pack cannot", Collapse(page.Markup)));
+
+        Assert.Empty(Session.Profile.PackLog);          // asked, not done
+
+        await page.InvokeAsync(() => page.Find("button.btn-warning").Click());
+        page.WaitForAssertion(() => Assert.Single(Session.Profile.PackLog));
+    }
+
+    [Fact]
+    public async Task A_run_of_pictures_is_logged_together_rather_than_one_at_a_time()
+    {
+        // Logging one reading out of several clears the rest with it, so the per-picture direct
+        // button is only offered while there is nothing else to lose. The batch button is the
+        // offer that belongs to a run.
+        StubTwo(HandScan(), HandScan(["A1-100", "A1-101", "A1-102", "A1-103", "A1-104"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        Assert.Empty(page.FindAll("#log-one"));
+        Assert.Single(page.FindAll("#log-all"));
+    }
+
+    [Fact]
+    public async Task What_a_picture_offers_is_not_flush_against_what_it_read()
+    {
+        // The card table closes on mb-0 and the buttons under it came straight after, so the first
+        // thing you could press sat against the last row it was about. The gap belongs to the
+        // import rather than to each host, which had the same bug twice.
+        StubScan(HandScan());
+        await ReadyAsync();
+
+        foreach (var page in new IRenderedFragment[]
+                 { RenderComponent<LogPack>(), RenderComponent<WonderPick>() })
+        {
+            Upload(page);
+
+            var actions = page.Find("button.btn-primary").ParentElement;
+            while (actions is not null && !actions.ClassList.Contains("mt-3"))
+                actions = actions.ParentElement;
+
+            Assert.NotNull(actions);
+        }
+    }
+
+    [Fact]
     public async Task Adopting_the_only_picture_asks_nothing()
     {
         // Nothing is lost with one picture, and a confirm on the ordinary path is a tap for its own
@@ -511,6 +603,13 @@ public class ShotImportHostingTests : AppHost
             .Name;
     }
 
+    /// <summary>
+    /// A hit in a slot's own search box. Each one is a list item, which the page's other outline
+    /// buttons -- the pack shortlist, "Log It Now" -- are not, so the class alone does not say
+    /// "a card the search came back with".
+    /// </summary>
+    private const string Hits = "li button.btn-outline-primary";
+
     [Fact]
     public async Task A_slot_you_have_to_name_is_searched_within_the_pack_the_picture_is_of()
     {
@@ -538,18 +637,18 @@ public class ShotImportHostingTests : AppHost
         page.WaitForAssertion(
             () => Assert.Contains("Search Every Card", page.Markup),
             TimeSpan.FromSeconds(3));
-        Assert.Empty(page.FindAll(".btn-outline-primary"));
+        Assert.Empty(page.FindAll(Hits));
 
         // And a card the pack does hold comes back — with every hit from that pack, which is the
         // assertion that would fail if the restriction were only a sort order.
         var inside = Session.Index.ByPack["A1:Mewtwo"];
         box.Input(inside[0].Name);
         page.WaitForAssertion(
-            () => Assert.NotEmpty(page.FindAll(".btn-outline-primary")),
+            () => Assert.NotEmpty(page.FindAll(Hits)),
             TimeSpan.FromSeconds(3));
 
         var keys = inside.Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
-        Assert.All(page.FindAll(".btn-outline-primary"), hit =>
+        Assert.All(page.FindAll(Hits), hit =>
             Assert.Contains(hit.QuerySelector("span")!.TextContent.Trim(), keys));
     }
 
@@ -575,7 +674,7 @@ public class ShotImportHostingTests : AppHost
         page.FindAll("button").First(b => b.TextContent.Contains("Search Every Card")).Click();
 
         page.WaitForAssertion(
-            () => Assert.NotEmpty(page.FindAll(".btn-outline-primary")),
+            () => Assert.NotEmpty(page.FindAll(Hits)),
             TimeSpan.FromSeconds(3));
 
         // And it stops claiming to be over one pack once it is not.

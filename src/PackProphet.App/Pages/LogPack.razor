@@ -107,21 +107,52 @@ else if (_pack is null)
 
                         @if (guess.PackKey is not null)
                         {
-                            <button class="btn btn-primary" aria-live="polite"
-                                    title="@AdoptWarning"
-                                    @onclick="() => AdoptShot(reading, guess.PackKey)">
-                                @if (Confirming(reading, guess.PackKey))
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button class="btn btn-primary" aria-live="polite"
+                                        title="@AdoptWarning"
+                                        @onclick="() => AdoptShot(reading, guess.PackKey)">
+                                    @if (Confirming(reading, guess.PackKey))
+                                    {
+                                        <text>Really? Other screenshots will be deleted.</text>
+                                    }
+                                    else
+                                    {
+                                        <text>
+                                            Open @guess.PackKey.Split(':')[1] with these
+                                            @reading.NamedCount @Fmt.S(reading.NamedCount, "card")
+                                        </text>
+                                    }
+                                </button>
+
+                                @* The batch button's counterpart for one picture: log it where it
+                                   stands, without the trip through the picker. The button above is
+                                   the one that opens the pack in the grid so the cards can be
+                                   checked first, which is worth offering and not worth forcing —
+                                   one pack was the case that had no way to skip it.
+
+                                   Only while this is the only picture. Over a batch it would log
+                                   one reading and clear the rest with it, which is what the
+                                   All-Pictures button exists to avoid. *@
+                                @if (OnlyPicture)
                                 {
-                                    <text>Really? Other screenshots will be deleted.</text>
+                                    <button id="log-one" class="btn btn-outline-primary"
+                                            disabled="@Busy.IsBusy"
+                                            @onclick="() => LogOne(reading)">
+                                        Log It Now
+                                    </button>
                                 }
-                                else
-                                {
-                                    <text>
-                                        Open @guess.PackKey.Split(':')[1] with these
-                                        @reading.NamedCount @Fmt.S(reading.NamedCount, "card")
-                                    </text>
-                                }
-                            </button>
+                            </div>
+
+                            @if (OnlyPicture && _bulkMiscount is { } query)
+                            {
+                                <Notice Severity="Notice.Level.Warning" Dense="true" Class="mt-2">
+                                    @query
+                                    <button class="btn btn-sm btn-warning ms-2 py-0"
+                                            disabled="@Busy.IsBusy" @onclick="LogAllAnyway">
+                                        Log It Anyway
+                                    </button>
+                                </Notice>
+                            }
                         }
                         else if (guess.Candidates.Count > 1)
                         {
@@ -725,6 +756,11 @@ else
     /// </summary>
     private bool AdoptCostsTheRest => (_shots?.Readings.Count ?? 0) > 1;
 
+    /// <summary>
+    /// Whether one picture is on screen, so logging it costs nothing else.
+    /// </summary>
+    private bool OnlyPicture => (_shots?.Readings.Count ?? 0) == 1;
+
     private bool Confirming(ShotReading reading, string pack) =>
         _confirmAdopt is { } c && ReferenceEquals(c.Reading, reading) && c.Pack == pack;
 
@@ -1099,6 +1135,12 @@ else
 
         return LogAllCore(plan);
     }
+
+    /// <summary>
+    /// One picture, logged as a batch of one. The miscount question, the pack-point arithmetic and
+    /// the account of what happened are the batch's, and none of them cares how many there were.
+    /// </summary>
+    private Task LogOne(ShotReading reading) => LogAll(Plan([reading]));
 
     /// <summary>The second press, which arrives with the answer.</summary>
     private Task LogAllAnyway()

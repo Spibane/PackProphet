@@ -323,9 +323,14 @@
             </section>
         }
 
-        @if (reading.Matches.Count > 0)
+        @if (reading.Matches.Count > 0 && Actions is not null)
         {
-            @Actions?.Invoke(reading)
+            @* The gap is this component's to give, not each host's. What a reading renders last is
+               either the card table, which closes on mb-0, or the slot list -- so a host's first
+               button lands flush against it, and both hosts had the same missing margin. *@
+            <div class="mt-3">
+                @Actions(reading)
+            </div>
         }
     }
 }

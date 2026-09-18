@@ -92,6 +92,8 @@ until then the minor number tracks the roadmap phase.
   the first row of cards was underneath it and nothing brought it out, since at rest there is
   nothing to scroll. Worst on a search that matches one row, where the row you went looking for is
   the covered one. The grid starts below the strip now, by the height the script already measures
+- **Fixed: "12 pack hourglasss".** `Fmt.S` added an *s* to everything; English adds *es* after a
+  sibilant. Every other word the app counts is unaffected
 - **Fixed: the same strip was squeezing the grid on a narrow window.** Below the fold width it is
   meant to be a bar in the flow, and the rule that undid its overlay placement was outranked by the
   rule that set it, so it stayed in a column that layout does not have. Grid invented an implicit

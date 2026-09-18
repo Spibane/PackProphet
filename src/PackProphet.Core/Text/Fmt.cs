@@ -84,7 +84,7 @@ public static class Fmt
 
     /// <summary>Plural helper, for the many places a count is read aloud in a sentence.</summary>
     public static string S(int n, string singular, string? plural = null) =>
-        n == 1 ? singular : plural ?? singular + "s";
+        n == 1 ? singular : plural ?? Plural(singular);
 
     /// <summary>
     /// The same, for a figure that is printed with a decimal. It agrees with what is SHOWN rather
@@ -92,7 +92,24 @@ public static class Fmt
     /// packs" is the bug this exists to stop.
     /// </summary>
     public static string S(double n, string singular, string? plural = null) =>
-        Math.Round(n, 1) == 1d ? singular : plural ?? singular + "s";
+        Math.Round(n, 1) == 1d ? singular : plural ?? Plural(singular);
+
+    /// <summary>
+    /// "+s", except after a sibilant, where English takes "+es".
+    ///
+    /// Written because the naive rule shipped "12 pack hourglasss" onto the log screen. Every
+    /// other word this app counts -- packs, cards, rows, rungs, variants -- is unaffected, so this
+    /// is the whole of the irregularity worth encoding: an explicit plural is still the way to say
+    /// anything harder, and the callers that need one pass it.
+    /// </summary>
+    private static string Plural(string singular) =>
+        singular.EndsWith("s", StringComparison.OrdinalIgnoreCase)
+        || singular.EndsWith("x", StringComparison.OrdinalIgnoreCase)
+        || singular.EndsWith("z", StringComparison.OrdinalIgnoreCase)
+        || singular.EndsWith("ch", StringComparison.OrdinalIgnoreCase)
+        || singular.EndsWith("sh", StringComparison.OrdinalIgnoreCase)
+            ? singular + "es"
+            : singular + "s";
 }
 
 /// <summary>

@@ -132,6 +132,11 @@ until then the minor number tracks the roadmap phase.
 - **Fixed: four diamonds overlapped the bar beside them in the rail's target rows.** 49px of
   glyphs in a 40px track. Nothing clipped them, because a clipped rarity reads as a lower one, so
   the track fits the widest rung instead
+- **Copy: less explaining.** The page-wide notes defending a design decision are gone — why
+  `/progress` names three routes instead of picking one, why "by packs" is not an ordering, why a
+  batch cannot beat ten singles, what the batch figures do not model — along with the reasoning
+  clauses trailing six switch labels and footnotes. The instruction or the fact stays; the argument
+  for it lives in the code
 - **Fixed: the same strip was squeezing the grid on a narrow window.** Below the fold width it is
   meant to be a bar in the flow, and the rule that undid its overlay placement was outranked by the
   rule that set it, so it stayed in a column that layout does not have. Grid invented an implicit

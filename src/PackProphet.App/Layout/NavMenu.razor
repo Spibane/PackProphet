@@ -34,7 +34,12 @@
        A plain anchor, not a NavLink: a wordmark that filled in like a pressed button whenever you
        were on the collection would read as a sixth destination in the row. *@
     <a class="brand" href="collection" title="Your collection">
-        <PackMark Class="pack-mark" />
+        @* Filled, where the same drawing is an outline everywhere else. A line drawing of a pack
+           is the same weight as the line drawings on the buttons beside it, which is what made the
+           name disappear into the row; a solid one is a different kind of mark rather than a
+           bigger one of the same kind. It keeps currentColor, so it still takes the bar's ink in
+           either theme. *@
+        <PackMark Class="pack-mark" Filled="true" />
         PackProphet
     </a>
     @* The same marks the tab bar puts on the same five destinations, from the same component.

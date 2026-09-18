@@ -1769,12 +1769,44 @@ main > * { flex-shrink: 0; }
     background: var(--bs-tertiary-bg);
     border-bottom: 1px solid var(--bs-border-color);
 }
-/* The wordmark, which is also the way home. An anchor now, so it has to say it is not an ordinary
-   link: no underline, the body's ink rather than the link colour, and the pointer plus a faint lift
-   on hover to say it is pressable at all -- a wordmark gives no other clue that it is. */
+/* The wordmark, which is also the way home.
+   ==================================================================================
+   An anchor, so it has to say it is not an ordinary link: no underline, the body's ink rather than
+   the link colour, and the pointer plus the accent on hover to say it is pressable at all -- a
+   wordmark gives no other clue that it is.
+
+   AND IT HAS TO SAY IT IS NOT A DESTINATION
+   ----------------------------------------------------------------------------------
+   It went unnoticeable the moment the destinations beside it got marks of their own. Before that
+   the pack was the only glyph in the row and the name read as the name; after, the brand was the
+   same construction as its neighbours -- a mark, then a word, at the same size in the same ink --
+   and looked like a sixth button that had lost its border.
+
+   Fixed with size and separation rather than colour. The row already spends the accent on the
+   destination you are on, which is a filled block; a second accented thing beside it would be two
+   claims on the same glance, and "where am I" is the one worth keeping. So: the largest type in
+   the row, the largest mark in it, and a rule between it and the buttons, which is the same
+   hairline the page bars use. */
 .app-nav .brand {
-    font-weight: 700; margin-right: .75rem; letter-spacing: -.01em;
+    display: inline-flex; align-items: center;
+    font-weight: 700; letter-spacing: -.02em;
+
+    /* Zero, because the mark already brings its own -- see the note on .pack-mark. The gap
+       between a mark and the word it belongs to is measured by eye rather than by box: the two are
+       one lockup, and a gap that reads as deliberate space reads as two things. */
+    gap: 0;
+
+    /* Larger than the 1rem its neighbours set, so it reads as the masthead rather than as one of
+       them. This is the whole of the fix that a reader would call "the logo is bigger". */
+    font-size: 1.3rem;
+
     color: var(--bs-body-color); text-decoration: none;
+
+    /* Space, then a rule, then space: the gap alone was .75rem and read as the gap between two
+       buttons, because that is what it was. */
+    margin-inline-end: .7rem;
+    padding-inline-end: .7rem;
+    border-inline-end: 1px solid var(--pp-hairline, var(--bs-border-color));
 }
 .app-nav .brand:hover { color: var(--bs-primary); }
 .app-nav .brand:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 3px; border-radius: var(--pp-r-xs); }
@@ -2564,25 +2596,43 @@ h1[tabindex="-1"]:focus-visible { outline: none; }
    the dark one, where it all but vanished. currentColor has no such failure mode: there is one
    colour, it is the body colour, and it is already the most contrasted thing on either bar.
 
-   Hidden under slate, which is the app exactly as it shipped and shipped without a mark. */
-.app-nav .brand .pack-mark { display: none; }
+   IN BOTH SKINS NOW, AND ON A TILE
+   ----------------------------------------------------------------------------------
+   It used to be hidden under slate, on the grounds that slate is the app exactly as it shipped and
+   shipped without a mark. That is a reason to leave something alone, not a reason for the app's own
+   name to have no mark on half its skins -- so both get it.
 
-[data-pp-skin="paper"] .app-nav .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: .4rem;
-    letter-spacing: -.02em;
-}
+   And it is drawn SOLID here, which the same mark is nowhere else -- see PackMark's Filled. The
+   outline version is the same weight as the line drawings on the buttons beside it, which is what
+   made the name vanish into the row once those buttons had drawings at all. Filling it makes it a
+   different KIND of mark rather than a larger one of the same kind, and it keeps currentColor, so
+   nothing here has to know about the theme. */
+/* Sized here rather than by the component's width/height attributes, which are only a default.
+   2rem, which is the height of every control in this row -- so the pack is the largest drawing in
+   the bar while still being no taller than the buttons next to it. That is the ceiling rather than
+   a preference: the bar is a fixed 3rem with overflow hidden, so a mark that outgrew the controls
+   would not make the bar taller, it would get clipped by it.
 
-/* Sized here rather than by the component's width/height attributes, which are only a default:
-   1.3rem against the wordmark's 1rem, so the mark reads as slightly the larger of the two without
-   outgrowing a bar whose controls are 2rem. In rem rather than px so it tracks the type scale if the
-   reader has scaled it. */
-[data-pp-skin="paper"] .app-nav .brand .pack-mark {
+   In rem so it tracks the type scale if the reader has scaled it. */
+.app-nav .brand .pack-mark {
     display: block;
     flex: none;
-    inline-size: 1.3rem;
-    block-size: 1.3rem;
+    inline-size: 2rem;
+    block-size: 2rem;
+
+    /* NO MARGIN EITHER WAY, AND THAT IS THE POINT.
+       ------------------------------------------------------------------------------
+       The pack occupies the middle 9.9 units of a 24-unit viewBox, tilted, so at 2rem the drawing
+       carries about 9.4px of its own empty box on the side facing the wordmark. That is already a
+       lockup's worth of space, which is why the gap above is zero: with a .45rem gap on top of it
+       the optical distance was 16.6px and the two read as a mark and a separate word.
+
+       Measured rather than eyeballed, at each step. A negative margin here pulling the word into
+       the glyph's whitespace took it to 5.4px, which was too close -- the pack is tilted eight
+       degrees, so its lower-right corner reaches further right than its top-right one and a word
+       set to the average crowds the corner. Letting the glyph's own box be the whole of the
+       spacing lands at 9.4px, which is the lockup. Nothing to tune, which is the reason to prefer
+       it to a number someone would have to re-derive. */
 }
 
 /* page chrome

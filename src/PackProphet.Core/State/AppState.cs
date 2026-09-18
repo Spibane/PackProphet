@@ -220,20 +220,18 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     public string? ChaseOrder { get; init; }
 
     /// <summary>
-    /// What the four Answer pages work toward: "everything", a set, "series:X", a chase list, or
-    /// "chases". One setting rather than four, because it is one question -- the pack ranking, the
-    /// trade queue, the wishlist and the Wonder Pick bar all answer "given what I am collecting,
-    /// what should I do next", and they were each keeping their own copy of what that was. Four
-    /// buttons labelled Target, four sheets behind them, and setting one changed nothing anywhere
-    /// else.
+    /// What the four Answer pages worked toward, and no longer: read and cleared, like
+    /// <see cref="WishGrid"/> below.
     ///
-    /// Here rather than on the profile, like the shelf orders above, even though a chase list
-    /// belongs to one collection: switching collections leaves a scope naming a list that is not
-    /// there, and <c>NormalizeScope</c> already answers that with "everything" rather than an
-    /// empty target.
+    /// It was one saved scope for the pack ranking, the trade queue, the wishlist and the Wonder
+    /// Pick bar, on the argument that they ask one question. They do -- but the answer does not
+    /// keep. Saved, it outlived the visit that set it, so a page opened days later ranked against
+    /// a set chosen once somewhere else, with a picker nobody remembered touching as the only
+    /// clue. A link could write it too, which is how "Which Pack" on one Progress panel came to
+    /// decide what Wonder Pick thought was worth a stamina.
     ///
-    /// Null means never chosen, and the reader supplies the default -- so this needs no schema
-    /// bump, and a scope written by a later version falls back rather than throwing.
+    /// Each page keeps its own scope for the length of the visit now, and a redirect can seed it.
+    /// Kept here so a save that carries one still loads; StateSerializer drops the value.
     /// </summary>
     public string? Target { get; init; }
 

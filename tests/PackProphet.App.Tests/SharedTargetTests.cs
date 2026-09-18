@@ -4,13 +4,14 @@ using PackProphet.Components;
 using PackProphet.Pages;
 
 /// <summary>
-/// One target, read by all four Answer pages.
+/// A target lasts as long as the visit that set it, and no longer.
 ///
-/// The pack ranking, the trade queue, the wishlist and the Wonder Pick bar ask the same question —
-/// given what I am collecting, what should I do next — and each kept its own copy of what that
-/// was. Four buttons labelled Target, four sheets behind them, and setting one changed nothing
-/// anywhere else: a reader who narrowed the ranking to one set found Wonder Pick still appraising
-/// offers against the whole game.
+/// The four Answer pages ask one question -- given what I am collecting, what should I do next --
+/// so for a while they shared one saved answer. The answer does not keep. Saved, it outlived the
+/// visit: a page opened days later ranked against a set chosen once on another screen, and a link
+/// could write it, so "Which Pack" on a Progress panel decided what Wonder Pick thought an offer
+/// was worth. Nothing is stored now, nothing is shared, and a redirect is the one thing that can
+/// say what a page opens on.
 /// </summary>
 public class SharedTargetTests : AppHost
 {
@@ -20,49 +21,72 @@ public class SharedTargetTests : AppHost
     /// <summary>A real set from the shipped data, so the label under test is one the app can name.</summary>
     private string ASet() => Session.Index.OpenableSets.OrderBy(s => s, StringComparer.Ordinal).First();
 
+    private static string Scope(IRenderedFragment page) =>
+        page.FindComponent<ScopePicker>().Instance.Scope;
+
+    private static async Task ChooseAsync(IRenderedFragment page, string scope) =>
+        await page.InvokeAsync(() =>
+            page.FindComponent<ScopePicker>().Instance.OnScope.InvokeAsync(
+                new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = scope }));
+
     [Fact]
-    public async Task A_target_set_on_one_page_is_the_target_on_all_of_them()
+    public async Task Every_page_opens_on_everything()
     {
         await ReadyAsync();
 
+        Assert.Equal("everything", Scope(RenderComponent<Packs>()));
+        Assert.Equal("everything", Scope(RenderComponent<Trades>()));
+        Assert.Equal("everything", Scope(RenderComponent<TradeBoard>()));
+        Assert.Equal("everything", Scope(RenderComponent<WonderPick>()));
+    }
+
+    [Fact]
+    public async Task A_scope_chosen_on_one_page_stays_on_that_page()
+    {
+        await ReadyAsync();
         var set = ASet();
 
-        // Through the picker's own callback rather than by writing state, so the test takes the
-        // path a change actually takes.
+        var trades = RenderComponent<Trades>();
+        await ChooseAsync(trades, set);
+
+        // It holds where it was chosen,
+        Assert.Equal(set, Scope(trades));
+
+        // and nowhere else. This is the whole change: a narrowed trade queue is not an
+        // instruction about what Wonder Pick should think is worth a stamina.
+        Assert.Equal("everything", Scope(RenderComponent<Packs>()));
+        Assert.Equal("everything", Scope(RenderComponent<WonderPick>()));
+        Assert.Equal("everything", Scope(RenderComponent<TradeBoard>()));
+    }
+
+    [Fact]
+    public async Task A_scope_is_forgotten_when_the_page_is_left()
+    {
+        // Nothing is persisted, so coming back is a fresh visit. A stored scope is the thing that
+        // used to have a reader ranking against a set they picked on a Tuesday.
+        await ReadyAsync();
+        var set = ASet();
+
+        await ChooseAsync(RenderComponent<Trades>(), set);
+
+        Assert.Equal("everything", Scope(RenderComponent<Trades>()));
+        Assert.Null(Session.State.Prefs.Target);
+    }
+
+    [Fact]
+    public async Task A_picker_has_its_own_scope_actually_selected()
+    {
+        // Not the parameter -- the option the control is SHOWING. The two branches of ScopePicker
+        // spelled one set "A1" and "set:A1", and a picker that finds no matching option sits on
+        // "Everything" while the bar above it names the set.
+        await ReadyAsync();
+        var set = ASet();
+
         var packs = RenderComponent<Packs>();
-        await packs.InvokeAsync(() =>
-            packs.FindComponent<ScopePicker>().Instance.OnScope.InvokeAsync(
-                new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = set }));
+        await ChooseAsync(packs, set);
 
-        Assert.Equal(set, Session.Target);
-
-        // Every page's own control, since that is what a reader would check it against. The bar
-        // says it too on three of the four; the wishlist keeps its scope in the rail.
-        Assert.Equal(set, RenderComponent<Trades>().FindComponent<ScopePicker>().Instance.Scope);
-        Assert.Equal(set, RenderComponent<TradeBoard>().FindComponent<ScopePicker>().Instance.Scope);
-        Assert.Equal(set, RenderComponent<WonderPick>().FindComponent<ScopePicker>().Instance.Scope);
+        Assert.Equal(set, packs.Find(".scope-pick").QuerySelector("option[selected]")?.GetAttribute("value"));
     }
-
-    [Fact]
-    public async Task Every_picker_has_the_shared_target_actually_selected()
-    {
-        // Not the parameter — the option the control is SHOWING. The two branches of ScopePicker
-        // spelled one set "A1" and "set:A1", which cost nothing while each page kept its own
-        // scope and broke the moment they shared one: the trade pages' dropdown found no matching
-        // option and sat on "Everything" while the bar above it named the set.
-        await ReadyAsync();
-
-        var set = ASet();
-        Session.SetTarget(set);
-
-        Assert.Equal(set, Selected(RenderComponent<Packs>()));
-        Assert.Equal(set, Selected(RenderComponent<Trades>()));
-        Assert.Equal(set, Selected(RenderComponent<TradeBoard>()));
-        Assert.Equal(set, Selected(RenderComponent<WonderPick>()));
-    }
-
-    private static string? Selected(IRenderedFragment page) =>
-        page.Find(".scope-pick").QuerySelector("option[selected]")?.GetAttribute("value");
 
     [Fact]
     public async Task The_bar_says_what_the_page_is_working_toward()
@@ -70,30 +94,38 @@ public class SharedTargetTests : AppHost
         // The reading half: a page ranking against one set while its bar still says "everything"
         // is the failure that made four separate scopes hard to notice in the first place.
         await ReadyAsync();
-
         var set = ASet();
-        Session.SetTarget(set);
         var said = Session.ScopeLabel(set);
 
-        Assert.Contains(said, Flat(RenderComponent<Packs>().Find(".page-head").TextContent));
-        Assert.Contains(said, Flat(RenderComponent<Trades>().Find(".page-head").TextContent));
-        Assert.Contains(said, Flat(RenderComponent<WonderPick>().Find(".page-head").TextContent));
+        var packs = RenderComponent<Packs>();
+        await ChooseAsync(packs, set);
+        Assert.Contains(said, Flat(packs.Find(".page-head").TextContent));
+
+        var trades = RenderComponent<Trades>();
+        await ChooseAsync(trades, set);
+        Assert.Contains(said, Flat(trades.Find(".page-head").TextContent));
+
+        var wonder = RenderComponent<WonderPick>();
+        await ChooseAsync(wonder, set);
+        Assert.Contains(said, Flat(wonder.Find(".page-head").TextContent));
     }
 
     [Fact]
-    public async Task A_target_naming_a_deleted_chase_list_falls_back_rather_than_sticking()
+    public async Task A_scope_naming_a_deleted_chase_list_falls_back_rather_than_sticking()
     {
-        // It is stored app-wide while a chase list belongs to one collection, so the stored string
-        // can outlive what it names. The picker and the figures under it have to agree, and
-        // "everything" is the only answer both can give.
+        // A list can go while the page holding it is open -- from another tab, or from a sync.
+        // The picker and the figures under it have to agree, and "everything" is the only answer
+        // both can give.
         await ReadyAsync();
 
         var id = Session.CreateChaseList();
-        Session.SetTarget($"chase:{id}");
-        Assert.Equal($"chase:{id}", Session.Target);
+        var page = RenderComponent<Trades>();
+        await ChooseAsync(page, $"chase:{id}");
+        Assert.Equal($"chase:{id}", Scope(page));
 
         Session.DeleteChaseList(id);
+        page.Render();
 
-        Assert.Equal("everything", Session.Target);
+        Assert.Equal("everything", Scope(page));
     }
 }

@@ -234,6 +234,10 @@ public static class StateSerializer
             ? new Prefs()
             : prefs with
             {
+                // Dropped rather than carried: no page reads a saved scope any more, and a value
+                // left in the file is one a future reader could pick up as if it still meant
+                // something. See Prefs.Target.
+                Target = null,
                 AssumedRateDonors = prefs.AssumedRateDonors ?? [],
                 AvailableLimitedPacks = prefs.AvailableLimitedPacks ?? [],
                 PinnedPacks = (prefs.PinnedPacks ?? [])

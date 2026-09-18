@@ -10,7 +10,8 @@
 
    Matching the tab bar rather than picking a roomier desktop split: which four destinations are
    the daily ones does not change with the width of the screen, and a nav whose contents reshuffle
-   between a laptop and a phone is one you have to re-learn. *@
+   between a laptop and a phone is one you have to re-learn. The ORDER matches it too, Progress
+   before Packs -- see the note in TabBar for why that way round. *@
 <nav class="app-nav">
     @* The pack from the app icon beside the name. Drawn in PackMark so the centre tab on a phone
        shows the same mark from the same path data.
@@ -24,12 +25,29 @@
         <PackMark Class="pack-mark" />
         PackProphet
     </span>
-    <NavLink class="nav-item" href="collection" Match="NavLinkMatch.All">Collection</NavLink>
-    <NavLink class="nav-item" href="packs">Packs</NavLink>
-    <NavLink class="nav-item" href="log">Log</NavLink>
-    <NavLink class="nav-item" href="chase">Chases</NavLink>
+    @* The same marks the tab bar puts on the same five destinations, from the same component.
+       They were a phone-only thing, which left the two navs agreeing about what they contained and
+       disagreeing about how it looked -- and the mark is the part you learn, so learning it on a
+       phone and not finding it on a laptop is the re-learning this nav exists to avoid.
+
+       Smaller than the tab bar's 22px: there the tab IS the target and the label is a caption
+       under the mark, here the word is the target and the mark sits beside it. A glyph the size of
+       the word would compete with it. *@
+    <NavLink class="nav-item" href="collection" Match="NavLinkMatch.All">
+        <NavIcon For="collection" Size="15" />Collection
+    </NavLink>
+    <NavLink class="nav-item" href="progress">
+        <NavIcon For="progress" Size="15" />Progress
+    </NavLink>
+    <NavLink class="nav-item" href="log">
+        @* The booster from PackMark, as the wordmark beside it and the centre tab both use. *@
+        <PackMark Size="15" />Log
+    </NavLink>
+    <NavLink class="nav-item" href="packs">
+        <NavIcon For="packs" Size="15" />Packs
+    </NavLink>
     <button class="nav-item nav-more-btn" popovertarget="desk-more">
-        More
+        <NavIcon For="more" Size="15" />More
         <span class="caret" aria-hidden="true">&#9662;</span>
     </button>
 

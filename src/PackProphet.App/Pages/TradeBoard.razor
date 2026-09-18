@@ -114,7 +114,7 @@ else
                 <span class="ttl">Cannot Be Listed</span>
                 @foreach (var group in _plan.Excluded.GroupBy(x => x.Reason).OrderBy(g => g.Key))
                 {
-                    <div class="rail-note">
+                    <div class="rail-footnote">
                         <span class="lbl">@group.Count() @Fmt.S(group.Count(), "card"), @group.Key</span>
                         <span class="who">
                             @string.Join(", ", group.Select(x => x.Card.Name)

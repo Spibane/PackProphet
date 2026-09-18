@@ -293,12 +293,15 @@ public class TradeBoardPageTests : AppHost
         Session.SetPlan(RarityPlan.Uniform(tiers));
 
         var page = RenderComponent<TradeBoard>();
-        page.WaitForState(() => page.FindAll(".page-rail .rail-note").Count > 0,
+        page.WaitForState(() => page.FindAll(".page-rail .rail-footnote").Count > 0,
                           TimeSpan.FromSeconds(10));
 
-        Assert.Empty(page.FindAll(".rail-main .rail-note"));
+        Assert.Empty(page.FindAll(".rail-main .rail-footnote"));
 
-        var note = page.Find(".page-rail .rail-note");
+        // .rail-footnote, not .rail-note: this two-part structure and the rail's prose notes were
+        // sharing one class, and the grid rules meant for this one were laying every prose note's
+        // inline children out as grid rows.
+        var note = page.Find(".page-rail .rail-footnote");
         Assert.Contains("cannot be traded", note.QuerySelector(".lbl")!.TextContent);
 
         // Every name rather than the first few: only these rarities are excluded, so the group is

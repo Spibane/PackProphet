@@ -4,6 +4,62 @@ Notable changes to PackProphet. Dates are ISO. Versions follow
 [semantic versioning](https://semver.org) once there is a release to be compatible with;
 until then the minor number tracks the roadmap phase.
 
+### v0.8.0 - 2026-09-17
+
+- **Every unfinished set on one page, at `/progress`.** The app could already answer "how do I
+  finish A2?" and had nowhere that answered "which of my sets are unfinished?" — scope was
+  one-at-a-time on the four Answer pages, and the Collection page's set strip carried a code and a
+  percentage as a way to jump between sets, not as an overview. One panel per set now leads with
+  how far short of target it is, what would finish it in calendar time, what kind of cards are left,
+  and the state of all three routes into it. Expanding a panel gives the rarity ladder with the
+  rungs you collect none of drawn as gaps rather than zeroes, and the outstanding cards, each
+  linking to its own page where its five routes are already priced
+- **No total, and no date for finishing everything.** Cards short is additive and the page bar
+  states it; expected packs is not. Packs of one set are not packs of another and the daily
+  allowance is shared, so 412 + 61 is not a number — the same reason `PackAllocator` exists rather
+  than the ranking simply adding its sets up. For the same reason the panels cannot be ordered by
+  packs: release order and closest-to-done are each one quantity measured the same way in every set,
+  and expected packs is not, so ordering by it would rank quantities that are not comparable. The
+  rail says so where the control is
+- **Three routes, no winner.** Each panel names packs, that set's pack points and how many of the
+  missing cards are tradeable, side by side and with no cheapest tinted among them. The engine
+  already refused that conversion — `RouteCost` prices only pulls and pack points in packs, and
+  leaves shinedust and stamina in their own currencies, because the game has no exchange rate
+  between them — and a page that picked a winner would be inventing one in the one place nothing
+  else does
+- **Every panel is the same eight bands at the same heights.** Four of them are pinned rather than
+  sized to their contents, and the contents are clamped to fit: the sentence to three lines, the
+  rarity line to one, the caveats to two. A band that grows to its content puts one panel out of
+  step with the one beside it, and then the figure, the bar and the buttons all sit at a different
+  height in each — which is the difference between twenty-one panels and one panel shown twenty-one
+  times. An expanded panel is no longer allowed to stretch the panels beside it either; a shut panel
+  is the same height whatever its neighbours are doing
+- **A set whose odds nobody has published says so, rather than "not sold in packs".** The two are
+  not the same statement: one is a gap in the data that the pack ranking can close by borrowing
+  another set's distribution, the other is a fact about the game that nothing closes. The engine
+  lumps them together, having nothing to price in either case, and the page now separates them and
+  names the fix
+- **`/packs` no longer says "Open this next" on a scoped ranking.** That is a claim about every pack
+  in the game and it is only true when everything was ranked. Against one set it is the best pack
+  *for that set*, and the best pack overall may be in a set the ranking never looked at. A narrowed
+  scope reads "Best for this target", deferring to the page bar above it for what the target is
+- **Progress takes the second slot in the main bar and Chase Lists moves behind More.** Progress is
+  where you arrive with "what am I missing", and every panel on it links out to the pack ranking for
+  one set — so it comes before the page it feeds, not after. A chase list is something you build by
+  hand for cards outside your plan, reached occasionally; it is still in More, in the command
+  palette, and in the scope picker on four pages
+- **Both navs now draw the same marks.** The tab bar had a glyph per destination and the desktop row
+  had none, so the two agreed about what they contained and disagreed about how it looked — and the
+  mark is the part you learn. They come from one component now, for the reason the booster pack
+  already did: path data copied into two files disagrees with itself after the first tweak
+- **A rarity rung has a compact form, and it is coloured wherever it appears.** Ten rungs across a
+  panel is about three rem a box, where "◆◆◆◆" does not fit and was being cut in half; the ladder now
+  reads `4◆` and wraps rather than being squeezed onto one row. The four families take their usual
+  colours, which on a row of ten is half of what tells them apart
+- **Fixed: a rail's prose notes were being laid out as grid rows.** Two different structures shared
+  the `rail-note` class and the grid rules meant for one of them won for both, so any note with an
+  inline element in it broke into a line per element. The footnote structure has its own name now
+
 ### v0.7.0 - 2026-09-01
 
 - **Cloud sync, with no account and nothing readable on the server.** One device makes a

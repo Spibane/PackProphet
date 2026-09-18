@@ -298,6 +298,33 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     /// removes. Order is preserved rather than sorted, so a pin lands where you put it.
     /// </summary>
     public List<string> PinnedPacks { get; init; } = [];
+
+    /// <summary>
+    /// How the Progress panels are ordered: "release" or "closest".
+    ///
+    /// Deliberately not "packs". Expected packs is the one figure on that page that cannot order
+    /// it: a set's packs are its own, so putting a 60-pack set above a 400-pack one would rank two
+    /// quantities that are not the same quantity. Percent complete is comparable across sets, and
+    /// release order is the order the collection itself is in, so those are the two on offer.
+    ///
+    /// Null means never chosen and the reader supplies the default, as with the shelf orders — so
+    /// this needed no schema bump, and a value written by a later version falls back rather than
+    /// throwing.
+    /// </summary>
+    public string? ProgressOrder { get; init; }
+
+    /// <summary>
+    /// Leave finished sets off the Progress page. True by default: the page answers "what is
+    /// left", and a set with nothing left is not an answer to it.
+    /// </summary>
+    public bool ProgressHideComplete { get; init; } = true;
+
+    /// <summary>
+    /// Include sets that have not been released on the Progress page. False by default, because
+    /// every card in them is outstanding and nothing can be done about any of it — an unreleased
+    /// set would otherwise lead the page on the strength of being entirely missing.
+    /// </summary>
+    public bool ProgressIncludeUnreleased { get; init; }
 }
 
 /// <summary>

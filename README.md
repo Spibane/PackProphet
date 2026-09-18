@@ -4,7 +4,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-0.5.1-black?style=flat-square)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.0-black?style=flat-square)](./CHANGELOG.md)
 [![Status](https://img.shields.io/badge/status-Public_test-green?style=flat-square)](https://packprophet.spibane.com/)
 [![Changelog](https://img.shields.io/badge/changelog-blue?style=flat-square)](./CHANGELOG.md)
 
@@ -29,6 +29,7 @@ Browser
 Blazor WebAssembly  (.NET 10 — static files, no account, no sign-in)
    │
    ├── /                        Collection (grid or list, counts, filters, undo)
+   ├── /progress                Every unfinished set, and what each one still needs
    ├── /packs                   Which pack to open next, against any target
    ├── /log                     Log a pack; accrues pack points
    ├── /chase                   Chase lists, shared entirely inside a link
@@ -65,6 +66,14 @@ series, or a hand-picked chase list.
 
 ## Features
 
+- **Every unfinished set on one page** — how far short of your target each one is, what would finish
+  it, and the state of all three routes into it: packs, that set's pack points, and how many of the
+  missing cards are tradeable. One panel per set, each leading with its own figure, because the
+  figures do not add up: a set can be three cards short and four hundred packs away, if those three
+  are Crowns. There is deliberately **no total and no finish-everything date** — cards are cards and
+  the page counts them, but packs of one set are not packs of another, and the daily allowance is
+  shared. Expand a set to see what is left by rarity rung, with the rungs you collect none of drawn
+  as gaps rather than zeroes
 - **Which pack to open next** — every pack ranked against whatever you are collecting, using
   published pull rates. The chance a pack gives you something you need and the expected packs until
   it does; **where in the pack that chance is**, per card position, since the first three cards come
@@ -333,6 +342,7 @@ differently in production. The cost is a native relink on every build.
 | `/collection/screenshot` | Read cards off a screenshot of the game |
 | `/collection/import`, `/collection/export` | Import from another tracker; export a backup |
 | `/card/{key}` | One card: printings, cheapest route, packs that can give it |
+| `/progress` | Every unfinished set: what it still needs, and where it comes from |
 | `/packs` | Which pack to open next, with the target advisor and points panel |
 | `/log` | Log a pack |
 | `/history` | Packs over time, predicted against actual, and your best hits |

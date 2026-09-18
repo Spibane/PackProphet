@@ -1,0 +1,80 @@
+@* The mark for a destination, in one place.
+
+   WHY A COMPONENT AND NOT INLINE SVG
+   ==================================================================================
+   The same five destinations appear in two navs -- the tab bar on a phone, the row of buttons on a
+   desktop -- and both are supposed to be the same nav at two widths. NavMenu's own note commits to
+   that: "a nav whose contents reshuffle between a laptop and a phone is one you have to re-learn."
+   The contents already matched. The marks did not, because they were inline in the tab bar and
+   absent from the desktop row.
+
+   Copying the path data across would be the mistake PackMark was written to end: "path data copied
+   into two files is path data that disagrees with itself after the first tweak." So the glyphs live
+   here and both navs read from them, and the booster pack keeps coming from PackMark because it is
+   in the wordmark too.
+
+   currentColor throughout, no literal colours: the same drawing has to sit in body ink on a pale
+   bar, white on a filled active button, and the accent on a selected tab, without any of the three
+   saying anything about colour.
+
+   A 24 viewBox and a 1.8-1.9 stroke on every mark, so they carry the same weight as each other at
+   the same rendered size. The caller sets that size: 22px beside a tab label, 15px beside a nav
+   button's word, where the mark is a hint at the word rather than the thing you aim at. *@
+
+<svg class="@Class" viewBox="0 0 24 24" width="@Size" height="@Size"
+     focusable="false" aria-hidden="true">
+    @switch (For)
+    {
+        @* Four panes: the grid the page opens as, which is the only one of these a reader has
+           already seen full-size before they see the mark. *@
+        case "collection":
+            <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+            <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+            <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+            <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+            break;
+
+        @* Four bars at four heights: one panel per set, each at its own standing, so the shape
+           says "several things, each part-done". Deliberately not a percentage ring, which says
+           one figure -- and one figure is what that page refuses to give, because the sets do not
+           total. *@
+        case "progress":
+            <path d="M4 20V10M9.5 20V5M15 20v-8M20.5 20v-5"
+                  fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+            break;
+
+        @* A box seen in three-quarter view: a pack of five, which is what the page ranks. *@
+        case "packs":
+            <path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+            <path d="M4 8.5 12 13l8-4.5M12 13v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+            break;
+
+        case "more":
+            <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+            break;
+    }
+</svg>
+
+@code {
+    /// <summary>
+    /// Which destination's mark to draw: "collection", "progress", "packs" or "more".
+    ///
+    /// A string rather than an enum because the callers are markup and the value is written once
+    /// per nav entry beside the href it belongs to -- an enum would put the two spellings of one
+    /// destination on different lines. An unknown name draws nothing rather than throwing: a nav
+    /// with a missing glyph is a nav, and a nav that threw would take the whole shell down.
+    ///
+    /// The booster pack is NOT here. It comes from <see cref="PackMark"/>, which the wordmark and
+    /// the centre tab already share.
+    /// </summary>
+    [Parameter, EditorRequired] public string For { get; set; } = "";
+
+    /// <summary>
+    /// Rendered size in px. 22 beside a tab label, where the tab is the target; 15 beside a
+    /// desktop nav button's word, where the word is.
+    /// </summary>
+    [Parameter] public int Size { get; set; } = 22;
+
+    /// <summary>Class on the svg, so a caller can size it from the stylesheet instead.</summary>
+    [Parameter] public string? Class { get; set; }
+}

@@ -1,0 +1,883 @@
+@page "/progress"
+@implements IDisposable
+@inject AppSession Session
+@inject UiBusy Busy
+
+@* One panel per incomplete set: how far short it is, what would finish it, and the state of the
+   three routes into it.
+
+   A LEDGER, NOT AN ANSWER
+   ==================================================================================
+   Parallel panels, each leading with its own figure, and no verdict over the top of them. The
+   app's other pages pick one thing to do next; this one reports where every set stands, which is
+   the question the scope picker could never answer because it only ever holds one scope at a time.
+
+   WHAT THIS PAGE MAY NOT DO
+   ----------------------------------------------------------------------------------
+   Three rules fall out of that job, and all three are load-bearing:
+
+   No pack total, and no date for finishing everything. Cards short is additive -- a card missing
+   in A1 and one missing in A2 are both one card -- so the bar states it. Expected packs is not:
+   the packs are different packs and the daily allowance is shared, so 412 + 61 is not a number.
+   See PackAllocator, which exists because a multi-set target cannot be priced by adding up its
+   sets.
+
+   No best route. Each panel names packs, points and trade side by side and picks no winner.
+   RouteCost prices only Pull and PackPoints in packs and refuses to convert the other three,
+   because the game has no exchange rate between them -- so a "cheapest" across them would be
+   invented here and nowhere else in the app.
+
+   No ordering by packs. Release order and closest-to-done are both one quantity measured the same
+   way in every set; expected packs is not, so ordering by it would rank quantities that are not
+   comparable. The rail says so where the control is.
+
+   No box strip on a panel. BoxStrip's own test is whether you could name every box before looking
+   at the data, and the set of incomplete sets fails it. The rarity ladder passes -- fixed, short,
+   nameable -- so the strip appears inside an expanded panel and nowhere else.
+
+   THE PANEL INVARIANT
+   ----------------------------------------------------------------------------------
+   Every panel is the same eight bands at the same heights, four of them fixed, and the content is
+   clamped to fit: the sentence to three lines, the rarity line to one, the caveats to two, and
+   every route carries a sub-line even where there is nothing to qualify. A band that grows to its
+   content is a band that puts one panel out of step with the one beside it, and then the figure,
+   the bar and the buttons all sit at a different height in each -- which is the difference between
+   four panels and one repeated panel. See .set-panel in app.css, which owns the heights. *@
+
+<PageTitle>Progress · PackProphet</PageTitle>
+
+@if (!Session.Ready)
+{
+    <Loading />
+}
+else
+{
+    @* `folded` because the rail is a sheet on a phone: below 600px the stylesheet stacks this bar
+       into two lines rather than dropping the subtitle, and the subtitle is the only thing saying
+       what the hidden controls are set to. A count without its filters is a lie. *@
+    <div class="page-head folded">
+        <h1 class="title">Progress</h1>
+        @* The counts and the controls, because the controls decide the counts. "4 sets" means
+           nothing without "complete hidden" beside it, and on a phone the rail is a sheet, so
+           this is the only place either is stated. *@
+        <span class="subtitle">
+            @if (_rows.Count == 0)
+            {
+                <span class="seg">Nothing short of target</span>
+            }
+            else
+            {
+                @* One .seg per reading, as the collection's bar and the trade queue's are
+                   written. The middot between them is drawn by the stylesheet, and the segment is
+                   the flex item -- which is what makes the spaces inside one survive. Written as
+                   separate runs with literal spaces between them, they did not: `.subtitle` is a
+                   flex container, each run became its own item, and flex trims the whitespace at
+                   an item's edges. That produced "21 setsincomplete". *@
+                <span class="seg"><strong>@_rows.Count @Fmt.S(_rows.Count, "set")</strong> incomplete</span>
+                <span class="seg"><strong>@_shortTotal @Fmt.S(_shortTotal, "card")</strong> short</span>
+                <span class="seg">@OrderLabel</span>
+                @if (Session.ProgressHideComplete)
+                {
+                    <span class="seg">complete hidden</span>
+                }
+                @if (Session.ProgressIncludeUnreleased)
+                {
+                    <span class="seg">unreleased shown</span>
+                }
+            }
+        </span>
+    </div>
+
+    <PageShell Measure="PageShell.Width.Wide" Class="railed">
+
+        @* A rail rather than a sheet, which is the Browse shell rather than the Answer one. The
+           split PageSheet describes is about what the controls DO: an Answer page's controls set
+           what its verdict is of and are touched once on arrival, while these order and filter a
+           set of panels you scan -- the same job the collection's rail does. *@
+        <PageRail Id="progress-rail" OpenLabel="View" Count="@RailCount">
+            <div class="rail-group">
+                <span class="ttl" id="progress-order">Order</span>
+                <div class="rail-seg" role="group" aria-labelledby="progress-order">
+                    <button class="btn btn-sm @Seg(Session.ProgressOrder == ByRelease)"
+                            @onclick="() => SetOrder(ByRelease)"
+                            aria-pressed="@Aria.Flag(Session.ProgressOrder == ByRelease)"
+                            title="Oldest set first, the order the Collection page is in">Release</button>
+                    <button class="btn btn-sm @Seg(Session.ProgressOrder == ByClosest)"
+                            @onclick="() => SetOrder(ByClosest)"
+                            aria-pressed="@Aria.Flag(Session.ProgressOrder == ByClosest)"
+                            title="Nearest to finished first">Closest</button>
+                </div>
+                @* Said where the control is, because the missing option is the one a reader will
+                   look for. *@
+                <p class="rail-note">
+                    Not by packs. A set's packs are its own, so 60 packs of one set and 400 of
+                    another are not two sizes of the same thing.
+                </p>
+            </div>
+
+            <div class="rail-group">
+                <span class="ttl">Show</span>
+                <label class="form-check">
+                    <input class="form-check-input" type="checkbox"
+                           checked="@Session.ProgressHideComplete" @onchange="OnHideComplete" />
+                    Hide Complete Sets
+                </label>
+                <label class="form-check">
+                    <input class="form-check-input" type="checkbox"
+                           checked="@Session.ProgressIncludeUnreleased" @onchange="OnUnreleased" />
+                    Include Unreleased
+                </label>
+                @* An unreleased set is 100% outstanding and nothing can be done about any of it,
+                   so it would otherwise lead the page on the strength of being entirely missing. *@
+                <p class="rail-note">
+                    An unreleased set is missing in full, and nothing can be opened toward it yet.
+                </p>
+            </div>
+
+            <div class="rail-group">
+                <span class="ttl">Copies Wanted</span>
+                @* The plan is what "short of target" MEANS, so it belongs to this page rather
+                   than behind a link to Settings. It edits the default; a set with a plan of its
+                   own says so on its own panel. *@
+                <span class="rarity-chips">
+                    <RarityChips Plan="Draft" OnCycle="CycleTier" />
+                </span>
+                <p class="rail-note">
+                    This is the <strong>default</strong>, used by every set without a plan of its
+                    own. Give one its own on <a href="packs">Which Pack</a>.
+                </p>
+                @if (_pending)
+                {
+                    <p class="rail-note">
+                        <span class="chip-pending" title="Applying shortly, keep tapping to make more changes">
+                            Updating&hellip;
+                        </span>
+                    </p>
+                }
+            </div>
+        </PageRail>
+
+        <div class="progress-body">
+
+            @* The caveat the whole page rests on, said once rather than on every panel. Same
+               placement and same reason as the note at the top of Resources. *@
+            <p class="lede">
+                Packs, pack points and trade are three separate systems and nothing converts
+                between them, so every set below names all three rather than picking a winner.
+            </p>
+
+            @if (_rows.Count == 0)
+            {
+                @* An empty, not a success. Green is the app's voice for something having gone
+                   right, and a finished collection is a standing state rather than an event this
+                   page witnessed -- the same call the Packs page's empty makes. *@
+                <EmptyState>
+                    <ChildContent>
+                    @if (_candidates == 0)
+                    {
+                        <text>
+                            No sets to report on yet. Mark what you own on the
+                            <a href="collection">Collection</a> page and they appear here.
+                        </text>
+                    }
+                    else
+                    {
+                        <text>
+                            Every set you collect is finished. Aim higher in Copies Wanted, or
+                            start a chase list for the cards outside your plan.
+                        </text>
+                    }
+                    </ChildContent>
+                    <Action>
+                        <a class="btn btn-sm btn-outline-secondary" href="chase">Chase Lists</a>
+                    </Action>
+                </EmptyState>
+            }
+            else
+            {
+                <div class="set-panels @(_rows.Any(r => r.Caveats.Count > 0) ? null : "no-caveats")">
+                    @foreach (var row in _rows)
+                    {
+                        @* Keyed by set so a reorder moves panels rather than rewriting their
+                           contents in place, which would swap one set's figures under another
+                           set's heading for a frame. *@
+                        <article class="set-panel @(row.Points.AtCap ? "at-cap" : null) @(_open == row.Set ? "open" : null)"
+                                 @key="row.Set">
+
+                            <div class="p-head">
+                                @if (row.Art is { Length: > 0 } art)
+                                {
+                                    @* Background rather than <img>, as the pack thumbnails
+                                       elsewhere are: a failed load leaves the placeholder rather
+                                       than a broken-image glyph. *@
+                                    <span class="thumb" aria-hidden="true" style="--art:url('@art')"></span>
+                                }
+                                else
+                                {
+                                    <span class="thumb" aria-hidden="true"></span>
+                                }
+                                <span class="p-name">
+                                    <span class="code">@row.Set</span>
+                                    <span class="full" title="@row.Name">@row.Name</span>
+                                </span>
+                                <span class="p-pct" title="@row.Satisfied of @row.Wanted cards you collect">
+                                    @row.Fraction.ToString("P0")
+                                </span>
+                            </div>
+
+                            <div class="p-lead">
+                                <span class="p-fig">@row.Short</span>
+                                <span class="micro">Short Of Target</span>
+                            </div>
+
+                            <div class="bar" aria-hidden="true">
+                                <span style="inline-size:@((row.Fraction * 100).ToString("F0"))%"></span>
+                            </div>
+
+                            @* The arithmetic in words, with the figure it turns on in accent ink.
+                               Clamped to three lines by the band. *@
+                            <p class="p-say">
+                                @* Awaiting rates FIRST, because it is the one of the three that
+                                   is about missing data rather than about the game. It also
+                                   predicts what Which Pack will show for this set: a row marked
+                                   "Rates Unknown" and no ranking, plus the offer to borrow another
+                                   set's odds. A panel that promised a ranking and led somewhere
+                                   with none is the inconsistency this wording removes. *@
+                                @if (row.AwaitingRates)
+                                {
+                                    <text>
+                                        <span class="key">No published odds</span> for @row.Set yet.
+                                        Which Pack can borrow another set's to estimate it.
+                                    </text>
+                                }
+                                else if (row.NoPackRoute)
+                                {
+                                    <text>
+                                        <span class="key">No pack</span> can finish this set — what
+                                        is left comes only from trade or the shop.
+                                    </text>
+                                }
+                                else
+                                {
+                                    <text>About </text>
+                                    <span class="key">@Fmt.PacksPhrase(row.Packs)</span>
+                                    @if (row.BestPack is { Length: > 0 } pack)
+                                    {
+                                        <text> of @pack</text>
+                                    }
+                                    <text> — </text><strong>@Fmt.Days(row.Packs, Premium)</strong>
+                                    <text> at @RatePhrase</text>
+                                    @* The premium rate is a real tradeoff and is costed rather than
+                                       nudged at. The clause opens with its own punctuation because
+                                       a run of markup that opens with a space loses it. *@
+                                    @if (!Premium)
+                                    {
+                                        <text>, or </text><strong>@Fmt.Days(row.Packs, true)</strong><text> with premium</text>
+                                    }
+                                    <text>.</text>
+                                }
+                            </p>
+
+                            @* What KIND of cards are left. Three short that are all crowns is a
+                               different situation from three diamonds, and the count alone cannot
+                               tell them apart. Three rungs at most, so it stays one line. *@
+                            <p class="p-rar">
+                                @foreach (var g in row.Rungs.Take(RungsNamed))
+                                {
+                                    <span class="g">
+                                        @* Compact, the same form the strip in the expansion uses.
+                                           The two are the same fact about the same set a few
+                                           inches apart, and spelling one "◆◆◆◆" and the other
+                                           "4◆" makes a reader check whether they mean the same
+                                           thing. *@
+                                        <span class="glyphs @g.Rung.GlyphClass">@g.Rung.Compact</span>
+                                        @g.Count
+                                    </span>
+                                }
+                                @if (row.Rungs.Count > RungsNamed)
+                                {
+                                    <span class="g more">+@row.Rungs.Skip(RungsNamed).Sum(g => g.Count) more</span>
+                                }
+                            </p>
+
+                            @* Three readings at equal weight. Deliberately NOT a BoxStrip with a
+                               Best box: the three are priced in packs, points and shinedust, and
+                               tinting one as cheapest would assert an exchange rate the game does
+                               not have. *@
+                            <div class="routes">
+                                <div class="route @(row.NoPackRoute ? "dead" : null)">
+                                    <span class="lbl">Packs</span>
+                                    <span class="v">@(row.NoPackRoute ? "—" : Fmt.Packs(row.Packs))</span>
+                                    <span class="sub">
+                                        @if (row.AwaitingRates)
+                                        {
+                                            <text>Odds not published</text>
+                                        }
+                                        else if (row.NoPackRoute)
+                                        {
+                                            <text>Not sold in packs</text>
+                                        }
+                                        else if (row.Assumed is { Length: > 0 } donor)
+                                        {
+                                            <text>Rates borrowed from @donor</text>
+                                        }
+                                        else if (row.BestPack is { Length: > 0 } best)
+                                        {
+                                            @best
+                                        }
+                                        else
+                                        {
+                                            <text>&nbsp;</text>
+                                        }
+                                    </span>
+                                </div>
+
+                                <div class="route">
+                                    <span class="lbl">Points</span>
+                                    <span class="v">@row.Points.Balance.ToString("N0")</span>
+                                    <span class="sub">
+                                        @if (row.Points.AffordableNow.Count > 0)
+                                        {
+                                            <text>@row.Points.AffordableNow.Count ready now</text>
+                                        }
+                                        else if (row.Points.RarestWanted is not null && row.Points.PacksToAfford > 0)
+                                        {
+                                            <text>@row.Points.PacksToAfford @Fmt.S(row.Points.PacksToAfford, "pack") to afford one</text>
+                                        }
+                                        else
+                                        {
+                                            <text>None ready yet</text>
+                                        }
+                                    </span>
+                                </div>
+
+                                <div class="route @(row.Tradeable == 0 ? "dead" : null)">
+                                    <span class="lbl">Trade</span>
+                                    <span class="v">@(row.Tradeable == 0 ? "—" : row.Tradeable.ToString())</span>
+                                    <span class="sub">
+                                        @if (row.Tradeable == 0)
+                                        {
+                                            <text>None of them tradeable</text>
+                                        }
+                                        else
+                                        {
+                                            <text>of @row.Short tradeable</text>
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+
+                            @* Two lines are reserved whether or not there is anything to put in
+                               them, so the buttons below start at the same height in every panel. *@
+                            <ul class="caveats">
+                                @foreach (var caveat in row.Caveats.Take(CaveatsShown))
+                                {
+                                    <li class="@(caveat.Warn ? "warn" : null)">@caveat.Text</li>
+                                }
+                            </ul>
+
+                            <div class="p-acts">
+                                @* Sets the shared target, as the chase list's own button does --
+                                   see the note on the scope parameter in Packs.razor. *@
+                                <a class="btn btn-sm btn-primary" href="packs?scope=@row.Set">Which Pack</a>
+                                <a class="btn btn-sm btn-outline-secondary" href="collection?set=@row.Set">Browse</a>
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        @onclick="() => Toggle(row.Set)"
+                                        aria-expanded="@Aria.Flag(_open == row.Set)">
+                                    @(_open == row.Set ? "Less" : "What's Left")
+                                </button>
+                            </div>
+
+                            @if (_open == row.Set)
+                            {
+                                <div class="expand">
+                                    @* The one strip on this page, and legal because the ladder is
+                                       a fixed, short, nameable set. A dashed rung is one the plan
+                                       wants none of, which is the opposite of a rung showing 0. *@
+                                    @* Columns="0" hands the count to the stylesheet, which is
+                                       what BoxStrip's own note says it is for: a strip whose boxes
+                                       carry text has a width it cannot go under, so the count has
+                                       to follow the width. Ten rungs forced onto one row inside a
+                                       panel gave 32px boxes and ellipsised every label. *@
+                                    <BoxStrip Label="What Is Left, By Rung"
+                                              Clause="@RungClause(row)"
+                                              Columns="0">
+                                        @foreach (var rung in Session.Index.Ladder.Rungs)
+                                        {
+                                            var wanted = row.Plan.Copies(rung.Index) > 0;
+                                            var left = row.Rungs.FirstOrDefault(g => g.Rung.Index == rung.Index)?.Count ?? 0;
+                                            @* Compact, not Glyphs: ten boxes across a 20rem
+                                               panel is about 3rem each, and "◆◆◆◆" overflows
+                                               that. Coloured by family through LabelClass, as
+                                               every other rarity in the app is -- on a row of ten
+                                               the colour is half of what tells them apart. *@
+                                            <Box State="@(wanted ? Box.Kind.Live : Box.Kind.Dead)"
+                                                 Label="@rung.Compact"
+                                                 LabelClass="@($"glyphs {rung.GlyphClass}")"
+                                                 Figure="@left.ToString()" />
+                                        }
+                                    </BoxStrip>
+
+                                    @* The cards themselves, each linking to its own page rather
+                                       than restating its five routes here: card detail already
+                                       prices them and already explains the blocked ones, and a
+                                       second table of the same thing is where the two would start
+                                       to disagree. *@
+                                    <div class="miss">
+                                        @foreach (var card in row.Missing.Take(MissingShown))
+                                        {
+                                            <a class="miss-row" href="card/@card.Key">
+                                                <span class="miss-art pack-thumb" aria-hidden="true" style="@card.ArtVars"></span>
+                                                <span class="nm">@card.Name</span>
+                                                <span class="rar glyphs @Session.Index.GlyphClass(card)">
+                                                    @Session.Index.Glyphs(card)
+                                                </span>
+                                                <span class="go" aria-hidden="true">&rsaquo;</span>
+                                            </a>
+                                        }
+                                    </div>
+
+                                    @if (row.Missing.Count > MissingShown)
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary"
+                                           href="collection?set=@row.Set">
+                                            All @row.Missing.Count On One Page
+                                        </a>
+                                    }
+                                </div>
+                            }
+                        </article>
+                    }
+                </div>
+            }
+        </div>
+    </PageShell>
+}
+
+@code {
+    /// <summary>
+    /// Rungs named in full on a panel before the rest collapse into "+N more". Three, because the
+    /// line is fixed at one line and four rungs overflow a 20rem panel.
+    /// </summary>
+    private const int RungsNamed = 3;
+
+    /// <summary>Cards listed in an expanded panel before it defers to the Collection page.</summary>
+    private const int MissingShown = 12;
+
+    /// <summary>
+    /// Caveats a panel prints. Two, because the band that holds them is a fixed height and the
+    /// rest of the panel is measured against it -- so the cap belongs here, where the list is
+    /// ordered by consequence, rather than to the overflow rule, which would drop whichever two
+    /// happened to come last and say nothing about it.
+    ///
+    /// Four can be true at once, but only of a set that is unreleased, at its points cap, on a
+    /// plan of its own AND holding cards no pack sells. The two that matter most in that case are
+    /// the two this prints.
+    /// </summary>
+    private const int CaveatsShown = 2;
+
+    /// <summary>
+    /// The two orders, named rather than quoted at each use. A string literal in a Razor attribute
+    /// has to be escaped, and an escaped quote there is not C# -- so the constants also keep the
+    /// markup parseable.
+    /// </summary>
+    private const string ByRelease = "release";
+    private const string ByClosest = "closest";
+
+    /// <summary>
+    /// One set's standing, computed once per state change rather than per render.
+    ///
+    /// Every figure here costs something real -- Rank walks every pack, and BestCasePacksToFinish
+    /// runs the completion integral -- and this page asks for all of it once per set rather than
+    /// once. Doing that in a render loop across twenty sets is the whole reason this is a record
+    /// built in Recompute and not a set of expression-bodied helpers.
+    /// </summary>
+    /// <param name="Short">Copies outstanding, which is what the panel leads with.</param>
+    /// <param name="Packs">
+    /// Best-case packs to finish, availability respected. Infinite where nothing priceable is
+    /// left, which the panel says in words rather than printing a huge number.
+    /// </param>
+    /// <param name="Unreachable">Of <paramref name="Short"/>, how many no pack sells.</param>
+    /// <param name="Rungs">Outstanding copies by rarity rung, rarest first.</param>
+    private sealed record SetRow(
+        string Set,
+        string Name,
+        string Art,
+        int Short,
+        int Wanted,
+        int Satisfied,
+        double Packs,
+        string? BestPack,
+        int Unreachable,
+        int Tradeable,
+        SetPoints Points,
+        RarityPlan Plan,
+        bool Released,
+        bool AwaitingRates,
+        string? Assumed,
+        IReadOnlyList<RungCount> Rungs,
+        IReadOnlyList<PocketCard> Missing,
+        IReadOnlyList<Caveat> Caveats)
+    {
+        /// <summary>Zero wanted reads as finished rather than as a division by zero.</summary>
+        public double Fraction => Wanted <= 0 ? 1.0 : (double)Satisfied / Wanted;
+
+        /// <summary>
+        /// True when there is no pack figure to print. The panel says why in words and dashes the
+        /// Packs box: an enormous figure and "no figure" are different statements and a reader
+        /// cannot tell them apart from a number alone.
+        ///
+        /// Two quite different reasons land here and the panel must not conflate them --
+        /// see <see cref="AwaitingRates"/>. "Nobody has published this set's odds" is a gap in the
+        /// data that the Packs page can close by borrowing another set's; "no pack sells these
+        /// cards" is a fact about the game that nothing closes.
+        /// </summary>
+        public bool NoPackRoute => double.IsInfinity(Packs) || Unreachable >= Short;
+    }
+
+    private sealed record RungCount(RarityRung Rung, int Count);
+
+    /// <param name="Warn">
+    /// True where the caveat is costing something now rather than merely qualifying a figure.
+    /// At most one of these is ever true at a time, which is why it can be a flag.
+    /// </param>
+    private sealed record Caveat(string Text, bool Warn = false);
+
+    private IReadOnlyList<SetRow> _rows = [];
+
+    /// <summary>
+    /// Sets considered before the filters ran. Separates "nothing left to collect" from "no
+    /// collection yet", which the empty state has to tell apart.
+    /// </summary>
+    private int _candidates;
+
+    private int _shortTotal;
+    private string? _open;
+
+    private bool Premium => Session.Profile.Resources.Premium;
+
+    private string OrderLabel => Session.ProgressOrder == ByClosest ? "closest first" : "release order";
+
+    /// <summary>
+    /// A release date as a clause, or nothing. In code rather than in the markup, where the
+    /// pattern match it needs would sit inside an @@() expression and read as a code block.
+    /// </summary>
+    private static string DueText(DateOnly? on) => on is null ? "" : $", due {on:d MMM yyyy}";
+
+    /// <summary>
+    /// The free pack allowance as a phrase. Assembled here rather than in the markup, where the
+    /// three runs it takes lose the spaces between them.
+    /// </summary>
+    private string RatePhrase =>
+        $"{GameRules.PacksPerDay(Premium)} {Fmt.S(GameRules.PacksPerDay(Premium), "pack")} a day";
+
+    /// <summary>
+    /// Controls currently doing something, for the sheet button's badge. The order is not counted:
+    /// a page is always in some order, and a badge reading "1" for the default reports a setting
+    /// the user never made.
+    /// </summary>
+    private int RailCount =>
+        (Session.ProgressHideComplete ? 0 : 1) + (Session.ProgressIncludeUnreleased ? 1 : 0);
+
+    private static string Seg(bool on) => on ? "btn-secondary" : "btn-outline-secondary";
+
+    /// <summary>
+    /// Why any box in the strip is dashed, said once for the whole row rather than per box. Null
+    /// when none of them are, so the strip carries no sentence about an absence that is not there.
+    /// </summary>
+    private string? RungClause(SetRow row)
+    {
+        var unwanted = Session.Index.Ladder.Rungs.Count(r => row.Plan.Copies(r.Index) == 0);
+        return unwanted == 0
+            ? null
+            : $"the {unwanted} dashed {Fmt.S(unwanted, "rung")} are ones this set's plan wants none of";
+    }
+
+    // ---- the plan chips, as on the Packs page ------------------------------------------------
+    // The chips edit a draft and the recompute waits for the taps to stop. Recomputing every set
+    // on every tap would make adjusting three rarities three full passes over the collection.
+
+    private RarityPlan Plan => Session.Plan(null);
+    private RarityPlan? _draft;
+    private RarityPlan Draft => _draft ?? Plan;
+    private bool _pending;
+    private CancellationTokenSource? _debounce;
+    private static readonly TimeSpan SettleDelay = TimeSpan.FromMilliseconds(700);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += OnChanged;
+        Busy.Changed += OnBusyChanged;
+
+        await Session.InitAsync();
+        if (!Session.Ready) return;
+
+        await Busy.RunAsync("Working out what is left…", Recompute);
+    }
+
+    private void OnBusyChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnChanged()
+    {
+        if (Signature() != _builtFor) Recompute();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string _builtFor = "";
+
+    /// <summary>
+    /// Everything the panels are computed from, as text.
+    ///
+    /// The premium flag is deliberately absent: it changes how a pack figure is stated as calendar
+    /// time and nothing about the figure itself, so rebuilding every set for it would spend a
+    /// second to produce identical panels. The Packs page's ranking signature leaves it out for
+    /// the same reason.
+    /// </summary>
+    private string Signature() =>
+        $"{Session.CollectionRevision}|{Session.ProgressOrder}|{Session.ProgressHideComplete}|" +
+        $"{Session.ProgressIncludeUnreleased}|{string.Join(',', Session.UnavailablePacks)}|" +
+        $"foils:{Session.FoilCopies}|" +
+        $"{string.Join(',', Session.AssumedRates.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}<{kv.Value}"))}|" +
+        // Every set's own plan, not just the default: an override changes one panel and nothing
+        // else, and keying on the default alone left that panel stale.
+        $"{string.Join(',', Session.Index.OpenableSets.OrderBy(s => s, StringComparer.Ordinal)
+            .Select(s => $"{s}:{PlanKey(Session.Plan(s))}"))}";
+
+    private static string PlanKey(RarityPlan plan) =>
+        string.Join('.', plan.CopiesByTier.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}"));
+
+    private void Recompute()
+    {
+        if (!Session.Ready || Session.Ranker is null || Session.Points is null) return;
+        _builtFor = Signature();
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var unavailable = Session.UnavailablePacks;
+        var balances = Session.Profile.Resources.PackPointsBySet;
+        var assumed = Session.AssumedRates;
+
+        // Released, sells packs, and nobody has published its odds. Materialised once: the
+        // property walks every openable set and checks the rate table on each call.
+        var awaiting = Session.SetsAwaitingRates.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var candidates = Session.Index.OpenableSets
+            .Where(set => Session.ProgressIncludeUnreleased || Session.Sets.IsReleased(set, today))
+            .ToArray();
+
+        _candidates = candidates.Length;
+
+        var rows = new List<SetRow>(candidates.Length);
+
+        foreach (var set in candidates)
+        {
+            var plan = Session.Plan(set);
+            var target = Session.TargetForSet(set);
+            var outstanding = target.Outstanding(Session.Index, Session.Owned);
+            var shortOf = outstanding.Sum(d => d.Remaining);
+
+            if (shortOf == 0 && Session.ProgressHideComplete) continue;
+
+            var (wanted, satisfied) = Session.TargetProgress([set]);
+
+            // Priced against the same availability filter the Packs page uses, so the two pages
+            // do not disagree about what a set costs.
+            var packs = shortOf == 0
+                ? 0.0
+                : Session.Ranker.BestCasePacksToFinish(target, Session.Owned, unavailable);
+
+            var unreachable = shortOf == 0
+                ? 0
+                : Session.Ranker.Unreachable(target, Session.Owned, unavailable).Sum(d => d.Remaining);
+
+            // This set's own best pack, not the app's. Rank returns every pack that serves the
+            // target and the target is one set, so the first row of this set IS its best pack --
+            // but the filter is still needed, because a card can be reprinted across sets.
+            var best = shortOf == 0
+                ? null
+                : Session.Ranker.Rank(target, Session.Owned)
+                    .Where(s => !unavailable.Contains(s.PackKey))
+                    .Select(s => (string?)s.PackName)
+                    .FirstOrDefault();
+
+            rows.Add(new SetRow(
+                Set: set,
+                Name: Session.Sets.DisplayName(set),
+                Art: SetArtUrl(set),
+                Short: shortOf,
+                Wanted: wanted,
+                Satisfied: satisfied,
+                Packs: packs,
+                BestPack: best,
+                Unreachable: unreachable,
+                Tradeable: TradeableOf(outstanding),
+                Points: Session.Points.Describe(set, balances.GetValueOrDefault(set), Session.Owned, plan),
+                Plan: plan,
+                Released: Session.Sets.IsReleased(set, today),
+                AwaitingRates: awaiting.Contains(set),
+                Assumed: assumed.GetValueOrDefault(set),
+                Rungs: RungsOf(outstanding),
+                Missing: MissingOf(outstanding),
+                Caveats: CaveatsFor(set, shortOf, unreachable, awaiting.Contains(set), today)));
+        }
+
+        _rows = Session.ProgressOrder == ByClosest
+            // Most complete first. Ties broken by how few cards are left, then by set, so the
+            // order is total rather than dependent on the input sequence.
+            ? rows.OrderByDescending(r => r.Fraction)
+                  .ThenBy(r => r.Short)
+                  .ThenBy(r => Session.Sets.SortKey(r.Set), StringComparer.Ordinal)
+                  .ToArray()
+            : rows.OrderBy(r => Session.Sets.SortKey(r.Set), StringComparer.Ordinal).ToArray();
+
+        _shortTotal = _rows.Sum(r => r.Short);
+
+        // A panel that filtered out cannot stay open behind the scenes.
+        if (_open is { } open && _rows.All(r => r.Set != open)) _open = null;
+    }
+
+    /// <summary>
+    /// What qualifies this panel's figures, most consequential first.
+    ///
+    /// The order is the ranking: a card no pack sells changes what the packs figure MEANS, and a
+    /// capped balance is costing something on every pack opened. The other two explain where a
+    /// number came from, which matters less than knowing a number is not the whole story.
+    ///
+    /// Kept short enough to sit on one line in a 20rem panel, which is the narrowest the grid
+    /// lets one get. The band holds three lines, so two caveats fit even where one of them wraps.
+    /// </summary>
+    private IReadOnlyList<Caveat> CaveatsFor(
+        string set, int shortOf, int unreachable, bool awaitingRates, DateOnly today)
+    {
+        var list = new List<Caveat>(4);
+
+        // Named before the unreachable count, because for a set awaiting rates that count is
+        // every outstanding card -- and "241 of the 241 come from no pack" is not what is true.
+        if (awaitingRates)
+            list.Add(new Caveat($"{set}'s odds are unpublished, so it cannot be ranked yet."));
+        else if (unreachable > 0)
+            list.Add(new Caveat($"{unreachable} of the {shortOf} come from no pack."));
+
+        // Warn, not a plain note: a capped balance is not a caveat on a figure, it is packs being
+        // opened for nothing.
+        if (Session.Points is not null && Session.Profile.Resources.PackPointsBySet
+                .GetValueOrDefault(set) >= GameRules.PackPointsCap)
+            list.Add(new Caveat($"Points at the cap: {set} packs earn none.", Warn: true));
+
+        if (!Session.Sets.IsReleased(set, today))
+            list.Add(new Caveat($"Not out yet{DueText(Session.Sets.ReleaseDateOf(set))}."));
+
+        if (Session.HasPlanOverride(set))
+            list.Add(new Caveat($"{set} has its own plan."));
+
+        return list;
+    }
+
+    /// <summary>
+    /// Outstanding copies per rarity rung, rarest first, which is the order that makes the line
+    /// worth reading: what is left at the top of the ladder is what decides whether a set is
+    /// nearly done or barely started.
+    /// </summary>
+    private IReadOnlyList<RungCount> RungsOf(IReadOnlyList<Demand> outstanding) =>
+        outstanding
+            .Select(d => (Rung: Session.Index.Rung(d.SuppliedBy[0]), d.Remaining))
+            .Where(x => x.Rung is not null)
+            .GroupBy(x => x.Rung!.Index)
+            .Select(g => new RungCount(g.First().Rung!, g.Sum(x => x.Remaining)))
+            .OrderByDescending(g => g.Rung.Index)
+            .ToArray();
+
+    /// <summary>
+    /// Outstanding demands with a live trade route. Counted in demands rather than copies: a
+    /// trade brings one card, so "6 of 8 tradeable" is about which cards can come that way.
+    /// </summary>
+    private int TradeableOf(IReadOnlyList<Demand> outstanding)
+    {
+        if (Session.Routes is null) return 0;
+
+        return outstanding.Count(d => d.SuppliedBy.Any(card =>
+            Session.Routes.For(card, Session.Owned).Options
+                .Any(o => o.Route is AcquisitionRoute.Trade or AcquisitionRoute.Share && o.Available)));
+    }
+
+    /// <summary>The cards themselves, rarest first, matching the order of the rarity line.</summary>
+    private IReadOnlyList<PocketCard> MissingOf(IReadOnlyList<Demand> outstanding) =>
+        outstanding
+            .Select(d => d.SuppliedBy[0])
+            .OrderByDescending(c => Session.Index.Rung(c)?.Index ?? -1)
+            .ThenBy(c => c.Number)
+            .ToArray();
+
+    /// <summary>
+    /// A booster wrapper for the set, the same picture the Collection page's set tabs use: a
+    /// wrapper is recognisable at 26px where a wordmark logo is a smudge.
+    /// </summary>
+    private string SetArtUrl(string set) =>
+        Session.Index.ByPack.Keys
+            .Where(k => k.StartsWith($"{set}:", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(k => k, StringComparer.Ordinal)
+            .Select(k => Session.PackArt.UrlFor(k))
+            .FirstOrDefault(u => !string.IsNullOrEmpty(u)) ?? "";
+
+    private void Toggle(string set) => _open = _open == set ? null : set;
+
+    private Task SetOrder(string order) =>
+        Busy.RunAsync("Reordering…", () => Session.SetProgressOrder(order));
+
+    private Task OnHideComplete(ChangeEventArgs e) =>
+        Busy.RunAsync("Working out what is left…",
+            () => Session.SetProgressHideComplete(e.Value is true));
+
+    private Task OnUnreleased(ChangeEventArgs e) =>
+        Busy.RunAsync("Working out what is left…",
+            () => Session.SetProgressIncludeUnreleased(e.Value is true));
+
+    private void CycleTier(int tier)
+    {
+        var next = Draft.Cycle(tier);
+        // Refuse to leave nothing selected: every panel would read "complete", which looks like a
+        // bug rather than a choice.
+        if (next.IsEmpty) return;
+
+        _draft = next;
+        _pending = true;
+        StateHasChanged();          // the chip moves now; the panels wait
+
+        _debounce?.Cancel();
+        _debounce = new CancellationTokenSource();
+        var token = _debounce.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(SettleDelay, token);
+                await InvokeAsync(ApplyDraftAsync);
+            }
+            catch (OperationCanceledException) { /* superseded by a later tap */ }
+        }, token);
+    }
+
+    private async Task ApplyDraftAsync()
+    {
+        if (_draft is null) return;
+
+        var plan = _draft;
+        _pending = false;
+
+        await Busy.RunAsync("Working out what is left…", () =>
+        {
+            // Raises Changed, and the signature carries every set's plan -- so this is what makes
+            // the page stale. Calling Recompute here as well would build every panel twice.
+            Session.SetPlan(plan);
+            _draft = null;          // the saved plan is the source of truth again
+        });
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Busy.Changed -= OnBusyChanged;
+        _debounce?.Cancel();
+        _debounce?.Dispose();
+    }
+}

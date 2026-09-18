@@ -1467,12 +1467,19 @@ main > .page-head {
     text-wrap: pretty;
 }
 
-/* A note in a rail: a line that names something, and the detail under it. Not a control and not a
-   figure -- the wishlist's "cannot be listed" is a footnote about cards that are NOT on the board,
-   which under the board read as part of it. */
-.rail-note { display: grid; gap: 1px; font-size: .78rem; }
-.rail-note > .lbl { color: var(--bs-body-color); }
-.rail-note > .who { font-size: .74rem; line-height: 1.35; color: var(--bs-tertiary-color); }
+/* A footnote in a rail: a line that names something, and the detail under it. Not a control and
+   not a figure -- the wishlist's "cannot be listed" is a footnote about cards that are NOT on the
+   board, which under the board read as part of it.
+
+   WAS .rail-note, which is the prose class declared further up this file, and the collision was
+   live: this block is the later of the two, so `display: grid` won everywhere and every prose note
+   in a rail laid its inline children out as grid rows. CardGrid's clamped-columns note has no
+   inline children and so looked fine; the first note with a <strong> in it broke into three lines.
+   Renamed rather than reordered, because the two are different structures and one of them wanted
+   a name of its own. */
+.rail-footnote { display: grid; gap: 1px; font-size: .78rem; }
+.rail-footnote > .lbl { color: var(--bs-body-color); }
+.rail-footnote > .who { font-size: .74rem; line-height: 1.35; color: var(--bs-tertiary-color); }
 
 /* Two readings at the foot of a rail: a pool and its number. Not a control, so no border and no
    fill -- it is the same kind of thing as the target figures on the collection's rail. */
@@ -1782,7 +1789,17 @@ main > * { flex-shrink: 0; }
     padding: .35rem .7rem; border-radius: var(--pp-r-sm); text-decoration: none;
     border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
     color: var(--bs-body-color); font-size: 1rem; line-height: 1.2;
+
+    /* The mark sits beside the word rather than above it, which is the difference between this row
+       and the tab bar: there the label is a caption under the glyph, here the glyph is a hint at
+       the label. Inline-flex so the two centre on each other instead of on the text baseline --
+       a 15px square aligned to a baseline sits low by about two pixels, which on a row of five
+       reads as five buttons at four heights. */
+    display: inline-flex; align-items: center; gap: .4rem;
 }
+/* The glyph never shrinks and never stretches: it is a square, and a flex item in a row that runs
+   out of room would otherwise be squashed into a rectangle. */
+.app-nav .nav-item > svg { flex: none; }
 .app-nav .nav-item:hover { border-color: var(--bs-primary); background: var(--bs-secondary-bg); }
 /* Filled, so where you are reads at a glance rather than by comparing borders. */
 .app-nav .nav-item.active {
@@ -5930,6 +5947,256 @@ tr.row-best {
 /* A capped set is actively losing value on every pack opened, which is a stronger statement than
    the rest of the table makes and is tinted rather than merely worded. */
 .pts-capped { --bs-table-bg: color-mix(in srgb, var(--bs-warning) 12%, var(--bs-body-bg)); }
+
+
+/* progress — one panel per incomplete set
+   ==================================================================================
+   The other family of Ledger panels, beside .pool above, and built on the same principle: equal
+   weight, no ranking, no total. Where .pool has two figures and a form, this has a figure, a
+   sentence, a rarity line, three routes and a caveat list — enough moving parts that "equal
+   weight" stops being a matter of not tinting one and becomes a matter of GEOMETRY.
+
+   THE BANDS, AND WHY THEY ARE FIXED
+   ----------------------------------------------------------------------------------
+   A panel is eight rows in one order, and the four whose content varies are pinned to a height
+   rather than sized to what is in them. Without that, four panels side by side put their figures
+   at four heights, their bars at four more, and their buttons wherever the caveats above them
+   happened to end — so a reader comparing two sets is re-finding every component in each panel
+   instead of reading across one row of them. Four panels that each look slightly different are
+   four objects; four that agree are one object shown four times.
+
+   The content is clamped to the band, which is the other half of the same decision: a sentence
+   allowed to run to four lines would either overflow its band or force every band to grow to the
+   worst case in the set, and the worst case is a set nobody is looking at.
+
+   The heights are declared here rather than in the markup because they are a property of the type
+   scale, not of the data: change --band-say and every panel in the app moves together. */
+
+.progress-body {
+    /* The one content child of a railed page. See .page-body.railed, which puts every child in
+       the same grid cell — so the panels and the lede above them need a wrapper of their own or
+       they would stack on top of each other. */
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    padding: .7rem .8rem 1rem;
+}
+
+.progress-body > .lede {
+    font-size: .84rem;
+    color: var(--bs-secondary-color);
+    max-inline-size: 40rem;
+    margin-bottom: .7rem;
+}
+
+.set-panels {
+    display: grid;
+    /* 20rem, where .pools uses 17rem: a panel carrying a three-line sentence and three route
+       boxes has a width it cannot go under, and below this the routes wrap and the sentence
+       reaches five lines. */
+    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    gap: .8rem;
+
+    /* A panel takes its own height and is never stretched to its row's.
+       ------------------------------------------------------------------------------
+       Grid items stretch by default, and one open panel makes its row as tall as the expansion --
+       so every other panel in that row was stretched with it, and the auto rows in the template
+       below soaked up the difference. The head, the figure and the buttons drifted apart by
+       whatever the expansion happened to add, which is the one thing the fixed bands exist to
+       stop: opening a panel re-laid out the two beside it.
+
+       start, not stretch, so a shut panel is the same height whatever its neighbours are doing.
+       The row's bottom edge goes ragged next to an open panel, which is the honest picture -- one
+       panel is showing more than the others. */
+    align-items: start;
+}
+
+.set-panel {
+    /* The four bands whose content varies. Fixed, not minimums — see the note above. */
+    --band-say: 4.3rem;     /* three lines at .95rem / 1.5 */
+    --band-rar: 1.25rem;    /* one line, always; the rest of the rungs become "+N more" */
+    --band-route: 4.6rem;   /* label, figure, and two lines of sub */
+    --band-cav: 3.4rem;     /* three lines at .76rem / 1.45, reserved even when empty:
+                               two caveats, one of which may wrap in a 20rem panel */
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--pp-r);
+    padding: .85rem .9rem .8rem;
+    background: var(--bs-tertiary-bg);
+
+    display: grid;
+    grid-template-rows:
+        auto                /* head    */
+        auto                /* lead    */
+        auto                /* bar     */
+        var(--band-say)     /* say     */
+        var(--band-rar)     /* rarity  */
+        var(--band-route)   /* routes  */
+        var(--band-cav)     /* caveats */
+        auto;               /* actions */
+    gap: .55rem;
+
+    /* Belt and braces with align-items above: if anything ever does stretch a panel past its
+       content, the spare height collects at the foot of it rather than being shared out among the
+       auto rows. The bands stay where they are either way. */
+    align-content: start;
+}
+
+/* Nothing in view has a caveat, so the band that reserves room for one is 3.4rem of empty panel.
+   Collapsed as a set rather than per panel: what the band buys is the action rows lining up, and
+   they still do -- every panel on the page loses the same row at the same time. */
+.set-panels.no-caveats .set-panel { --band-cav: 0rem; }
+
+/* The expansion is a ninth row under the actions rather than a re-layout of the eight, so an open
+   panel and a shut one still agree all the way down to the buttons. */
+.set-panel.open { grid-template-rows: auto auto auto var(--band-say) var(--band-rar) var(--band-route) var(--band-cav) auto auto; }
+
+/* Points at the cap: packs of this set are earning nothing, which is the one state on the panel
+   that is actively costing something. A border and not a fill, for the reason .pool.at-cap gives
+   — a tinted panel ranks itself above the ones beside it, which is what a Ledger must not do. */
+.set-panel.at-cap { border-color: var(--bs-danger-border-subtle, var(--bs-danger)); }
+
+.set-panel .p-head { display: flex; align-items: center; gap: .55rem; min-width: 0; }
+.set-panel .thumb { flex: none; inline-size: 26px; block-size: 36px; border-radius: var(--pp-r-xs); }
+.set-panel .p-name { display: flex; flex-direction: column; min-width: 0; }
+.set-panel .p-name .code { font-weight: 700; letter-spacing: -.01em; }
+.set-panel .p-name .full {
+    font-size: .76rem; color: var(--bs-secondary-color);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.set-panel .p-pct {
+    margin-left: auto; flex: none;
+    font-weight: 600; font-variant-numeric: tabular-nums; color: var(--bs-secondary-color);
+}
+
+/* The figure the panel leads with. 1.7rem is the stat size the History page uses, deliberately
+   not the 2.1rem of a verdict: these are parallel panels, and one of them is not a verdict. */
+.set-panel .p-lead { display: flex; align-items: baseline; gap: .45rem; }
+.set-panel .p-fig { font-size: 1.7rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+
+.set-panel .bar {
+    align-self: center;
+    block-size: 6px; border-radius: var(--pp-r-xs);
+    background: var(--bs-secondary-bg); overflow: hidden;
+}
+.set-panel .bar > span { display: block; block-size: 100%; background: var(--bs-primary); border-radius: var(--pp-r-xs); }
+
+.set-panel .p-say {
+    margin: 0;
+    font-size: .95rem; line-height: 1.5; text-wrap: pretty;
+    /* Three lines, and the clamp is what keeps the band honest: a long pack name would otherwise
+       push the rarity line and everything under it out of step with the panel beside it. */
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+.set-panel .p-say .key { color: var(--pp-accent-ink, var(--bs-primary)); font-weight: 700; }
+
+/* One line. Three rungs at most are named, so this cannot wrap — what is left at the top of the
+   ladder is the part that decides whether a set is nearly done, and it reads first. */
+.set-panel .p-rar {
+    margin: 0;
+    display: flex; gap: .6rem; align-items: baseline;
+    font-size: .82rem; font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden;
+}
+.set-panel .p-rar .g { flex: none; }
+.set-panel .p-rar .more { color: var(--bs-secondary-color); }
+
+/* Three readings at equal weight, and deliberately not a .box-strip: a strip has a .best state,
+   and these are priced in packs, points and shinedust. Tinting one as cheapest would assert an
+   exchange rate the game does not have — see RouteCost, which refuses the same conversion. */
+.set-panel .routes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
+.set-panel .route {
+    display: grid; grid-template-rows: auto auto 1fr; gap: .1rem;
+    min-width: 0; padding: .4rem .5rem;
+    border: 1px solid var(--pp-hairline, var(--bs-border-color));
+    border-radius: var(--pp-r-sm);
+    background: var(--pp-deep, var(--bs-body-bg));
+}
+/* No route of this kind exists for what is left, which a blank cell would report as data that
+   failed to arrive. Same dashed treatment, and same reason, as a dead .box. */
+.set-panel .route.dead { border-style: dashed; background: var(--bs-body-bg); }
+.set-panel .route .lbl {
+    font-size: .7rem; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+.set-panel .route .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+.set-panel .route.dead .v { font-weight: 400; color: var(--bs-secondary-color); }
+.set-panel .route .sub {
+    font-size: .72rem; line-height: 1.35; color: var(--bs-secondary-color);
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+
+/* Two lines reserved in every panel, including the ones with nothing to say, so the action row
+   below starts at the same height everywhere. An em dash leads each line rather than a bullet:
+   these are qualifications on the figures above, not a list of things to do. */
+.set-panel .caveats {
+    margin: 0; padding: 0; list-style: none;
+    display: grid; gap: .2rem; align-content: start; overflow: hidden;
+}
+.set-panel .caveats li {
+    position: relative; padding-inline-start: .8rem;
+    font-size: .76rem; line-height: 1.45; color: var(--bs-secondary-color);
+}
+.set-panel .caveats li::before { content: "—"; position: absolute; inset-inline-start: 0; opacity: .7; }
+.set-panel .caveats li.warn { color: var(--bs-danger-text-emphasis, var(--bs-danger)); }
+
+.set-panel .p-acts { display: flex; flex-wrap: wrap; align-items: end; gap: .4rem; }
+
+.set-panel .expand {
+    display: grid; gap: .7rem;
+    margin-top: .3rem; padding-top: .7rem;
+    border-top: 1px solid var(--pp-hairline, var(--bs-border-color));
+}
+/* The ladder wraps rather than being squeezed onto one row.
+   ------------------------------------------------------------------------------
+   Ten rungs across a panel is 32px a box, which ellipsises even "4◆" -- and a rarity you cannot
+   read is not a rarity. So the count follows the width: 3.25rem is what a two-character rung and
+   a three-digit count need side by side, and the row wraps to five, four or three as the panel
+   narrows. Two rows of five reads as well as one row of ten and is legible, which one row of ten
+   was not. */
+.set-panel .expand .box-strip .boxes {
+    grid-template-columns: repeat(auto-fit, minmax(3.25rem, 1fr));
+    gap: .3rem;
+}
+/* Centred, because a wrapped row's last line is short and the boxes are a ladder rather than a
+   column of readings -- a ragged left edge on the second line would read as a new list. */
+.set-panel .expand .box { justify-items: center; }
+.set-panel .expand .box .lbl { white-space: nowrap; }
+
+/* The cards themselves, as rows rather than tiles: the name is what you are looking for and a
+   grid of art at this width would fit three. Each links to its own page, where all five routes
+   are already priced — this page does not restate them. */
+.set-panel .miss { display: grid; }
+.set-panel .miss-row {
+    display: flex; align-items: center; gap: .55rem;
+    padding: .35rem 0; min-block-size: 2.6rem;
+    border-top: 1px solid var(--pp-hairline, var(--bs-border-color));
+    font-size: .85rem; color: inherit; text-decoration: none;
+}
+.set-panel .miss-row:first-of-type { border-top: 0; }
+.set-panel .miss-row:hover { color: var(--bs-primary); }
+.set-panel .miss-row:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+.set-panel .miss-art { flex: none; inline-size: 24px; block-size: 33px; border-radius: var(--pp-r-xs); }
+.set-panel .miss-row .nm { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.set-panel .miss-row .rar { flex: none; font-size: .8rem; }
+.set-panel .miss-row .go { flex: none; margin-left: auto; color: var(--bs-secondary-color); font-size: 1.1rem; }
+
+/* Phone. The bands are re-pinned rather than abandoned: the routes wrap to two columns and the
+   sentence is a touch smaller, so the heights differ from the desktop's while staying identical
+   between panels — which is the whole point of them. Panels stack here, so they are compared
+   down a column instead of across a row, and a component that moved between them would be just
+   as wrong. */
+@media (width <= 560px) {
+    .set-panel {
+        --band-say: 4.1rem;
+        --band-route: 9.6rem;
+    }
+    .set-panel .p-say { font-size: .9rem; }
+    .set-panel .routes { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
+    /* The third route takes the full width of the second row rather than leaving a gap beside it. */
+    .set-panel .route:last-child { grid-column: span 2; }
+    .progress-body { padding-inline: .6rem; }
+}
 
 
 /* The board's three tuning knobs, folded. Each had a visible label of its own, which wrapped the

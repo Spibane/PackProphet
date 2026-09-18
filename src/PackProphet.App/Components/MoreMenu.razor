@@ -30,6 +30,9 @@
 
     <p class="nav-more-head" id="@($"{Id}-head")">Everything Else</p>
     <nav aria-labelledby="@($"{Id}-head")">
+        @* First of the list, because it is the one that came OUT of the primary bar rather
+           than never having been in it. *@
+        <NavLink class="nav-more-item" href="chase">Chases</NavLink>
         <NavLink class="nav-more-item" href="decks">Decks</NavLink>
         <NavLink class="nav-more-item" href="wonder">Wonder Pick</NavLink>
         <NavLink class="nav-more-item" href="trades">Trades</NavLink>

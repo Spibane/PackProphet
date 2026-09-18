@@ -189,7 +189,7 @@ else
             var st = lead.Standing!;
             var chance = ChanceWords(st.ChanceUseful);
             <div class="verdict-lead">
-                <span class="micro">@(lead.Best ? "Open this next" : "If you open this")</span>
+                <span class="micro">@LeadLabel(lead)</span>
 
                 <div class="lead-head">
                     @* Background rather than <img>, as the table's thumbnails are: a failed load
@@ -882,6 +882,13 @@ else
     /// </summary>
     [SupplyParameterFromQuery(Name = "chase")] public string? Chase { get; set; }
 
+    /// <summary>
+    /// Arriving from a Progress panel's "Which Pack" button, naming one set. Same shape and same
+    /// reasoning as <see cref="Chase"/>: a query parameter so the link survives a reload, and it
+    /// sets the shared target rather than overriding it for the visit.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "scope")] public string? ScopeParam { get; set; }
+
     private IReadOnlyList<PackStanding> _ranked = [];
 
     /// <summary>
@@ -945,6 +952,25 @@ else
     /// <summary>The scoped set, if the scope is one at all. Null for "everything" and chase lists.</summary>
     private string? ScopedSet => !IsChaseScope && _sets.Contains(Scope) ? Scope : null;
 
+    /// <summary>
+    /// What the verdict block is introducing, which depends on what was ranked.
+    ///
+    /// "Open this next" is a claim about every pack in the game, and it is only true at the
+    /// "everything" scope. Ranked against one set, one series or one chase list, the top row is
+    /// the best pack FOR THAT -- the best pack overall may well be in a set this ranking never
+    /// looked at. Someone who scoped to A3 to find out what finishing it costs is not being told
+    /// to go and open A3 next, and the label said they were.
+    ///
+    /// The narrowed form does not name the scope, because the page bar directly above already
+    /// does -- "Target: Celestial Guardians" -- and it uses the bar's own word for it, so the
+    /// reading and the control that sets it are named the same thing. Naming it twice would also
+    /// put an arbitrary chase-list name into a micro-label that has no room for one.
+    /// </summary>
+    private string LeadLabel(PackRow lead) =>
+        !lead.Best ? "If you open this"
+        : Scope == "everything" ? "Open this next"
+        : "Best for this target";
+
     private string? PlanScope =>
         ScopedSet is { } set && Session.HasPlanOverride(set) ? set : null;
 
@@ -991,6 +1017,12 @@ else
         // old per-page scope back again under a different name.
         if (Chase is { Length: > 0 } id && Session.ChaseListById(id) is not null)
             Session.SetTarget($"chase:{id}");
+
+        // A set, a series or "everything", from a Progress panel. Checked against the sets that
+        // actually exist before it is stored: a link naming a set this build has never heard of
+        // would otherwise persist as the target and leave every page ranking against nothing.
+        if (ScopeParam is { Length: > 0 } scope && KnownScope(scope))
+            Session.SetTarget(scope);
 
         // Arriving from another page still costs a full ranking, so it needs the same
         // indicator as changing a filter does — otherwise navigation looks like a hang.
@@ -1276,6 +1308,17 @@ else
         Scope.StartsWith("series:", StringComparison.Ordinal) ? Session.SetsInSeries(Scope[7..])
         : _sets.Contains(Scope) ? [Scope]
         : _sets;
+
+    /// <summary>
+    /// Whether a scope from the query string names something this build can rank against. Chase
+    /// lists are excluded deliberately — they have their own parameter, which also checks that the
+    /// list still exists.
+    /// </summary>
+    private bool KnownScope(string scope) =>
+        scope == "everything"
+        || _sets.Contains(scope)
+        || (scope.StartsWith("series:", StringComparison.Ordinal)
+            && Session.SetsInSeries(scope[7..]).Length > 0);
 
     private void Recompute()
     {
@@ -1563,18 +1606,14 @@ else
         1 => "1st", 2 => "2nd", 3 => "3rd", 4 => "4th", 5 => "5th", _ => $"{n}th"
     };
 
-    /// <summary>Expected packs as calendar time, which is the number that changes decisions.</summary>
-    private static string Days(double packs, bool premium)
-    {
-        if (double.IsPositiveInfinity(packs)) return "never";
-        // Written as plain comparisons on purpose: Razor's parser reads a line-leading '<'
-        // in a relational pattern as the start of a markup tag.
-        var days = packs / GameRules.PacksPerDay(premium);
-        if (days < 1) return "today";
-        if (days < 60) return $"{days:N0} days";
-        if (days < 730) return $"{days / 30.44:N0} months";
-        return $"{days / 365.25:N1} years";
-    }
+    /// <summary>
+    /// Expected packs as calendar time, which is the number that changes decisions. Lives in
+    /// <see cref="Text.Fmt.Days"/> now that the Progress page states the same thing per set.
+    ///
+    /// Qualified, like the Fmt() helper above it: this page has its own static Fmt, which shadows
+    /// the class of that name for every unqualified use in the file.
+    /// </summary>
+    private static string Days(double packs, bool premium) => Text.Fmt.Days(packs, premium);
 
     /// <summary>
     /// When premium is off, price the alternative too. A +50% pack rate is a real tradeoff

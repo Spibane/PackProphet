@@ -390,11 +390,19 @@ else
 
 @code {
     /// <summary>
-    /// What this page works toward, shared with the other three Answer pages and persisted. See
-    /// <see cref="AppSession.Target"/>: it is one question asked on four screens, and four copies
-    /// of the answer meant setting it here changed nothing anywhere else.
+    /// What this page works toward, for as long as you are on it.
+    ///
+    /// It was one saved target shared by all four Answer pages, on the argument that "given what I
+    /// am collecting, what should I do next" is one question. In use it was a trap: the target
+    /// outlived the visit that set it, so a page opened days later ranked against a set chosen
+    /// once on a different screen, and the only clue was a picker nobody remembered touching.
+    ///
+    /// Nothing is stored now. Every page starts at everything and holds a choice for the visit,
+    /// which is as long as the answer is worth anything.
     /// </summary>
-    private string Scope => Session.Target;
+    private string Scope => Session.NormalizeScope(_scope);
+
+    private string _scope = "everything";
 
     /// <summary>Every candidate for the scope, unfiltered. Filtering is a view, not a re-rank.</summary>
     private IReadOnlyList<TradeCandidate> _all = [];
@@ -665,7 +673,7 @@ else
 
     private Task OnScope(ChangeEventArgs e)
     {
-        Session.SetTarget(e.Value?.ToString() ?? "everything");
+        _scope = e.Value?.ToString() ?? "everything";
 
         // Ranking walks every outstanding demand and the whole surplus pool, so "everything"
         // is real work rather than a filter change.

@@ -182,7 +182,7 @@ public class PacksPageTests : AppHost
         var set = Session.Index.OpenableSets.First(
             s => Session.Odds.PriceablePacks.Any(p => p.StartsWith($"{s}:", StringComparison.Ordinal)));
 
-        await page.InvokeAsync(() => Session.SetTarget(set));
+        page.Find(".scope-pick").Change(set);
 
         page.WaitForAssertion(() =>
         {
@@ -212,40 +212,26 @@ public class PacksPageTests : AppHost
     }
 
     [Fact]
-    public async Task A_scope_in_the_link_ranks_for_the_visit_without_saving_it()
+    public async Task A_redirect_is_the_one_thing_that_says_what_this_page_opens_on()
     {
-        // "Which Pack" on a Progress panel, and "Rank Packs" on a chase list, name what to rank
-        // right now. They used to write the SHARED target, so following one silently repointed
-        // the trade queue and the Wonder Pick threshold at a single set -- on pages the user had
-        // not opened, with no picker having been touched to explain it.
+        // "Which Pack" on a Progress panel, and "Rank Packs" on a chase list, carry the scope in
+        // the query string. It applies on arrival and is forgotten with the visit -- it used to
+        // be written to a saved target that the trade queue and Wonder Pick read, so following one
+        // link repointed two pages the reader had not opened.
         await ReadyAsync();
 
         var set = Session.Index.OpenableSets.Skip(1).First();
-        Assert.Equal("everything", Session.Target);
 
         Services.GetService<Microsoft.AspNetCore.Components.NavigationManager>()!
                 .NavigateTo($"packs?scope={set}");
 
         var page = RenderComponent<Packs>();
 
-        // The page itself follows the link,
         Assert.Contains(Session.Sets.DisplayName(set), page.Find(".page-head").TextContent);
+        Assert.Null(Session.State.Prefs.Target);
 
-        // and the saved target -- which Trades, the board and Wonder Pick read -- is untouched.
-        Assert.Equal("everything", Session.Target);
-    }
-
-    [Fact]
-    public async Task Choosing_a_scope_in_the_picker_is_still_saved_for_every_page()
-    {
-        // The other half of the rule: one target, four pages, and it changes when somebody says
-        // so. A link is not somebody saying so; this is.
-        var page = await PageAsync();
-        var set = Session.Index.OpenableSets.Skip(1).First();
-
-        page.Find(".scope-pick").Change(set);
-
-        // The handler re-ranks behind the busy indicator, so the write lands a continuation later.
-        page.WaitForState(() => Session.Target == set, TimeSpan.FromSeconds(10));
+        // And it is this page's, not the app's: another Answer page opened now starts over.
+        Assert.Equal("everything",
+            RenderComponent<Trades>().FindComponent<PackProphet.Components.ScopePicker>().Instance.Scope);
     }
 }

@@ -136,11 +136,14 @@ until then the minor number tracks the roadmap phase.
   What a pack cost is recorded on the logged row, so the refund is exact and a free pack refunds
   nothing; whether *this* pack was the third one that Tuesday cannot be worked out from a log with
   a row taken out of it
-- **Fixed: a "Which Pack" link repointed the trade queue and Wonder Pick.** Following one from a
-  Progress panel, or "Rank Packs" from a chase list, wrote the target the four Answer pages share —
-  so `/trades` and `/wonder` opened ranked against one set, with no picker having been touched to
-  say why. A link names what to rank for that visit now. The saved target changes when somebody
-  chooses it in a picker, which is still one choice for all four pages
+- **A target lasts the visit, and is never saved.** The four Answer pages shared one stored scope,
+  on the argument that "given what I am collecting, what should I do next" is one question. It is —
+  but the answer does not keep. Stored, it outlived the visit that set it: `/trades` and `/wonder`
+  opened ranked against a set chosen once days earlier on another screen, with a picker nobody
+  remembered touching as the only clue. A link could write it too, so "Which Pack" on one Progress
+  panel decided what Wonder Pick thought an offer was worth. Every page starts at **everything**
+  now and holds a choice for as long as you are on it; a redirect — `?scope=`, `?chase=` — is the
+  one thing that can say what a page opens on. A scope left in an older save is dropped on read
 - **Copy: less explaining.** The page-wide notes defending a design decision are gone — why
   `/progress` names three routes instead of picking one, why "by packs" is not an ordering, why a
   batch cannot beat ten singles, what the batch figures do not model — along with the reasoning

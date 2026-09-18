@@ -1315,34 +1315,6 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
-    /// <summary>
-    /// What the Answer pages are working toward, normalised: a scope naming a chase list that has
-    /// since been deleted reads as "everything", so the picker and the figures under it cannot
-    /// disagree about what is being ranked.
-    /// </summary>
-    public string Target => NormalizeScope(Canonical(State.Prefs.Target ?? "everything"));
-
-    /// <summary>
-    /// One spelling for a set. TargetForScope accepts "set:A1" and "A1" alike, which was harmless
-    /// while each page kept its own scope and is not once they share one: a picker comparing the
-    /// stored string against its own option values has to be looking at the same string.
-    /// </summary>
-    private static string Canonical(string scope) =>
-        scope.StartsWith("set:", StringComparison.Ordinal) ? scope[4..] : scope;
-
-    /// <summary>
-    /// Set it once, for every page that asks. Raises Changed like any other edit, which is how the
-    /// page that did the setting gets its own recompute.
-    /// </summary>
-    public void SetTarget(string scope)
-    {
-        scope = Canonical(scope);
-        if (scope == State.Prefs.Target) return;
-        State = State with { Prefs = State.Prefs with { Target = scope } };
-        QueueSave();
-        Changed?.Invoke();
-    }
-
     public bool ChaseGrid => State.Prefs.ChaseGrid;
 
     public void SetChaseGrid(bool on)
@@ -1585,15 +1557,28 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     /// <summary>
-    /// The same scope, or "everything" when what it named is gone. A picker showing a deleted
-    /// chase list keeps offering it; resolving to a fallback alone would leave the control and the
-    /// results disagreeing about what is being ranked.
+    /// The same scope in one spelling, or "everything" when what it named is gone.
+    ///
+    /// Two jobs, because every page runs a scope through this on the way in and both have to have
+    /// happened by the time a picker compares it against its own option values.
+    ///
+    /// The fallback: a picker showing a deleted chase list keeps offering it, and resolving to
+    /// "everything" only inside <see cref="TargetForScope"/> would leave the control and the
+    /// figures under it disagreeing about what was ranked.
+    ///
+    /// The spelling: TargetForScope reads "set:A1" and "A1" alike, a tolerance left over from
+    /// four pages each emitting their own -- and a control comparing strings cannot be that
+    /// relaxed, so one of them wins here.
     /// </summary>
-    public string NormalizeScope(string scope) =>
-        scope.StartsWith("chase:", StringComparison.Ordinal) && ChaseListById(scope[6..]) is null ? "everything"
-        : scope == "chases" && ChaseLists.Count == 0 ? "everything"
-        : scope.StartsWith("series:", StringComparison.Ordinal) && SetsInSeries(scope[7..]).Length == 0 ? "everything"
-        : scope;
+    public string NormalizeScope(string scope)
+    {
+        var s = scope.StartsWith("set:", StringComparison.Ordinal) ? scope[4..] : scope;
+
+        return s.StartsWith("chase:", StringComparison.Ordinal) && ChaseListById(s[6..]) is null ? "everything"
+            : s == "chases" && ChaseLists.Count == 0 ? "everything"
+            : s.StartsWith("series:", StringComparison.Ordinal) && SetsInSeries(s[7..]).Length == 0 ? "everything"
+            : s;
+    }
 
     /// <summary>
     /// What a scope is called on a page bar. The reading half of <see cref="TargetForScope"/>:

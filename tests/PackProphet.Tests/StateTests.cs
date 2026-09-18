@@ -73,26 +73,27 @@ public class StateTests
         Assert.Equal("dark", (await store.LoadAsync()).Prefs.Theme);
     }
 
+    [Fact]
+    public void Prefs_DropTheSavedTargetOnRead()
+    {
+        // It used to be saved and shared by the four Answer pages, and the sharing was fine while
+        // the SAVING was not: the scope outlived the visit that set it, so a page opened days
+        // later ranked against a set chosen once somewhere else. Each page keeps its own for the
+        // length of a visit now, and a save still carrying one loads with it dropped rather than
+        // quietly ranking against it.
+        var state = AppState.Fresh() with { Prefs = new Prefs() with { Target = "series:A" } };
+
+        var reloaded = StateSerializer.Deserialize(StateSerializer.Serialize(state))!;
+
+        Assert.Null(reloaded.Prefs.Target);
+        Assert.Null(StateSerializer.Deserialize(StateSerializer.Serialize(AppState.Fresh()))!.Prefs.Target);
+    }
+
     /// <summary>
     /// Column counts are persisted, so they must survive a save/load — and an older save
     /// that predates the field must not come back as zero columns, which would render an
     /// empty grid. Zero is the "never chosen" sentinel and readers substitute a default.
     /// </summary>
-    [Fact]
-    public void Prefs_RoundTripTheSharedTarget()
-    {
-        // The point of sharing it across the four Answer pages is that it is set once. A target
-        // that came back as "everything" on the next visit would be the per-page scope again.
-        var state = AppState.Fresh() with { Prefs = new Prefs() with { Target = "series:A" } };
-
-        var reloaded = StateSerializer.Deserialize(StateSerializer.Serialize(state))!;
-
-        Assert.Equal("series:A", reloaded.Prefs.Target);
-        // Null rather than a written default, so an older save reads as never chosen and the
-        // reader supplies "everything".
-        Assert.Null(StateSerializer.Deserialize(StateSerializer.Serialize(AppState.Fresh()))!.Prefs.Target);
-    }
-
     [Fact]
     public void Prefs_RoundTripColumnCounts_AndOlderSavesReadAsUnset()
     {

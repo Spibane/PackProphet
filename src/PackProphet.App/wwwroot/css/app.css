@@ -333,6 +333,19 @@ main > .page-head {
     box-shadow: 0 1px 6px rgba(0, 0, 0, .25);
 }
 
+/* Sharing the cell is not the same as covering the first row.
+   ----------------------------------------------------------------------------------
+   The overlay parks at the top of the grid, so the top row of cards began underneath it and
+   stayed there: at rest, with nothing scrolled, a card's number, name and rarity were behind the
+   strip and no amount of scrolling would bring them out -- worst of all on a search that returns
+   one row, where the row you went looking for is the row that is covered.
+
+   So the grid starts below the strip instead. Scrolled, cards still pass under it, which is what
+   a pinned label is for; unscrolled, there is nothing under it to hide. The room is measured --
+   js/gridspy.js publishes --spy-h, margins included -- and is 0 while the strip has nothing to
+   say, so a single-set list gets its first row back at the top of the page. */
+.page-body.railed > .grid-wrap { padding-top: var(--spy-h, 0px); }
+
 /* One element, two shells.
    ==================================================================================
    Above the fold width this is a column beside the grid. Below it, it is a sheet over the grid,
@@ -1576,12 +1589,22 @@ main > .page-head {
     }
     .page-body.railed > * { grid-area: auto; }
     .page-body.railed > .grid-spy {
+        /* Back in the flow, and this has to be said HERE. The reset two rules up is `> *`, which
+           the rule placing this element names by class and so outranks at any width -- so the
+           strip stayed in column two, a column this layout does not have. Grid invented one for
+           it: an implicit track as wide as a wordmark and a set name, charged against the track
+           the cards are in, which is why a narrow window was showing a squeezed grid beside a
+           strip pinned to its right edge. */
+        grid-area: auto;
         margin: 0;
         border-inline: 0;
         border-top: 0;
         border-radius: 0;
         box-shadow: none;
     }
+    /* A row of its own here rather than an overlay, so the grid below has nothing to reserve --
+       leaving the padding on would open a strip's worth of empty page above the first card. */
+    .page-body.railed > .grid-wrap { padding-top: 0; }
 }
 
 /* breakpoints

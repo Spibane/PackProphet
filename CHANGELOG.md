@@ -48,14 +48,35 @@ until then the minor number tracks the roadmap phase.
   one set — so it comes before the page it feeds, not after. A chase list is something you build by
   hand for cards outside your plan, reached occasionally; it is still in More, in the command
   palette, and in the scope picker on four pages
-- **Both navs now draw the same marks.** The tab bar had a glyph per destination and the desktop row
-  had none, so the two agreed about what they contained and disagreed about how it looked — and the
-  mark is the part you learn. They come from one component now, for the reason the booster pack
-  already did: path data copied into two files disagrees with itself after the first tweak
+- **Every destination has a mark, in all three places destinations appear.** The tab bar had a
+  glyph apiece and the desktop row had none, so the two navs agreed about what they contained and
+  disagreed about how it looked — and the mark is the part you learn. The More menu had none at all.
+  All of them come from one component now, for the reason the booster pack already did: path data
+  copied into two files disagrees with itself after the first tweak
+- **The nine marks in the More menu were drawn against each other, not one at a time.** Six had an
+  obvious drawing and three did not, and a menu where six items carry a mark and three do not reads
+  as one that failed to load — so the three had to be solved before any could be used. Each was
+  rendered at its real size beside the marks already in use and kept or thrown out on that, which
+  cost a gear (indistinguishable from the theme button's sun), a three-card fan for Wonder Pick (a
+  blob at 15px), two bars for Compare (a count away from the progress marks), a Venn for the same
+  (one shape rather than an overlap), and the wishlist's own twenty slots (a filled grey rectangle).
+  What each mark is, and what was drawn first and discarded, is recorded beside it
 - **A rarity rung has a compact form, and it is coloured wherever it appears.** Ten rungs across a
   panel is about three rem a box, where "◆◆◆◆" does not fit and was being cut in half; the ladder now
   reads `4◆` and wraps rather than being squeezed onto one row. The four families take their usual
   colours, which on a row of ten is half of what tells them apart
+- **Fixed: the app's own root URL lit nothing up in the nav.** The collection is served at two
+  addresses — the root and `/collection` — because the root has to show something and the collection
+  is what it shows. A nav link matches one address, so the entry pointing at `/collection` was not
+  active at the root: the page was right and the nav looked like it had no home, on the one URL
+  every first visit arrives at and the one the site is bookmarked as. That entry's state is now
+  computed from the URL, in one place both navs read, since it is the only route in the app with
+  two of them
+- **The wordmark on the desktop bar goes home.** It was text, and clicking it did nothing — the one
+  thing every visitor tries. It leads to the collection, which is what the app's root shows and what
+  everything else on the bar is an answer about. A plain link rather than a nav entry: a wordmark
+  that filled in like a pressed button whenever you were on the collection would read as a sixth
+  destination in the row
 - **Fixed: a rail's prose notes were being laid out as grid rows.** Two different structures shared
   the `rail-note` class and the grid rules meant for one of them won for both, so any note with an
   inline element in it broke into a line per element. The footnote structure has its own name now

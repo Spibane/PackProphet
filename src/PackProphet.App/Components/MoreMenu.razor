@@ -30,22 +30,51 @@
 
     <p class="nav-more-head" id="@($"{Id}-head")">Everything Else</p>
     <nav aria-labelledby="@($"{Id}-head")">
+        @* A mark on every item, from the same component the two navs use.
+           ==================================================================================
+           All nine or none. Six of these have an obvious drawing and three did not, and a grid
+           where six items carry a mark and three do not reads as a grid that failed to load --
+           so the three had to be solved before any of them could be used. Each glyph names in
+           NavIcon what it is and, where it matters, what was drawn first and thrown away.
+
+           The two closest pairs in the finished set are Settings against the More button that
+           opens this menu (three lines, with knobs and without) and Wishlist against Wonder Pick
+           (a clipboard and a card). Both are told apart by one feature rather than by their
+           silhouette, which is worth knowing if either is ever redrawn. *@
         @* First of the list, because it is the one that came OUT of the primary bar rather
            than never having been in it. *@
-        <NavLink class="nav-more-item" href="chase">Chases</NavLink>
-        <NavLink class="nav-more-item" href="decks">Decks</NavLink>
-        <NavLink class="nav-more-item" href="wonder">Wonder Pick</NavLink>
-        <NavLink class="nav-more-item" href="trades">Trades</NavLink>
-        <NavLink class="nav-more-item" href="board">Wishlist</NavLink>
+        <NavLink class="nav-more-item" href="chase">
+            <NavIcon For="chase" Size="16" />Chases
+        </NavLink>
+        <NavLink class="nav-more-item" href="decks">
+            <NavIcon For="decks" Size="16" />Decks
+        </NavLink>
+        <NavLink class="nav-more-item" href="wonder">
+            <NavIcon For="wonder" Size="16" />Wonder Pick
+        </NavLink>
+        <NavLink class="nav-more-item" href="trades">
+            <NavIcon For="trades" Size="16" />Trades
+        </NavLink>
+        <NavLink class="nav-more-item" href="board">
+            <NavIcon For="board" Size="16" />Wishlist
+        </NavLink>
         @* Only with something to compare: a link that always says "you have one collection" is a
            dead end. *@
         @if (Session.MultipleProfiles)
         {
-            <NavLink class="nav-more-item" href="compare">Compare</NavLink>
+            <NavLink class="nav-more-item" href="compare">
+                <NavIcon For="compare" Size="16" />Compare
+            </NavLink>
         }
-        <NavLink class="nav-more-item" href="resources">Resources</NavLink>
-        <NavLink class="nav-more-item" href="history">History</NavLink>
-        <NavLink class="nav-more-item" href="settings">Settings</NavLink>
+        <NavLink class="nav-more-item" href="resources">
+            <NavIcon For="resources" Size="16" />Resources
+        </NavLink>
+        <NavLink class="nav-more-item" href="history">
+            <NavIcon For="history" Size="16" />History
+        </NavLink>
+        <NavLink class="nav-more-item" href="settings">
+            <NavIcon For="settings" Size="16" />Settings
+        </NavLink>
     </nav>
 
     @* Light dismiss alone left the phone with no way out that was not also a tap on the page: the

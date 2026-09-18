@@ -52,12 +52,108 @@
         case "more":
             <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
             break;
+
+        @* ---- the More menu's nine -------------------------------------------------------
+           Each of these was drawn, rendered at 15px beside the marks already in use, and kept
+           or thrown away on what it looked like at that size rather than on the idea. The ones
+           thrown away are named here, because the reason each was rejected is the reason the
+           replacement looks the way it does -- and because the obvious drawing is usually the
+           rejected one. *@
+
+        @* A bookmark, not a heart: these are the cards you are hunting, not the ones you love.
+           The heart is the grid's Want it mark and means something else. *@
+        case "chase":
+            <path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z"
+                  fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+            break;
+
+        @* One card in front of another: a deck is recognised by its face card, and the second
+           edge is what says there is a stack behind it. *@
+        case "decks":
+            <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                <rect x="3.5" y="7" width="11.5" height="14" rx="1.6" />
+                <path d="M7.5 4.5h10a1.6 1.6 0 0 1 1.6 1.6V17" />
+            </g>
+            break;
+
+        @* A face-down card, which is the whole mechanic: five on offer, you pick one blind.
+           A three-card fan was the first drawing and is the obvious one -- at 15px it collapses
+           into a blob that reads as a crown. *@
+        case "wonder":
+            <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="3.5" width="12" height="17" rx="1.8" />
+                <path d="M9.7 9.4a2.3 2.3 0 1 1 3.3 2.1c-.7.4-1 .9-1 1.6v.3" />
+            </g>
+            <circle cx="12" cy="16.7" r=".85" fill="currentColor" />
+            break;
+
+        @* Two arrows, one each way: a trade is a swap of equals. Offset vertically and with
+           heads, which is what keeps it clear of the three even lines on the More button.
+           A two-arrow cycle was the alternative and reads as refresh -- this app has sync. *@
+        case "trades":
+            <path d="M4 9.5h13M14 6.5l3 3-3 3M20 15.5H7M10 12.5l-3 3 3 3"
+                  fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            break;
+
+        @* A clipboard: the list you retype the in-game board from, which is what that page is
+           for. Drawing the twenty slots themselves was the first attempt and the honest one --
+           at 15px twenty slots inside a frame mush into a filled grey rectangle, and four large
+           ones instead collide with the collection's four panes. *@
+        case "board":
+            <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4.5" y="4" width="15" height="17" rx="2" />
+                <path d="M9 4.6V2.8h6v1.8" />
+                <path d="M8.5 10.5h7M8.5 14.5h4.5" />
+            </g>
+            break;
+
+        @* Two people, because what is being compared is two accounts. Two bars of different
+           heights collided with the progress marks -- a count difference and nothing else --
+           and two overlapping circles read as one blob at 15px rather than as an overlap.
+           This is the only person in the set, so it cannot be mistaken for anything. *@
+        case "compare":
+            <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8.5" cy="8" r="2.8" />
+                <path d="M3.5 19a5 5 0 0 1 10 0" />
+                <circle cx="17" cy="9.5" r="2.3" />
+                <path d="M13.6 19a4.2 4.2 0 0 1 7.9-1.6" />
+            </g>
+            break;
+
+        @* An hourglass, which is the app's own word for the thing that page is about: three
+           currencies that regenerate, and the hourglasses that bring them forward. *@
+        case "resources":
+            <path d="M7 3h10M7 21h10M8.5 3v3.4L12 10.8l3.5-4.4V3M8.5 21v-3.4L12 13.2l3.5 4.4V21"
+                  fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            break;
+
+        case "history":
+            <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <circle cx="12" cy="12" r="8.2" />
+                <path d="M12 7.2V12l3.6 2.6" />
+            </g>
+            break;
+
+        @* Sliders rather than a gear. A gear is a circle with radial strokes and so is the sun
+           on the theme button two inches away -- at 15px they were the same drawing. The knobs
+           are what keep this clear of the More button's three even lines, so they are filled in
+           the surface colour rather than left open. *@
+        case "settings":
+            <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                <path d="M5 7h14M5 12h14M5 17h14" />
+                <circle cx="9" cy="7" r="2.1" fill="var(--bs-body-bg)" />
+                <circle cx="15" cy="12" r="2.1" fill="var(--bs-body-bg)" />
+                <circle cx="8" cy="17" r="2.1" fill="var(--bs-body-bg)" />
+            </g>
+            break;
     }
 </svg>
 
 @code {
     /// <summary>
-    /// Which destination's mark to draw: "collection", "progress", "packs" or "more".
+    /// Which destination's mark to draw: the route's own name -- "collection", "progress",
+    /// "packs", "more", "chase", "decks", "wonder", "trades", "board", "compare", "resources",
+    /// "history" or "settings".
     ///
     /// A string rather than an enum because the callers are markup and the value is written once
     /// per nav entry beside the href it belongs to -- an enum would put the two spellings of one

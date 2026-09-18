@@ -1769,7 +1769,15 @@ main > * { flex-shrink: 0; }
     background: var(--bs-tertiary-bg);
     border-bottom: 1px solid var(--bs-border-color);
 }
-.app-nav .brand { font-weight: 700; margin-right: .75rem; letter-spacing: -.01em; }
+/* The wordmark, which is also the way home. An anchor now, so it has to say it is not an ordinary
+   link: no underline, the body's ink rather than the link colour, and the pointer plus a faint lift
+   on hover to say it is pressable at all -- a wordmark gives no other clue that it is. */
+.app-nav .brand {
+    font-weight: 700; margin-right: .75rem; letter-spacing: -.01em;
+    color: var(--bs-body-color); text-decoration: none;
+}
+.app-nav .brand:hover { color: var(--bs-primary); }
+.app-nav .brand:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 3px; border-radius: var(--pp-r-xs); }
 
 /* One height for everything in the row. Each control was sizing itself off its own contents, so
    they landed on three different heights -- 32px for a text link, 31px for the theme button, 28px
@@ -6367,7 +6375,20 @@ tr.row-best {
     border-radius: var(--pp-r);
     color: var(--bs-body-color); text-decoration: none;
     background: var(--bs-secondary-bg);
+
+    /* The mark, then the word. Flex rather than an inline glyph so the two centre on each other
+       instead of on the text baseline: a 16px square aligned to a baseline sits low by a couple of
+       pixels, which down a column of nine reads as nine items that do not line up. */
+    display: flex; align-items: center; gap: .55rem;
 }
+/* Square, and it stays square: these sit in a two-column grid whose tracks can get narrow, and a
+   flex item that shrinks would flatten the drawing rather than ellipsise the label beside it. */
+.nav-more-item > svg { flex: none; }
+/* Full strength, not dimmed. It was at .72 on the argument that the mark is a hint at the word
+   rather than a second label -- which read, at 16px on this surface, as a mark fainter than the
+   label beside it. The mark is the part being scanned; anything quieter than the word it sits
+   against sends the eye to the word first and buys nothing. The desktop nav's marks were never
+   dimmed, so this also puts the two in step. */
 .nav-more-item.active { background: var(--bs-primary); color: #fff; font-weight: 600; }
 .nav-more-item:hover:not(.active) { background: var(--bs-tertiary-bg); }
 .nav-more-item:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }

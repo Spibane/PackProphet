@@ -1,5 +1,6 @@
 @inject AppSession Session
 @inject PaletteSwitch Palette
+@inject NavigationManager Nav
 @implements IDisposable
 
 @* The five destinations that carry the loop the app is built around: record what you own, check
@@ -25,12 +26,19 @@
    never hide active state that changes what the numbers mean. A destination is not a claim about
    data. *@
 <nav class="tab-bar" aria-label="Main">
-    <NavLink class="tab" href="collection" Match="NavLinkMatch.All">
+    @* A plain anchor, and the one entry in this bar that is not a NavLink.
+       ==================================================================================
+       The collection answers to two URLs -- the root and /collection -- and NavLink matches one
+       href, so it cannot be active at both. See Routes.IsCollection for what that cost: the root
+       rendered the collection with nothing lit up in either nav. Computing this one keeps a single
+       source of truth for it, where adding `active` alongside a NavLink would have two things
+       deciding the same class. *@
+    <a class="tab @(AtCollection ? "active" : null)" href="collection">
         <span class="ico" aria-hidden="true">
             <NavIcon For="collection" />
         </span>
         <span class="lbl">Collection</span>
-    </NavLink>
+    </a>
 
     <NavLink class="tab" href="progress">
         <span class="ico" aria-hidden="true">
@@ -76,9 +84,26 @@
 <MoreMenu Id="nav-more" />
 
 @code {
-    protected override void OnInitialized() => Session.Changed += OnChanged;
+    /// <summary>Whether the collection is the page we are on, at either of its two URLs.</summary>
+    private bool AtCollection => Routes.IsCollection(Nav.ToBaseRelativePath(Nav.Uri));
 
-    public void Dispose() => Session.Changed -= OnChanged;
+    protected override void OnInitialized()
+    {
+        Session.Changed += OnChanged;
+
+        // See the note on the collection tab: its active state is computed during render, so it
+        // needs telling when the URL moves. The NavLinks beside it do that for themselves.
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
+        InvokeAsync(StateHasChanged);
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 }

@@ -22,12 +22,36 @@
 <svg class="@Class" viewBox="0 0 24 24" width="@Size" height="@Size" focusable="false"
      aria-hidden="true">
     <g transform="rotate(-8 12 12)">
-        <rect x="7.05" y="3.45" width="9.9" height="17.1" rx="2.25"
-              fill="none" stroke="currentColor" stroke-width="1.8" />
-        @* A fifth of the way down the pack, where the icon puts it: lower reads as a window rather
-           than a sealed pack. *@
-        <path d="M7.05 7.65h9.9" stroke="currentColor" stroke-width="1.8" />
-        <path d="M12 12.45L14.63 15.08L12 17.7L9.37 15.08z" fill="currentColor" />
+        @if (Filled)
+        {
+            @* THE SAME PACK, SOLID.
+               ==========================================================================
+               One path and one fill, with the tear strip and the diamond knocked out of it by
+               evenodd rather than drawn over the top. They have to be holes: this mark paints in
+               currentColor precisely so it can sit on any ground, and a strip painted in the bar's
+               own colour would be this file deciding what that ground is — which is the failure
+               the greyscale-filter version had, and the reason the mark became markup.
+
+               The outer subpath is the same rounded rect the outline draws, written longhand
+               because a <rect> cannot carry holes.
+
+               The strip is INSET from both edges where the outline's runs the full width. Full
+               width cuts a solid pack clean in two and reads as two shapes stacked; stopping short
+               of the corners reads as a perforation across one. *@
+            <path fill="currentColor" fill-rule="evenodd"
+                  d="M9.3 3.45h5.4a2.25 2.25 0 0 1 2.25 2.25v12.6a2.25 2.25 0 0 1-2.25 2.25H9.3a2.25 2.25 0 0 1-2.25-2.25V5.7A2.25 2.25 0 0 1 9.3 3.45z
+                     M8.55 6.9h6.9v1.5h-6.9z
+                     M12 12.45l2.63 2.63L12 17.7l-2.63-2.62z" />
+        }
+        else
+        {
+            <rect x="7.05" y="3.45" width="9.9" height="17.1" rx="2.25"
+                  fill="none" stroke="currentColor" stroke-width="1.8" />
+            @* A fifth of the way down the pack, where the icon puts it: lower reads as a window
+               rather than a sealed pack. *@
+            <path d="M7.05 7.65h9.9" stroke="currentColor" stroke-width="1.8" />
+            <path d="M12 12.45L14.63 15.08L12 17.7L9.37 15.08z" fill="currentColor" />
+        }
     </g>
 </svg>
 
@@ -40,4 +64,23 @@
     /// attribute, which is how the top bar sizes this in rem instead.
     /// </summary>
     [Parameter] public int Size { get; set; } = 24;
+
+    /// <summary>
+    /// Draw the pack solid instead of as an outline.
+    ///
+    /// For the wordmark, and so far only the wordmark. The outline is a line drawing at the same
+    /// weight as the line drawings on the nav buttons beside it, and once those buttons had marks
+    /// of their own the name stopped reading as the name — it was the same construction as its
+    /// neighbours, minus a border. Solid makes it a different KIND of mark rather than a larger
+    /// one of the same kind, which is what size alone could not buy.
+    ///
+    /// A parameter and not a second component: it is the same drawing at the same coordinates, and
+    /// the two forms have to go on agreeing about the tilt, the strip and the diamond. Two files
+    /// would be the thing this file exists to prevent.
+    ///
+    /// The centre tab on a phone keeps the outline. It is already white on a filled circle, so it
+    /// has no legibility to gain, and a solid mark there would read as a pressed state on the one
+    /// control in the app that writes something.
+    /// </summary>
+    [Parameter] public bool Filled { get; set; }
 }

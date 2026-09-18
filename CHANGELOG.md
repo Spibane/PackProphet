@@ -72,6 +72,13 @@ until then the minor number tracks the roadmap phase.
   every first visit arrives at and the one the site is bookmarked as. That entry's state is now
   computed from the URL, in one place both navs read, since it is the only route in the app with
   two of them
+- **The wordmark reads as the name again, now the destinations have marks of their own.** Giving
+  every button a glyph made the brand the same construction as its neighbours — a mark, then a word,
+  at the same size in the same ink — so it looked like a sixth button that had lost its border. It
+  is the largest type and the largest drawing in the row now, separated from the buttons by a rule
+  rather than by a gap that read as the gap between two of them, and its pack is drawn **solid**
+  where every other mark in the app is drawn in line: a different kind of mark rather than a larger
+  one of the same kind. The pack also appears under the Slate skin, which had never had it
 - **The wordmark on the desktop bar goes home.** It was text, and clicking it did nothing — the one
   thing every visitor tries. It leads to the collection, which is what the app's root shows and what
   everything else on the bar is an answer about. A plain link rather than a nav entry: a wordmark

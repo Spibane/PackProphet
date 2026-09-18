@@ -22,6 +22,19 @@ public static class GameRules
     /// </summary>
     public const int PackPointsCap = 2500;
 
+    /// <summary>
+    /// Every balance the game can actually produce is a multiple of five: packs pay five at a
+    /// time and every shop price is a multiple of five, so nothing in the game can leave you
+    /// holding 43 points. A figure that is not one was mistyped, and it is rounded DOWN -- a
+    /// balance reported higher than it is would have the app recommending a card the shop will
+    /// refuse to sell.
+    /// </summary>
+    public static int SnapPackPoints(int points)
+    {
+        var held = Math.Clamp(points, 0, PackPointsCap);
+        return held - held % PackPointsPerPack;
+    }
+
     /// <summary>Free packs per day on the base account, on a 12-hour timer.</summary>
     public const int FreePacksPerDay = 2;
 

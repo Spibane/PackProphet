@@ -131,9 +131,12 @@ else
                         <tr class="@(row.AtCap ? "pts-capped" : "")">
                             <td>@row.Set</td>
                             <td class="num">
+                                @* Stepped in fives, because that is the only way a balance moves:
+                                   five earned a pack, and every shop price a multiple of five. *@
                                 <input type="number" min="0" max="@GameRules.PackPointsCap"
+                                       step="@GameRules.PackPointsPerPack"
                                        class="form-control form-control-sm pts-in"
-                                       value="@row.Balance"
+                                       value="@row.Balance" @key="(row.Set, _snapped)"
                                        @onchange="e => OnPoints(row.Set, e)" />
                             </td>
                             <td class="num">
@@ -325,9 +328,24 @@ else
             .ToArray();
     }
 
+    /// <summary>
+    /// Bumped whenever a typed figure had to be rounded to a multiple of five, and part of the
+    /// input's @key so the field is rebuilt with the figure that was actually stored.
+    ///
+    /// Without it the correction is invisible: Blazor compares the new value attribute against the
+    /// one it last rendered, not against what is in the box, so typing 43 over a stored 40 leaves
+    /// 43 on screen against a balance of 40 -- and the next pack logged makes it 45.
+    /// </summary>
+    private int _snapped;
+
     private void OnPoints(string set, ChangeEventArgs e)
     {
-        if (Num.TryCount(e.Value?.ToString(), out var n)) Session.SetPackPoints(set, n);
+        if (!Num.TryCount(e.Value?.ToString(), out var n)) return;
+
+        var held = GameRules.SnapPackPoints(n);
+        if (held != n) _snapped++;
+
+        Session.SetPackPoints(set, held);
     }
 
     /// <summary>

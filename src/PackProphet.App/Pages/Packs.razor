@@ -527,8 +527,9 @@ else
                                 </td>
                                 <td class="num">
                                     <input class="form-control form-control-sm text-end" style="width:5.5rem"
-                                           type="number" min="0" max="@GameRules.PackPointsCap" step="5"
-                                           value="@row.Balance"
+                                           type="number" min="0" max="@GameRules.PackPointsCap"
+                                           step="@GameRules.PackPointsPerPack"
+                                           value="@row.Balance" @key="(row.Set, _snapped)"
                                            @onchange="e => SetBalance(row.Set, e)"
                                            aria-label="@($"Pack points in {row.Set}")" />
                                 </td>
@@ -1268,15 +1269,25 @@ else
         return string.Join(" · ", parts);
     }
 
+    /// <summary>
+    /// Bumped when a typed figure was rounded to a multiple of five, and part of the input's @key
+    /// so the box shows the figure that was stored. See the same field on the Resources page for
+    /// why the value attribute alone does not do it.
+    /// </summary>
+    private int _snapped;
+
     private void SetBalance(string set, ChangeEventArgs e)
     {
         if (!int.TryParse(e.Value?.ToString(), out var value)) return;
-        var clamped = Math.Clamp(value, 0, GameRules.PackPointsCap);
+
+        // Snapped rather than clamped: a balance the game cannot produce is a typo.
+        var held = GameRules.SnapPackPoints(value);
+        if (held != value) _snapped++;
 
         Session.Mutate(p =>
         {
             var next = new Dictionary<string, int>(p.Resources.PackPointsBySet);
-            if (clamped > 0) next[set] = clamped; else next.Remove(set);
+            if (held > 0) next[set] = held; else next.Remove(set);
             return p with { Resources = p.Resources with { PackPointsBySet = next } };
         });
 

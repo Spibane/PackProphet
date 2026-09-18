@@ -880,9 +880,14 @@ public sealed class AppSession : IAsyncDisposable
     /// of the distribution of what turns up, and a log of accepted offers only would be biased
     /// upward by the very policy it sets.
     /// </summary>
-    public void LogWonderOffer(IReadOnlyList<PocketCard> offer, int staminaCost, bool taken, PocketCard? received)
+    /// <returns>
+    /// What taking it cost, so the page can say whether hourglasses went into it, or null when the
+    /// offer was only logged.
+    /// </returns>
+    public PoolSpend? LogWonderOffer(IReadOnlyList<PocketCard> offer, int staminaCost, bool taken, PocketCard? received)
     {
         var keys = offer.Select(c => c.OwnershipKey).ToList();
+        PoolSpend? paid = null;
 
         Mutate(p =>
         {
@@ -900,17 +905,18 @@ public sealed class AppSession : IAsyncDisposable
             // both follow from the same action rather than needing three separate edits.
             if (taken)
             {
+                // Hourglasses cover whatever the pool cannot, because that is what the game made
+                // you do: a pick you have recorded happened, so a cost the balance cannot meet was
+                // paid with hourglasses rather than not paid at all. It also spends the PROJECTED
+                // balance instead of the figure as typed, which used to throw away every hour of
+                // regeneration since -- a pool entered empty two days ago was charged from empty.
+                paid = ResourcePlan.Spend(
+                    next.Resources.Wonder, staminaCost, DateTimeOffset.Now,
+                    GameRules.StaminaCap, GameRules.WonderHourglassesPerStamina);
+
                 next = next with
                 {
-                    Resources = next.Resources with
-                    {
-                        // Spending restamps the pool too: the balance is true as of now, and
-                        // leaving the old timestamp would credit the regeneration twice.
-                        Wonder = (next.Resources.Wonder with
-                        {
-                            Balance = Math.Max(0, next.Resources.Wonder.Balance - staminaCost)
-                        }).AsOfNow(DateTimeOffset.Now)
-                    }
+                    Resources = next.Resources with { Wonder = paid.Pool }
                 };
 
                 if (received is not null)
@@ -924,6 +930,39 @@ public sealed class AppSession : IAsyncDisposable
 
             return next;
         });
+
+        return paid;
+    }
+
+    /// <summary>
+    /// Book the hourglasses a batch of logged packs cost, on the profile being mutated.
+    ///
+    /// Called from inside the log's own Mutate rather than after it, so the pack, its points and
+    /// its cost are one edit: a save between them would leave a pack logged and unpaid for.
+    ///
+    /// Returns <see cref="PackSpend.None"/> when the setting is off, which is the default -- see
+    /// Prefs.AutoPackHourglasses on why spending a hoard uninvited is opt-in.
+    /// </summary>
+    public PackSpend PayForPacks(Profile profile, int packs)
+    {
+        if (!AutoPackHourglasses) return PackSpend.None;
+
+        var opened = ResourcePlan.PacksOpenedOn(profile.PackLog, DateOnly.FromDateTime(DateTime.Now));
+
+        return ResourcePlan.PacksOpened(
+            opened, packs, profile.Resources.PackHourglasses, profile.Resources.Premium);
+    }
+
+    /// <summary>Whether logged packs past the day's free ones draw on the hourglass balance.</summary>
+    public bool AutoPackHourglasses => State.Prefs.AutoPackHourglasses;
+
+    public void SetAutoPackHourglasses(bool on)
+    {
+        if (on == AutoPackHourglasses) return;
+
+        State = State with { Prefs = State.Prefs with { AutoPackHourglasses = on } };
+        QueueSave();
+        Changed?.Invoke();
     }
 
     /// <summary>A linter bound to the current card data, or null before it loads.</summary>

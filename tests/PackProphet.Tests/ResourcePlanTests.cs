@@ -126,6 +126,115 @@ public class ResourcePlanTests
     }
 
     [Fact]
+    public void Spending_takes_the_regenerated_balance_not_the_figure_that_was_typed()
+    {
+        // Entered empty two days ago, so the pool has filled since. Charging the spend against
+        // the nought on file would have taken 24 hourglasses for stamina the user already had.
+        var pool = Pool(0, hourglasses: 24, asOf: Noon);
+        var spend = ResourcePlan.Spend(pool, 2, Noon.AddDays(2));
+
+        Assert.Equal(2, spend.FromBalance);
+        Assert.Equal(0, spend.FromHourglasses);
+        Assert.Equal(0, spend.Hourglasses);
+        Assert.Equal(24, spend.Pool.Hourglasses);
+        // 48 hours is four units of regeneration from empty, and two of those were spent.
+        Assert.Equal(2, spend.Pool.Balance);
+        Assert.Equal(0, spend.Unpaid);
+    }
+
+    [Fact]
+    public void Hourglasses_cover_what_the_balance_cannot()
+    {
+        // A 4-stamina offer against a balance of one. The pick happened, so the other three were
+        // paid for -- 36 hourglasses at twelve each.
+        var spend = ResourcePlan.Spend(Pool(1, hourglasses: 40, asOf: Noon), 4, Noon);
+
+        Assert.Equal(1, spend.FromBalance);
+        Assert.Equal(3, spend.FromHourglasses);
+        Assert.Equal(36, spend.Hourglasses);
+        Assert.Equal(0, spend.Pool.Balance);
+        Assert.Equal(4, spend.Pool.Hourglasses);
+        Assert.Equal(0, spend.Unpaid);
+        Assert.Equal(Noon, spend.Pool.AsOf);
+    }
+
+    [Fact]
+    public void A_part_paid_spend_says_how_much_nothing_covered()
+    {
+        // Eleven hourglasses buy nothing: the game restores stamina twelve at a time. The app
+        // records the pick anyway and reports the shortfall rather than inventing stamina.
+        var spend = ResourcePlan.Spend(Pool(1, hourglasses: 11, asOf: Noon), 3, Noon);
+
+        Assert.Equal(1, spend.FromBalance);
+        Assert.Equal(0, spend.FromHourglasses);
+        Assert.Equal(2, spend.Unpaid);
+        Assert.Equal(11, spend.Pool.Hourglasses);
+    }
+
+    [Fact]
+    public void The_days_free_packs_come_before_any_hourglass_is_spent()
+    {
+        // Three packs on a base account: two free, one bought for twelve.
+        var spend = ResourcePlan.PacksOpened(openedToday: 0, opening: 3, hourglasses: 100, premium: false);
+
+        Assert.Equal(2, spend.Free);
+        Assert.Equal(1, spend.FromHourglasses);
+        Assert.Equal(GameRules.PackHourglassesPerPack, spend.Hourglasses);
+        Assert.Equal(0, spend.Unpaid);
+
+        // Premium's third pack is free, so the same three cost nothing.
+        var withPremium = ResourcePlan.PacksOpened(0, 3, 100, premium: true);
+        Assert.Equal(3, withPremium.Free);
+        Assert.Equal(0, withPremium.Hourglasses);
+    }
+
+    [Fact]
+    public void Packs_already_opened_today_have_used_up_the_allowance()
+    {
+        // The allowance is a day's, not a batch's: two already logged means this one is bought.
+        var spend = ResourcePlan.PacksOpened(openedToday: 2, opening: 1, hourglasses: 12, premium: false);
+
+        Assert.Equal(0, spend.Free);
+        Assert.Equal(1, spend.FromHourglasses);
+        Assert.Equal(12, spend.Hourglasses);
+    }
+
+    [Fact]
+    public void Packs_beyond_the_hourglasses_are_reported_rather_than_refused()
+    {
+        // Twelve packs logged with one pack's worth of hourglasses on file. The app is being told
+        // what happened, so it books what it can and says how far behind the balance was.
+        var spend = ResourcePlan.PacksOpened(openedToday: 0, opening: 12, hourglasses: 12, premium: false);
+
+        Assert.Equal(2, spend.Free);
+        Assert.Equal(1, spend.FromHourglasses);
+        Assert.Equal(9, spend.Unpaid);
+    }
+
+    [Fact]
+    public void Nothing_opened_costs_nothing()
+    {
+        Assert.Equal(ResourcePlan.PacksOpened(0, 0, 500, false), PackSpend.None);
+    }
+
+    [Fact]
+    public void Packs_are_counted_against_the_readers_own_day()
+    {
+        // Local dates, because the free packs reset by calendar day where the user is. An event
+        // at 23:30 local belongs to that day even where UTC has already moved on.
+        var today = DateTimeOffset.Now;
+        var log = new List<PackOpenEvent>
+        {
+            new(today, "A1", "Charizard", "unknown", []),
+            new(today.AddDays(-1), "A1", "Charizard", "unknown", []),
+        };
+
+        Assert.Equal(1, ResourcePlan.PacksOpenedOn(log, DateOnly.FromDateTime(DateTime.Now)));
+        Assert.Equal(1, ResourcePlan.PacksOpenedOn(log, DateOnly.FromDateTime(DateTime.Now.AddDays(-1))));
+        Assert.Equal(0, ResourcePlan.PacksOpenedOn(log, DateOnly.FromDateTime(DateTime.Now.AddDays(1))));
+    }
+
+    [Fact]
     public void Dust_runway_counts_trades_not_currency()
     {
         // 25,000 is the 2-star price. The point of the figure is that it is usually far beyond

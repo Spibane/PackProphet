@@ -99,6 +99,16 @@ until then the minor number tracks the roadmap phase.
   figure down to one — down rather than to the nearest, since a balance reported high recommends a
   card the shop will refuse to sell. Both places that take a balance now agree, and the box shows
   what was stored rather than what was typed
+- **Logged packs past the day's free ones can spend pack hourglasses.** Off by default, with the
+  switch under **Hourglasses** in Settings — it draws down a stored balance uninvited, and a player
+  hoarding hourglasses for a release would not thank it. On, the allowance is the account's own (two
+  a day, three with premium), whole packs only at twelve hourglasses each, and the log says what it
+  spent
+- **A Wonder Pick you took spends hourglasses when the stamina was not there.** Taking one already
+  spent stamina; it took it off the figure as typed, so a pool entered empty two days ago was
+  charged from empty and the regeneration since was thrown away. It now spends the projected
+  balance and covers the rest from hourglasses, twelve to a stamina, which is what the game made
+  you do to take the pick in the first place
 - **Fixed: the same strip was squeezing the grid on a narrow window.** Below the fold width it is
   meant to be a bar in the flow, and the rule that undid its overlay placement was outranked by the
   rule that set it, so it stayed in a column that layout does not have. Grid invented an implicit

@@ -807,8 +807,15 @@ else
         if (got is null) return;
 
         var cost = _appraisal.StaminaCost;
-        Session.LogWonderOffer(_offer, cost, taken: true, received: got);
+        var paid = Session.LogWonderOffer(_offer, cost, taken: true, received: got);
+
         _logged = $"Logged. {got.Name} added to your collection, {cost} stamina spent.";
+
+        // What the balance could not cover came out of the hourglasses, so say which. Silent, it
+        // looks like the stamina went further than it did.
+        if (paid is { FromHourglasses: > 0 })
+            _logged += $" {paid.Hourglasses} hourglasses covered {paid.FromHourglasses} of it.";
+
         Clear();
     }
 

@@ -179,6 +179,24 @@
         </p>
     }
 
+    @* With the resources rather than with the lifetime totals above: it changes a balance, it does
+       not correct one. Off by default -- see Prefs.AutoPackHourglasses. *@
+    <h2>Hourglasses</h2>
+    <div class="form-check mb-4">
+        <input class="form-check-input" type="checkbox" id="autopackhg"
+               checked="@Session.AutoPackHourglasses"
+               @onchange="e => Session.SetAutoPackHourglasses((bool)(e.Value ?? false))" />
+        <label class="form-check-label" for="autopackhg">
+            Spend Pack Hourglasses Past the Day's Free Packs
+            <span class="d-block small text-body-secondary">
+                @GameRules.PacksPerDay(false) free packs a day,
+                @GameRules.PacksPerDay(true) with premium. Each pack logged after that takes
+                @GameRules.PackHourglassesPerPack from the balance on
+                <a href="resources">Resources</a>.
+            </span>
+        </label>
+    </div>
+
     @* Alt accounts are ordinary in this game and you can trade with yourself, so a second
        collection is a normal way to play. Managed here rather than in the top bar: switching is
        frequent, creating and deleting are not, and a delete button in the chrome of every page is

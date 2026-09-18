@@ -219,6 +219,18 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     public bool? WishGrid { get; init; }
 
     /// <summary>
+    /// Spend pack hourglasses automatically on packs logged past the day's free ones.
+    ///
+    /// Off by default: it draws down a stored balance without being asked, and a player who
+    /// hoards hourglasses for a new set's release would have the app spending them on every pack
+    /// they log. On, the allowance is the account's own -- two a day, three with premium.
+    ///
+    /// A preference rather than a fact about the account, unlike <c>Resources.Premium</c>: it is
+    /// how the user wants their logging booked, not something the game decides.
+    /// </summary>
+    public bool AutoPackHourglasses { get; init; }
+
+    /// <summary>
     /// Copies wanted of each parallel foil — the Deluxe set's second printings of its 1-3 diamond
     /// cards. Zero ignores them; one is the default.
     ///

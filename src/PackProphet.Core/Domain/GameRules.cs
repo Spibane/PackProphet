@@ -75,6 +75,21 @@ public static class GameRules
     /// <summary>12 Trade Hourglasses restore one Trade Stamina.</summary>
     public const int TradeHourglassesPerStamina = 12;
 
+    // ---- The daily handout --------------------------------------------------------
+    //
+    // What a day of turning up pays in hourglasses. It is the one income the app can credit
+    // without being told what happened, which is why the Resources page offers it as a button
+    // rather than making the user add it to two fields by hand.
+    //
+    // Two constants and not one: they are two currencies, and a day that pays four of one and two
+    // of the other cannot be expressed as a single figure.
+
+    /// <summary>Pack Hourglasses a day of dailies pays.</summary>
+    public const int DailyPackHourglasses = 4;
+
+    /// <summary>Wonder Hourglasses a day of dailies pays.</summary>
+    public const int DailyWonderHourglasses = 2;
+
     /// <summary>
     /// Wonder and Trade pools are structurally identical: cap 5, one restored every 12h. Only
     /// what they cost to spend differs.

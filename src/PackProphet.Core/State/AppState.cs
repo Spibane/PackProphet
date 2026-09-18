@@ -90,6 +90,16 @@ public sealed record Resources(
     bool Premium,
     DateTimeOffset? NextFreePackAt)
 {
+    /// <summary>
+    /// When the day's hourglasses were last credited from the Resources page, so the button that
+    /// does it can refuse a second go on the same day. A double tap is otherwise invisible: two
+    /// balances four and two too high, and every timeline on the page quietly optimistic.
+    ///
+    /// An optional property rather than a constructor parameter, so saves written before it load
+    /// unchanged. Null means never.
+    /// </summary>
+    public DateTimeOffset? DailyHourglassesAt { get; init; }
+
     public static Resources Empty => new(
         ResourcePool.Empty, ResourcePool.Empty, 0, new(), 0, false, null);
 }

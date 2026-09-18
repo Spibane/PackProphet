@@ -23,6 +23,20 @@ else
             them.
         </p>
 
+        @* One button for both currencies: it is one day's income, and two buttons would have to be
+           pressed together to mean anything. Refuses a second go on the same day -- a double tap
+           is otherwise invisible, and it moves every timeline on the page. *@
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+            <button class="btn btn-sm btn-primary" @onclick="Session.AddDailyHourglasses"
+                    disabled="@Session.DailyHourglassesAdded">
+                @(Session.DailyHourglassesAdded ? "Today's Dailies Added" : "Add Today's Dailies")
+            </button>
+            <span class="small text-body-secondary">
+                @GameRules.DailyPackHourglasses pack and @GameRules.DailyWonderHourglasses Wonder
+                hourglasses, once a day.
+            </span>
+        </div>
+
         <div class="pools">
             @* ---- packs ------------------------------------------------------------------- *@
             <div class="pool">

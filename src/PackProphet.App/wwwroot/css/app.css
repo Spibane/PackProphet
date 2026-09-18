@@ -1528,11 +1528,19 @@ main > .page-head {
    is one diamond or four -- the whole point of the row is comparing the lengths. */
 .tier-row {
     display: grid;
-    grid-template-columns: 2.5rem minmax(0, 1fr) 2.6rem;
+    /* 3.2rem for the glyphs, not 2.5. Four diamonds are 49px wide at this row's .78rem -- which
+       is exactly what --rarity-col's note predicts, 62.9px at 1rem -- and a 40px track let them
+       spill 9px into the bar beside them and draw over its track. Nothing clipped them, because
+       clipping a rarity would show it as a lower one; so the track fits the widest rung instead.
+       3.2rem is 51.2px. */
+    grid-template-columns: 3.2rem minmax(0, 1fr) 2.6rem;
     align-items: center;
     gap: .5rem;
     font-size: .78rem;
 }
+/* One line, whatever the rung. A wrapped "◆◆◆◆" would take the row to two lines and put the bar
+   half a line out of alignment with the ones above it. */
+.tier-row > .glyphs { white-space: nowrap; }
 .tier-row > .bar {
     block-size: 6px;
     border-radius: var(--pp-r-xs);
@@ -6509,6 +6517,22 @@ tr.row-best {
 @media (width <= 1056px) {
     /* The bar's own height, its border, and the inset it sits above. */
     main { padding-bottom: calc(var(--tab-bar-h) + 1px + env(safe-area-inset-bottom)); }
+}
+
+/* The rail stops above the tab bar, in the band where both are on screen.
+   ==================================================================================
+   `main` reserves the bar's height for the page, but the rail is pinned to the WINDOW -- it runs
+   `100dvh` from where the bars above it end -- so it ran its last 57px underneath a bar that is
+   fixed on top of it. Scrolled to the end, the bottom control group was still behind the bar: not
+   clipped, not reachable, and on a short window that is most of what the rail holds.
+
+   The same three terms main reserves, because it is the same bar. Below 900px there is no column
+   to correct -- the rail is a sheet opened from a button -- and at 1057 and up the bar is gone. */
+@media (900px < width <= 1056px) {
+    .page-rail {
+        block-size: calc(100dvh - var(--rail-top, 0px)
+                         - var(--tab-bar-h) - 1px - env(safe-area-inset-bottom));
+    }
 }
 
 /* The palette reached from the More sheet: an action, not one of the destinations under it, so it

@@ -87,6 +87,15 @@ until then the minor number tracks the roadmap phase.
 - **Fixed: a rail's prose notes were being laid out as grid rows.** Two different structures shared
   the `rail-note` class and the grid rules meant for one of them won for both, so any note with an
   inline element in it broke into a line per element. The footnote structure has its own name now
+- **Fixed: the set strip was sitting on the top row of the collection.** It overlays the grid
+  rather than taking a bar of its own, and it parks at the top — so with more than one set in scope
+  the first row of cards was underneath it and nothing brought it out, since at rest there is
+  nothing to scroll. Worst on a search that matches one row, where the row you went looking for is
+  the covered one. The grid starts below the strip now, by the height the script already measures
+- **Fixed: the same strip was squeezing the grid on a narrow window.** Below the fold width it is
+  meant to be a bar in the flow, and the rule that undid its overlay placement was outranked by the
+  rule that set it, so it stayed in a column that layout does not have. Grid invented an implicit
+  one the width of a wordmark and charged it to the cards
 
 ### v0.7.0 - 2026-09-01
 

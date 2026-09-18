@@ -527,6 +527,60 @@ public class LayoutInvariantTests
             "Use minmax(0, 1fr): " + string.Join("; ", offenders));
     }
 
+    /// <summary>
+    /// The set strip overlays the railed grid, and the grid leaves room for it.
+    ///
+    /// Two halves of one answer, in two files, and either one alone is a bug that looks like
+    /// nothing: the strip shares the grid's cell on purpose -- it is an overlay rather than a
+    /// third bar -- so without the reserved room at the top of the grid the first row of cards
+    /// sits under it permanently. Nothing scrolls it out from under, because at rest there is
+    /// nothing to scroll; the row is simply unreadable. A search that matches one row is the worst
+    /// of it, since the row you went looking for is the one that is covered.
+    ///
+    /// --spy-h is the measurement, published by js/gridspy.js AFTER it decides whether the strip
+    /// is showing. Measured before, the frame that turns the strip on publishes a zero and nothing
+    /// schedules another pass to correct it.
+    /// </summary>
+    [Fact]
+    public void The_railed_grid_reserves_the_room_the_set_strip_overlays_it_with()
+    {
+        var css = WithoutComments(Css);
+
+        Assert.Matches(
+            @"\.page-body\.railed\s*>\s*\.grid-wrap\s*\{[^}]*padding-top:\s*var\(--spy-h",
+            css);
+
+        var spy = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "js", "gridspy.js"));
+
+        var toggle = spy.IndexOf("classList.toggle('on'", StringComparison.Ordinal);
+        var publish = spy.IndexOf("'--spy-h'", StringComparison.Ordinal);
+
+        Assert.True(toggle >= 0 && publish > toggle,
+            "gridspy.js must publish --spy-h after it toggles the strip on, or the pass that " +
+            "shows the strip publishes a height of zero and the grid reserves nothing.");
+    }
+
+    /// <summary>
+    /// Below the fold width the strip is a bar in the flow, and it has to be told so by name.
+    ///
+    /// The placement it is undoing is `.page-body.railed > .grid-spy`, which outranks the
+    /// `> *` reset beside it at every width -- so the strip stayed in a column the narrow layout
+    /// does not define, grid invented an implicit track the width of a wordmark for it, and the
+    /// cards were squeezed into what was left with the strip pinned to their right.
+    /// </summary>
+    [Fact]
+    public void The_narrow_layout_puts_the_set_strip_back_in_the_flow()
+    {
+        var css = WithoutComments(Css);
+
+        var rule = Regex.Match(css,
+            @"@media\s*\(width\s*<=\s*900px\)\s*\{.*?\.page-body\.railed\s*>\s*\.grid-spy\s*\{(?<body>[^}]*)\}",
+            RegexOptions.Singleline);
+
+        Assert.True(rule.Success, "the narrow layout no longer has a rule for the set strip");
+        Assert.Contains("grid-area: auto", rule.Groups["body"].Value, StringComparison.Ordinal);
+    }
+
     private static int Height(string pattern)
     {
         var m = Regex.Match(WithoutComments(Css), pattern, RegexOptions.Singleline);

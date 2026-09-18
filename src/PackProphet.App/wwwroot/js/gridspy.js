@@ -113,6 +113,15 @@ function scrolledBy(grid) {
         : scroller.scrollTop;
 }
 
+/// The vertical room the strip occupies, margins and all, or 0 when it is not showing.
+function spyRoom(label) {
+    const box = label.getBoundingClientRect().height;
+    if (box <= 0) return 0;
+
+    const style = getComputedStyle(label);
+    return box + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
+}
+
 export function watch(grid, label) {
     if (!grid || !label || watched.has(grid)) return;
 
@@ -133,11 +142,6 @@ export function watch(grid, label) {
 
         const bars = barsBottom(label);
         host?.style.setProperty('--bars-h', `${bars}px`);
-
-        // The strip's own height, so the list view's column headers can sit under it rather than
-        // behind it. Zero while it has nothing to say: the stylesheet drops an empty strip, and a
-        // header offset by a strip that is not there would float a row's height below the bars.
-        host?.style.setProperty('--spy-h', `${label.getBoundingClientRect().height}px`);
 
         // The line under which a row is covered: the bottom of the bars, plus the strip itself once
         // it has something in it.
@@ -169,6 +173,20 @@ export function watch(grid, label) {
         // of its own. Safe against Blazor: the class attribute it renders here is a constant, so the
         // diff never has a new value to write and never puts this back.
         label.classList.toggle('on', !!name);
+
+        // How much room the strip takes below the bars, published for the stylesheet: the list
+        // view's column headers park under it, and on a railed page the grid reserves this much
+        // at its top so the strip's overlay never lands on the first row of cards.
+        //
+        // Measured AFTER the class above, not before. The old order read the height on the same
+        // pass that decided whether to show the strip at all, so the frame that turned it on
+        // published a zero and nothing scheduled another pass to correct it -- a first row of
+        // cards under a strip that had just appeared stayed under it until the next scroll.
+        //
+        // Margins included, because the question is how much vertical space the thing occupies
+        // and the overlay carries a margin of its own; guarded on the height, since a hidden
+        // strip still has margins declared and 0 is the honest answer for one that is not there.
+        host?.style.setProperty('--spy-h', `${spyRoom(label)}px`);
 
         // The back-to-top button, on the same pass and for the same reason: this is the one place
         // that already knows how far down the page is, without a second scroll listener.
@@ -215,6 +233,10 @@ export function watch(grid, label) {
         const el = label.parentElement?.querySelector(sel);
         if (ro && el) ro.observe(el);
     }
+    // The strip itself as well, since the room it takes is what the grid below reserves: it grows
+    // when the layout hands it a margin at the desk width and loses it again on a phone, and
+    // neither of those is a scroll or a row swap.
+    if (ro) ro.observe(label);
 
     watched.set(grid, { scroller, onScroll, mo, ro });
     update();

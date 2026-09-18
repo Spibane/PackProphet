@@ -117,6 +117,12 @@ until then the minor number tracks the roadmap phase.
   answer for it said *Set Complete* and nothing. They now name the rarest card from that set you do
   not own, whatever rung it sits on, marked **Outside Your Plan** so it cannot be read as something
   you were short of
+- **Fixed: a showcase card drew its face over its own name.** The face is as tall as the card and
+  takes its width from that height, which a grid track sized `auto` cannot resolve — it sized the
+  track from the face's minimum and then painted the face at its real width. A chase list with
+  three badges in it was enough: a 150px face in a 125px track, over the name beside it and 11px
+  past the panel. The card is a flex row now, where the height is settled before the width is asked
+  for
 - **Fixed: the same strip was squeezing the grid on a narrow window.** Below the fold width it is
   meant to be a bar in the flow, and the rule that undid its overlay placement was outranked by the
   rule that set it, so it stayed in a column that layout does not have. Grid invented an implicit

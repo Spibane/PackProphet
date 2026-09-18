@@ -1,5 +1,6 @@
 @inject AppSession Session
 @inject PaletteSwitch Palette
+@inject NavigationManager Nav
 @implements IDisposable
 
 @* The same four destinations the tab bar makes primary, in the same order, with everything else
@@ -21,10 +22,21 @@
        so the class dressed this glyph in a pale yellow box in light and an olive one in dark, padded
        it, and overrode its ink. It looked like a broken asset rather than a class collision, which
        is exactly how .fold-hint's own name was arrived at further down the stylesheet. *@
-    <span class="brand">
+    @* The wordmark goes home, which is the collection: it is what the app's own root route shows,
+       and what everything else on the bar is an answer about.
+
+       "collection" rather than the bare root, even though the root serves the same page. The nav
+       entry beside this one points at "collection" and matches on the whole path, so the root is a
+       URL where the collection renders and nothing in the nav lights up -- landing there via the
+       wordmark would look like a page with no home. That gap is the root's and predates this link;
+       pointing at the path the nav already agrees on keeps this out of it.
+
+       A plain anchor, not a NavLink: a wordmark that filled in like a pressed button whenever you
+       were on the collection would read as a sixth destination in the row. *@
+    <a class="brand" href="collection" title="Your collection">
         <PackMark Class="pack-mark" />
         PackProphet
-    </span>
+    </a>
     @* The same marks the tab bar puts on the same five destinations, from the same component.
        They were a phone-only thing, which left the two navs agreeing about what they contained and
        disagreeing about how it looked -- and the mark is the part you learn, so learning it on a
@@ -33,9 +45,16 @@
        Smaller than the tab bar's 22px: there the tab IS the target and the label is a caption
        under the mark, here the word is the target and the mark sits beside it. A glyph the size of
        the word would compete with it. *@
-    <NavLink class="nav-item" href="collection" Match="NavLinkMatch.All">
+    @* A plain anchor, and the one entry in this row that is not a NavLink.
+       ==================================================================================
+       The collection answers to two URLs -- the root and /collection -- and NavLink matches one
+       href, so it cannot be active at both. See Routes.IsCollection for what that cost: the root
+       rendered the collection with nothing lit up in either nav. Computing this one keeps a single
+       source of truth for it, where adding `active` alongside a NavLink would have two things
+       deciding the same class. *@
+    <a class="nav-item @(AtCollection ? "active" : null)" href="collection">
         <NavIcon For="collection" Size="15" />Collection
-    </NavLink>
+    </a>
     <NavLink class="nav-item" href="progress">
         <NavIcon For="progress" Size="15" />Progress
     </NavLink>
@@ -115,9 +134,29 @@
 <MoreMenu Id="desk-more" />
 
 @code {
-    protected override void OnInitialized() => Session.Changed += OnChanged;
+    /// <summary>
+    /// Whether the collection is the page we are on, at either of its two URLs.
+    /// </summary>
+    private bool AtCollection => Routes.IsCollection(Nav.ToBaseRelativePath(Nav.Uri));
 
-    public void Dispose() => Session.Changed -= OnChanged;
+    protected override void OnInitialized()
+    {
+        Session.Changed += OnChanged;
+
+        // The four NavLinks below keep their own active state in step with the URL; the anchor
+        // above cannot, because its state is computed during render. Without this it would be
+        // correct on first paint and stale on every navigation after it.
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) =>
+        InvokeAsync(StateHasChanged);
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 

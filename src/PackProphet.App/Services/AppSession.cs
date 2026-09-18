@@ -965,6 +965,38 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
+    /// <summary>Whether the day's hourglasses have already been credited on this collection.</summary>
+    public bool DailyHourglassesAdded =>
+        Profile.Resources.DailyHourglassesAt is { } at
+        && at.ToLocalTime().Date == DateTime.Now.Date;
+
+    /// <summary>
+    /// Credit a day of dailies: pack hourglasses and Wonder hourglasses, in one edit.
+    ///
+    /// Both pools at once even though nothing converts between them - it is one day's income in
+    /// two currencies, and the alternative is two buttons that have to be pressed together.
+    /// Refuses a second helping on the same day; the fields are still there to type into.
+    /// </summary>
+    public void AddDailyHourglasses()
+    {
+        if (DailyHourglassesAdded) return;
+
+        Mutate(p => p with
+        {
+            Resources = p.Resources with
+            {
+                PackHourglasses = Math.Max(0, p.Resources.PackHourglasses) + GameRules.DailyPackHourglasses,
+                // Not restamped: adding hourglasses does not touch the balance, so the moment
+                // that balance was true is still the moment it was true.
+                Wonder = p.Resources.Wonder with
+                {
+                    Hourglasses = Math.Max(0, p.Resources.Wonder.Hourglasses) + GameRules.DailyWonderHourglasses
+                },
+                DailyHourglassesAt = DateTimeOffset.Now
+            }
+        }, undoable: false);
+    }
+
     /// <summary>A linter bound to the current card data, or null before it loads.</summary>
     public DeckLinter? Linter => Data is null ? null : _linter ??= new DeckLinter(Index, Facts);
 

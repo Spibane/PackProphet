@@ -501,6 +501,9 @@ public static class StateMerge
                                   conflicts, "The shinedust total", where, unset: 0),
             Premium = local.Premium || remote.Premium,
             NextFreePackAt = Later(local.NextFreePackAt, remote.NextFreePackAt),
+            // Whichever device credited the day most recently wins, so crediting on the phone
+            // leaves the tablet's button already spent rather than offering a second helping.
+            DailyHourglassesAt = Later(local.DailyHourglassesAt, remote.DailyHourglassesAt),
             PackPointsBySet = PickMapByKey(local.PackPointsBySet, remote.PackPointsBySet,
                                            ancestor?.PackPointsBySet, conflicts, where),
         };

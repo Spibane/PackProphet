@@ -174,4 +174,13 @@ public class GameRulesTests
 
         Assert.Equal(0, GameRules.SnapPackPoints(-25));
     }
+
+    [Fact]
+    public void TheDailyHandoutIsTwoCurrenciesAndNeverATotal()
+    {
+        // Pack and Wonder hourglasses do not convert, so the day pays two figures. Both positive,
+        // or the button on the Resources page credits nothing.
+        Assert.True(GameRules.DailyPackHourglasses > 0);
+        Assert.True(GameRules.DailyWonderHourglasses > 0);
+    }
 }

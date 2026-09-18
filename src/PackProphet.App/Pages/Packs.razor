@@ -877,8 +877,26 @@ else
     /// What this page works toward, shared with the other three Answer pages and persisted. See
     /// <see cref="AppSession.Target"/>: it is one question asked on four screens, and four copies
     /// of the answer meant setting it here changed nothing anywhere else.
+    ///
+    /// Except while a link says otherwise. A scope in the query string is this VISIT's, not the
+    /// saved one -- see <see cref="_visit"/>.
     /// </summary>
-    private string Scope => Session.Target;
+    private string Scope => _visit ?? Session.Target;
+
+    /// <summary>
+    /// The scope a link arrived with, for as long as this page is on screen.
+    ///
+    /// It used to be written straight into the shared target, on the argument that following such
+    /// a link is a statement of what you are working toward. It is not: "Which Pack" on a
+    /// Progress panel is a question about that panel's set, and answering it silently repointed
+    /// the trade queue and the Wonder Pick threshold at one set for good. The user never touched
+    /// a picker, so nothing on those pages said why.
+    ///
+    /// So the saved target now changes in one way only -- somebody choosing it in a picker. This
+    /// holds the link's answer instead, and this page's bar, its ranking and its picker all read
+    /// Scope, so they still agree with each other.
+    /// </summary>
+    private string? _visit;
     private string[] _sets = [];
 
     /// <summary>
@@ -889,8 +907,7 @@ else
 
     /// <summary>
     /// Arriving from a Progress panel's "Which Pack" button, naming one set. Same shape and same
-    /// reasoning as <see cref="Chase"/>: a query parameter so the link survives a reload, and it
-    /// sets the shared target rather than overriding it for the visit.
+    /// reasoning as <see cref="Chase"/>: a query parameter so the link survives a reload.
     /// </summary>
     [SupplyParameterFromQuery(Name = "scope")] public string? ScopeParam { get; set; }
 
@@ -1016,18 +1033,14 @@ else
         if (!Session.Ready) return;
 
         _sets = Session.Index.OpenableSets.ToArray();
-        // Arriving from a chase list's own "Rank Packs" button. It SETS the shared target rather
-        // than overriding it for this visit: following that link is a deliberate statement of what
-        // you are working toward, and a ranking that disagreed with the bar above it would be the
-        // old per-page scope back again under a different name.
+        // Arriving from a chase list's own "Rank Packs" button, or from a Progress panel's "Which
+        // Pack". Both name what to rank FOR THIS VISIT and leave the saved target alone -- see
+        // _visit. Checked against what exists first: a link naming a chase list since deleted, or
+        // a set this build has never heard of, ranks against everything rather than nothing.
         if (Chase is { Length: > 0 } id && Session.ChaseListById(id) is not null)
-            Session.SetTarget($"chase:{id}");
-
-        // A set, a series or "everything", from a Progress panel. Checked against the sets that
-        // actually exist before it is stored: a link naming a set this build has never heard of
-        // would otherwise persist as the target and leave every page ranking against nothing.
-        if (ScopeParam is { Length: > 0 } scope && KnownScope(scope))
-            Session.SetTarget(scope);
+            _visit = $"chase:{id}";
+        else if (ScopeParam is { Length: > 0 } scope && KnownScope(scope))
+            _visit = scope;
 
         // Arriving from another page still costs a full ranking, so it needs the same
         // indicator as changing a filter does — otherwise navigation looks like a hang.
@@ -1644,6 +1657,11 @@ else
         return Busy.RunAsync("Ranking packs\u2026", () =>
         {
             _advisor = [];      // stale for the new scope; repriced only if reopened
+
+            // A choice in the picker IS the saved target, here and on the other three pages. The
+            // link's scope stops applying the moment one is made, or Scope would go on reading
+            // the link and the picker would look broken.
+            _visit = null;
 
             // The recompute comes from OnChanged, which this raises: the rank signature carries
             // the scope, so setting it is what makes the page stale. Calling Recompute here as

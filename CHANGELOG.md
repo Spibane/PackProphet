@@ -136,6 +136,11 @@ until then the minor number tracks the roadmap phase.
   What a pack cost is recorded on the logged row, so the refund is exact and a free pack refunds
   nothing; whether *this* pack was the third one that Tuesday cannot be worked out from a log with
   a row taken out of it
+- **Fixed: a "Which Pack" link repointed the trade queue and Wonder Pick.** Following one from a
+  Progress panel, or "Rank Packs" from a chase list, wrote the target the four Answer pages share —
+  so `/trades` and `/wonder` opened ranked against one set, with no picker having been touched to
+  say why. A link names what to rank for that visit now. The saved target changes when somebody
+  chooses it in a picker, which is still one choice for all four pages
 - **Copy: less explaining.** The page-wide notes defending a design decision are gone — why
   `/progress` names three routes instead of picking one, why "by packs" is not an ordering, why a
   batch cannot beat ten singles, what the batch figures do not model — along with the reasoning

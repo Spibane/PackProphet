@@ -210,4 +210,42 @@ public class PacksPageTests : AppHost
         // per rarity, and it is the half of the premise that used to be invisible from the page.
         Assert.NotNull(subtitle.QuerySelector(".plan-summary, .glyphs"));
     }
+
+    [Fact]
+    public async Task A_scope_in_the_link_ranks_for_the_visit_without_saving_it()
+    {
+        // "Which Pack" on a Progress panel, and "Rank Packs" on a chase list, name what to rank
+        // right now. They used to write the SHARED target, so following one silently repointed
+        // the trade queue and the Wonder Pick threshold at a single set -- on pages the user had
+        // not opened, with no picker having been touched to explain it.
+        await ReadyAsync();
+
+        var set = Session.Index.OpenableSets.Skip(1).First();
+        Assert.Equal("everything", Session.Target);
+
+        Services.GetService<Microsoft.AspNetCore.Components.NavigationManager>()!
+                .NavigateTo($"packs?scope={set}");
+
+        var page = RenderComponent<Packs>();
+
+        // The page itself follows the link,
+        Assert.Contains(Session.Sets.DisplayName(set), page.Find(".page-head").TextContent);
+
+        // and the saved target -- which Trades, the board and Wonder Pick read -- is untouched.
+        Assert.Equal("everything", Session.Target);
+    }
+
+    [Fact]
+    public async Task Choosing_a_scope_in_the_picker_is_still_saved_for_every_page()
+    {
+        // The other half of the rule: one target, four pages, and it changes when somebody says
+        // so. A link is not somebody saying so; this is.
+        var page = await PageAsync();
+        var set = Session.Index.OpenableSets.Skip(1).First();
+
+        page.Find(".scope-pick").Change(set);
+
+        // The handler re-ranks behind the busy indicator, so the write lands a continuation later.
+        page.WaitForState(() => Session.Target == set, TimeSpan.FromSeconds(10));
+    }
 }

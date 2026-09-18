@@ -126,6 +126,12 @@ until then the minor number tracks the roadmap phase.
 - **Fixed: two hairlines where "What's Left" opens on `/progress`.** The rung strip draws its own
   top rule, for the pages where it follows a paragraph; here it follows a rule the panel had just
   drawn
+- **Fixed: the rail ran underneath the tab bar.** Between 900 and 1056px both are on screen, and
+  the rail is pinned to the window rather than to the page — so its last 57px, and the end of its
+  scroll, sat behind a fixed bar. On a short window that was most of what the rail holds
+- **Fixed: four diamonds overlapped the bar beside them in the rail's target rows.** 49px of
+  glyphs in a 40px track. Nothing clipped them, because a clipped rarity reads as a lower one, so
+  the track fits the widest rung instead
 - **Fixed: the same strip was squeezing the grid on a narrow window.** Below the fold width it is
   meant to be a bar in the flow, and the rule that undid its overlay placement was outranked by the
   rule that set it, so it stayed in a column that layout does not have. Grid invented an implicit

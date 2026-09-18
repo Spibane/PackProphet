@@ -30,4 +30,20 @@ public class FmtPluralTests
     [InlineData(0.5, "packs")]
     public void A_decimal_figure_agrees_with_what_is_printed(double n, string expected) =>
         Assert.Equal(expected, Fmt.S(n, "pack"));
+
+    [Theory]
+    [InlineData("hourglass", "hourglasses")]
+    [InlineData("box", "boxes")]
+    [InlineData("match", "matches")]
+    [InlineData("wish", "wishes")]
+    // And the ordinary case is untouched, which is every other word the app counts.
+    [InlineData("card", "cards")]
+    [InlineData("pack", "packs")]
+    [InlineData("variant", "variants")]
+    public void A_sibilant_takes_es_rather_than_a_third_s(string singular, string expected)
+    {
+        // "12 pack hourglasss" is what the naive rule put on the log screen.
+        Assert.Equal(expected, Fmt.S(2, singular));
+        Assert.Equal(singular, Fmt.S(1, singular));
+    }
 }

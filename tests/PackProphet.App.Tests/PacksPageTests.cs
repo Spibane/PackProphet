@@ -162,6 +162,37 @@ public class PacksPageTests : AppHost
         Assert.DoesNotContain("Open this next", page.Find(".verdict-lead").TextContent);
     }
 
+    /// <summary>
+    /// A scoped ranking does not claim to be the pack to open next.
+    ///
+    /// "Open this next" is a statement about every pack in the game. Ranked against one set it is
+    /// the best pack FOR THAT SET, and the best pack overall may be in a set this ranking never
+    /// looked at -- so the label has to give way. The Progress page made this the common path:
+    /// every panel on it links here scoped to one set, and twenty-one of those links all saying
+    /// "open this next" would be twenty-one different answers to one question.
+    /// </summary>
+    [Fact]
+    public async Task A_scoped_ranking_does_not_claim_to_be_the_next_pack_to_open()
+    {
+        var page = await PageAsync();
+
+        // Everything: the ranking did look at every pack, so the claim is the page's to make.
+        Assert.Contains("Open this next", page.Find(".verdict-lead").TextContent);
+
+        var set = Session.Index.OpenableSets.First(
+            s => Session.Odds.PriceablePacks.Any(p => p.StartsWith($"{s}:", StringComparison.Ordinal)));
+
+        await page.InvokeAsync(() => Session.SetTarget(set));
+
+        page.WaitForAssertion(() =>
+        {
+            var lead = page.Find(".verdict-lead").TextContent;
+
+            Assert.DoesNotContain("Open this next", lead);
+            Assert.Contains("Best for this target", lead);
+        }, TimeSpan.FromSeconds(20));
+    }
+
     [Fact]
     public async Task The_bar_says_what_the_ranking_is_of()
     {

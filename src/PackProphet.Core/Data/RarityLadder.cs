@@ -46,6 +46,27 @@ public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyLis
         _ => Symbol
     };
 
+    /// <summary>
+    /// The shortest form that still names the rung: "4◆", "2★", "2✦", "♛".
+    ///
+    /// <see cref="Symbol"/> with the family word dropped, for somewhere narrower than a chip. A box
+    /// in a strip is the case: ten of them across a 20rem panel leaves about 3rem each, where
+    /// "◆◆◆◆" overflows its box and "Shiny ✦✦" overflows it twice. Four repeated marks being wider
+    /// than the space is the same reason Symbol counts in digits -- this just takes it further,
+    /// because a box has no room for the word Symbol keeps.
+    ///
+    /// Crown loses its digit rather than its word: there is only one crown rung, so "1♛" would be
+    /// counting something that is never counted.
+    /// </summary>
+    public string Compact => Group switch
+    {
+        "Diamond" => $"{Count}◆",
+        "Star" => $"{Count}★",
+        "Shiny" => $"{Count}✦",
+        "Crown" => "♛",
+        _ => Symbol
+    };
+
     /// <summary>CSS class for colouring the glyphs by family.</summary>
     public string GlyphClass => Group.ToLowerInvariant();
 }

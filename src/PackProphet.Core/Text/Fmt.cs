@@ -47,6 +47,28 @@ public static class Fmt
     /// <summary>Where a timeline is meant.</summary>
     public const string Never = "never";
 
+    /// <summary>
+    /// Expected packs as calendar time, which is the figure that changes decisions: 61 packs means
+    /// nothing until it is a month.
+    ///
+    /// Here rather than on the page that wrote it first. The Packs page and the Progress page both
+    /// state a pack figure as time, and two copies of the banding would be two pages disagreeing
+    /// about when "days" becomes "months".
+    /// </summary>
+    public static string Days(double packs, bool premium)
+    {
+        if (double.IsPositiveInfinity(packs) || double.IsNaN(packs)) return Never;
+
+        var days = packs / GameRules.PacksPerDay(premium);
+
+        // Written as plain comparisons on purpose: Razor's parser reads a line-leading '<' in a
+        // relational pattern as the start of a markup tag, and this is called from markup.
+        if (days < 1) return "today";
+        if (days < 60) return $"{days:N0} days";
+        if (days < 730) return $"{days / 30.44:N0} months";
+        return $"{days / 365.25:N1} years";
+    }
+
     /// <summary>Where the point is that opening packs is not a route to this card at all.</summary>
     public const string NoPackRoute = "No pack has it";
 

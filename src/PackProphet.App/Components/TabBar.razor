@@ -2,35 +2,41 @@
 @inject PaletteSwitch Palette
 @implements IDisposable
 
-@* The five destinations that carry the loop the app is built around: record what you own, see
-   which pack, log what you opened, and keep the list of what you are still missing. Wonder Pick
-   is a separate in-game mechanic and sits behind More with everything else you go to
-   occasionally.
+@* The five destinations that carry the loop the app is built around: record what you own, check
+   what every set still needs, log what you opened, and see which pack. Wonder Pick is a separate
+   in-game mechanic and sits behind More with everything else you go to occasionally.
 
-   Hiding those seven is legitimate under the rule the rest of the UI follows: hide controls
-   freely, never hide active state that changes what the numbers mean. A destination is not a
-   claim about data. *@
+   THE ORDER IS THE LOOP, AND PROGRESS COMES BEFORE PACKS
+   ==================================================================================
+   Progress sits second and Packs fourth, which is the reverse of how they went in. Progress is
+   where you arrive with "what am I missing", and every panel on it links out to Packs for one
+   set -- so it is the hub and Packs is what it hands you off to. A hub after the page it feeds
+   reads as a detour.
+
+   Chase Lists is the destination this displaced. A chase list is something you build by hand for
+   cards outside your plan -- worth having, reached occasionally -- while every set's standing
+   against the target is checked as often as which pack to open. Chases is in More, in the palette,
+   and in the scope picker on four pages, so nothing about it got harder to reach except by a tap.
+
+   Log keeps the centre either way: it is the only tab that writes something, and the swap above
+   moves the two either side of it rather than moving it.
+
+   Hiding the rest is legitimate under the rule the UI follows everywhere: hide controls freely,
+   never hide active state that changes what the numbers mean. A destination is not a claim about
+   data. *@
 <nav class="tab-bar" aria-label="Main">
     <NavLink class="tab" href="collection" Match="NavLinkMatch.All">
         <span class="ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
-                <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8" />
-                <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8" />
-                <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8" />
-                <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8" />
-            </svg>
+            <NavIcon For="collection" />
         </span>
         <span class="lbl">Collection</span>
     </NavLink>
 
-    <NavLink class="tab" href="packs">
+    <NavLink class="tab" href="progress">
         <span class="ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
-                <path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-                <path d="M4 8.5 12 13l8-4.5M12 13v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-            </svg>
+            <NavIcon For="progress" />
         </span>
-        <span class="lbl">Packs</span>
+        <span class="lbl">Progress</span>
     </NavLink>
 
     @* Centred and larger: the only tab that writes something, and the one repeated many times a
@@ -50,24 +56,18 @@
         </span>
     </NavLink>
 
-    <NavLink class="tab" href="chase">
+    <NavLink class="tab" href="packs">
         <span class="ico" aria-hidden="true">
-            @* A bookmark, not a heart: these are the cards you are hunting, not the ones you love. *@
-            <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
-                <path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z"
-                      fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
-            </svg>
+            <NavIcon For="packs" />
         </span>
-        <span class="lbl">Chases</span>
+        <span class="lbl">Packs</span>
     </NavLink>
 
     @* A native popover: top layer, light dismiss and Escape come free, and unlike a dialog it is
        non-modal, which is right for a menu. *@
     <button class="tab" popovertarget="nav-more" aria-label="More destinations">
         <span class="ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="22" height="22" focusable="false">
-                <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
-            </svg>
+            <NavIcon For="more" />
         </span>
         <span class="lbl">More</span>
     </button>

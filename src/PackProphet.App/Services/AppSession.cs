@@ -1158,8 +1158,44 @@ public sealed class AppSession : IAsyncDisposable
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// How the Progress panels are ordered. Release order is the default because it is the order
+    /// the Collection page is already in, so the two pages list the same sets the same way.
+    /// </summary>
+    public string ProgressOrder => Known(State.Prefs.ProgressOrder, ProgressOrders, "release");
+
+    public void SetProgressOrder(string order)
+    {
+        if (order == ProgressOrder) return;
+        State = State with { Prefs = State.Prefs with { ProgressOrder = order } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    public bool ProgressHideComplete => State.Prefs.ProgressHideComplete;
+
+    public void SetProgressHideComplete(bool on)
+    {
+        if (on == ProgressHideComplete) return;
+        State = State with { Prefs = State.Prefs with { ProgressHideComplete = on } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    public bool ProgressIncludeUnreleased => State.Prefs.ProgressIncludeUnreleased;
+
+    public void SetProgressIncludeUnreleased(bool on)
+    {
+        if (on == ProgressIncludeUnreleased) return;
+        State = State with { Prefs = State.Prefs with { ProgressIncludeUnreleased = on } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
     private static readonly string[] DeckOrders = ["buildable", "name", "size", "custom"];
     private static readonly string[] ChaseOrders = ["closest", "name", "size", "custom"];
+
+    private static readonly string[] ProgressOrders = ["release", "closest"];
 
     private static string Known(string? stored, string[] allowed, string fallback) =>
         stored is not null && Array.IndexOf(allowed, stored) >= 0 ? stored : fallback;

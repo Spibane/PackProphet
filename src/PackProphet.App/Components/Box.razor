@@ -11,7 +11,7 @@
 <div class="box @StateClass">
     @if (Label is { Length: > 0 })
     {
-        <span class="lbl">@Label</span>
+        <span class="lbl @LabelClass">@Label</span>
     }
 
     @if (ChildContent is not null)
@@ -79,6 +79,16 @@
 
     /// <summary>What this box is: an ordinal, a route name, a slot number.</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>
+    /// An extra class on the label, where what the box is OF has a house style of its own.
+    ///
+    /// A rarity is the case that needed it: the ladder's four families are coloured by
+    /// `.glyphs.<family>` everywhere else in the app, and a label that is a plain string cannot be
+    /// wrapped in a span of its own by the caller. Without this the rungs came out in the label's
+    /// secondary grey, which on a strip of ten is the one thing telling them apart.
+    /// </summary>
+    [Parameter] public string? LabelClass { get; set; }
 
     /// <summary>The figure itself, already formatted. Ignored on a dead box.</summary>
     [Parameter] public string? Figure { get; set; }

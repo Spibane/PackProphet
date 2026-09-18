@@ -153,4 +153,25 @@ public class GameRulesTests
             Assert.False(GameRules.EarnsGoldFlair(r.Group, r.Count, 10, card.IsPromo));
         });
     }
+
+    [Fact]
+    public void PackPoints_SnapToTheFivesTheGameDealsIn()
+    {
+        // Every balance the game can hold is a multiple of five, so anything else was mistyped.
+        Assert.Equal(40, GameRules.SnapPackPoints(40));
+        Assert.Equal(40, GameRules.SnapPackPoints(43));
+        Assert.Equal(40, GameRules.SnapPackPoints(44));
+        Assert.Equal(45, GameRules.SnapPackPoints(45));
+
+        // Down, never up: a balance reported higher than it is recommends a card the shop will
+        // refuse to sell.
+        Assert.Equal(0, GameRules.SnapPackPoints(4));
+
+        // The cap is itself a multiple of five, so clamping cannot land off the grid.
+        Assert.Equal(GameRules.PackPointsCap, GameRules.SnapPackPoints(GameRules.PackPointsCap));
+        Assert.Equal(GameRules.PackPointsCap, GameRules.SnapPackPoints(99_999));
+        Assert.Equal(0, GameRules.PackPointsCap % GameRules.PackPointsPerPack);
+
+        Assert.Equal(0, GameRules.SnapPackPoints(-25));
+    }
 }

@@ -848,7 +848,9 @@ public sealed class AppSession : IAsyncDisposable
         Mutate(p =>
         {
             var next = new Dictionary<string, int>(p.Resources.PackPointsBySet);
-            var value = Math.Clamp(points, 0, GameRules.PackPointsCap);
+            // Snapped, not just clamped: the game pays five at a time and charges in fives, so a
+            // balance that is not a multiple of five is a typo whichever screen it arrived from.
+            var value = GameRules.SnapPackPoints(points);
 
             if (value == 0) next.Remove(set); else next[set] = value;
 

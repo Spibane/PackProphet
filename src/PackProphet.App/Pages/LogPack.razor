@@ -250,6 +250,13 @@ else if (_pack is null)
                     <Notice Severity="Notice.Level.Success" Class="mt-3">
                         Logged @done.Packs @Fmt.S(done.Packs, "pack")
                         and @done.Cards @Fmt.S(done.Cards, "card").
+                        @if (_paid.Hourglasses > 0)
+                        {
+                            <span>
+                                @_paid.Hourglasses pack @Fmt.S(_paid.Hourglasses, "hourglass") spent
+                                on @_paid.FromHourglasses of them.
+                            </span>
+                        }
                         @if (done.Capped.Count > 0)
                         {
                             <span class="text-danger-emphasis">
@@ -462,6 +469,12 @@ else
         <Notice Severity="Notice.Level.Success" Class="mb-0">
             Logged @_justLogged.Value.cards cards.
             Pack points for @_justLogged.Value.set: <strong>@_justLogged.Value.points</strong>
+            @* Only when it spent something. The setting is off by default and most packs are free
+               ones, so this line is the exception rather than a permanent postscript. *@
+            @if (_paid.Hourglasses > 0)
+            {
+                <span>&middot; @_paid.Hourglasses pack @Fmt.S(_paid.Hourglasses, "hourglass") spent.</span>
+            }
             @if (_justLogged.Value.capped)
             {
                 <span class="text-danger-emphasis">
@@ -564,6 +577,12 @@ else
 
     private readonly List<PocketCard> _picked = [];
     private (int cards, string set, int points, bool capped)? _justLogged;
+
+    /// <summary>
+    /// What the last logging drew from the hourglass balance. Reported rather than left silent: a
+    /// setting that spends a stored resource has to say so on the occasion it spends it.
+    /// </summary>
+    private PackSpend _paid = PackSpend.None;
 
     /// <summary>
     /// A pack to open on arrival, so the Packs page can hand off the pack it just recommended
@@ -688,6 +707,7 @@ else
     {
         _pack = pack;
         _justLogged = null;
+        _paid = PackSpend.None;
         _miscount = null;
         _picked.Clear();
         // A name typed while looking for a card in the last pack would otherwise hide most of the
@@ -700,7 +720,15 @@ else
             : [];
     }
 
-    private void Reset() { _pack = null; _picked.Clear(); _justLogged = null; _miscount = null; _find = ""; }
+    private void Reset()
+    {
+        _pack = null;
+        _picked.Clear();
+        _justLogged = null;
+        _paid = PackSpend.None;
+        _miscount = null;
+        _find = "";
+    }
 
     /// <summary>
     /// Whether the screenshot reader on the picker screen starts open.
@@ -1013,6 +1041,8 @@ else
         var keys = _picked.Select(c => c.OwnershipKey).ToList();
         var count = _picked.Count;
 
+        var paid = PackSpend.None;
+
         Session.Mutate(p =>
         {
             var collection = new Dictionary<string, int>(p.Collection);
@@ -1026,6 +1056,11 @@ else
             var after = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
             points[set] = after;
 
+            // What the pack cost, if it was past the day's free ones and the setting is on. Read
+            // from p before the log below is appended, so this pack is not counted against its
+            // own allowance.
+            paid = Session.PayForPacks(p, 1);
+
             var log = new List<PackOpenEvent>(p.PackLog)
             {
                 // Variant is unknown from the user's point of view; they just opened "a pack".
@@ -1035,13 +1070,18 @@ else
             return p with
             {
                 Collection = collection,
-                Resources = p.Resources with { PackPointsBySet = points },
+                Resources = p.Resources with
+                {
+                    PackPointsBySet = points,
+                    PackHourglasses = p.Resources.PackHourglasses - paid.Hourglasses
+                },
                 PackLog = log
             };
         });
 
         var nowPoints = Session.Profile.Resources.PackPointsBySet.GetValueOrDefault(set);
         _justLogged = (count, set, nowPoints, nowPoints >= GameRules.PackPointsCap);
+        _paid = paid;
         _miscount = null;
         _picked.Clear();
     }
@@ -1171,6 +1211,7 @@ else
         if (opened.Count == 0) return;
 
         var capped = new List<string>();
+        var paid = PackSpend.None;
 
         Session.Mutate(p =>
         {
@@ -1178,6 +1219,11 @@ else
             var points = new Dictionary<string, int>(p.Resources.PackPointsBySet);
             var log = new List<PackOpenEvent>(p.PackLog);
             var now = DateTimeOffset.Now;
+
+            // The whole batch against the day's allowance in one go, before any of it is logged:
+            // priced pack by pack it would charge the first free pack to the first picture and
+            // then the allowance to the rest of them.
+            paid = Session.PayForPacks(p, opened.Count);
 
             foreach (var (pack, cards) in opened)
             {
@@ -1201,12 +1247,17 @@ else
             return p with
             {
                 Collection = collection,
-                Resources = p.Resources with { PackPointsBySet = points },
+                Resources = p.Resources with
+                {
+                    PackPointsBySet = points,
+                    PackHourglasses = p.Resources.PackHourglasses - paid.Hourglasses
+                },
                 PackLog = log,
             };
         });
 
         _bulkLogged = (opened.Count, plan.Cards, capped);
+        _paid = paid;
         _bulkMiscount = null;
 
         // The batch is spent. Left on screen it is a button that opens every one of these packs a

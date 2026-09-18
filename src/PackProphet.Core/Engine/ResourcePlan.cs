@@ -46,6 +46,32 @@ public sealed record PackOutlook(
         PerDay <= 0 ? double.PositiveInfinity : Math.Max(0, packs - FromHourglasses) / PerDay;
 }
 
+/// <param name="Pool">The pool after the spend, restamped, so the projection carries on from here.</param>
+/// <param name="FromBalance">Units the pool itself covered.</param>
+/// <param name="FromHourglasses">Units bought with hourglasses, because the pool was short.</param>
+/// <param name="Hourglasses">Hourglasses that cost.</param>
+/// <param name="Unpaid">
+/// Units neither the pool nor the hourglasses could cover. The app records what the user says
+/// happened rather than refusing it, so this is how far behind the stored figures were.
+/// </param>
+public sealed record PoolSpend(
+    ResourcePool Pool,
+    int FromBalance,
+    int FromHourglasses,
+    int Hourglasses,
+    int Unpaid);
+
+/// <param name="Free">Packs the day's allowance covered.</param>
+/// <param name="FromHourglasses">Packs the hourglasses paid for.</param>
+/// <param name="Hourglasses">Hourglasses that cost.</param>
+/// <param name="Unpaid">
+/// Packs beyond both, which happens when the balance on file is behind what has been opened.
+/// </param>
+public sealed record PackSpend(int Free, int FromHourglasses, int Hourglasses, int Unpaid)
+{
+    public static readonly PackSpend None = new(0, 0, 0, 0);
+}
+
 /// <summary>
 /// Projects the three resource systems forward from what the user last told us.
 ///
@@ -126,6 +152,74 @@ public static class ResourcePlan
             until,
             resources.Premium);
     }
+
+    /// <summary>
+    /// Spend from a pool, with the hourglasses covering whatever the balance cannot.
+    ///
+    /// The spend comes off the PROJECTED balance rather than the stored one, which is the whole
+    /// reason this is here: a balance entered yesterday has regenerated since, and taking the cost
+    /// off the figure as typed would charge hourglasses for stamina the user already had.
+    ///
+    /// Hourglasses are only drawn in whole units - twelve of them or the stamina does not arrive -
+    /// so a balance of eleven pays for nothing and stays where it is.
+    /// </summary>
+    public static PoolSpend Spend(
+        ResourcePool pool,
+        int units,
+        DateTimeOffset now,
+        int cap = GameRules.StaminaCap,
+        int hourglassesPerUnit = GameRules.WonderHourglassesPerStamina)
+    {
+        var outlook = Project(pool, now, cap, hourglassesPerUnit);
+        var owed = Math.Max(0, units);
+
+        var fromBalance = Math.Min(owed, outlook.Balance);
+        var uncovered = owed - fromBalance;
+
+        // FromHourglasses off the outlook, not the raw balance divided here: one place decides how
+        // many units a pile of hourglasses is worth.
+        var bought = Math.Min(uncovered, outlook.FromHourglasses);
+        var spent = bought * Math.Max(0, hourglassesPerUnit);
+
+        // Restamped even when nothing was spent, because the projected balance is what is being
+        // stored: leaving the old timestamp on it would add the same regeneration a second time.
+        var after = new ResourcePool(
+            outlook.Balance - fromBalance,
+            outlook.Hourglasses - spent).AsOfNow(now);
+
+        return new PoolSpend(after, fromBalance, bought, spent, uncovered - bought);
+    }
+
+    /// <summary>
+    /// What opening packs costs in hourglasses, once the day's free ones are used up.
+    ///
+    /// Packs are not a pool: there is no balance to draw down, only an allowance that arrives
+    /// daily, so the question is how many of these packs the day had left and what the rest cost.
+    /// Twelve hourglasses a pack, in whole packs only.
+    /// </summary>
+    /// <param name="openedToday">Packs already logged today, before these ones.</param>
+    /// <param name="opening">Packs being logged now.</param>
+    public static PackSpend PacksOpened(int openedToday, int opening, int hourglasses, bool premium)
+    {
+        var packs = Math.Max(0, opening);
+        if (packs == 0) return PackSpend.None;
+
+        var left = Math.Max(0, GameRules.PacksPerDay(premium) - Math.Max(0, openedToday));
+        var free = Math.Min(packs, left);
+        var owed = packs - free;
+
+        var affordable = Math.Max(0, hourglasses) / GameRules.PackHourglassesPerPack;
+        var bought = Math.Min(owed, affordable);
+
+        return new PackSpend(free, bought, bought * GameRules.PackHourglassesPerPack, owed - bought);
+    }
+
+    /// <summary>
+    /// Packs logged on a given day, in the reader's own time zone: the allowance resets by
+    /// calendar day where the user is, not at UTC midnight.
+    /// </summary>
+    public static int PacksOpenedOn(IEnumerable<PackOpenEvent> log, DateOnly day) =>
+        log.Count(e => DateOnly.FromDateTime(e.At.ToLocalTime().DateTime) == day);
 
     /// <summary>
     /// Trades the dust balance can fund at a given price.

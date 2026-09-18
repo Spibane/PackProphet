@@ -486,7 +486,7 @@ else
             </label>
             <p class="small text-body-secondary">
                 Deleting returns the @GameRules.PackPointsPerPack pack points that opening earned,
-                floored at zero. Only the date is editable.
+                floored at zero, and any pack hourglasses it spent. Only the date is editable.
             </p>
 
             <DataTable Label="Recent packs">
@@ -712,6 +712,13 @@ else
             var points = new Dictionary<string, int>(p.Resources.PackPointsBySet);
             var collection = alsoCards ? new Dictionary<string, int>(p.Collection) : p.Collection;
 
+            // Hourglasses the deleted packs cost, handed back with the points they earned. Zero
+            // for a free pack and for anything logged before packs were paid for at all, so this
+            // is nothing on most deletions and exact on the rest -- the figure comes off the row
+            // rather than being worked out again from a log this delete is in the middle of
+            // changing.
+            var refund = entries.Sum(e => Math.Max(0, e.Hourglasses));
+
             foreach (var entry in entries)
             {
                 // Floored at zero: the points may already have been spent, and a negative
@@ -732,7 +739,11 @@ else
             return p with
             {
                 Collection = collection,
-                Resources = p.Resources with { PackPointsBySet = points },
+                Resources = p.Resources with
+                {
+                    PackPointsBySet = points,
+                    PackHourglasses = p.Resources.PackHourglasses + refund
+                },
                 PackLog = p.PackLog.Where(x => !doomed.Contains(x)).ToList(),
 
                 // Said, not merely done. Dropping the row leaves the other device holding a row

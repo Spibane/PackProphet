@@ -132,6 +132,10 @@ until then the minor number tracks the roadmap phase.
 - **Fixed: four diamonds overlapped the bar beside them in the rail's target rows.** 49px of
   glyphs in a 40px track. Nothing clipped them, because a clipped rarity reads as a lower one, so
   the track fits the widest rung instead
+- **Deleting a logged pack gives back the hourglasses it spent**, alongside the points it earned.
+  What a pack cost is recorded on the logged row, so the refund is exact and a free pack refunds
+  nothing; whether *this* pack was the third one that Tuesday cannot be worked out from a log with
+  a row taken out of it
 - **Copy: less explaining.** The page-wide notes defending a design decision are gone — why
   `/progress` names three routes instead of picking one, why "by packs" is not an ordering, why a
   batch cannot beat ten singles, what the batch figures do not model — along with the reasoning

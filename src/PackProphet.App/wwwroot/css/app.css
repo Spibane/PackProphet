@@ -6245,6 +6245,18 @@ tr.row-best {
     margin-top: .3rem; padding-top: .7rem;
     border-top: 1px solid var(--pp-hairline, var(--bs-border-color));
 }
+/* One rule between the panel and what "What's Left" opens, not two.
+   ------------------------------------------------------------------------------
+   .box-strip draws its own top rule, for the pages where a strip follows a paragraph. Here it is
+   the first thing inside a region that has just drawn one, so the panel showed the expand's
+   hairline, 22px of margin, and then the strip's hairline again -- two lines a few pixels apart
+   with nothing between them. The strip's own spacing goes with it: the expand's padding is what
+   holds the gap now. */
+.set-panel .expand > .box-strip:first-child {
+    margin-block-start: 0;
+    padding-block-start: 0;
+    border-top: 0;
+}
 /* The ladder wraps rather than being squeezed onto one row.
    ------------------------------------------------------------------------------
    Ten rungs across a panel is 32px a box, which ellipsises even "4◆" -- and a rarity you cannot

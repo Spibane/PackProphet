@@ -353,10 +353,10 @@ else
             <div class="mb-3">
                 @* The game sells ten of a set in one action, so the batch gets a real answer
                    rather than being left to intuition. *@
+                @* Two clauses on why a batch cannot beat ten singles went with the copy cut.
+                   The reader came here to pick a set, not to be talked out of the button. *@
                 <p class="small text-body-secondary">
-                    Ten packs of a set is the same ten draws as ten singles of it, so a batch
-                    cannot do better. What it decides is <em>which</em> set gets them.
-                    Figures below cover the whole batch.
+                    Figures below cover the whole batch of @GameRules.PacksPerBatch.
                 </p>
 
                 @if (_batches.Count == 0)
@@ -407,10 +407,8 @@ else
                             }
                         </tbody>
                     </DataTable>
-                    <p class="small text-body-secondary mb-0">
-                        Not priced here: a batch gives up the chance to switch packs after each
-                        pull, which only matters on a nearly finished set.
-                    </p>
+                    @* The "not priced here" caveat is gone: a note on what the figures do not
+                       model is an answer to a question the table never raises. *@
                 }
             </div>
         }

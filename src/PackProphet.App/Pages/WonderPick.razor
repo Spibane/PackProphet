@@ -245,10 +245,11 @@ else
                                 </text>
                                 @if (Session.WonderStamina >= GameRules.StaminaCap)
                                 {
+                                    @* Was three clauses on why the cap lowers the bar. The
+                                       reader needs to know that it did, not the arithmetic. *@
                                     <text>
-                                        It is lowered right now because you are at the cap: the
-                                        fifth regenerates whether you spend or not, so holding
-                                        out costs you one.
+                                        Lowered right now because you are at the cap: holding out
+                                        costs you the next one.
                                     </text>
                                 }
                             }

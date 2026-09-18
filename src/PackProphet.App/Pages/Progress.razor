@@ -107,12 +107,8 @@ else
                             aria-pressed="@Aria.Flag(Session.ProgressOrder == ByClosest)"
                             title="Nearest to finished first">Closest</button>
                 </div>
-                @* Said where the control is, because the missing option is the one a reader will
-                   look for. *@
-                <p class="rail-note">
-                    Not by packs. A set's packs are its own, so 60 packs of one set and 400 of
-                    another are not two sizes of the same thing.
-                </p>
+                @* No note on why "by packs" is not one of these buttons. It answered a question
+                   the control never raises, and the answer was three clauses long. *@
             </div>
 
             <div class="rail-group">
@@ -159,12 +155,9 @@ else
 
         <div class="progress-body">
 
-            @* The caveat the whole page rests on, said once rather than on every panel. Same
-               placement and same reason as the note at the top of Resources. *@
-            <p class="lede">
-                Packs, pack points and trade are three separate systems and nothing converts
-                between them, so every set below names all three rather than picking a winner.
-            </p>
+            @* No lede. It explained why the panels name three routes instead of picking one,
+               which is a defence of the design rather than anything the reader needs -- and the
+               panels say it themselves by naming all three. *@
 
             @if (_rows.Count == 0)
             {

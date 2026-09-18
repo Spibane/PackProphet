@@ -112,6 +112,11 @@ until then the minor number tracks the roadmap phase.
 - **A button for the day's hourglasses, on `/resources`.** One tap credits four pack and
   two Wonder hourglasses, and refuses a second go the same day: a double tap is otherwise
   invisible, and two balances slightly too high move every timeline on the page
+- **A finished set with points left says what they can buy.** Points are spendable only in the set
+  that earned them, so a plan finished with 800 in hand is 800 stranded — and the two columns that
+  answer for it said *Set Complete* and nothing. They now name the rarest card from that set you do
+  not own, whatever rung it sits on, marked **Outside Your Plan** so it cannot be read as something
+  you were short of
 - **Fixed: the same strip was squeezing the grid on a narrow window.** Below the fold width it is
   meant to be a bar in the flow, and the rule that undid its overlay placement was outranked by the
   rule that set it, so it stayed in a column that layout does not have. Grid invented an implicit

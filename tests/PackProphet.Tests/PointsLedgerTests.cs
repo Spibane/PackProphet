@@ -163,4 +163,55 @@ public class PointsLedgerTests
         Assert.True(warnings[0].AtCap);
         Assert.DoesNotContain(warnings, w => w.Set == "A3");
     }
+
+    [Fact]
+    public void A_finished_plan_with_points_left_names_what_they_can_buy_instead()
+    {
+        // Diamonds only, and every diamond in the set owned: the plan is done, but the balance is
+        // stranded -- points can only be spent in the set that earned them. So the columns answer
+        // what the points CAN buy rather than "Set Complete" over a balance of 800.
+        var diamonds = RarityPlan.Uniform(Ix.Ladder.ByGroup("Diamond"));
+        var owned = Ix.BySet["A1"]
+            .Where(c => Ix.Ladder.Rungs.Any(r => r.Group == "Diamond" && r.Codes.Contains(c.Rarity)))
+            .Aggregate(new Collection(), (c, card) => c.With(card.OwnershipKey, 1));
+
+        var row = Ledger.Describe("A1", 800, owned, diamonds);
+
+        Assert.True(row.BeyondTarget);
+        Assert.NotNull(row.RarestWanted);
+        Assert.NotEqual("Diamond",
+            Ix.Ladder.Rungs.First(r => r.Codes.Contains(row.RarestWanted!.Rarity)).Group);
+        Assert.NotEmpty(row.AffordableNow);
+        Assert.All(row.AffordableNow, c => Assert.Equal(0, owned.Of(c)));
+    }
+
+    [Fact]
+    public void A_finished_plan_with_no_points_is_just_finished()
+    {
+        // Nothing to spend, so there is nothing to point at: the fallback would be advice about a
+        // balance the user does not have.
+        var diamonds = RarityPlan.Uniform(Ix.Ladder.ByGroup("Diamond"));
+        var owned = Ix.BySet["A1"]
+            .Where(c => Ix.Ladder.Rungs.Any(r => r.Group == "Diamond" && r.Codes.Contains(c.Rarity)))
+            .Aggregate(new Collection(), (c, card) => c.With(card.OwnershipKey, 1));
+
+        var row = Ledger.Describe("A1", 0, owned, diamonds);
+
+        Assert.False(row.BeyondTarget);
+        Assert.Null(row.RarestWanted);
+        Assert.Empty(row.AffordableNow);
+    }
+
+    [Fact]
+    public void An_unfinished_plan_never_looks_outside_it()
+    {
+        // The fallback is for a finished plan only. While anything inside it is outstanding, a
+        // card from a rung the user ignores must not appear as the thing to save for.
+        var diamonds = RarityPlan.Uniform(Ix.Ladder.ByGroup("Diamond"));
+        var row = Ledger.Describe("A1", 2000, new Collection(), diamonds);
+
+        Assert.False(row.BeyondTarget);
+        Assert.Equal("Diamond",
+            Ix.Ladder.Rungs.First(r => r.Codes.Contains(row.RarestWanted!.Rarity)).Group);
+    }
 }

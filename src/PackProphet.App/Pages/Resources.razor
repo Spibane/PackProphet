@@ -170,6 +170,13 @@ else
                                     <span class="text-body-secondary ms-1">
                                         @RarityOf(goal) &middot; @row.RarestPoints.ToString("N0")
                                     </span>
+                                    @* The plan is finished and the balance is stranded in this
+                                       set, so the column shows what the points can still buy. It
+                                       has to say so, or it reads as a card you are short of. *@
+                                    @if (row.BeyondTarget)
+                                    {
+                                        <span class="d-block text-body-tertiary">Outside Your Plan</span>
+                                    }
                                 }
                                 else
                                 {

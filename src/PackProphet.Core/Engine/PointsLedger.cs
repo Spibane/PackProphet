@@ -16,6 +16,13 @@ using PackProphet.Domain;
 /// Packs OF THIS SET still to open before that card is affordable, zero when it already is.
 /// Of this set specifically: points cannot cross-fund, so packs of anything else do not count.
 /// </param>
+/// <param name="BeyondTarget">
+/// True when <see cref="RarestWanted"/> and <see cref="AffordableNow"/> describe cards from
+/// OUTSIDE the collecting plan, which happens when the plan is finished and there is still a
+/// balance in hand. The points cannot be spent anywhere else and cannot be saved for anything
+/// else, so the honest answer is what they can buy rather than nothing at all - but the UI has to
+/// say which of the two it is showing.
+/// </param>
 public sealed record SetPoints(
     string Set,
     int Balance,
@@ -24,7 +31,8 @@ public sealed record SetPoints(
     IReadOnlyList<PocketCard> AffordableNow,
     PocketCard? RarestWanted = null,
     int RarestPoints = 0,
-    int PacksToAfford = 0);
+    int PacksToAfford = 0,
+    bool BeyondTarget = false);
 
 /// <summary>
 /// Per-set pack-point balances. Points are earned at a flat rate per pack, are spendable
@@ -82,6 +90,24 @@ public sealed class PointsLedger
             .Where(x => _rarities.TryGetValue(x.Card.Rarity, out var r) && r.Points > 0)
             .ToArray();
 
+        // A finished set with points still in it. The balance is stranded - spendable only here,
+        // and there is nothing here that the plan wants - so the shop's own list is the answer:
+        // cards from this set the user does not own at all, whatever rung they sit on. Gated on
+        // there being a balance, because with none the set really is just complete.
+        var beyond = false;
+        if (wanted.Length == 0 && balance > 0)
+        {
+            wanted = (cards ?? [])
+                .DistinctBy(c => c.OwnershipKey)
+                .Select(c => (Card: c, Rung: _index.Ladder.IndexOf(c.Rarity)))
+                .Where(x => x.Rung is not null)
+                .Where(x => owned.Of(x.Card) == 0)
+                .Where(x => _rarities.TryGetValue(x.Card.Rarity, out var r) && r.Points > 0)
+                .ToArray();
+
+            beyond = wanted.Length > 0;
+        }
+
         var affordable = wanted
             .Where(x => _rarities[x.Card.Rarity].Points <= balance)
             .OrderByDescending(x => _rarities[x.Card.Rarity].Points)
@@ -106,7 +132,7 @@ public sealed class PointsLedger
             : (int)Math.Ceiling(Math.Max(0, rarestPoints - balance) / (double)GameRules.PackPointsPerPack);
 
         return new SetPoints(set, balance, capped, untilCap, affordable,
-                             rarest, rarestPoints, packsToAfford);
+                             rarest, rarestPoints, packsToAfford, beyond);
     }
 
     /// <summary>

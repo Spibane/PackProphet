@@ -545,6 +545,12 @@ else
                                         <span class="text-body-secondary">
                                             (dearest: @row.AffordableNow[0].Name)
                                         </span>
+                                        @* The plan is finished here and the balance can only be
+                                           spent in this set, so these are cards from outside it. *@
+                                        @if (row.BeyondTarget)
+                                        {
+                                            <span class="d-block text-body-tertiary">Outside Your Plan</span>
+                                        }
                                     }
                                 </td>
                             </tr>

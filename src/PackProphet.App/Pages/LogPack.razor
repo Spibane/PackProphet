@@ -1064,7 +1064,12 @@ else
             var log = new List<PackOpenEvent>(p.PackLog)
             {
                 // Variant is unknown from the user's point of view; they just opened "a pack".
-                new(DateTimeOffset.Now, set, parts[1], "unknown", keys) { Id = LogId.New() }
+                // The cost rides on the row, so deleting it can give the hourglasses back.
+                new(DateTimeOffset.Now, set, parts[1], "unknown", keys)
+                {
+                    Id = LogId.New(),
+                    Hourglasses = paid.Hourglasses
+                }
             };
 
             return p with
@@ -1225,11 +1230,21 @@ else
             // then the allowance to the rest of them.
             paid = Session.PayForPacks(p, opened.Count);
 
+            // Which packs of the batch the hourglasses paid for: the day's free ones are used up
+            // first, so it is the next `paid.FromHourglasses` of them, in order. Spread per row
+            // rather than held as a batch total, because rows are deleted one at a time.
+            var free = paid.Free;
+            var bought = paid.FromHourglasses;
+
             foreach (var (pack, cards) in opened)
             {
                 var parts = pack.Split(':');
                 var set = parts[0];
                 var keys = cards.Select(c => c.OwnershipKey).ToList();
+
+                var cost = 0;
+                if (free > 0) free--;
+                else if (bought > 0) { bought--; cost = GameRules.PackHourglassesPerPack; }
 
                 foreach (var key in keys)
                     collection[key] = collection.GetValueOrDefault(key) + 1;
@@ -1241,7 +1256,11 @@ else
                 if (after >= GameRules.PackPointsCap && !capped.Contains(set)) capped.Add(set);
 
                 // Variant is unknown from the user's point of view; they just opened "a pack".
-                log.Add(new PackOpenEvent(now, set, parts[1], "unknown", keys) { Id = LogId.New() });
+                log.Add(new PackOpenEvent(now, set, parts[1], "unknown", keys)
+                {
+                    Id = LogId.New(),
+                    Hourglasses = cost
+                });
             }
 
             return p with

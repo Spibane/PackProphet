@@ -138,4 +138,51 @@ public class HistoryPageTests : AppHost
         Assert.Contains(page.FindAll("summary"),
                         s => s.TextContent.Contains("Show These as Numbers"));
     }
+
+    [Fact]
+    public async Task Deleting_a_pack_returns_the_hourglasses_it_spent()
+    {
+        // A pack past the day's free ones costs twelve pack hourglasses, and the cost rides on
+        // the logged row. Deleting the row un-opens the pack, so the hourglasses come back with
+        // the points -- otherwise a mislogged pack is charged for twice, once when it was logged
+        // and again by never being refunded.
+        await ReadyAsync();
+        Log(1);
+
+        Session.Mutate(p => p with
+        {
+            Resources = p.Resources with { PackHourglasses = 5 },
+            PackLog = p.PackLog
+                .Select(e => e with { Hourglasses = GameRules.PackHourglassesPerPack })
+                .ToList()
+        });
+
+        var page = RenderComponent<History>();
+
+        // Twice: the first tap arms the button, which is what stops a stray tap deleting a row.
+        var delete = () => page.FindAll("tbody .btn-outline-danger, tbody .btn-danger").First();
+        delete().Click();
+        delete().Click();
+
+        Assert.Empty(Session.Profile.PackLog);
+        Assert.Equal(5 + GameRules.PackHourglassesPerPack, Session.Profile.Resources.PackHourglasses);
+    }
+
+    [Fact]
+    public async Task Deleting_a_free_pack_returns_no_hourglasses()
+    {
+        // Most packs are free ones, and the setting that spends hourglasses is off by default, so
+        // a row carrying no cost must not hand back twelve of them.
+        await ReadyAsync();
+        Log(1);
+        Session.Mutate(p => p with { Resources = p.Resources with { PackHourglasses = 7 } });
+
+        var page = RenderComponent<History>();
+        var delete = () => page.FindAll("tbody .btn-outline-danger, tbody .btn-danger").First();
+        delete().Click();
+        delete().Click();
+
+        Assert.Empty(Session.Profile.PackLog);
+        Assert.Equal(7, Session.Profile.Resources.PackHourglasses);
+    }
 }

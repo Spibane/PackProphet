@@ -42,6 +42,18 @@ public sealed record PackOpenEvent(
     /// row independently arrive at the same id rather than forking it.
     /// </summary>
     public string? Id { get; init; }
+
+    /// <summary>
+    /// Pack hourglasses this pack cost, if it was one the day's free packs did not cover and the
+    /// setting was on to spend them. Zero for a free pack, and for every pack logged before the
+    /// setting existed.
+    ///
+    /// Recorded rather than recomputed, because deleting the row is where it is needed and by
+    /// then the day's arithmetic has moved on: whether THIS pack was the third one that Tuesday
+    /// cannot be worked out from a log with a row taken out of it. Optional, so older saves load
+    /// unchanged.
+    /// </summary>
+    public int Hourglasses { get; init; }
 }
 
 /// <summary>

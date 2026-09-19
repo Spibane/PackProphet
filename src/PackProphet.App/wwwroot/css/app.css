@@ -1984,6 +1984,53 @@ h1[tabindex="-1"]:focus-visible { outline: none; }
 }
 .storage-alarm code { font-size: .88rem; }
 
+/* the app-wide notice bar
+
+   Below the storage alarm and drawn deliberately unlike it. That one is red because the user's
+   collection is one reload from gone; this one usually says the site is a few days ahead of its
+   own data, which is the ordinary state of a release week and not a fault.
+
+   So the surface is neutral at every level and only the leading edge carries the severity. A
+   full-width yellow wash on release day is how a bar earns being skipped, and the bar that is
+   skipped is the one that is still there when something is actually broken. Same argument, and
+   the same 4% fill, as .gap-strip above. */
+.site-notice {
+    display: flex; align-items: baseline; gap: .5rem .6rem; flex-wrap: wrap;
+    /* Insets on the physical sides, matching the bars around it: the safe-area cutout is on a
+       physical edge, so a logical margin would clear it in one writing direction only. */
+    margin: .5rem calc(.75rem + var(--safe-r)) .5rem calc(.75rem + var(--safe-l));
+    padding: .45rem .6rem;
+    border: 1px solid var(--pp-hairline, var(--bs-border-color));
+    /* The severity, spent on one edge. Kept as a border rather than a pseudo-element so it
+       follows the rounded corner and the writing direction for free. */
+    border-inline-start-width: 3px;
+    border-radius: var(--pp-r);
+    background: color-mix(in srgb, var(--bs-body-color) 4%, transparent);
+    font-size: .92rem;
+}
+.site-notice.info { border-inline-start-color: var(--bs-secondary-color); }
+.site-notice.warning { border-inline-start-color: var(--bs-warning); }
+/* The one level that gets a tinted surface as well as an edge, because it is the one level that
+   means something is broken rather than late. */
+.site-notice.problem {
+    border-inline-start-color: var(--pp-accent-ink, var(--bs-danger));
+    background: color-mix(in srgb, var(--bs-danger) 9%, var(--bs-body-bg));
+}
+/* Wraps before the action does, so a long sentence on a phone pushes the link to its own line
+   rather than squeezing it to two characters wide. */
+.site-notice > .msg { flex: 1 1 16rem; min-width: 0; }
+.site-notice > .act { flex: 0 0 auto; white-space: nowrap; }
+/* Pushed to the far end whether or not there is an action, and whether or not the text wrapped. */
+.site-notice > .x {
+    flex: 0 0 auto; margin-inline-start: auto;
+    /* Padded to a finger rather than sized to a glyph. A 12px multiplication sign is the whole
+       target otherwise, and this bar is read on a phone held in one hand. */
+    min-width: 2.25rem; min-height: 2.25rem;
+    padding: 0 .4rem; border: 0; background: none; cursor: pointer;
+    color: var(--bs-secondary-color); font-size: 1.15rem; line-height: 1;
+}
+.site-notice > .x:hover { color: var(--bs-body-color); }
+
 /* evolution gaps
 
    One line by default. The Collection page already carries a header, a series picker, a row of

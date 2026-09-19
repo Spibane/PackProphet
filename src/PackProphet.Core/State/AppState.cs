@@ -357,6 +357,26 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     /// set would otherwise lead the page on the strength of being entirely missing.
     /// </summary>
     public bool ProgressIncludeUnreleased { get; init; }
+
+    /// <summary>
+    /// Notices the user has hidden, by key. See <c>PackProphet.Data.SiteNotice</c>.
+    ///
+    /// A LIST OF KEYS, NOT A FLAG
+    /// ------------------------------------------------------------------------------
+    /// The two dismissible strips above this — <see cref="ShowEvolutionGaps"/> and
+    /// <see cref="ShowWonderIntro"/> — are each one boolean, because each announces one standing
+    /// fact that never becomes a different fact. The app-wide bar is the opposite: it announces
+    /// whichever thing is currently behind, and there is always a next thing. A flag there would
+    /// mean hiding "B4a has no rates yet" also hides "B5 has no rates yet" two months later, which
+    /// is not dismissing a notice, it is turning off the feature.
+    ///
+    /// So a dismissal names its subject. <c>AppSession.DismissNotice</c> owns the pruning that
+    /// keeps it from growing without bound.
+    ///
+    /// Empty by default, and empty is also what a save written before this existed deserialises
+    /// to — so no schema bump, as with PackColumns and Skin.
+    /// </summary>
+    public List<string> DismissedNotices { get; init; } = [];
 }
 
 /// <summary>

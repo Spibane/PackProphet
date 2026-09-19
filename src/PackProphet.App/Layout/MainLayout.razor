@@ -62,6 +62,11 @@
         </div>
     }
 
+    @* After the storage alarm, never before it. Both are app-wide bars, and that one is about the
+       user's own data being lost right now; this one is about the site being behind or something
+       being broken, which is somebody else's problem to fix. *@
+    <NoticeBar />
+
     <main id="main" tabindex="-1">@Body</main>
 
     @* After main, not before it: the bar sits at the bottom of the screen, so this is also the

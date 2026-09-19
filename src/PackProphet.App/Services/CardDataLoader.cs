@@ -18,11 +18,24 @@ public enum DataSource { Cdn, VendoredSnapshot }
 /// and this is a fact about one load — which is what makes it assertable, and what lets a
 /// diagnostics view say where the art on screen is coming from.
 /// </param>
+/// <param name="ArtGaps">
+/// How much of each set this deployment can actually draw, for the sets the art repository was
+/// missing — from the same manifest as <paramref name="VendoredArtSets"/>.
+///
+/// The two are different questions about the same deploy. VendoredArtSets is "try our own origin
+/// for this set", which has to exclude a set nothing was written for or every card spends a
+/// request discovering a 404. This is "what is still not drawable anywhere", which has to INCLUDE
+/// exactly that set, because it is the one worth telling the user about.
+///
+/// Empty when the manifest is absent, which is a development build, every test, and any deploy
+/// where upstream had nothing missing — all of which are honestly "nothing known to be missing".
+/// </param>
 public sealed record CardData(
     CardIndex Index, PullRates Rates, CardFacts Facts, SetCatalog Sets, PackArtCatalog PackArt,
     IReadOnlyDictionary<string, Rarity> Rarities,
     DataSource Source, string? Version,
-    IReadOnlyCollection<string> VendoredArtSets);
+    IReadOnlyCollection<string> VendoredArtSets,
+    IReadOnlyList<SetShortfall> ArtGaps);
 
 /// <summary>
 /// Loads the card database, preferring the live CDN so newly released sets appear without a
@@ -169,7 +182,15 @@ public sealed class CardDataLoader
     /// </summary>
     private const string ArtManifest = "art/index.json";
 
-    private sealed record VendoredArt(List<string>? Sets, List<string>? Packs);
+    /// <param name="Art">
+    /// Per-set art coverage, keyed by set code. Absent in a manifest written before the workflow
+    /// recorded it, which reads as "nothing known to be missing" rather than as an error — the
+    /// field is additive on purpose, so an old deploy and a new app do not disagree.
+    /// </param>
+    private sealed record VendoredArt(
+        List<string>? Sets, List<string>? Packs, Dictionary<string, ArtHave>? Art);
+
+    private sealed record ArtHave(int Have, int Of);
 
     /// <summary>
     /// Its own deadline, and a short one.
@@ -204,7 +225,8 @@ public sealed class CardDataLoader
     /// Same origin and a couple of dozen bytes, so awaiting it costs a round trip to the host
     /// already serving the page.
     /// </summary>
-    private async Task<IReadOnlyCollection<string>> ReadArtManifestAsync(CancellationToken ct)
+    private async Task<(IReadOnlyCollection<string> Sets, IReadOnlyList<SetShortfall> Gaps)>
+        ReadArtManifestAsync(CancellationToken ct)
     {
         VendoredArt? manifest;
 
@@ -235,7 +257,18 @@ public sealed class CardDataLoader
         // The value is a fact about the response that just arrived, so it comes from the response.
         // Blanks dropped to match what UseVendored stores, so the pair cannot disagree about how
         // many sets were vendored.
-        return manifest?.Sets?.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray() ?? [];
+        var sets = manifest?.Sets?.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray() ?? [];
+
+        // Nonsense dropped rather than carried: a set with Of <= 0 divides into nothing downstream,
+        // and one claiming more art than cards is a manifest this app cannot reason about. Both
+        // read as "nothing known about that set", which is the same answer as an absent manifest.
+        var gaps = manifest?.Art?
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Key))
+            .Where(kv => kv.Value is { Of: > 0 } v && v.Have >= 0 && v.Have <= v.Of)
+            .Select(kv => new SetShortfall(kv.Key, kv.Value.Have, kv.Value.Of))
+            .ToArray() ?? [];
+
+        return (sets, gaps);
     }
 
     public async Task<CardData> LoadAsync(CancellationToken ct = default)
@@ -249,7 +282,7 @@ public sealed class CardDataLoader
             ?? throw new InvalidOperationException(
                 "Neither the CDN nor the vendored snapshot could be loaded.");
 
-        return _cached = loaded with { VendoredArtSets = art };
+        return _cached = loaded with { VendoredArtSets = art.Sets, ArtGaps = art.Gaps };
     }
 
     private async Task<CardData?> TryLoadAsync(string root, DataSource source, CancellationToken ct)
@@ -285,7 +318,7 @@ public sealed class CardDataLoader
             // source was tried: it is a fact about the deployment rather than about which of the
             // two data sources answered.
             return new CardData(index, new PullRates(rates), CardFacts.Empty, catalog, packArt,
-                                rarities, source, version, []);
+                                rarities, source, version, [], []);
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or NotSupportedException
                                       or System.Text.Json.JsonException)

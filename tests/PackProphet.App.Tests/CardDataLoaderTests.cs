@@ -78,6 +78,57 @@ public class CardDataLoaderTests
     }
 
     [Fact]
+    public async Task The_manifest_also_says_what_this_deployment_still_cannot_draw()
+    {
+        // Two different questions about the same deploy, and they must not be answered from one
+        // list. `sets` is "try our own origin for this one", which has to EXCLUDE a set nothing
+        // was written for or every card spends a request discovering a 404; `art` is "what is
+        // still not drawable anywhere", which has to INCLUDE exactly that set, because it is the
+        // one the notice bar exists to mention.
+        var data = await Loader(null, """
+            {"sets":["B4a"],"packs":[],
+             "art":{"B4a":{"have":84,"of":110},"B9":{"have":0,"of":90},"B4":{"have":233,"of":233}}}
+            """).LoadAsync();
+
+        Assert.Contains("B4a", data.VendoredArtSets);
+        Assert.DoesNotContain("B9", data.VendoredArtSets);
+
+        var gaps = data.ArtGaps.ToDictionary(g => g.Set);
+        Assert.Equal(84, gaps["B4a"].Have);
+        Assert.True(gaps["B9"].Nothing);
+
+        // A complete set is carried rather than filtered here; DataLag decides what is short.
+        Assert.Equal(233, gaps["B4"].Have);
+    }
+
+    [Fact]
+    public async Task A_manifest_without_art_coverage_is_read_as_nothing_known()
+    {
+        // The field is additive: a deploy written by an older copy of vendor-gap-art.py has no
+        // "art" block, and an app that read that as "every set is missing" would put a sentence
+        // about the whole game on every page.
+        var data = await Loader(null, """{"sets":["B4a"],"packs":[]}""").LoadAsync();
+
+        Assert.Contains("B4a", data.VendoredArtSets);
+        Assert.Empty(data.ArtGaps);
+    }
+
+    [Fact]
+    public async Task Art_coverage_that_cannot_be_true_is_dropped_rather_than_carried()
+    {
+        // A set of no cards divides into nothing downstream, and one claiming more art than cards
+        // is a manifest this app cannot reason about. Both read as "nothing known about that set",
+        // which is the same answer an absent manifest gives.
+        var data = await Loader(null, """
+            {"sets":[],"packs":[],
+             "art":{"B1":{"have":0,"of":0},"B2":{"have":50,"of":10},"B3":{"have":-1,"of":10},
+                    "B4a":{"have":5,"of":10}}}
+            """).LoadAsync();
+
+        Assert.Equal(["B4a"], data.ArtGaps.Select(g => g.Set));
+    }
+
+    [Fact]
     public async Task A_missing_art_manifest_leaves_every_card_on_the_remote_chain()
     {
         // The ordinary case: a development build, and any deploy where upstream was already

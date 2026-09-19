@@ -1,0 +1,74 @@
+@* The one message above every page.
+
+   Its own component rather than markup in MainLayout, so the layout stays a layout: the decision
+   about WHAT to say is in SiteNotices, the decision about how loud to be is here, and neither is
+   mixed into the nav and the skip links.
+
+   Not Notice.razor, which is the inline message a page puts beside the thing it is about. This one
+   is somewhere else entirely — above every page, on a page that has nothing to do with it — and
+   the difference shows up in two places:
+
+     * it is dismissible, and Notice.razor is not. An inline notice goes away when the state it
+       describes does; this one describes something that will still be true tomorrow.
+     * only Problem interrupts a screen reader. Notice.razor makes Warning assertive too, which is
+       right for a warning about the form you are filling in and wrong for a bar that is read on
+       arrival at every page in the app -- being cut off mid-sentence twelve times is worse than
+       hearing it a moment late. *@
+
+@inject SiteNotices Notices
+@inject AppSession Session
+@implements IDisposable
+
+@if (Notices.Current is { } notice)
+{
+    <div class="site-notice @LevelClass(notice.Level)" role="@Role(notice.Level)">
+        <span class="msg">@notice.Text</span>
+
+        @if (notice.HasAction)
+        {
+            @* Left as an ordinary anchor rather than a NavLink: the href can be an absolute https
+               URL from the notice feed, which NavLink would try to match against a route. *@
+            <a class="act" href="@notice.ActionHref">@notice.ActionLabel</a>
+        }
+
+        <button class="x" @onclick="() => Notices.Dismiss(notice)"
+                aria-label="Hide this notice">&times;</button>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Both, and for different reasons: the feed arrives late and raises Changed, while a
+        // dismissal is recorded in Prefs and arrives as a Session change.
+        Notices.Changed += OnChanged;
+        Session.Changed += OnChanged;
+    }
+
+    /// <summary>
+    /// Fetch the authored feed once the page is up. Not awaited into the render path: it is a
+    /// request to a third party, and the bar appearing a moment late costs nothing.
+    /// </summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender) _ = Notices.InitAsync();
+    }
+
+    public void Dispose()
+    {
+        Notices.Changed -= OnChanged;
+        Session.Changed -= OnChanged;
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private static string LevelClass(NoticeLevel level) => level switch
+    {
+        NoticeLevel.Problem => "problem",
+        NoticeLevel.Warning => "warning",
+        _ => "info",
+    };
+
+    private static string Role(NoticeLevel level) =>
+        level == NoticeLevel.Problem ? "alert" : "status";
+}

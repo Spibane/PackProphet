@@ -21,10 +21,15 @@ using PackProphet.Services;
 /// listed falls through to <paramref name="onRemote"/> and then to a 404, which is what a set
 /// upstream has not published yet actually answers.
 /// </param>
+/// <param name="noticeFeed">
+/// What the authored notice gist answers with. Null is a 404, which is both what an unconfigured
+/// build gets (it makes no request at all) and what a deleted gist answers.
+/// </param>
 internal sealed class SnapshotHandler(
     Func<CancellationToken, Task<HttpResponseMessage>>? onRemote = null,
     string? artManifest = null,
-    IReadOnlyDictionary<string, string>? remoteFiles = null) : HttpMessageHandler
+    IReadOnlyDictionary<string, string>? remoteFiles = null,
+    string? noticeFeed = null) : HttpMessageHandler
 {
     /// <summary>Every URL asked for, in order. A request not made is as much of an assertion as one made.</summary>
     public List<string> Requests { get; } = [];
@@ -43,6 +48,20 @@ internal sealed class SnapshotHandler(
                         Content = new StringContent(json, System.Text.Encoding.UTF8,
                                                     "application/json")
                     });
+
+        // The authored notice feed. Matched on host rather than on the whole URL: the fetch adds a
+        // cache-busting stamp to the query, and pinning the test to that stamp would be asserting
+        // the clock.
+        if (request.RequestUri.Host == "gist.githubusercontent.com")
+        {
+            return Task.FromResult(noticeFeed is null
+                ? new HttpResponseMessage(HttpStatusCode.NotFound)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                  {
+                      Content = new StringContent(noticeFeed, System.Text.Encoding.UTF8,
+                                                  "application/json")
+                  });
+        }
 
         // The manifest of art this deployment vendored. Absent by default, which is what a
         // development build and most deploys serve, and what every other test wants.
@@ -130,7 +149,10 @@ public abstract class AppHost : TestContext
         // check count of zero, meaning the wait expired before the assertion ran even once.
         DefaultWaitTimeout = TimeSpan.FromSeconds(10);
 
-        Services.AddSingleton(new HttpClient(new SnapshotHandler())
+        // A factory, not an instance, for the same reason Store() is one: NoticeFeedJson() is
+        // virtual, and resolving this lazily means a test's override is in place before it is
+        // asked. Nothing resolves an HttpClient until card data is first loaded.
+        Services.AddSingleton(_ => new HttpClient(new SnapshotHandler(noticeFeed: NoticeFeedJson()))
         {
             BaseAddress = new Uri("https://test.local/")
         });
@@ -149,6 +171,12 @@ public abstract class AppHost : TestContext
         Services.AddSingleton<IStateStore>(_ => Store());
         Services.AddSingleton<AppSession>();
         Services.AddSingleton<UiBusy>();
+        // The notice bar. Unconfigured by default, so no page test grows a bar it was not written
+        // for — the same reason SyncSettings() is unconfigured by default.
+        Services.AddSingleton(_ => NoticeSettings());
+        Services.AddSingleton<NoticeFeed>();
+        Services.AddSingleton<SiteNotices>();
+
         Services.AddSingleton<NavHistory>();
         Services.AddSingleton<PaletteSwitch>();
         Services.AddSingleton<GridFocus>();
@@ -169,6 +197,19 @@ public abstract class AppHost : TestContext
     /// growing a section it was not written for.
     /// </summary>
     protected virtual SyncOptions SyncSettings() => new();
+
+    /// <summary>
+    /// Whether this test's app has an authored notice feed to read. Unconfigured by default, which
+    /// is what a fork of the repo builds in and what keeps the notice bar out of every other
+    /// page's markup.
+    /// </summary>
+    protected virtual NoticeOptions NoticeSettings() => new();
+
+    /// <summary>
+    /// What the authored notice gist answers with. Null is a 404 and the default, which is also
+    /// what an unconfigured build costs: no request is made at all.
+    /// </summary>
+    protected virtual string? NoticeFeedJson() => null;
 
     /// <summary>What the sync transport talks to. Null means a real client, which no test wants.</summary>
     protected virtual HttpMessageHandler? SyncHandler() => new SnapshotHandler();

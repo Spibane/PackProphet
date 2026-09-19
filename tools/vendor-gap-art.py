@@ -255,7 +255,7 @@ def main() -> int:
         # Still written, and written empty: it is the difference between "this deploy vendored
         # nothing" and a manifest that failed to appear, and only one of those is worth a warning
         # in the browser console later.
-        write_manifest(args.out, [], [], args.dry_run)
+        write_manifest(args.out, [], [], {}, args.dry_run)
         return 0
 
     cards = sum(len(known[s]) for s in missing)
@@ -299,6 +299,20 @@ def main() -> int:
         for suffix, _ in wanted:
             if suffix not in by_suffix:
                 log(f"  not in the archive either: {suffix}")
+
+        # Counted off the archive rather than off the filesystem, because a dry run writes
+        # nothing -- so this is "what the app would be told", which is the whole point of
+        # previewing a deploy. The real path counts extracted files instead, and the two differ
+        # only where an extraction fails, which is logged where it happens.
+        coverage = {
+            s: {"have": sum(1 for n in known[s]
+                            if f"images/cards-by-set/{s}/{n}.webp" in by_suffix),
+                "of": len(known[s])}
+            for s in missing
+        }
+        write_manifest(args.out, sorted(s for s in missing if coverage[s]["have"] > 0),
+                       [p for p in packs if f"images/packs/{p}.webp" in by_suffix],
+                       coverage, dry=True)
         return 0
 
     written, absent, bytes_out = 0, [], 0
@@ -327,24 +341,50 @@ def main() -> int:
         # those cards keep falling back to the remote chain and then to the placeholder.
         log(f"{len(absent)} file(s) are not in the archive yet")
 
+    # How much of each missing set this deploy can actually draw.
+    #
+    # Written for the app's notice bar rather than for anything here, and this is the only place
+    # that can know it: the app cannot discover a missing image without requesting it, and probing
+    # 3,879 of them to decide whether to show one sentence is absurd. The work is already done
+    # above -- which sets the art repository lacks, and which files the archive turned out to hold
+    # -- so all that was missing was writing the answer down instead of only the fix.
+    #
+    # Every missing set is recorded, including the ones nothing was written for. A set with have=0
+    # is the one most worth saying out loud, and it is exactly the one `sets` below must omit.
+    coverage = {
+        s: {
+            "have": sum(1 for n in known[s]
+                        if os.path.exists(os.path.join(args.out, s, f"{n}.webp"))),
+            "of": len(known[s]),
+        }
+        for s in missing
+    }
+
     # Only the sets something was actually written for. Claiming a set the app then cannot serve
     # would spend a request per card on this app's own origin discovering that.
-    served = sorted({s for s in missing if any(
-        os.path.exists(os.path.join(args.out, s, f"{n}.webp")) for n in known[s])})
+    served = sorted(s for s in missing if coverage[s]["have"] > 0)
     served_packs = [p for p in packs if os.path.exists(os.path.join(args.out, "packs", f"{p}.webp"))]
 
-    write_manifest(args.out, served, served_packs, args.dry_run)
+    for s in missing:
+        c = coverage[s]
+        if c["have"] < c["of"]:
+            log(f"{s}: art for {c['have']} of {c['of']} cards")
+
+    write_manifest(args.out, served, served_packs, coverage, args.dry_run)
     return 0
 
 
-def write_manifest(out: str, sets: list[str], packs: list[str], dry: bool) -> None:
+def write_manifest(out: str, sets: list[str], packs: list[str],
+                   coverage: dict[str, dict[str, int]], dry: bool) -> None:
     if dry:
-        log(f"would write index.json: sets={sets} packs={packs}")
+        log(f"would write index.json: sets={sets} packs={packs} art={coverage}")
         return
     os.makedirs(out, exist_ok=True)
     path = os.path.join(out, "index.json")
     with io.open(path, "w", encoding="utf-8") as f:
-        json.dump({"sets": sets, "packs": packs}, f)
+        # "art" is additive: a deployment written by an older copy of this script has none, and the
+        # app reads that as "nothing known to be missing" rather than as an error.
+        json.dump({"sets": sets, "packs": packs, "art": coverage}, f)
         f.write("\n")
     log(f"wrote {path}: sets={sets or 'none'} packs={packs or 'none'}")
 

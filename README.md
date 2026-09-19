@@ -286,13 +286,87 @@ a commit, and a git history that never carried it.
 The CSP names one exact host rather than `*.supabase.co`, so a tampered card dataset has nowhere to
 post to.
 
+## Notices
+
+One bar above every page, for the two cases where the site knows something the pages do not.
+
+**Derived.** The app's own data ages at three rates by design: card data is fetched live, card art
+is a manual commit in a second repository, and card detail is a separate 4.4 MB table topped up per
+set. So for days after a release the app knows a card exists, cannot draw it, and cannot say what it
+does. The bar names the set and which of the two is missing — as one sentence, because a new set is
+usually missing both and two notices would mean dismissing one to reveal the other.
+
+If the live database could not be reached at all it says that instead: the visible symptom of
+falling back to the bundled snapshot is that the newest set is simply absent, so it is worth stating
+rather than leaving to be discovered.
+
+Pull rates deliberately are **not** on this bar, although they lag the same way. An unpriced set is
+already solvable in the app — `/packs` offers to borrow the newest measured set's distributions and
+every figure follows — so it is a setting, not something anyone is waiting on.
+
+Screenshot recognition is not on it either, for a different reason: deciding whether it applies
+means parsing the 150 KB fingerprint table, which is the one piece of card data deliberately kept
+off the boot path, and the import page already says so above its own file picker.
+
+Detail coverage is computed on the spot. Art coverage cannot be — the app cannot see a missing image
+without requesting it, and probing 3,879 of them to decide whether to show one sentence is absurd —
+so `tools/vendor-gap-art.py` writes what it found into `art/index.json` during the deploy, which is
+the one place that already knows. That listing asks the art repository for a set's *directory*, so a
+set it has started and not finished looks complete: this under-reports and never over-reports, which
+is the right direction for a claim made on every page.
+
+**Authored, for the rest.** An outage, a feature that has started failing, or a pack that launched
+before the card database published it — the last of which nothing derived can see, since the app
+cannot know about a set it has never heard of.
+
+Set the repository variable `PACKPROPHET_NOTICE_GIST` to a gist's **raw URL without the revision
+SHA** (`https://gist.githubusercontent.com/<you>/<id>/raw/notice.json`). The deploy workflow
+substitutes it into `appsettings.json` and refuses a URL carrying a SHA, which would serve one
+revision forever. Unset, no request is made. For local `dotnet run`, put it in the gitignored
+`appsettings.Development.json`.
+
+A gist rather than a file in this repository because the service worker precaches every `.json` in
+the published output and then serves it cache-first: a committed notice would be frozen at whichever
+build the visitor installed and could never announce anything.
+
+The gist holds a list, even for one notice:
+
+```json
+[
+  {
+    "id": "2026-09-18-b5",
+    "level": "info",
+    "text": "B5 launches today. The card database has not published it yet.",
+    "until": "2026-09-25",
+    "actionLabel": "Read More",
+    "actionHref": "https://example.com/notes"
+  }
+]
+```
+
+`id` is required and is what a dismissal is remembered against — reuse it to edit a notice, change
+it to post a new one. `level` is `info`, `warning` or `problem`; anything unrecognised reads as
+`info`, so a typo there still shows the notice. `until` is an inclusive `yyyy-MM-dd` and optional,
+but a date that cannot be parsed **drops** the notice: that field is the only thing that makes one
+stop on its own. The action is both halves or neither, and the href must be an absolute `https` URL
+or a plain in-app path.
+
+This feed is the only text in the app that neither the build nor the user wrote, so it is treated
+that way. Every check is in `NoticeFeedReader` with an assertion against it, and every ambiguity
+resolves to showing nothing.
+
+**One notice at a time.** Two rows above every page is two rows on every page, and a reader told
+two things at once acts on neither, so the most severe wins and an authored notice breaks a tie.
+Dismissing is per subject rather than per feature — hiding one release's notice leaves the next
+one's free to appear — and only a `problem` interrupts a screen reader.
+
 ## Package Structure
 
 ```
 PackProphet/
 ├── src/
 │   ├── PackProphet.Core/          # Engine and domain. No UI reference; warnings are errors
-│   │   ├── Data/                  # Card index, facts, pull rates, rarity ladder, set catalogue
+│   │   ├── Data/                  # Card index, facts, pull rates, rarity ladder, sets, notices
 │   │   ├── Deck/                  # Share-code codec, legality linter, QR render
 │   │   ├── Domain/                # Cards, rarities, pack variants, game rules
 │   │   ├── Engine/                # Odds, targets, ranking, allocation, trades, wonder picks
@@ -303,7 +377,7 @@ PackProphet/
 │   └── PackProphet.App/           # Blazor WebAssembly
 │       ├── Components/            # Card grid, tile, picker, palette, shared controls
 │       ├── Pages/                 # One per route (see URLs below)
-│       ├── Services/              # Session, data loader, storage, sync, scanning, focus
+│       ├── Services/              # Session, data loader, storage, sync, notices, scanning, focus
 │       └── wwwroot/
 │           ├── js/                # Only what Blazor cannot reach (see Architecture)
 │           └── data/              # Vendored snapshot + card-hashes.txt fingerprint table

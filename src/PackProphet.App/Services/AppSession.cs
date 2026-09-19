@@ -1658,6 +1658,79 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     /// <summary>
+    /// How many dismissals are remembered. A ceiling rather than a measurement: the app produces
+    /// about one notice a month, so twenty is years of them, and the only thing this really
+    /// defends against is a notice feed with a new id every hour quietly filling local storage
+    /// with keys nothing will ever match again.
+    /// </summary>
+    public const int RememberedDismissals = 20;
+
+    /// <summary>
+    /// The derived "the site is behind on these sets" key, shared with <c>DataLag.Waiting</c> so
+    /// the pruning below and the key it prunes cannot drift apart.
+    /// </summary>
+    private const string WaitingPrefix = "waiting:";
+
+    /// <summary>Whether a notice with this key has been hidden for good.</summary>
+    public bool NoticeDismissed(string key) =>
+        State.Prefs.DismissedNotices.Contains(key, StringComparer.Ordinal);
+
+    /// <summary>
+    /// How many notices are currently hidden, for the control on the settings page that undoes it.
+    ///
+    /// Both dismissible strips before this were reversible from Settings — the gap bar's own
+    /// tooltip says so — and a permanent dismissal with no way back is the one that turns a
+    /// misclick into a loss. Counted rather than listed: a key is "waiting:B4+B4a", which is a name
+    /// for a notice rather than the notice, and the text it stood for is not stored.
+    /// </summary>
+    public int DismissedNoticeCount => State.Prefs.DismissedNotices.Count;
+
+    /// <summary>
+    /// Unhide every notice. All of them at once rather than one at a time, for the reason above:
+    /// the keys are not readable, so there is nothing to choose between.
+    /// </summary>
+    public void ClearDismissedNotices()
+    {
+        if (DismissedNoticeCount == 0) return;
+
+        State = State with { Prefs = State.Prefs with { DismissedNotices = [] } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Hide a notice for good, and prune what that makes dead.
+    ///
+    /// Two prunings, for two different reasons:
+    ///
+    ///   * only one "waiting:" notice can be live at a time, because its key is built from the
+    ///     whole list of sets the site is behind on. So adding one makes every other one
+    ///     unmatchable forever, and keeping them would accumulate a key per release.
+    ///   * the feed's keys are the author's to choose and this app cannot tell a retired id from
+    ///     one that is merely quiet this week, so they are capped and dropped oldest-first rather
+    ///     than reasoned about. Losing the oldest dismissal means one old notice could reappear,
+    ///     which is the cheaper failure than an unbounded list.
+    /// </summary>
+    public void DismissNotice(string key)
+    {
+        if (NoticeDismissed(key)) return;
+
+        var kept = State.Prefs.DismissedNotices.AsEnumerable();
+
+        if (key.StartsWith(WaitingPrefix, StringComparison.Ordinal))
+            kept = kept.Where(k => !k.StartsWith(WaitingPrefix, StringComparison.Ordinal));
+
+        // Newest last, so Skip drops the oldest.
+        var next = kept.Append(key).ToList();
+        if (next.Count > RememberedDismissals)
+            next = next.Skip(next.Count - RememberedDismissals).ToList();
+
+        State = State with { Prefs = State.Prefs with { DismissedNotices = next } };
+        QueueSave();
+        Changed?.Invoke();
+    }
+
+    /// <summary>
     /// Evolution chains you own part of. Memoised over the card data; the REPORT is cached
     /// separately, since it depends on the collection.
     /// </summary>

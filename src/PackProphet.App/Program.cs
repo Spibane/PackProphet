@@ -30,6 +30,13 @@ builder.Services.AddScoped<SyncCrypto>();
 builder.Services.AddScoped<SyncTransport>();
 builder.Services.AddScoped<SyncService>();
 
+// The bar above every page. The feed is off unless appsettings.json names a gist, in which case
+// no request is made and only the notices the app derives from its own data can appear.
+builder.Services.AddScoped(sp =>
+    builder.Configuration.GetSection("Notice").Get<NoticeOptions>() ?? new NoticeOptions());
+builder.Services.AddScoped<NoticeFeed>();
+builder.Services.AddScoped<SiteNotices>();
+
 // Constructed by MainLayout rather than only where it is consumed: it works by observing
 // navigation, so it has to exist from the first page load.
 builder.Services.AddScoped<NavHistory>();

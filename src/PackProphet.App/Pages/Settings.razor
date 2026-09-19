@@ -89,6 +89,23 @@
         </label>
     </div>
 
+    @* Beside the two above for the same reason, and a button rather than a checkbox because there
+       is nothing to switch off: the bar only appears when there is something to say. What a
+       dismissal hides is one notice, so undoing it is undoing that, not enabling a feature.
+
+       Absent when there is nothing to undo, so the page does not carry a dead control. *@
+    @if (Session.DismissedNoticeCount > 0)
+    {
+        <div class="mb-4">
+            <button class="btn btn-outline-secondary btn-sm" @onclick="Session.ClearDismissedNotices">
+                Show Hidden Notices Again
+            </button>
+            <span class="d-block small text-body-secondary mt-1">
+                @Session.DismissedNoticeCount hidden.
+            </span>
+        </div>
+    }
+
     @* The plan drives every estimate in the app — the ranking, the completion figures, the point
        shop, the trade board — so it is editable here as well as on the Packs page. *@
     <h2>What Counts as Complete</h2>

@@ -131,6 +131,49 @@ jobs:
           grep -q "${host}" "${INDEX}" || { echo "::error::connect-src does not name ${host}"; exit 1; }
           echo "sync configured for ${host}"
 
+      # The notice bar's authored channel, for the things the app cannot work out for itself: an
+      # outage, a feature that has started failing, or a pack that launched before the card database
+      # published it. The app derives the rest from its own data and needs nothing set here.
+      #
+      # A variable rather than a secret, and for a weaker reason than the sync key's: a gist's raw
+      # URL is in the page either way. What keeping it out of the tree buys is repointing the feed
+      # without a commit.
+      #
+      # The host is already in connect-src, so only the URL is substituted -- and the host is
+      # gist.githubusercontent.com for everyone, not a per-user one, so there is no placeholder to
+      # verify the way the sync step has to.
+      #
+      # Unset is a supported state: no request is made and only the derived notices can appear.
+      - name: Point the notice bar at its gist
+        env:
+          NOTICE_GIST: ${{ vars.PACKPROPHET_NOTICE_GIST }}
+          SETTINGS: src/PackProphet.App/wwwroot/appsettings.json
+        run: |
+          set -euo pipefail
+
+          if [ -z "${NOTICE_GIST}" ]; then
+            echo "::notice::PACKPROPHET_NOTICE_GIST not set - only derived notices can appear"
+            exit 0
+          fi
+
+          # Refused rather than trimmed, and the revision SHA is the specific thing being refused.
+          # A gist's raw URL comes in two shapes -- .../raw/<file> serves the latest edit and
+          # .../raw/<sha>/<file> serves that revision forever -- and the browser's copy button hands
+          # you the second one. Pasted here, the feed is frozen at whatever it said that day, which
+          # is the one failure this whole channel exists to avoid and is invisible while it happens:
+          # the app fetches successfully and shows a stale notice, or none.
+          #
+          # python3 -c rather than a heredoc, matching the sync step above: a heredoc inside a YAML
+          # block scalar carries the block's own indentation into the script, and Python refuses an
+          # indented first statement.
+          python3 -c "import os, re, sys, urllib.parse; u = urllib.parse.urlparse(os.environ['NOTICE_GIST']); parts = [p for p in u.path.split('/') if p]; sys.exit('::error::PACKPROPHET_NOTICE_GIST must be a https gist raw URL') if (u.scheme, u.netloc) != ('https', 'gist.githubusercontent.com') or 'raw' not in parts else None; sys.exit('::error::PACKPROPHET_NOTICE_GIST carries a revision SHA, so it would serve that revision forever - use the .../raw/<file> form') if any(re.fullmatch(r'[0-9a-f]{40}', p) for p in parts[parts.index('raw') + 1:]) else None"
+
+          python3 -c "import json, os; p = os.environ['SETTINGS']; d = json.load(open(p)); d['Notice']['GistUrl'] = os.environ['NOTICE_GIST']; open(p, 'w').write(json.dumps(d, indent=2) + '\n')"
+
+          grep -q 'gist.githubusercontent.com' src/PackProphet.App/wwwroot/index.html \
+            || { echo "::error::connect-src does not name gist.githubusercontent.com"; exit 1; }
+          echo "notice feed configured"
+
       - name: Publish
         run: dotnet publish src/PackProphet.App/PackProphet.App.csproj -c Release -o build
 

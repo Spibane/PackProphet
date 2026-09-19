@@ -153,6 +153,49 @@ until then the minor number tracks the roadmap phase.
   meant to be a bar in the flow, and the rule that undid its overlay placement was outranked by the
   rule that set it, so it stayed in a column that layout does not have. Grid invented an implicit
   one the width of a wordmark and charged it to the cards
+- **A bar above every page for what the site is still waiting on.** The app's own data ages at
+  three rates by design — card data is fetched live, card art is a manual commit in a second
+  repository, and card detail is a separate 4.4 MB table topped up per set — so for days after a
+  release it knows a card exists, cannot draw it, and cannot say what it does. Every page behaved as
+  though that were normal, which reads as a broken app rather than a waiting one. It now names the
+  set and what has not arrived, once, where you land. A card database that could not be reached at
+  all says that instead, because the visible symptom of falling back to the bundled copy is that the
+  newest set is simply absent
+- **Not pull rates, though they lag the same way.** An unpriced set is already solvable in the app:
+  `/packs` offers to borrow the newest measured set's distributions and every figure follows. A bar
+  for something you can already fix is a bar about a setting, and this one is about data nobody has
+  published. Screenshot recognition is off it too, for a different reason — deciding whether it
+  applies means parsing the 150 KB fingerprint table, which is the one piece of card data
+  deliberately kept off the boot path, and the import page already says so above its own file picker
+- **The deploy now writes down what it could not find, not only what it fixed.** Art coverage is the
+  one gap the app cannot compute: it cannot see a missing image without requesting it, and probing
+  3,879 of them to decide whether to show one sentence is absurd. `tools/vendor-gap-art.py` already
+  asks the art repository which sets it has and fills the gaps from a release archive, so
+  `art/index.json` gained a per-set count of what is actually drawable. It asks for a set's
+  *directory*, so a set upstream has started and not finished still looks complete — this
+  under-reports and never over-reports, which is the right direction for a claim made on every page
+- **And a channel for the things the app cannot work out for itself.** An outage, a feature that has
+  started failing, or a pack that launched before the card database published it — which is the one
+  release-day case nothing derived can see, since the app cannot know about a set it has never
+  heard of. Posted as a gist and read at boot, so saying something does not mean a deploy; not a
+  file in this repo, because the service worker precaches every `.json` in the published output and
+  then serves it cache-first, so a committed notice would be frozen at whichever build the visitor
+  installed. The feed is the only text in the app that neither the build nor the user wrote, so it
+  is treated as such: an entry with no id, an unreadable `until` date, text past 300 characters, or
+  a link that is not an absolute `https` URL or a plain in-app path is refused rather than guessed
+  at. Blank in `appsettings.json` and nothing is requested
+- **One bar, one notice, and a dismissal that names its subject.** Two rows above every page is two
+  rows on every page, and a reader told two things at once acts on neither, so the most severe wins
+  and an authored notice breaks a tie. Missing art and missing detail are said in one sentence for
+  the same reason: as two notices the bar would show one, and dismissing it would reveal the other.
+  Dismissing is per subject rather than per feature — the two dismissible strips before this were
+  each a single flag, which for a bar that announces whichever thing is behind today would mean
+  hiding one release's notice hides the next one's — and a set that gains its art while still short
+  of detail is the same subject half answered, so it is not re-announced. Only a `problem`
+  interrupts a screen reader; a `warning` is assertive beside the form it is about and not when it
+  is read on arrival at twelve pages. Nothing derived appears until there are cards to be talking
+  about, and **Settings → Show Hidden Notices Again** undoes a dismissal, as the other two strips
+  already allowed
 
 ### v0.7.0 - 2026-09-01
 

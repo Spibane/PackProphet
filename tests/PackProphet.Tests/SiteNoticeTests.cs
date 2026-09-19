@@ -291,6 +291,52 @@ public class SiteNoticeTests
         Assert.Single(Read(json));
     }
 
+    /// <summary>
+    /// The published feed documents itself in a comment block above the list, and the list below
+    /// it is usually empty. That is the file's resting state — so this is the shape the parser
+    /// meets on almost every fetch, and the one nothing else here covers: the test above puts a
+    /// comment INSIDE the array, and leading trivia before the root token is a different position
+    /// in the grammar.
+    ///
+    /// Worth a test of its own because the failure is silent in both directions. Drop
+    /// <c>JsonCommentHandling.Skip</c> from the reader's options and the whole feed stops parsing;
+    /// an unreadable feed and an empty one are indistinguishable by design, so the authored
+    /// channel would simply go quiet and nothing would say why.
+    /// </summary>
+    private const string DocumentedFeed = """
+        // PackProphet notices. Everything above the brackets is a comment.
+        //
+        //   id     REQUIRED. What a dismissal is remembered against.
+        //   until  Optional, inclusive, yyyy-MM-dd.
+        //
+        // TEMPLATE -- copy the block between the brackets and edit it:
+        //
+        //   {
+        //     "id": "2026-09-19-something",
+        //     "text": "Screenshot import is failing for the newest set."
+        //   }
+
+        [BODY]
+        """;
+
+    [Fact]
+    public void The_feed_may_document_itself_above_the_list()
+    {
+        Assert.Empty(Read(DocumentedFeed.Replace("[BODY]", "[]")));
+    }
+
+    [Fact]
+    public void A_documented_feed_still_reads_the_entries_under_it()
+    {
+        // The comment block must not cost the notice beneath it, which is the case that matters:
+        // the header is only ever read on the day somebody posts something.
+        var notice = Assert.Single(Read(DocumentedFeed.Replace(
+            "[BODY]", """[{"id":"down","level":"problem","text":"Import is failing."}]""")));
+
+        Assert.Equal("feed:down", notice.Key);
+        Assert.Equal(NoticeLevel.Problem, notice.Level);
+    }
+
     [Fact]
     public void An_entry_with_no_id_is_refused()
     {

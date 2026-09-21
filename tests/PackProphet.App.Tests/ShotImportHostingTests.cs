@@ -238,6 +238,91 @@ public class ShotImportHostingTests : AppHost
         page.WaitForAssertion(() => Assert.Equal(2, Session.Profile.PackLog.Count));
     }
 
+    // ------------------------------------------------------------------ the same shot twice
+
+    [Fact]
+    public async Task A_picture_of_a_pack_already_in_the_log_says_so_before_anything_is_pressed()
+    {
+        // The case this exists for: a folder chosen a second time, or yesterday's screenshots
+        // handed over with today's. The evidence is the only evidence there is -- same pack, same
+        // cards -- and it is said next to the buttons, because both of them reach the log.
+        StubScan(HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        Upload(page);
+        await page.InvokeAsync(() => page.Find("#log-one").Click());
+        page.WaitForAssertion(() => Assert.Single(Session.Profile.PackLog));
+
+        var again = RenderComponent<LogPack>();
+        Upload(again);
+
+        page.WaitForAssertion(() => Assert.Contains(
+            "You already logged a Mewtwo pack with exactly these cards",
+            Collapse(again.Markup)));
+    }
+
+    [Fact]
+    public async Task A_pack_logged_twice_is_asked_about_and_then_allowed()
+    {
+        // Warned, not refused. Two packs of one booster really can come out the same, so the
+        // second press goes through and the log gets both -- see RepeatOpenings for the
+        // arithmetic that makes refusing it wrong.
+        StubScan(HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        Upload(page);
+        await page.InvokeAsync(() => page.Find("#log-one").Click());
+        page.WaitForAssertion(() => Assert.Single(Session.Profile.PackLog));
+
+        var again = RenderComponent<LogPack>();
+        Upload(again);
+
+        await again.InvokeAsync(() => again.Find("#log-one").Click());
+        again.WaitForAssertion(() =>
+            Assert.Contains("records a pack already in your history", Collapse(again.Markup)));
+        Assert.Single(Session.Profile.PackLog);         // asked, not done
+
+        await again.InvokeAsync(() => again.Find("button.btn-warning").Click());
+        again.WaitForAssertion(() => Assert.Equal(2, Session.Profile.PackLog.Count));
+    }
+
+    [Fact]
+    public async Task The_same_picture_twice_in_one_batch_is_caught_without_the_log()
+    {
+        // Choosing the same folder twice puts both copies on screen at once, and neither is in
+        // the log yet -- so the batch has to notice its own repeats as well as the log's.
+        StubTwo(HandScan(), HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        Assert.Empty(Session.Profile.PackLog);
+
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() =>
+            Assert.Contains("1 of these pictures records a pack already in your history",
+                            Collapse(page.Markup)));
+    }
+
+    [Fact]
+    public async Task A_run_of_different_packs_is_not_a_repeat()
+    {
+        // The check must not fire on an ordinary sitting, which is the case it would ruin. Two
+        // different packs, and neither is in the log.
+        StubTwo(HandScan(), HandScan(["A1-100", "A1-101", "A1-102", "A1-103", "A1-104"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() => Assert.Equal(2, Session.Profile.PackLog.Count));
+        Assert.DoesNotContain("already in your history", Collapse(page.Markup));
+    }
+
     [Fact]
     public async Task Adopting_one_of_several_pictures_asks_before_dropping_the_rest()
     {

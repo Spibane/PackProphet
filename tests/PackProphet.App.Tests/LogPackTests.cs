@@ -106,6 +106,32 @@ public class LogPackTests : AppHost
     }
 
     [Fact]
+    public async Task The_screenshot_reader_is_opened_by_a_button_and_starts_folded()
+    {
+        // It was a <summary> in secondary text, which reads as a footnote about the page rather
+        // than as the faster of the two ways to log a pack.
+        var page = await PageAsync();
+
+        Assert.Empty(page.FindAll("details"));
+
+        var open = page.Find("button.shot-open");
+        Assert.Equal("false", open.GetAttribute("aria-expanded"));
+        Assert.Equal("log-shots", open.GetAttribute("aria-controls"));
+
+        // Folded, but still in the page: a reading is a minute of work and a mis-tap on the
+        // button must not be able to throw twenty of them away.
+        Assert.NotNull(page.Find("#log-shots").GetAttribute("hidden"));
+
+        open.Click();
+        Assert.Equal("true", page.Find("button.shot-open").GetAttribute("aria-expanded"));
+        Assert.Null(page.Find("#log-shots").GetAttribute("hidden"));
+
+        page.Find("button.shot-open").Click();
+        Assert.Equal("false", page.Find("button.shot-open").GetAttribute("aria-expanded"));
+        Assert.NotNull(page.Find("#log-shots").GetAttribute("hidden"));
+    }
+
+    [Fact]
     public async Task The_way_out_of_typing_leads_to_this_page_s_own_reader()
     {
         // It used to point at the collection's screenshot import, which records cards and nothing
@@ -123,9 +149,9 @@ public class LogPackTests : AppHost
         // asked for, so it must not need finding again.
         page.WaitForAssertion(() =>
         {
-            var shots = page.Find("details");
-            Assert.NotNull(shots.GetAttribute("open"));
-            Assert.Contains("Screenshot", shots.TextContent);
+            var open = page.Find("button.shot-open");
+            Assert.Equal("true", open.GetAttribute("aria-expanded"));
+            Assert.NotNull(page.Find("#log-shots"));
         });
     }
 

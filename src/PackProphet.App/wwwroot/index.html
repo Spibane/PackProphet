@@ -107,10 +107,16 @@
     <!-- The More menu is a native popover, so light dismiss and Escape are free. Following a link
          inside it is not a dismiss, though: Blazor routes in place, the popover has no idea the
          page changed, and it would sit open over the destination. One delegated listener closes
-         it, rather than wiring an onclick to each of eight links. -->
+         it, rather than wiring an onclick to each of eight links.
+
+         Except the dailies button, which is the one control on the sheet that leaves you where
+         you are. Its answer is its own label -- it flips to "Today's Dailies Added" and goes
+         disabled -- so closing the sheet under it would hide the only confirmation there is and
+         leave a press that looks like nothing happened. -->
     <script>
         document.addEventListener('click', e => {
-            const item = e.target.closest('[popover].nav-more a, [popover].nav-more button');
+            const item = e.target.closest(
+                '[popover].nav-more a, [popover].nav-more button:not(.nav-more-daily)');
             if (!item) return;
             const menu = item.closest('[popover].nav-more');
             if (menu && menu.matches(':popover-open')) menu.hidePopover();

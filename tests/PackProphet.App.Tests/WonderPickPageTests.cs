@@ -55,6 +55,44 @@ public class WonderPickPageTests : AppHost
     }
 
     [Fact]
+    public async Task The_screenshot_reader_is_opened_by_a_button_and_starts_folded()
+    {
+        // The same control as the log screen's, in the same state, because it is the same offer
+        // made in the same place in the same job -- and it was a <summary> in secondary text here
+        // too, which reads as a footnote about the page rather than the fast way to fill it.
+        await ReadyAsync();
+
+        var page = RenderComponent<WonderPick>();
+
+        Assert.Empty(page.FindAll("details"));
+
+        var open = page.Find("button.shot-open");
+        Assert.Equal("false", open.GetAttribute("aria-expanded"));
+        Assert.Equal("wonder-shots", open.GetAttribute("aria-controls"));
+        Assert.NotNull(page.Find("#wonder-shots").GetAttribute("hidden"));
+
+        open.Click();
+        Assert.Equal("true", page.Find("button.shot-open").GetAttribute("aria-expanded"));
+        Assert.Null(page.Find("#wonder-shots").GetAttribute("hidden"));
+
+        page.Find("button.shot-open").Click();
+        Assert.NotNull(page.Find("#wonder-shots").GetAttribute("hidden"));
+    }
+
+    [Fact]
+    public async Task The_reader_is_not_offered_once_the_offer_has_cards_in_it()
+    {
+        // Unchanged by turning the disclosure into a button: the reader replaces typing the five
+        // cards, so it has nothing to offer someone who has already typed some.
+        await ReadyAsync();
+
+        var page = WithOffer();
+
+        Assert.Empty(page.FindAll("button.shot-open"));
+        Assert.Empty(page.FindAll("#wonder-shots"));
+    }
+
+    [Fact]
     public async Task While_the_offer_is_half_typed_the_picker_is_under_the_strip()
     {
         // The complaint this is for: naming the first card pushed the second search about a screen

@@ -196,15 +196,16 @@ until then the minor number tracks the roadmap phase.
   is read on arrival at twelve pages. Nothing derived appears until there are cards to be talking
   about, and **Settings → Show Hidden Notices Again** undoes a dismissal, as the other two strips
   already allowed
-- **The screenshot reader on `/log` is a button now, not a disclosure.** It was a `<summary>` in
-  secondary text, which is the typography of a footnote — something the page mentions in case you
-  want it. It is the faster of the two ways to log a pack, since the game has just shown you the
-  five cards and the cards themselves say which pack they came out of, so it is drawn as the offer
-  it is. Still folded by default, because picking a pack by hand always works and this does not: a
-  set released since the last fingerprint refresh cannot be recognised, and the grid has to be the
-  first thing on the page for anyone in that week. Folded means hidden rather than unmounted — a
-  batch of twenty readings is a minute of work, and a mis-tap on the button must not be able to
-  throw it away
+- **The screenshot readers on `/log` and `/wonder` are buttons now, not disclosures.** Each was a
+  `<summary>` in secondary text, which is the typography of a footnote — something the page
+  mentions in case you want it. Both are the fast way to do the thing their page is for: on the
+  log screen the game has just shown you the five cards and the cards themselves say which pack
+  they came out of, and on Wonder Pick entering the offer by hand is five searches. So both are
+  drawn as the offer they are, and as the same control, since it is the same offer in the same
+  place in the same job. Still folded by default, because the by-hand route always works and this
+  does not: a set released since the last fingerprint refresh cannot be recognised. Folded means
+  hidden rather than unmounted — a batch of twenty readings is a minute of work, and a mis-tap on
+  the button must not be able to throw it away
 - **The day's hourglasses can be credited from the More menu.** One idempotent act with no
   arguments and nothing to read afterwards, which used to live only on Resources, a page load away
   from wherever you were. It sits across both columns at the foot of the sheet and outside the

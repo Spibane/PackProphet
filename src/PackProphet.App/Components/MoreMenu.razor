@@ -77,6 +77,13 @@
         </NavLink>
     </nav>
 
+    @* A rule, because the button under it is a different kind of thing from the grid above it.
+       Spacing alone was carrying that: .25rem below the last row said "foot of the grid", which
+       is where a tenth destination would also sit. A thematic break says it outright, and <hr>
+       is what one is -- it maps to role="separator", so the boundary is announced rather than
+       only drawn. *@
+    <hr class="nav-more-rule" />
+
     @* The one thing on this sheet that is not a place to go.
        ==================================================================================
        Crediting the day's hourglasses is a daily chore and it lived only on Resources, a page

@@ -104,6 +104,12 @@ series, or a hand-picked chase list.
   is uploaded and it works offline: every card's artwork was reduced to 128 bits ahead of time and
   the fingerprints ship with the app, so recognising a card is a distance comparison against a 150 KB
   table rather than a model or a server. See [Reading a screenshot](#reading-a-screenshot) below
+- **Promos, without the scroll** — a promo arrives one at a time, so there is no pack to log and
+  nothing a screenshot saves; the work is all in the finding. `/log` offers the ten newest in the
+  promo set currently being filled, one tap per copy, owned ones included because a promo can be
+  earned twice. Newest rather than *currently on offer*: no dataset carries an event calendar, but
+  promo numbers are issued in release order, so recency is exact where availability is not
+  knowable at all — and the panel says so
 - **Decks** — import one by screenshotting the in-game share code, decoded in the browser; or build
   one by hand with live legality checking and a search covering rules text and card type as well as
   names ("what puts something to Sleep", "show me the Supporters"). Export back to a scannable code
@@ -424,7 +430,7 @@ differently in production. The cost is a native relink on every build.
 | `/card/{key}` | One card: printings, cheapest route, packs that can give it |
 | `/progress` | Every unfinished set: what it still needs, and where it comes from |
 | `/packs` | Which pack to open next, with the target advisor and points panel |
-| `/log` | Log a pack |
+| `/log` | Log a pack, read one off a screenshot, or log a recent promo |
 | `/history` | Packs over time, predicted against actual, and your best hits |
 | `/chase`, `/chase/{id}` | Chase lists, and one chase list's own page |
 | `/share` | A chase list opened from a share link (read-only) |

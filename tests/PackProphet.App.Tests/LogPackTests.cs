@@ -1,5 +1,6 @@
 namespace PackProphet.App.Tests;
 
+using PackProphet.Data;
 using PackProphet.Pages;
 
 /// <summary>
@@ -129,6 +130,122 @@ public class LogPackTests : AppHost
         page.Find("button.shot-open").Click();
         Assert.Equal("false", page.Find("button.shot-open").GetAttribute("aria-expanded"));
         Assert.NotNull(page.Find("#log-shots").GetAttribute("hidden"));
+    }
+
+    // ------------------------------------------------------------------ logging a promo
+
+    [Fact]
+    public async Task A_promo_is_logged_from_a_button_and_never_from_the_pack_picker()
+    {
+        // A promo is handed over by an event rather than opened, so it must not appear among the
+        // boosters as though it were a choice you could make.
+        var page = await PageAsync();
+
+        Assert.DoesNotContain(Shown(page), name => name.Contains("Vol.", StringComparison.Ordinal));
+
+        var open = page.Find("button[aria-controls='log-promos']");
+        Assert.Equal("false", open.GetAttribute("aria-expanded"));
+
+        open.Click();
+        Assert.Equal("true", page.Find("button[aria-controls='log-promos']").GetAttribute("aria-expanded"));
+        Assert.Null(page.Find("#log-promos").GetAttribute("hidden"));
+    }
+
+    [Fact]
+    public async Task The_list_is_the_newest_promos_of_the_set_being_filled()
+    {
+        var page = await PageAsync();
+        page.Find("button[aria-controls='log-promos']").Click();
+
+        var set = RecentPromos.CurrentSet(Session.Index, Session.Sets)!;
+        var expected = RecentPromos.Newest(Session.Index, set)
+            .Select(c => $"{c.Set} {c.Number}")
+            .ToArray();
+
+        var shown = page.FindAll("#log-promos .promo-row .nm .sub")
+            .Select(e => e.TextContent.Trim())
+            .ToArray();
+
+        Assert.Equal(expected, shown);
+        Assert.Equal(RecentPromos.Window, shown.Length);
+    }
+
+    [Fact]
+    public async Task A_promo_already_held_stays_on_the_list_and_can_be_taken_again()
+    {
+        // The reason owned cards are not filtered out: a promo can be earned more than once, and
+        // a row that vanished on the first tap would vanish exactly when the second is needed.
+        var page = await PageAsync();
+        page.Find("button[aria-controls='log-promos']").Click();
+
+        var first = RecentPromos.Newest(Session.Index, Session.Sets)[0];
+        Assert.Equal(0, Session.CountOf(first));
+
+        page.FindAll("#log-promos .promo-row .take").First().Click();
+        Assert.Equal(1, Session.CountOf(first));
+
+        Assert.Equal(
+            RecentPromos.Window, page.FindAll("#log-promos .promo-row").Count);
+
+        page.FindAll("#log-promos .promo-row .take").First().Click();
+        Assert.Equal(2, Session.CountOf(first));
+
+        page.WaitForAssertion(() =>
+            Assert.Equal("2", page.FindAll("#log-promos .promo-row .have").First().TextContent.Trim()));
+    }
+
+    [Fact]
+    public async Task Logging_a_promo_touches_the_collection_and_nothing_else()
+    {
+        // Not a pack: no log row, no pack points, no hourglass. A row in the pack log would be a
+        // pack that was never bought, and it would reach the odds check on History as a pack the
+        // model has no rates for.
+        var page = await PageAsync();
+        page.Find("button[aria-controls='log-promos']").Click();
+
+        var before = Session.Profile.Resources;
+        page.FindAll("#log-promos .promo-row .take").First().Click();
+
+        Assert.Empty(Session.Profile.PackLog);
+        Assert.Equal(before.PackHourglasses, Session.Profile.Resources.PackHourglasses);
+        Assert.Equal(before.PackPointsBySet, Session.Profile.Resources.PackPointsBySet);
+    }
+
+    [Fact]
+    public async Task A_mistapped_promo_can_be_taken_back_without_a_keyboard()
+    {
+        // The page is used on a phone beside the game, where Ctrl+Z is not available.
+        var page = await PageAsync();
+        page.Find("button[aria-controls='log-promos']").Click();
+
+        var first = RecentPromos.Newest(Session.Index, Session.Sets)[0];
+
+        Assert.Empty(page.FindAll("#log-promos .promo-row .drop"));   // nothing to take back yet
+
+        page.FindAll("#log-promos .promo-row .take").First().Click();
+        page.FindAll("#log-promos .promo-row .drop").First().Click();
+
+        Assert.Equal(0, Session.CountOf(first));
+        Assert.Empty(page.FindAll("#log-promos .promo-row .drop"));
+    }
+
+    [Fact]
+    public async Task Only_one_of_the_two_panels_is_open_at_a_time()
+    {
+        // Both sit above the pack grid and both are tall; two open put the grid off the bottom of
+        // a phone. They are alternatives rather than steps.
+        var page = await PageAsync();
+
+        page.Find("button.shot-open[aria-controls='log-shots']").Click();
+        page.Find("button[aria-controls='log-promos']").Click();
+
+        Assert.Equal("false",
+            page.Find("button.shot-open[aria-controls='log-shots']").GetAttribute("aria-expanded"));
+        Assert.NotNull(page.Find("#log-shots").GetAttribute("hidden"));
+        Assert.Null(page.Find("#log-promos").GetAttribute("hidden"));
+
+        page.Find("button.shot-open[aria-controls='log-shots']").Click();
+        Assert.NotNull(page.Find("#log-promos").GetAttribute("hidden"));
     }
 
     [Fact]

@@ -196,6 +196,35 @@ until then the minor number tracks the roadmap phase.
   is read on arrival at twelve pages. Nothing derived appears until there are cards to be talking
   about, and **Settings → Show Hidden Notices Again** undoes a dismissal, as the other two strips
   already allowed
+- **The screenshot reader on `/log` is a button now, not a disclosure.** It was a `<summary>` in
+  secondary text, which is the typography of a footnote — something the page mentions in case you
+  want it. It is the faster of the two ways to log a pack, since the game has just shown you the
+  five cards and the cards themselves say which pack they came out of, so it is drawn as the offer
+  it is. Still folded by default, because picking a pack by hand always works and this does not: a
+  set released since the last fingerprint refresh cannot be recognised, and the grid has to be the
+  first thing on the page for anyone in that week. Folded means hidden rather than unmounted — a
+  batch of twenty readings is a minute of work, and a mis-tap on the button must not be able to
+  throw it away
+- **The day's hourglasses can be credited from the More menu.** One idempotent act with no
+  arguments and nothing to read afterwards, which used to live only on Resources, a page load away
+  from wherever you were. It sits across both columns at the foot of the sheet and outside the
+  `<nav>`: a landmark listing destinations should not have a button in it, and full width is what
+  separates an action from the tiles above it. Resources keeps its own copy — that is the page that
+  explains what the two currencies are and where the balances are watched moving — and both press
+  the same guard, so the day is spent whichever was used and the other says so. Alone among the
+  sheet's controls it does not dismiss the sheet, because its answer is its own label
+- **The same screenshot imported twice is caught before it is logged.** A folder chosen again, or
+  yesterday's shots handed over with today's, used to add five cards and a pack-log row recording
+  an opening that never happened — invisible afterwards, since nothing in the log says the picture
+  was the same picture. A reading carries a pack and its cards and so does a logged opening, so the
+  two are simply compared, against the log and against the rest of the batch. It warns and does not
+  refuse: three common slots draw from a pool in the low tens, so over a few hundred packs of one
+  booster a genuinely identical hand is percentage points rather than nothing, and refusing it
+  would deny an event the user watched happen with no way to overrule it. The date of the earlier
+  one is named instead, which is the part that settles it. Card identity is the evidence rather
+  than the pixels: a hash would catch a re-upload of the same file and miss a re-crop, a
+  re-compression or a second screenshot of the same still screen, and would need a store that has
+  to be synced, migrated and pruned
 
 ### v0.7.0 - 2026-09-01
 

@@ -77,6 +77,31 @@
         </NavLink>
     </nav>
 
+    @* The one thing on this sheet that is not a place to go.
+       ==================================================================================
+       Crediting the day's hourglasses is a daily chore and it lived only on Resources, a page
+       load away from wherever you were. It is one idempotent act with no arguments and nothing
+       to read afterwards, which is the shape of a thing that belongs on a menu you already have
+       open rather than at the end of a journey to a page.
+
+       Outside the <nav> rather than a tenth cell in it. The landmark is a list of destinations
+       and this is not one, so a screen reader running the links should not find a button among
+       them. It is drawn across both of the grid's columns for the same reason: full width is
+       what separates an action from the tiles above it, and it is how .nav-more-search says the
+       same thing at the other end of the sheet.
+
+       Resources keeps its own copy. That is the page that explains what the two currencies are
+       and where the balances are watched moving, and both buttons press the same guard — so the
+       day is spent whichever one was used, and the other says so.
+
+       Disabled rather than hidden once it is done, and it says which: a button that vanishes
+       after it is pressed leaves someone wondering whether they pressed it. *@
+    <button class="nav-more-daily" @onclick="Session.AddDailyHourglasses"
+            disabled="@Session.DailyHourglassesAdded">
+        <NavIcon For="resources" Size="16" />
+        @(Session.DailyHourglassesAdded ? "Today's Dailies Added" : "Add Today's Dailies")
+    </button>
+
     @* Light dismiss alone left the phone with no way out that was not also a tap on the page: the
        sheet covers the bar it was opened from, so the only "outside" left to tap is the collection
        grid. A named way to close it, at the bottom where the thumb already is. Hidden at desk,

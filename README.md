@@ -178,6 +178,12 @@ one place that then asks what you meant:
   matching nothing, a list not in number order: each comes back as a slot that was not recognised and
   is left out. Nothing is applied without being shown, marking cards as *not* owned is off until
   asked for, and the whole import is one undo step
+- **The same picture imported twice is caught.** A logged opening carries its pack and its cards
+  and so does a reading, so the two are compared &mdash; against the pack log, and against the rest
+  of the batch. It warns rather than refuses: three common slots draw from a pool in the low tens,
+  so over a few hundred packs of one booster a genuinely identical hand is percentage points rather
+  than nothing, and the date of the earlier one is named so you can settle it. Card identity rather
+  than pixels, because a file hash would miss a re-crop or a second shot of the same still screen
 - **Only a card's window is fingerprinted** — everything but the outer frame and the bottom sixth —
   because a card on screen is not its artwork file. The game draws a gold flair border over any card
   held ten times or more and prints a copy-count badge across the bottom. Measured on a real

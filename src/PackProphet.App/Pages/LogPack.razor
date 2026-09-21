@@ -85,191 +85,226 @@ else if (_pack is null)
            it works: the game has just shown you the five cards, and the cards themselves say which
            pack they came out of — so neither the pack nor the five taps are needed.
 
-           A disclosure rather than the whole screen, because picking a pack by hand always works and
-           this does not: a set released since the last fingerprint refresh cannot be recognised. *@
-        <details class="mb-3" open="@_shotsOpen">
-            <summary class="small text-body-secondary">Read It Off a Screenshot Instead</summary>
-            <div class="pt-2">
-                <ShotImport @ref="_shots" Group="pack" Choices="@ShotChoices">
-                    <Intro>
-                        Screenshot the <strong>Opening Results</strong> screen, with all five cards
-                        showing. The cards say which pack it was.
-                    </Intro>
-                    <Actions Context="reading">
-                        @{
-                            var guess = PackIdentifier.Identify(Session.Index, reading);
-                        }
+           A button rather than a disclosure. It is folded away for the same reason it always was —
+           picking a pack by hand always works and this does not, since a set released since the
+           last fingerprint refresh cannot be recognised — but a summary in secondary text reads as
+           a footnote about the page, and this is the fastest way to use it. The panel is the same
+           panel; only the thing that opens it changed.
 
-                        @if (guess.Note is not null)
-                        {
-                            <Notice Severity="Notice.Level.Warning">@guess.Note</Notice>
-                        }
+           Still not the whole screen, and still not the default: the grid under it has to be the
+           first thing on the page for anyone whose set is too new to be read. *@
+        <button type="button" class="shot-open @(_shotsOpen ? "on" : "")"
+                aria-expanded="@Aria.Flag(_shotsOpen)" aria-controls="log-shots"
+                @onclick="() => _shotsOpen = !_shotsOpen">
+            @* A camera, because the thing being asked for is a picture. Drawn here rather than in
+               NavIcon, which holds the marks the two navs share and nothing else. *@
+            <span class="ico" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="17" height="17" focusable="false">
+                    <path d="M1.6 4.8h2.6l1.1-1.6h5.4l1.1 1.6h2.6v8H1.6z" fill="none"
+                          stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+                    <circle cx="8" cy="8.6" r="2.5" fill="none" stroke="currentColor"
+                            stroke-width="1.5" />
+                </svg>
+            </span>
+            Read It Off a Screenshot
+        </button>
 
-                        @if (guess.PackKey is not null)
-                        {
-                            <div class="d-flex gap-2 flex-wrap">
-                                <button class="btn btn-primary" aria-live="polite"
-                                        title="@AdoptWarning"
-                                        @onclick="() => AdoptShot(reading, guess.PackKey)">
-                                    @if (Confirming(reading, guess.PackKey))
-                                    {
-                                        <text>Really? Other screenshots will be deleted.</text>
-                                    }
-                                    else
-                                    {
-                                        <text>
-                                            Open @guess.PackKey.Split(':')[1] with these
-                                            @reading.NamedCount @Fmt.S(reading.NamedCount, "card")
-                                        </text>
-                                    }
-                                </button>
+        @* Hidden rather than unmounted. The readings are expensive -- twenty pictures is a minute
+           of work -- and a panel that is torn down when it folds away would lose every one of them
+           to a mis-tap on the button that folded it. `hidden` takes the whole panel out of the
+           tab order and out of the accessibility tree, which is the part that matters; keeping the
+           markup is what makes closing it survivable. *@
+        <div class="shot-panel" id="log-shots" hidden="@(!_shotsOpen)">
+            <ShotImport @ref="_shots" Group="pack" Choices="@ShotChoices">
+                <Intro>
+                    Screenshot the <strong>Opening Results</strong> screen, with all five cards
+                    showing. The cards say which pack it was.
+                </Intro>
+                <Actions Context="reading">
+                    @{
+                        var guess = PackIdentifier.Identify(Session.Index, reading);
+                    }
 
-                                @* The batch button's counterpart for one picture: log it where it
-                                   stands, without the trip through the picker. The button above is
-                                   the one that opens the pack in the grid so the cards can be
-                                   checked first, which is worth offering and not worth forcing —
-                                   one pack was the case that had no way to skip it.
+                    @if (guess.Note is not null)
+                    {
+                        <Notice Severity="Notice.Level.Warning">@guess.Note</Notice>
+                    }
 
-                                   Only while this is the only picture. Over a batch it would log
-                                   one reading and clear the rest with it, which is what the
-                                   All-Pictures button exists to avoid. *@
-                                @if (OnlyPicture)
+                    @* Already logged, by the only evidence there is: same pack, same cards.
+                       Said next to the buttons rather than only at the commit, because the two
+                       routes out of this block skip the batch gate -- opening the pack in the
+                       picker goes on to the picker's own commit, and the one-picture button is
+                       a single press away from a row in the log. *@
+                    @if (guess.PackKey is { } identified
+                         && RepeatNote(reading, identified) is { } repeat)
+                    {
+                        <Notice Severity="Notice.Level.Warning">@repeat</Notice>
+                    }
+
+                    @if (guess.PackKey is not null)
+                    {
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-primary" aria-live="polite"
+                                    title="@AdoptWarning"
+                                    @onclick="() => AdoptShot(reading, guess.PackKey)">
+                                @if (Confirming(reading, guess.PackKey))
                                 {
-                                    <button id="log-one" class="btn btn-outline-primary"
-                                            disabled="@Busy.IsBusy"
-                                            @onclick="() => LogOne(reading)">
-                                        Log It Now
-                                    </button>
+                                    <text>Really? Other screenshots will be deleted.</text>
                                 }
-                            </div>
+                                else
+                                {
+                                    <text>
+                                        Open @guess.PackKey.Split(':')[1] with these
+                                        @reading.NamedCount @Fmt.S(reading.NamedCount, "card")
+                                    </text>
+                                }
+                            </button>
 
-                            @if (OnlyPicture && _bulkMiscount is { } query)
+                            @* The batch button's counterpart for one picture: log it where it
+                               stands, without the trip through the picker. The button above is
+                               the one that opens the pack in the grid so the cards can be
+                               checked first, which is worth offering and not worth forcing —
+                               one pack was the case that had no way to skip it.
+
+                               Only while this is the only picture. Over a batch it would log
+                               one reading and clear the rest with it, which is what the
+                               All-Pictures button exists to avoid. *@
+                            @if (OnlyPicture)
                             {
-                                <Notice Severity="Notice.Level.Warning" Dense="true" Class="mt-2">
+                                <button id="log-one" class="btn btn-outline-primary"
+                                        disabled="@Busy.IsBusy"
+                                        @onclick="() => LogOne(reading)">
+                                    Log It Now
+                                </button>
+                            }
+                        </div>
+
+                        @if (OnlyPicture && _bulkQuery is { } query)
+                        {
+                            <Notice Severity="Notice.Level.Warning" Dense="true" Class="mt-2">
+                                @query
+                                <button class="btn btn-sm btn-warning ms-2 py-0"
+                                        disabled="@Busy.IsBusy" @onclick="LogAllAnyway">
+                                    Log It Anyway
+                                </button>
+                            </Notice>
+                        }
+                    }
+                    else if (guess.Candidates.Count > 1)
+                    {
+                        @* The cards narrowed it and could not finish. Offering the shortlist is
+                           the whole of what is left to ask, and it is a tap rather than a hunt
+                           through the picker. *@
+                        <p class="small mb-2">Which pack was it?</p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            @foreach (var candidate in guess.Candidates)
+                            {
+                                var pack = candidate;
+                                <button class="btn btn-sm btn-outline-primary" aria-live="polite"
+                                        title="@AdoptWarning"
+                                        @onclick="() => AdoptShot(reading, pack)">
+                                    @(Confirming(reading, pack)
+                                        ? "Really? Other screenshots will be deleted."
+                                        : pack.Split(':')[1])
+                                </button>
+                            }
+                        </div>
+                    }
+                </Actions>
+
+                @* Every picture at once, which is how packs are actually opened: in a run of
+                   ten, screenshotted as you go, imported in one sitting. Without this the only
+                   route was the per-picture button above, and that one takes you into the
+                   picker for a single pack — which unmounts this whole control and loses the
+                   other nine readings with it. Ten packs meant ten uploads.
+
+                   Only offered from two pictures up. Over a single reading it would be a second
+                   button saying the same thing as the one above it, minus the chance to check
+                   the cards in the picker first. *@
+                <Together Context="readings">
+                    @if (readings.Count > 1)
+                    {
+                        var plan = Plan(readings);
+
+                        @* Padded below as well as above. This block ends in a button, and its
+                           bottom edge was sitting against whatever the page put next -- the
+                           logged notice, or the pack grid once the disclosure closes -- so the
+                           button read as belonging to the thing under it. *@
+                        <section class="mt-3 border-top pt-3 pb-2">
+                            <h2 class="sub-head">All @readings.Count Pictures</h2>
+
+                            @if (plan.Unidentified > 0)
+                            {
+                                <Notice Severity="Notice.Level.Warning" Dense="true">
+                                    @plan.Unidentified of these pictures
+                                    @(plan.Unidentified == 1 ? "does" : "do") not say which pack
+                                    @(plan.Unidentified == 1 ? "it is" : "they are"): too few
+                                    cards named, or cards that fit more than one pack. Use that
+                                    picture's own button above, or name its slots first.
+                                </Notice>
+                            }
+
+                            @if (_bulkQuery is { } query)
+                            {
+                                <Notice Severity="Notice.Level.Warning" Dense="true">
                                     @query
                                     <button class="btn btn-sm btn-warning ms-2 py-0"
                                             disabled="@Busy.IsBusy" @onclick="LogAllAnyway">
-                                        Log It Anyway
+                                        Log @plan.Ready.Count Anyway
                                     </button>
                                 </Notice>
                             }
-                        }
-                        else if (guess.Candidates.Count > 1)
-                        {
-                            @* The cards narrowed it and could not finish. Offering the shortlist is
-                               the whole of what is left to ask, and it is a tap rather than a hunt
-                               through the picker. *@
-                            <p class="small mb-2">Which pack was it?</p>
-                            <div class="d-flex gap-2 flex-wrap">
-                                @foreach (var candidate in guess.Candidates)
-                                {
-                                    var pack = candidate;
-                                    <button class="btn btn-sm btn-outline-primary" aria-live="polite"
-                                            title="@AdoptWarning"
-                                            @onclick="() => AdoptShot(reading, pack)">
-                                        @(Confirming(reading, pack)
-                                            ? "Really? Other screenshots will be deleted."
-                                            : pack.Split(':')[1])
-                                    </button>
-                                }
-                            </div>
-                        }
-                    </Actions>
 
-                    @* Every picture at once, which is how packs are actually opened: in a run of
-                       ten, screenshotted as you go, imported in one sitting. Without this the only
-                       route was the per-picture button above, and that one takes you into the
-                       picker for a single pack — which unmounts this whole control and loses the
-                       other nine readings with it. Ten packs meant ten uploads.
+                            @if (plan.Ready.Count > 0)
+                            {
+                                <button id="log-all" class="btn btn-primary" disabled="@Busy.IsBusy"
+                                        @onclick="() => LogAll(plan)">
+                                    Log @plan.Ready.Count @Fmt.S(plan.Ready.Count, "pack")
+                                    (@plan.Cards @Fmt.S(plan.Cards, "card") in all)
+                                </button>
 
-                       Only offered from two pictures up. Over a single reading it would be a second
-                       button saying the same thing as the one above it, minus the chance to check
-                       the cards in the picker first. *@
-                    <Together Context="readings">
-                        @if (readings.Count > 1)
-                        {
-                            var plan = Plan(readings);
+                                @* Named so it can be checked before it is pressed. Twelve packs
+                                   logged in one press is twelve events and sixty cards, and
+                                   "which packs" is the thing you would want to have seen. *@
+                                <p class="small text-body-secondary mb-0 mt-2">
+                                    @string.Join(", ", plan.Ready
+                                        .GroupBy(r => r.Pack.Split(':')[1])
+                                        .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
+                                        .Select(g => g.Count() > 1 ? $"{g.Key} ×{g.Count()}" : g.Key))
+                                </p>
+                            }
+                        </section>
+                    }
+                </Together>
+            </ShotImport>
 
-                            @* Padded below as well as above. This block ends in a button, and its
-                               bottom edge was sitting against whatever the page put next -- the
-                               logged notice, or the pack grid once the disclosure closes -- so the
-                               button read as belonging to the thing under it. *@
-                            <section class="mt-3 border-top pt-3 pb-2">
-                                <h2 class="sub-head">All @readings.Count Pictures</h2>
-
-                                @if (plan.Unidentified > 0)
-                                {
-                                    <Notice Severity="Notice.Level.Warning" Dense="true">
-                                        @plan.Unidentified of these pictures
-                                        @(plan.Unidentified == 1 ? "does" : "do") not say which pack
-                                        @(plan.Unidentified == 1 ? "it is" : "they are"): too few
-                                        cards named, or cards that fit more than one pack. Use that
-                                        picture's own button above, or name its slots first.
-                                    </Notice>
-                                }
-
-                                @if (_bulkMiscount is { } query)
-                                {
-                                    <Notice Severity="Notice.Level.Warning" Dense="true">
-                                        @query
-                                        <button class="btn btn-sm btn-warning ms-2 py-0"
-                                                disabled="@Busy.IsBusy" @onclick="LogAllAnyway">
-                                            Log @plan.Ready.Count Anyway
-                                        </button>
-                                    </Notice>
-                                }
-
-                                @if (plan.Ready.Count > 0)
-                                {
-                                    <button id="log-all" class="btn btn-primary" disabled="@Busy.IsBusy"
-                                            @onclick="() => LogAll(plan)">
-                                        Log @plan.Ready.Count @Fmt.S(plan.Ready.Count, "pack")
-                                        (@plan.Cards @Fmt.S(plan.Cards, "card") in all)
-                                    </button>
-
-                                    @* Named so it can be checked before it is pressed. Twelve packs
-                                       logged in one press is twelve events and sixty cards, and
-                                       "which packs" is the thing you would want to have seen. *@
-                                    <p class="small text-body-secondary mb-0 mt-2">
-                                        @string.Join(", ", plan.Ready
-                                            .GroupBy(r => r.Pack.Split(':')[1])
-                                            .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
-                                            .Select(g => g.Count() > 1 ? $"{g.Key} ×{g.Count()}" : g.Key))
-                                    </p>
-                                }
-                            </section>
-                        }
-                    </Together>
-                </ShotImport>
-
-                @* Outside the import, because logging a batch clears it: the readings are spent and
-                   the button that consumed them must not still be there, so the one thing that has
-                   to outlive them is the account of what happened. *@
-                @if (_bulkLogged is { } done)
-                {
-                    <Notice Severity="Notice.Level.Success" Class="mt-3">
-                        Logged @done.Packs @Fmt.S(done.Packs, "pack")
-                        and @done.Cards @Fmt.S(done.Cards, "card").
-                        @if (_paid.Hourglasses > 0)
-                        {
-                            <span>
-                                @_paid.Hourglasses pack @Fmt.S(_paid.Hourglasses, "hourglass") spent
-                                on @_paid.FromHourglasses of them.
-                            </span>
-                        }
-                        @if (done.Capped.Count > 0)
-                        {
-                            <span class="text-danger-emphasis">
-                                @string.Join(", ", done.Capped) hit the @GameRules.PackPointsCap
-                                pack-point cap, so further packs of
-                                @(done.Capped.Count == 1 ? "that set" : "those sets") earn nothing.
-                                Spend before opening.
-                            </span>
-                        }
-                    </Notice>
-                }
-            </div>
-        </details>
+            @* Outside the import, because logging a batch clears it: the readings are spent and
+               the button that consumed them must not still be there, so the one thing that has
+               to outlive them is the account of what happened. *@
+            @if (_bulkLogged is { } done)
+            {
+                <Notice Severity="Notice.Level.Success" Class="mt-3">
+                    Logged @done.Packs @Fmt.S(done.Packs, "pack")
+                    and @done.Cards @Fmt.S(done.Cards, "card").
+                    @if (_paid.Hourglasses > 0)
+                    {
+                        <span>
+                            @_paid.Hourglasses pack @Fmt.S(_paid.Hourglasses, "hourglass") spent
+                            on @_paid.FromHourglasses of them.
+                        </span>
+                    }
+                    @if (done.Capped.Count > 0)
+                    {
+                        <span class="text-danger-emphasis">
+                            @string.Join(", ", done.Capped) hit the @GameRules.PackPointsCap
+                            pack-point cap, so further packs of
+                            @(done.Capped.Count == 1 ? "that set" : "those sets") earn nothing.
+                            Spend before opening.
+                        </span>
+                    }
+                </Notice>
+            }
+        </div>
 
         @* One flat grid rather than a group per set. The per-set headings cost more vertical space
            than the tiles they labelled — eleven sets meant roughly thirty rem of headings and
@@ -1104,8 +1139,16 @@ else
     /// <summary>What the last batch came to, once one has been logged.</summary>
     private (int Packs, int Cards, IReadOnlyList<string> Capped)? _bulkLogged;
 
-    /// <summary>The batch's miscount question, once it has been asked. Same one-press-then-confirm as a single pack.</summary>
-    private string? _bulkMiscount;
+    /// <summary>
+    /// The question raised by pressing Log, once it has been asked. Same one-press-then-confirm
+    /// as a single pack.
+    ///
+    /// One field for both questions the batch can raise — a picture holding a count its pack
+    /// cannot, and a picture repeating an opening already recorded. Two gates would mean two
+    /// presses to get past two problems with one batch, which is a dialog to click through
+    /// rather than a thing to read.
+    /// </summary>
+    private string? _bulkQuery;
 
     /// <summary>One picture's worth of a batch: the pack its cards say it is, and those cards.</summary>
     private readonly record struct Opened(string Pack, IReadOnlyList<PocketCard> Cards);
@@ -1113,8 +1156,13 @@ else
     /// <param name="Ready">Pictures that name a pack, in the order they were read.</param>
     /// <param name="Unidentified">Pictures whose cards do not settle on one pack. Left for the per-picture buttons.</param>
     /// <param name="Short">Of the ready ones, how many hold a number of cards their pack cannot.</param>
+    /// <param name="Repeats">
+    /// Of the ready ones, how many repeat an opening that is already recorded -- in the pack log,
+    /// or earlier in this same batch. See <see cref="RepeatOpenings"/> for why that is a warning
+    /// and not a refusal.
+    /// </param>
     private readonly record struct Batch(
-        IReadOnlyList<Opened> Ready, int Unidentified, int Short)
+        IReadOnlyList<Opened> Ready, int Unidentified, int Short, int Repeats)
     {
         public int Cards => Ready.Sum(r => r.Cards.Count);
     }
@@ -1132,6 +1180,12 @@ else
         var ready = new List<Opened>();
         var unidentified = 0;
         var shortOfAFullPack = 0;
+        var repeats = 0;
+
+        // Pictures already accounted for in THIS batch, so the second copy of one picture is
+        // caught as well as a picture that repeats the log. Choosing the same folder twice puts
+        // both cases on screen at once, and only the log knows about one of them.
+        var seen = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var reading in readings)
         {
@@ -1146,39 +1200,108 @@ else
 
             ready.Add(new Opened(pack, cards));
 
+            var parts = pack.Split(':');
+            var keys = cards.Select(c => c.OwnershipKey).ToArray();
+
+            if (!seen.Add(RepeatOpenings.Fingerprint(parts[0], parts[1], keys))
+                || RepeatOpenings.Match(Session.Profile.PackLog, pack, keys) is not null)
+            {
+                repeats++;
+            }
+
             var sizes = Session.Odds is null
                 ? (IReadOnlySet<int>)new HashSet<int>()
-                : Session.Odds.Rates.CardCounts(pack.Split(':')[0]);
+                : Session.Odds.Rates.CardCounts(parts[0]);
 
             if (sizes.Count > 0 && !sizes.Contains(cards.Length)) shortOfAFullPack++;
         }
 
-        return new Batch(ready, unidentified, shortOfAFullPack);
+        return new Batch(ready, unidentified, shortOfAFullPack, repeats);
     }
 
     /// <summary>
-    /// Asked once, like the single-pack commit: a batch where some picture holds the wrong number
-    /// of cards is worth a second press, because the odds check on History compares what was
-    /// recorded against what the model predicted and a miscount there reads as the model being
-    /// wrong. Asked once for the batch rather than once per picture — twelve identical questions
-    /// is a dialog to click through rather than a question to answer.
+    /// Asked once, like the single-pack commit. Two things are worth a second press and both go
+    /// through this one gate.
+    ///
+    /// A picture holding a count its pack cannot, because the odds check on History compares what
+    /// was recorded against what the model predicted and a miscount there reads as the model being
+    /// wrong. And a picture repeating an opening already recorded, which is what importing the
+    /// same screenshot twice looks like from here.
+    ///
+    /// Asked once for the batch rather than once per picture — twelve identical questions is a
+    /// dialog to click through rather than a question to answer.
     /// </summary>
     private Task LogAll(Batch plan)
     {
         if (plan.Ready.Count == 0) return Task.CompletedTask;
 
-        if (_bulkMiscount is null && plan.Short > 0)
+        if (_bulkQuery is null && Query(plan) is { } question)
         {
-            _bulkMiscount =
-                $"{plan.Short} of these {Fmt.S(plan.Short, "picture")} "
-                + $"{(plan.Short == 1 ? "holds" : "hold")} a number of cards that pack cannot. "
-                + "Log them anyway if that is what you meant, but the odds check on History "
-                + "compares what you record against what the model predicted, so a miscount there "
-                + "looks like the model being wrong.";
+            _bulkQuery = question;
             return Task.CompletedTask;
         }
 
         return LogAllCore(plan);
+    }
+
+    /// <summary>
+    /// What to ask before logging this batch, or null when there is nothing to ask.
+    ///
+    /// Repeats first when both apply. A batch that is already recorded is a batch that should
+    /// probably not be logged at all, where a miscount is a batch that should be logged after a
+    /// second look — so the stronger reason to stop leads.
+    /// </summary>
+    private string? Query(Batch plan)
+    {
+        var said = new List<string>();
+
+        if (plan.Repeats > 0)
+        {
+            said.Add(
+                $"{plan.Repeats} of these pictures "
+                + $"{(plan.Repeats == 1 ? "records a pack" : "record packs")} already in your "
+                + "history: same pack, same cards. Log "
+                + $"{(plan.Repeats == 1 ? "it" : "them")} anyway if you really opened "
+                + $"{(plan.Repeats == 1 ? "it" : "them")} twice.");
+        }
+
+        if (plan.Short > 0)
+        {
+            said.Add(
+                $"{plan.Short} of these {Fmt.S(plan.Short, "picture")} "
+                + $"{(plan.Short == 1 ? "holds" : "hold")} a number of cards that pack cannot. "
+                + "Log them anyway if that is what you meant, but the odds check on History "
+                + "compares what you record against what the model predicted, so a miscount there "
+                + "looks like the model being wrong.");
+        }
+
+        return said.Count == 0 ? null : string.Join(" ", said);
+    }
+
+    /// <summary>
+    /// The sentence to put beside one picture's own buttons, or null where that picture is not a
+    /// repeat of anything.
+    ///
+    /// Said here as well as at the commit, because this is where the two routes that bypass the
+    /// batch button are: opening the pack in the picker, and logging this one picture where it
+    /// stands. It names the date, which is the part that settles it — a match from four minutes
+    /// ago and a match from March are the same arithmetic and very different news.
+    /// </summary>
+    private string? RepeatNote(ShotReading reading, string pack)
+    {
+        var keys = reading.Matches
+            .Where(m => m.Source != MatchSource.GridPosition)
+            .Select(m => m.Card.OwnershipKey)
+            .ToArray();
+
+        if (keys.Length == 0) return null;
+
+        var earlier = RepeatOpenings.Match(Session.Profile.PackLog, pack, keys);
+        if (earlier is null) return null;
+
+        return $"You already logged a {pack.Split(':')[1]} pack with exactly these cards on "
+               + $"{earlier.At.ToLocalTime():d MMM yyyy}. Log it anyway if you really opened it "
+               + "twice.";
     }
 
     /// <summary>
@@ -1277,7 +1400,7 @@ else
 
         _bulkLogged = (opened.Count, plan.Cards, capped);
         _paid = paid;
-        _bulkMiscount = null;
+        _bulkQuery = null;
 
         // The batch is spent. Left on screen it is a button that opens every one of these packs a
         // second time, and the summary above says what happened without it.

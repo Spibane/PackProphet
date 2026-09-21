@@ -4431,6 +4431,41 @@ img[data-state="loading"] ~ .art-wait {
 .card-line.roomy:not(.head) .ty-stack.dual .e { width: 1.05rem; height: 1.05rem; }
 .card-line.roomy:not(.head) .ty-stack.dual .ty-name { font-size: .8rem; }
 
+/* The way into the screenshot reader on the log screen.
+   ==================================================================================
+   It was a <summary> in secondary text, which is the typography of a footnote: something the page
+   mentions in case you want it. The reader is the fast route -- the game has just shown you the
+   five cards -- so it is drawn as the offer it is. Same panel behind it; only the handle changed.
+
+   Full width rather than sized to its words, for the same reason .nav-more-search is: it is an
+   action above a grid of destinations, and a button the width of its label reads as one more tile
+   that wandered out of the grid. */
+.shot-open {
+    display: flex; align-items: center; gap: .55rem;
+    width: 100%; margin-bottom: .75rem;
+    padding: .7rem .85rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r);
+    background: var(--bs-tertiary-bg); color: var(--bs-body-color);
+    text-align: left; font-size: .95rem; font-weight: 600;
+}
+/* The one tinted thing on the button. The label carries the meaning and the accent points at it;
+   a tinted label as well would make the whole control compete with the commit button downstream. */
+.shot-open .ico { display: flex; flex: none; color: var(--bs-primary); }
+.shot-open:hover { background: var(--bs-secondary-bg); }
+.shot-open:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
+/* Open. Said on the button as well as by the panel appearing, because on a phone the panel's top
+   edge is the only part of it on screen and the two need to read as one thing. */
+.shot-open.on { border-color: var(--bs-primary); border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0; }
+.shot-panel {
+    margin-bottom: 1rem; padding: .85rem;
+    border: 1px solid var(--bs-primary); border-top: 0;
+    border-radius: 0 0 var(--pp-r) var(--pp-r);
+}
+/* Folded away. Spelled out rather than left to the UA sheet, because a later rule in this file
+   that gives .shot-panel a display would silently beat it and put the panel back. */
+.shot-panel[hidden] { display: none; }
+
 /* pack picker and table */
 
 /* Column count is chosen by the user, as in the collection grid, rather than fixed by an
@@ -6595,6 +6630,31 @@ tr.row-best {
 .nav-more-search .ico { display: flex; flex: none; }
 .nav-more-search:hover { background: var(--bs-secondary-bg); color: var(--bs-body-color); }
 .nav-more-search:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
+/* The day's hourglasses, credited from wherever you happen to be.
+   ==================================================================================
+   Across both of the grid's columns, hard under the last row of it: .25rem is the grid's own
+   gap, so it reads as the foot of that block rather than as a stray control floating between
+   the links and the Close button.
+
+   Tinted like .nav-more-search at the other end of the sheet, which is the sheet's one way of
+   saying "this does something" as against "this goes somewhere". Centred, unlike the links,
+   because it has no destination to line its label up with. */
+.nav-more-daily {
+    display: flex; align-items: center; justify-content: center; gap: .55rem;
+    width: 100%; margin-top: .25rem;
+    padding: .7rem .75rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r);
+    background: var(--bs-tertiary-bg); color: var(--bs-body-color);
+    font-size: .95rem; font-weight: 600;
+}
+.nav-more-daily > svg { flex: none; color: var(--bs-primary); }
+.nav-more-daily:hover:not(:disabled) { background: var(--bs-secondary-bg); }
+.nav-more-daily:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+/* Spent for the day. Still readable -- it is the thing telling you the day is already credited,
+   so it has to be legible rather than merely present. */
+.nav-more-daily:disabled { color: var(--bs-secondary-color); background: var(--bs-secondary-bg); }
+.nav-more-daily:disabled > svg { color: var(--bs-secondary-color); }
 
 /* Named way out of the sheet. On a phone the sheet is anchored to the bottom edge, over the tab
    bar that opened it, so the opener cannot be tapped again to toggle it shut -- and the only

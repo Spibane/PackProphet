@@ -73,15 +73,16 @@ else
                             aria-label="Hide the explanation">&times;</button>
                 </p>
             }
-            <p class="text-body-secondary">
-                Tap the @GameRules.WonderPickCardsShown cards you were offered. You get
-                <strong>one at random</strong>, so the only question is whether to spend at all.
-            </p>
-            <p class="text-body-secondary small">
-                Stamina caps at @GameRules.StaminaCap, one back every
-                @GameRules.StaminaRegen.TotalHours hours.
-                3&#9733;, Crown and Shiny never appear, so the price stops at 4.
-            </p>
+            @* No paragraph restating the game here. Two used to: how a Wonder Pick works, and
+               what stamina costs and caps at. Both are true and neither is about this page --
+               the reader has the game open beside them and has just been shown all of it. What
+               this page adds is the bar, which the note above says and nothing else has to
+               repeat.
+
+               The one instruction in them, "tap the five cards you were offered", is not lost:
+               the picker below is headed "Add Card 1 of 5" and the empty boxes each read "tap a
+               card below", both of which say it at the moment it applies rather than above the
+               fold on arrival. *@
         }
         else
         {

@@ -4466,6 +4466,56 @@ img[data-state="loading"] ~ .art-wait {
    that gives .shot-panel a display would silently beat it and put the panel back. */
 .shot-panel[hidden] { display: none; }
 
+/* The promo list behind "Log a Promo".
+   ==================================================================================
+   Rows and not tiles. Ten cards is a list to read down rather than a grid to scan, the count and
+   the way back from a mis-tap both need somewhere to sit, and the thing being matched is a card
+   you have just been handed -- which a thumbnail and a name settle as well as full art would.
+
+   It borrows .shot-panel for its frame, since the two controls above the grid are a pair and a
+   second frame of its own would make them look like two unrelated things. */
+.promo-list { list-style: none; margin: 0 0 .6rem; padding: 0; display: grid; gap: .3rem; }
+.promo-row { display: flex; align-items: stretch; gap: .3rem; min-inline-size: 0; }
+.promo-row .take {
+    flex: 1 1 auto; min-inline-size: 0;
+    display: flex; align-items: center; gap: .6rem;
+    padding: .4rem .55rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r);
+    background: var(--bs-body-bg); color: var(--bs-body-color); text-align: left;
+}
+.promo-row .take:hover { background: var(--bs-secondary-bg); }
+.promo-row .take:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+.promo-row .thumb {
+    flex: none; inline-size: 30px; block-size: 42px;
+    border-radius: var(--pp-r-xs);
+    --art-fit: cover; --pp-art-mark: var(--pp-art-mark-sm); --pp-art-mark-size: 72%;
+}
+.promo-row .nm { display: flex; flex-direction: column; min-inline-size: 0; }
+.promo-row .nm strong {
+    font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.promo-row .nm .sub {
+    font-size: .78rem; color: var(--bs-secondary-color); font-variant-numeric: tabular-nums;
+}
+/* How many you hold, at the far end where a column of them lines up. Zero is drawn faintly
+   rather than left blank: a blank cell reads as a row that failed rather than as none held. */
+.promo-row .have {
+    margin-inline-start: auto; flex: none;
+    min-inline-size: 1.6rem; text-align: end;
+    font-variant-numeric: tabular-nums; font-weight: 600;
+    color: var(--bs-secondary-color);
+}
+.promo-row.held .take { border-color: color-mix(in srgb, var(--bs-primary) 45%, var(--bs-border-color)); }
+.promo-row.held .have { color: var(--bs-body-color); }
+.promo-row .drop {
+    flex: none; inline-size: 2.4rem;
+    border: 1px solid var(--bs-border-color); border-radius: var(--pp-r);
+    background: var(--bs-body-bg); color: var(--bs-secondary-color);
+    font-size: 1.1rem; line-height: 1;
+}
+.promo-row .drop:hover { background: var(--bs-secondary-bg); color: var(--bs-body-color); }
+.promo-row .drop:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+
 /* pack picker and table */
 
 /* Column count is chosen by the user, as in the collection grid, rather than fixed by an

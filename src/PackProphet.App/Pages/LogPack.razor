@@ -95,7 +95,7 @@ else if (_pack is null)
            first thing on the page for anyone whose set is too new to be read. *@
         <button type="button" class="shot-open @(_shotsOpen ? "on" : "")"
                 aria-expanded="@Aria.Flag(_shotsOpen)" aria-controls="log-shots"
-                @onclick="() => _shotsOpen = !_shotsOpen">
+                @onclick="ToggleShots">
             @* A camera, because the thing being asked for is a picture. Drawn here rather than in
                NavIcon, which holds the marks the two navs share and nothing else. *@
             <span class="ico" aria-hidden="true">
@@ -305,6 +305,91 @@ else if (_pack is null)
                 </Notice>
             }
         </div>
+
+        @* The other thing a player acquires, which is not a pack and was not logged anywhere.
+           ==================================================================================
+           A promo arrives one at a time -- a Wonder Pick event, a mission, a campaign -- so there
+           is no pack to log and a screenshot saves nothing: the finding IS the work. Recording one
+           meant the collection, filtered to the promo set, scrolled past ninety cards you already
+           have, for one tap.
+
+           A button rather than tiles in the picker below. The picker is packs you decide to open
+           and a promo is not one of those, so a promo sitting among the boosters would be offering
+           a choice the game does not have.
+
+           See RecentPromos for why this is the ten newest rather than the ones currently on offer:
+           nothing in either dataset carries an event calendar, and card numbers are issued in
+           release order, so recency is exact where availability is not knowable at all. *@
+        @if (_promoSet is not null)
+        {
+            <button type="button" class="shot-open @(_promosOpen ? "on" : "")"
+                    aria-expanded="@Aria.Flag(_promosOpen)" aria-controls="log-promos"
+                    @onclick="TogglePromos">
+                @* A ticket, because a promo is handed to you rather than opened. *@
+                <span class="ico" aria-hidden="true">
+                    <svg viewBox="0 0 16 16" width="17" height="17" focusable="false">
+                        <path d="M1.7 4.2h12.6v2.4a1.4 1.4 0 0 0 0 2.8v2.4H1.7V9.4a1.4 1.4 0 0 0 0-2.8z"
+                              fill="none" stroke="currentColor" stroke-width="1.5"
+                              stroke-linejoin="round" />
+                        <path d="M9.4 4.2v1.3M9.4 7.3v1.4M9.4 10.5v1.3" fill="none"
+                              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                    </svg>
+                </span>
+                Log a Promo
+            </button>
+
+            <div class="shot-panel promo-panel" id="log-promos" hidden="@(!_promosOpen)">
+                @* Said plainly, because the list looks like a list of what is on offer and is not
+                   one. The game publishes no event calendar and neither dataset carries one, so
+                   the honest claim is the one about order. *@
+                <p class="small text-body-secondary">
+                    The @RecentPromos.Window newest in
+                    @Session.Sets.DisplayName(_promoSet), newest first. This is what arrived most
+                    recently, not what is still being handed out — the game publishes no event
+                    list.
+                </p>
+
+                <ul class="promo-list">
+                    @foreach (var card in _promos)
+                    {
+                        var promo = card;
+                        var held = Session.CountOf(promo);
+
+                        <li class="promo-row @(held > 0 ? "held" : "")">
+                            @* One tap is one copy. Not a checkbox and not a toggle: a promo can be
+                               earned again -- a repeatable mission, an event run twice -- so the
+                               act is "add one", and pressing it four times is four copies. *@
+                            <button class="take" @onclick="() => TakePromo(promo)"
+                                    aria-label="@AddLabel(promo, held)">
+                                <span class="thumb" style="@promo.ArtVars" aria-hidden="true"></span>
+                                <span class="nm">
+                                    <strong>@promo.Name</strong>
+                                    <span class="sub">@promo.Set @promo.Number</span>
+                                </span>
+                                <span class="have" aria-hidden="true">@held</span>
+                            </button>
+
+                            @* The way back from a mis-tap. Ctrl+Z undoes it too, and this page is
+                               used on a phone beside the game, where there is no Ctrl+Z. Only once
+                               there is a copy to take back. *@
+                            @if (held > 0)
+                            {
+                                <button class="drop" @onclick="() => DropPromo(promo)"
+                                        aria-label="@($"Remove a copy of {promo.Name}")">&minus;</button>
+                            }
+                        </li>
+                    }
+                </ul>
+
+                @* The escape, for a promo older than the window. Not a failure of the window --
+                   ten is a guess about how often events run -- so it is offered rather than
+                   apologised for. *@
+                <a class="small" href="collection?set=@_promoSet">
+                    Every @Session.Index.BySet[_promoSet].Count in
+                    @Session.Sets.DisplayName(_promoSet)
+                </a>
+            </div>
+        }
 
         @* One flat grid rather than a group per set. The per-set headings cost more vertical space
            than the tiles they labelled — eleven sets meant roughly thirty rem of headings and
@@ -645,6 +730,12 @@ else
             _packs = Session.Index.OpenablePackKeys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
             // Newest series first: that is where packs are actually being opened.
             _series = Session.Sets.Series.LastOrDefault() ?? "A";
+
+            // Resolved once. The set is a fact about the data rather than about the page, and
+            // the list under it is ten cards that only change when a snapshot does -- so
+            // recomputing either on render would be sorting a promo set on every tap.
+            _promoSet = RecentPromos.CurrentSet(Session.Index, Session.Sets);
+            _promos = _promoSet is null ? [] : RecentPromos.Newest(Session.Index, _promoSet);
         }
 
         ApplyQuery();
@@ -773,6 +864,59 @@ else
     /// next render for no reason they could see.
     /// </summary>
     private bool _shotsOpen;
+
+    /// <summary>The promo set being filled, or null where the data has none. See <see cref="RecentPromos"/>.</summary>
+    private string? _promoSet;
+
+    /// <summary>The newest promos in it, newest first. Fixed for the life of the page.</summary>
+    private IReadOnlyList<PocketCard> _promos = [];
+
+    private bool _promosOpen;
+
+    /// <summary>The counterpart of <see cref="TogglePromos"/>, and the same rule.</summary>
+    private void ToggleShots()
+    {
+        _shotsOpen = !_shotsOpen;
+        if (_shotsOpen) _promosOpen = false;
+    }
+
+    /// <summary>
+    /// Opens the promo list, and shuts the screenshot reader if it was open.
+    ///
+    /// One at a time, because both sit above the pack grid and both are tall: two open panels put
+    /// the grid off the bottom of a phone, and they are alternatives rather than steps — you are
+    /// logging a pack or you are logging a promo. Shutting the reader does not cost its readings,
+    /// which are hidden rather than unmounted.
+    /// </summary>
+    private void TogglePromos()
+    {
+        _promosOpen = !_promosOpen;
+        if (_promosOpen) _shotsOpen = false;
+    }
+
+    /// <summary>One more copy of a promo. Not a pack, so nothing else moves.</summary>
+    /// <remarks>
+    /// No <see cref="PackOpenEvent"/>, no pack points, no hourglass. A promo is handed over by an
+    /// event rather than opened, so a row in the pack log would be a pack that was never bought,
+    /// and it would land in the odds check on History as a pack the model has no rates for.
+    /// The collection is the whole of what changes.
+    /// </remarks>
+    private void TakePromo(PocketCard card) =>
+        Session.SetCount(card, Session.CountOf(card) + 1);
+
+    private void DropPromo(PocketCard card) =>
+        Session.SetCount(card, Math.Max(0, Session.CountOf(card) - 1));
+
+    /// <summary>
+    /// What pressing a promo row does, said in full for a screen reader.
+    ///
+    /// The row's own text is the name, the number and a bare figure, which read aloud in order is
+    /// "Absol PROMO-B 94 2" — three facts and no verb. The count is marked aria-hidden and said
+    /// here instead, where it can be a sentence.
+    /// </summary>
+    private static string AddLabel(PocketCard card, int held) =>
+        $"Add a copy of {card.Name}, {card.Set} {card.Number}. "
+        + (held == 0 ? "You have none." : $"You have {held}.");
 
     /// <summary>
     /// The way from a picked pack to this page's own screenshot reader, which lives on the picker

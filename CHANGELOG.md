@@ -226,6 +226,31 @@ until then the minor number tracks the roadmap phase.
   re-compression or a second screenshot of the same still screen, and would need a store that has
   to be synced, migrated and pruned
 
+- **Promos can be logged from `/log`, without the scroll.** A promo arrives one at a time — a
+  Wonder Pick event, a mission, a campaign — so there is no pack to log and a screenshot saves
+  nothing: the finding *is* the work, and it used to mean the collection, filtered to the promo
+  set, scrolled past ninety cards you already have, for one tap. A button beside the screenshot
+  one opens the ten newest in the promo set currently being filled, newest first, one tap per
+  copy. Not tiles in the pack picker: that grid is packs you decide to open, and a promo is not
+  one of those
+- **Newest, which is exact — not live, which is not knowable.** Neither community dataset carries
+  an event calendar: every promo card has a null release date and the promo sets have none either,
+  and the only event listings are editorial web pages. What the data does carry is order, because
+  promo numbers are issued as cards are released — the volumes in both promo sets are strictly
+  monotonic and never overlap, PROMO-B running Vol. 1 at 2–6 through Vol. 12 at 88–92, with the
+  promos belonging to no volume sitting at the numbers matching when they landed. So the panel
+  says what it is showing and never claims those are the ones still on offer
+- **Cards you already own stay on the list, and the volumes are ignored.** A promo can be earned
+  more than once — a repeatable mission, an event run twice — so a row that vanished on the first
+  tap would vanish exactly when the second was needed; the count sits on the row and a minus takes
+  a mis-tap back without a keyboard. Volumes are not used to group it although the data would
+  allow it, because a third of the promos are in none: 34 of PROMO-B's 94 are the Wonder Pick and
+  mission cards, which is precisely what an event hands out
+- **Logging a promo touches the collection and nothing else.** No pack-log row, no pack points, no
+  hourglass. A promo is handed over rather than opened, so a row in the log would be a pack that
+  was never bought, and it would reach the odds check on History as a pack the model has no rates
+  for — the same reason `PromoScopeTests` keeps promos out of the pack ranking
+
 ### v0.7.0 - 2026-09-01
 
 - **Cloud sync, with no account and nothing readable on the server.** One device makes a

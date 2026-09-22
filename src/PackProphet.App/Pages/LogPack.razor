@@ -248,6 +248,32 @@ else if (_pack is null)
                             {
                                 <Notice Severity="Notice.Level.Warning" Dense="true">
                                     @query
+
+                                    @* The usual shape of the problem: nine packs opened in a
+                                       sitting and one picture from yesterday's still in the
+                                       folder. Without this the choice was to log the duplicate
+                                       with the nine or throw all ten away and pick the files
+                                       again -- logging clears the readings either way, so
+                                       "cancel and remove the odd one" was never on offer.
+
+                                       Only when dropping the repeats still leaves something to
+                                       log, and only when there is a repeat to drop. Over a batch
+                                       that is entirely repeats this would be a button that logs
+                                       nothing, and over one with none it says the same as the
+                                       button beside it.
+
+                                       First and primary, because it is the likelier intent: a
+                                       picture that repeats an opening is usually a picture that
+                                       should not be logged. *@
+                                    @if (plan.Repeats > 0 && plan.Repeats < plan.Ready.Count)
+                                    {
+                                        <button id="log-new" class="btn btn-sm btn-primary ms-2 py-0"
+                                                disabled="@Busy.IsBusy" @onclick="LogOnlyNew">
+                                            Log @(plan.Ready.Count - plan.Repeats), Skipping
+                                            @plan.Repeats @Fmt.S(plan.Repeats, "Repeat")
+                                        </button>
+                                    }
+
                                     <button class="btn btn-sm btn-warning ms-2 py-0"
                                             disabled="@Busy.IsBusy" @onclick="LogAllAnyway">
                                         Log @plan.Ready.Count Anyway
@@ -286,6 +312,15 @@ else if (_pack is null)
                 <Notice Severity="Notice.Level.Success" Class="mt-3">
                     Logged @done.Packs @Fmt.S(done.Packs, "pack")
                     and @done.Cards @Fmt.S(done.Cards, "card").
+                    @* Said, because the count is short of the pictures that were on screen and
+                       nothing else on the page explains the difference. A summary reading
+                       "logged 9 packs" over a folder of ten is what makes someone count them. *@
+                    @if (done.Skipped > 0)
+                    {
+                        <span>
+                            @done.Skipped @Fmt.S(done.Skipped, "repeat") left out.
+                        </span>
+                    }
                     @if (_paid.Hourglasses > 0)
                     {
                         <span>
@@ -1281,7 +1316,7 @@ else
     private ShotImport? _shots;
 
     /// <summary>What the last batch came to, once one has been logged.</summary>
-    private (int Packs, int Cards, IReadOnlyList<string> Capped)? _bulkLogged;
+    private (int Packs, int Cards, IReadOnlyList<string> Capped, int Skipped)? _bulkLogged;
 
     /// <summary>
     /// The question raised by pressing Log, once it has been asked. Same one-press-then-confirm
@@ -1294,21 +1329,44 @@ else
     /// </summary>
     private string? _bulkQuery;
 
-    /// <summary>One picture's worth of a batch: the pack its cards say it is, and those cards.</summary>
-    private readonly record struct Opened(string Pack, IReadOnlyList<PocketCard> Cards);
+    /// <summary>
+    /// One picture's worth of a batch: the pack its cards say it is, those cards, and what is
+    /// wrong with it.
+    ///
+    /// The two faults ride on the picture rather than being counted over the batch, which is what
+    /// makes <see cref="Batch.WithoutRepeats"/> possible: a batch with three of its twelve dropped
+    /// has to recount how many of the REST are short, and a batch-level total cannot.
+    /// </summary>
+    /// <param name="Repeat">
+    /// This opening is already recorded -- in the pack log, or earlier in this same batch. See
+    /// <see cref="RepeatOpenings"/> for why that is a warning and not a refusal.
+    /// </param>
+    /// <param name="Miscount">This picture holds a number of cards its pack cannot.</param>
+    private readonly record struct Opened(
+        string Pack, IReadOnlyList<PocketCard> Cards, bool Repeat, bool Miscount);
 
     /// <param name="Ready">Pictures that name a pack, in the order they were read.</param>
     /// <param name="Unidentified">Pictures whose cards do not settle on one pack. Left for the per-picture buttons.</param>
-    /// <param name="Short">Of the ready ones, how many hold a number of cards their pack cannot.</param>
-    /// <param name="Repeats">
-    /// Of the ready ones, how many repeat an opening that is already recorded -- in the pack log,
-    /// or earlier in this same batch. See <see cref="RepeatOpenings"/> for why that is a warning
-    /// and not a refusal.
-    /// </param>
-    private readonly record struct Batch(
-        IReadOnlyList<Opened> Ready, int Unidentified, int Short, int Repeats)
+    private readonly record struct Batch(IReadOnlyList<Opened> Ready, int Unidentified)
     {
         public int Cards => Ready.Sum(r => r.Cards.Count);
+
+        /// <summary>Of the ready ones, how many repeat an opening that is already recorded.</summary>
+        public int Repeats => Ready.Count(r => r.Repeat);
+
+        /// <summary>Of the ready ones, how many hold a number of cards their pack cannot.</summary>
+        public int Short => Ready.Count(r => r.Miscount);
+
+        /// <summary>
+        /// The same batch with the repeats dropped.
+        ///
+        /// The case this is for: nine packs opened in a sitting, screenshotted as you go, and one
+        /// picture from yesterday's sitting still in the folder. Without this the choice was to
+        /// log the duplicate along with the nine or to throw all ten away and re-choose the files
+        /// -- and the readings are gone either way, since logging clears them.
+        /// </summary>
+        public Batch WithoutRepeats() =>
+            this with { Ready = Ready.Where(r => !r.Repeat).ToArray() };
     }
 
     /// <summary>
@@ -1323,8 +1381,6 @@ else
     {
         var ready = new List<Opened>();
         var unidentified = 0;
-        var shortOfAFullPack = 0;
-        var repeats = 0;
 
         // Pictures already accounted for in THIS batch, so the second copy of one picture is
         // caught as well as a picture that repeats the log. Choosing the same folder twice puts
@@ -1342,25 +1398,22 @@ else
             var pack = PackIdentifier.Identify(Session.Index, reading).PackKey;
             if (pack is null || cards.Length == 0) { unidentified++; continue; }
 
-            ready.Add(new Opened(pack, cards));
-
             var parts = pack.Split(':');
             var keys = cards.Select(c => c.OwnershipKey).ToArray();
 
-            if (!seen.Add(RepeatOpenings.Fingerprint(parts[0], parts[1], keys))
-                || RepeatOpenings.Match(Session.Profile.PackLog, pack, keys) is not null)
-            {
-                repeats++;
-            }
+            var repeat = !seen.Add(RepeatOpenings.Fingerprint(parts[0], parts[1], keys))
+                         || RepeatOpenings.Match(Session.Profile.PackLog, pack, keys) is not null;
 
             var sizes = Session.Odds is null
                 ? (IReadOnlySet<int>)new HashSet<int>()
                 : Session.Odds.Rates.CardCounts(parts[0]);
 
-            if (sizes.Count > 0 && !sizes.Contains(cards.Length)) shortOfAFullPack++;
+            var miscount = sizes.Count > 0 && !sizes.Contains(cards.Length);
+
+            ready.Add(new Opened(pack, cards, repeat, miscount));
         }
 
-        return new Batch(ready, unidentified, shortOfAFullPack, repeats);
+        return new Batch(ready, unidentified);
     }
 
     /// <summary>
@@ -1461,12 +1514,35 @@ else
         return readings.Count == 0 ? Task.CompletedTask : LogAllCore(Plan(readings));
     }
 
-    private Task LogAllCore(Batch plan) =>
+    /// <summary>
+    /// The other second press: log the batch with the repeats left out.
+    ///
+    /// Re-planned from the readings rather than from the plan the first press computed, as
+    /// <see cref="LogAllAnyway"/> does and for the same reason -- a confirm arrives without it.
+    /// Straight to the commit, because the question that gate asked has now been answered; a
+    /// miscount among the ones being kept was in the same sentence the user just read.
+    /// </summary>
+    private Task LogOnlyNew()
+    {
+        var readings = _shots?.Readings ?? [];
+        if (readings.Count == 0) return Task.CompletedTask;
+
+        var plan = Plan(readings);
+        return LogAllCore(plan.WithoutRepeats(), skipped: plan.Repeats);
+    }
+
+    /// <param name="skipped">
+    /// Repeats dropped before this plan was built, for the account afterwards. The commit cannot
+    /// work it out for itself -- it is handed the packs that survived and nothing about the ones
+    /// that did not -- and a summary reading "logged 9 packs" over a folder of ten is the kind of
+    /// silence that makes someone count them by hand.
+    /// </param>
+    private Task LogAllCore(Batch plan, int skipped = 0) =>
         plan.Ready.Count == 0
             ? Task.CompletedTask
             : Busy.RunAsync(
                 $"Logging {plan.Ready.Count} {Fmt.S(plan.Ready.Count, "pack")}…",
-                () => CommitBatch(plan));
+                () => CommitBatch(plan, skipped));
 
     /// <summary>
     /// Every pack in the batch, in one mutation.
@@ -1477,7 +1553,7 @@ else
     /// and stop dead at the cap, so twelve packs of one set have to be added in sequence against a
     /// running total rather than each against the total as it was before any of them.
     /// </summary>
-    private void CommitBatch(Batch plan)
+    private void CommitBatch(Batch plan, int skipped)
     {
         var opened = plan.Ready;
         if (opened.Count == 0) return;
@@ -1503,7 +1579,7 @@ else
             var free = paid.Free;
             var bought = paid.FromHourglasses;
 
-            foreach (var (pack, cards) in opened)
+            foreach (var (pack, cards, _, _) in opened)
             {
                 var parts = pack.Split(':');
                 var set = parts[0];
@@ -1542,7 +1618,7 @@ else
             };
         });
 
-        _bulkLogged = (opened.Count, plan.Cards, capped);
+        _bulkLogged = (opened.Count, plan.Cards, capped, skipped);
         _paid = paid;
         _bulkQuery = null;
 

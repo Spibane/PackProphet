@@ -308,6 +308,125 @@ public class ShotImportHostingTests : AppHost
     }
 
     [Fact]
+    public async Task A_batch_holding_one_repeat_can_be_logged_without_it()
+    {
+        // The usual shape of the problem: packs opened in a sitting, and one picture from an
+        // earlier sitting still in the folder. Before this the choice was to log the duplicate
+        // along with the rest or to throw the whole batch away and pick the files again --
+        // logging clears the readings either way, so there was no "remove the odd one" to reach.
+        await ReadyAsync();
+
+        // The earlier sitting, written straight to the log. Through the UI it would need a
+        // second stub over the same module, and the batch matcher set up below would then be
+        // shadowed by the single-file one -- both pictures would read as the same pack.
+        Session.Mutate(p => p with
+        {
+            PackLog = [.. p.PackLog,
+                       new PackOpenEvent(
+                           DateTimeOffset.Now.AddDays(-1), "A1", "Mewtwo", "unknown",
+                           [.. MewtwoHand.Select(k => Session.Index.ByKey[k].OwnershipKey)])]
+        });
+
+        // Two pictures: the pack already in the log, and one that is new.
+        StubTwo(HandScan(), HandScan(["A1-100", "A1-101", "A1-102", "A1-103", "A1-104"]));
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() => Assert.NotNull(page.Find("#log-new")));
+
+        await page.InvokeAsync(() => page.Find("#log-new").Click());
+        page.WaitForAssertion(() => Assert.Equal(2, Session.Profile.PackLog.Count));
+
+        // The new one went in; the repeat did not become a second Mewtwo row.
+        Assert.Equal(["Mewtwo", "Pikachu"], Session.Profile.PackLog.Select(e => e.Pack).Order().ToArray());
+
+        // And the account says why the count is short of the pictures that were on screen.
+        page.WaitForAssertion(() =>
+        {
+            var said = Collapse(page.Markup);
+            Assert.Contains("Logged 1 pack and 5 cards", said);
+            Assert.Contains("1 repeat left out", said);
+        });
+    }
+
+    [Fact]
+    public async Task The_same_picture_chosen_twice_logs_once_when_the_repeat_is_skipped()
+    {
+        // Within a batch the FIRST copy is the opening and the second is the repeat of it, so
+        // skipping leaves one -- which is the right answer for a folder picked twice over.
+        StubTwo(HandScan(), HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() =>
+            Assert.Contains("already in your history", Collapse(page.Markup)));
+
+        await page.InvokeAsync(() => page.Find("#log-new").Click());
+        page.WaitForAssertion(() => Assert.Single(Session.Profile.PackLog));
+        Assert.Equal("Mewtwo", Session.Profile.PackLog[0].Pack);
+    }
+
+    [Fact]
+    public async Task Skipping_the_repeats_is_not_offered_when_it_would_log_nothing()
+    {
+        // Both pictures repeat openings already in the log, so dropping them leaves an empty
+        // batch -- a button that logs nothing. Only "anyway" makes sense there.
+        await ReadyAsync();
+
+        var mewtwo = MewtwoHand;
+        var pikachu = new[] { "A1-100", "A1-101", "A1-102", "A1-103", "A1-104" };
+
+        Session.Mutate(p => p with
+        {
+            PackLog =
+            [
+                .. p.PackLog,
+                new PackOpenEvent(DateTimeOffset.Now.AddDays(-1), "A1", "Mewtwo", "unknown",
+                                  [.. mewtwo.Select(k => Session.Index.ByKey[k].OwnershipKey)]),
+                new PackOpenEvent(DateTimeOffset.Now.AddDays(-1), "A1", "Pikachu", "unknown",
+                                  [.. pikachu.Select(k => Session.Index.ByKey[k].OwnershipKey)]),
+            ]
+        });
+
+        StubTwo(HandScan(), HandScan(pikachu));
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() =>
+            Assert.Contains("record packs already in your history", Collapse(page.Markup)));
+
+        Assert.Empty(page.FindAll("#log-new"));
+
+        // Still allowed through, because a match is not proof -- two packs can come out the same.
+        await page.InvokeAsync(() => page.Find("button.btn-warning").Click());
+        page.WaitForAssertion(() => Assert.Equal(4, Session.Profile.PackLog.Count));
+    }
+
+    [Fact]
+    public async Task A_miscount_alone_does_not_offer_to_skip_anything()
+    {
+        // The gate carries two reasons and only one of them has something to drop. A batch that
+        // is merely short has no repeats, so the skip button would say the same as the button
+        // beside it.
+        StubTwo(HandScan(), HandScan(["A1-1", "A1-2", "A1-3", "A1-4"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() =>
+            Assert.Contains("holds a number of cards that pack cannot", Collapse(page.Markup)));
+
+        Assert.Empty(page.FindAll("#log-new"));
+    }
+
+    [Fact]
     public async Task A_run_of_different_packs_is_not_a_repeat()
     {
         // The check must not fire on an ordinary sitting, which is the case it would ruin. Two

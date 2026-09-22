@@ -17,6 +17,58 @@ public class CardDetailTests : AppHost
         RenderComponent<CardDetail>(p => p.Add(c => c.Key, cardKey));
 
     [Fact]
+    public async Task A_card_opens_at_the_top_of_itself()
+    {
+        // Blazor routes in place and nothing resets the scroll, so this page inherited whatever
+        // offset the page before it was at. Coming from a scrolled card grid -- far taller than
+        // one card -- the browser clamped that offset to this page's own maximum and the card
+        // opened at its bottom. Measured at 375px: the grid at 1400 of 6315, this page 1475
+        // tall, and it opened at 663, which is 1475 less the 812 viewport.
+        await ReadyAsync();
+
+        var key = Session.Index.All[0].Key;
+        var page = Open(key);
+
+        page.WaitForAssertion(() => Assert.Single(
+            JSInterop.Invocations.Where(i => i.Identifier == "ppScroll.toPageTop")));
+    }
+
+    [Fact]
+    public async Task Moving_from_one_card_to_another_goes_to_the_top_again()
+    {
+        // This page navigates to itself -- the reprints and the evolution line are links to other
+        // cards -- and those arrive as a parameter change rather than a fresh component, so a
+        // guard keyed on first render would fire once and never again.
+        await ReadyAsync();
+
+        var page = Open(Session.Index.All[0].Key);
+        page.WaitForAssertion(() => Assert.NotEmpty(
+            JSInterop.Invocations.Where(i => i.Identifier == "ppScroll.toPageTop")));
+
+        page.SetParametersAndRender(p => p.Add(c => c.Key, Session.Index.All[1].Key));
+
+        page.WaitForAssertion(() => Assert.Equal(
+            2, JSInterop.Invocations.Count(i => i.Identifier == "ppScroll.toPageTop")));
+    }
+
+    [Fact]
+    public async Task Re_rendering_the_same_card_does_not_move_the_window()
+    {
+        // Ticking the count re-renders this page, and a reset on every render would drag someone
+        // reading the attack text back to the top each time they pressed plus.
+        await ReadyAsync();
+
+        var page = Open(Session.Index.All[0].Key);
+        page.WaitForAssertion(() => Assert.Single(
+            JSInterop.Invocations.Where(i => i.Identifier == "ppScroll.toPageTop")));
+
+        page.Render();
+        page.Render();
+
+        Assert.Single(JSInterop.Invocations.Where(i => i.Identifier == "ppScroll.toPageTop"));
+    }
+
+    [Fact]
     public async Task The_art_opens_itself_larger()
     {
         // The art is the one thing on this page you might want to look at rather than read, and at

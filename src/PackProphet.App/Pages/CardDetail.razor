@@ -2,6 +2,7 @@
 @inject AppSession Session
 @inject NavigationManager Nav
 @inject NavHistory History
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>@(_card?.Name ?? "Card") · PackProphet</PageTitle>
@@ -517,11 +518,41 @@ else
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await TopAsync();
+
         if (_focused || _card is null) return;
 
         _focused = true;
         try { await _root.FocusAsync(); }
         catch { /* the element is gone, or the browser refused; Escape simply needs a click first */ }
+    }
+
+    /// <summary>The card this page has already put the window at the top for.</summary>
+    private string? _toppedFor;
+
+    /// <summary>
+    /// Start a card at the top of it.
+    ///
+    /// Blazor routes in place and nothing resets the scroll, so this page inherited whatever
+    /// offset the page before it was at -- and coming from a scrolled card grid, which is far
+    /// taller than one card, the browser clamped that offset to this page's own maximum and
+    /// opened it at its bottom. A phone problem only: above the desk breakpoint the grid scrolls
+    /// itself and the window was never moved.
+    ///
+    /// Keyed by the card rather than by first render, because this page navigates to itself --
+    /// the reprints and the evolution line are links to other cards -- and those arrive as a
+    /// parameter change with no new render cycle to hang "first" on. Not folded in with
+    /// <see cref="_focused"/> for the same reason: that one is deliberately once per visit.
+    /// </summary>
+    private async Task TopAsync()
+    {
+        if (_card is null || _toppedFor == Key) return;
+
+        _toppedFor = Key;
+
+        try { await JS.InvokeVoidAsync("ppScroll.toPageTop"); }
+        catch (JSDisconnectedException) { }
+        catch (ObjectDisposedException) { }
     }
 
     /// <summary>

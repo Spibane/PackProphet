@@ -252,6 +252,28 @@ until then the minor number tracks the roadmap phase.
   was never bought, and it would reach the odds check on History as a pack the model has no rates
   for — the same reason `PromoScopeTests` keeps promos out of the pack ranking
 
+- **A batch with one duplicate in it can be logged without the duplicate.** The usual shape of the
+  problem is nine packs opened in a sitting and one picture from an earlier sitting still in the
+  folder. The choice was to log the repeat along with the nine or to throw all ten away and pick
+  the files again — logging clears the readings either way, so "cancel and remove the odd one" was
+  never on offer. The confirm now leads with **Log 9, Skipping 1 Repeat**, and the account
+  afterwards says how many were left out, because a summary reading "logged 9 packs" over a folder
+  of ten is what makes someone count them by hand. Only when dropping the repeats still leaves
+  something to log, and the *log everything anyway* button stays beside it — a match is not proof
+- **A card opens at the top of itself.** Blazor routes in place and nothing reset the scroll, so a
+  card page inherited whatever offset the page before it was at; coming from a scrolled grid — far
+  taller than one card — the browser clamped that offset to the card page's own maximum and opened
+  it at the bottom. Measured at 375px: the grid at 1400 of 6315, the card page 1475 tall, opening
+  at 663, which is 1475 less the 812 viewport. A phone problem only, since above the desk
+  breakpoint the grid scrolls itself and the window never moved. The reset is keyed to the card
+  rather than to first render, because this page navigates to itself through the reprints and the
+  evolution line
+- **`/progress` in release order now runs newest to oldest.** The reverse of the Collection page,
+  and right here for the reason that page's order is right there: the Collection is a catalogue
+  and reads forwards, while this is a list of work outstanding. The work is nearly always in the
+  sets that just came out — an old set is either finished or has been sitting unfinished for a
+  year — so oldest-first put the two sets you are actually opening at the bottom of twenty panels
+
 ### v0.7.0 - 2026-09-01
 
 - **Cloud sync, with no account and nothing readable on the server.** One device makes a

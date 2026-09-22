@@ -54,6 +54,59 @@ public class ProgressPanelTests : AppHost
         return page;
     }
 
+    /// <summary>Set codes in the order the page draws their panels.</summary>
+    private static string[] PanelOrder(IRenderedComponent<Progress> page) =>
+        page.FindAll(".set-panel .p-name .code").Select(e => e.TextContent.Trim()).ToArray();
+
+    [Fact]
+    public async Task Release_order_puts_the_newest_set_first()
+    {
+        // The reverse of the Collection page, and right here for the reason that page's order is
+        // right there. The Collection is a catalogue and reads forwards; this is a list of work
+        // outstanding, and the work is nearly always in the sets that just came out -- an old set
+        // is either finished or has been unfinished for a year. Oldest-first put the two sets you
+        // are actually opening at the bottom of twenty panels.
+        var page = await PageAsync();
+
+        var shown = PanelOrder(page);
+        Assert.True(shown.Length > 1, "the ordering needs more than one panel to mean anything");
+
+        var newestFirst = shown
+            .OrderByDescending(Session.Sets.SortKey, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(newestFirst, shown);
+
+        // Named rather than only implied: the rail's own summary has to agree with the order.
+        Assert.Contains("newest first", page.Markup);
+    }
+
+    [Fact]
+    public async Task Closest_first_is_still_closest_first()
+    {
+        // The other order is unchanged, and the two have to stay distinguishable -- a reversal
+        // applied to both would make the control a no-op that still looks like a choice.
+        var page = await PageAsync();
+
+        page.FindAll(".rail-seg button").First(b => b.TextContent.Trim() == "Closest").Click();
+        page.WaitForAssertion(() => Assert.Contains("closest first", page.Markup));
+
+        var byClosest = PanelOrder(page);
+        Assert.True(byClosest.Length > 1);
+        Assert.NotEqual(
+            byClosest.OrderByDescending(Session.Sets.SortKey, StringComparer.Ordinal).ToArray(),
+            byClosest);
+
+        // And back, because a control that only works one way still looks like a choice.
+        page.FindAll(".rail-seg button").First(b => b.TextContent.Trim() == "Release").Click();
+        page.WaitForAssertion(() => Assert.Contains("newest first", page.Markup));
+
+        var byRelease = PanelOrder(page);
+        Assert.Equal(
+            byRelease.OrderByDescending(Session.Sets.SortKey, StringComparer.Ordinal).ToArray(),
+            byRelease);
+    }
+
     /// <summary>
     /// Every panel emits every band, in one order, whether or not it has anything to put in it.
     ///

@@ -101,7 +101,7 @@ else
                     <button class="btn btn-sm @Seg(Session.ProgressOrder == ByRelease)"
                             @onclick="() => SetOrder(ByRelease)"
                             aria-pressed="@Aria.Flag(Session.ProgressOrder == ByRelease)"
-                            title="Oldest set first, the order the Collection page is in">Release</button>
+                            title="Newest set first: an old set is either finished or has been unfinished for a year, and the work is in the ones that just came out">Release</button>
                     <button class="btn btn-sm @Seg(Session.ProgressOrder == ByClosest)"
                             @onclick="() => SetOrder(ByClosest)"
                             aria-pressed="@Aria.Flag(Session.ProgressOrder == ByClosest)"
@@ -549,7 +549,7 @@ else
 
     private bool Premium => Session.Profile.Resources.Premium;
 
-    private string OrderLabel => Session.ProgressOrder == ByClosest ? "closest first" : "release order";
+    private string OrderLabel => Session.ProgressOrder == ByClosest ? "closest first" : "newest first";
 
     /// <summary>
     /// A release date as a clause, or nothing. In code rather than in the markup, where the
@@ -720,7 +720,14 @@ else
                   .ThenBy(r => r.Short)
                   .ThenBy(r => Session.Sets.SortKey(r.Set), StringComparer.Ordinal)
                   .ToArray()
-            : rows.OrderBy(r => Session.Sets.SortKey(r.Set), StringComparer.Ordinal).ToArray();
+            // Newest set first, which is the reverse of the Collection page's ordering and is
+            // right here for the reason that page's is right there. The Collection is a catalogue
+            // and reads forwards; this is a list of work outstanding, and the work is nearly
+            // always in the sets that just came out -- an old set is either finished or has been
+            // sitting unfinished for a year. Oldest-first put the two sets you are actually
+            // opening at the bottom of twenty panels.
+            : rows.OrderByDescending(r => Session.Sets.SortKey(r.Set), StringComparer.Ordinal)
+                  .ToArray();
 
         _shortTotal = _rows.Sum(r => r.Short);
 

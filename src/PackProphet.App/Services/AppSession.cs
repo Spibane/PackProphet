@@ -69,15 +69,10 @@ public sealed class AppSession : IAsyncDisposable
 
     /// <summary>
     /// Best available booster art for a pack: the higher-resolution image where it is
-    /// published, otherwise the lower-resolution one. Null only if neither exists, in which
-    /// case the tile shows its drawn placeholder.
+    /// published, otherwise the lower-resolution one. Empty where neither can be trusted — see
+    /// <see cref="PackArtCatalog.Url"/> — and the tile shows its drawn placeholder.
     /// </summary>
-    public string PackArtUrl(string packKey)
-    {
-        var parts = packKey.Split(':', 2);
-        var better = PackArt.UrlFor(packKey);
-        return better ?? (parts.Length == 2 ? PocketCard.PackArtUrl(parts[1]) : "");
-    }
+    public string PackArtUrl(string packKey) => PackArt.Url(packKey);
 
     /// <summary>
     /// The card's type as one column: its energy for a Pokémon, its trainer kind otherwise.
@@ -253,6 +248,24 @@ public sealed class AppSession : IAsyncDisposable
     /// sells ordinary packs.
     /// </summary>
     public string? StandardRateDonor => Data is null ? null : EffectiveRates().StandardDonor(Sets);
+
+    /// <summary>
+    /// The set <paramref name="set"/> would borrow rates from: another Deluxe set for a Deluxe
+    /// set, the standard donor otherwise. Null when no donor of the right kind is measured.
+    /// </summary>
+    public string? RateDonorFor(string set) =>
+        Data is null ? null : EffectiveRates().DonorFor(set, IsDeluxeSet(set), Sets);
+
+    /// <summary>
+    /// Whether a set sells Deluxe packs, by the card list's packs or the set list's. Either will
+    /// do: the card list usually knows a new set first, and the set list may name its packs
+    /// before any card does.
+    /// </summary>
+    public bool IsDeluxeSet(string set) =>
+        Index.OpenablePackKeys.Any(k => k.Split(':', 2) is [var s, var p]
+                                        && string.Equals(s, set, StringComparison.OrdinalIgnoreCase)
+                                        && GameRules.IsDeluxePack(p))
+        || Sets.Info(set)?.Packs is { } packs && packs.Any(GameRules.IsDeluxePack);
 
     /// <summary>Sets that could be priced by borrowing: released, no published rates, has packs.</summary>
     public IReadOnlyList<string> SetsAwaitingRates
@@ -884,7 +897,11 @@ public sealed class AppSession : IAsyncDisposable
     /// What taking it cost, so the page can say whether hourglasses went into it, or null when the
     /// offer was only logged.
     /// </returns>
-    public PoolSpend? LogWonderOffer(IReadOnlyList<PocketCard> offer, int staminaCost, bool taken, PocketCard? received)
+    /// <param name="deluxe">A Deluxe offer, with Pack Hourglasses in its fifth slot.</param>
+    /// <param name="receivedHourglasses">Taken, and the hourglass slot came out: they are credited.</param>
+    public PoolSpend? LogWonderOffer(
+        IReadOnlyList<PocketCard> offer, int staminaCost, bool taken, PocketCard? received,
+        bool deluxe = false, bool receivedHourglasses = false)
     {
         var keys = offer.Select(c => c.OwnershipKey).ToList();
         PoolSpend? paid = null;
@@ -895,7 +912,9 @@ public sealed class AppSession : IAsyncDisposable
             {
                 new(DateTimeOffset.Now, keys, staminaCost, taken, received?.OwnershipKey)
                 {
-                    Id = LogId.New()
+                    Id = LogId.New(),
+                    Deluxe = deluxe,
+                    ReceivedHourglasses = taken && receivedHourglasses,
                 }
             };
 
@@ -919,7 +938,18 @@ public sealed class AppSession : IAsyncDisposable
                     Resources = next.Resources with { Wonder = paid.Pool }
                 };
 
-                if (received is not null)
+                if (receivedHourglasses)
+                {
+                    next = next with
+                    {
+                        Resources = next.Resources with
+                        {
+                            PackHourglasses = Math.Max(0, next.Resources.PackHourglasses)
+                                              + GameRules.DeluxeWonderPickHourglasses
+                        }
+                    };
+                }
+                else if (received is not null)
                 {
                     var collection = new Dictionary<string, int>(next.Collection);
                     collection[received.OwnershipKey] =
@@ -1014,9 +1044,25 @@ public sealed class AppSession : IAsyncDisposable
                   .Where(p => !State.Prefs.AvailableLimitedPacks.Contains(p))
                   .ToHashSet();
 
-    /// <summary>Limited-time packs at all, so the UI can offer a toggle for each.</summary>
+    /// <summary>Limited-time packs at all, by pack key.</summary>
     public IReadOnlyList<string> LimitedPacks =>
         Odds is null ? [] : Odds.LimitedTimePacks.OrderBy(p => p, StringComparer.Ordinal).ToArray();
+
+    /// <summary>
+    /// One on-sale toggle per limited-time pack NAME, so A4b's and B4b's Deluxe packs share one
+    /// "Deluxe" switch. Whether re-releases bring them back together or apart is not known yet,
+    /// so the setting is still stored per pack key and splitting the toggle later needs no
+    /// migration.
+    /// </summary>
+    public IReadOnlyList<string> LimitedPackNames =>
+        LimitedPacks.Select(p => p.Split(':')[1]).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+    /// <summary>On only when every pack sharing the name is on.</summary>
+    public bool IsLimitedPackNameAvailable(string packName) =>
+        LimitedPacks.Where(p => SameName(p, packName)).All(IsLimitedPackAvailable);
+
+    private static bool SameName(string packKey, string packName) =>
+        string.Equals(packKey.Split(':')[1], packName, StringComparison.OrdinalIgnoreCase);
 
     // ---- appearance -------------------------------------------------------------------
 
@@ -1351,10 +1397,26 @@ public sealed class AppSession : IAsyncDisposable
     public bool IsLimitedPackAvailable(string packKey) =>
         State.Prefs.AvailableLimitedPacks.Contains(packKey);
 
-    public void SetLimitedPackAvailable(string packKey, bool available)
+    /// <summary>
+    /// Marks a pack on or off sale, together with every limited-time pack of the same name —
+    /// see <see cref="LimitedPackNames"/>.
+    /// </summary>
+    public void SetLimitedPackAvailable(string packKey, bool available) =>
+        SetLimitedPackNameAvailable(packKey.Split(':').Last(), available, packKey);
+
+    public void SetLimitedPackNameAvailable(string packName, bool available) =>
+        SetLimitedPackNameAvailable(packName, available, null);
+
+    private void SetLimitedPackNameAvailable(string packName, bool available, string? packKey)
     {
-        var next = State.Prefs.AvailableLimitedPacks.Where(p => p != packKey).ToList();
-        if (available) next.Add(packKey);
+        // The named key is included even when the engine does not list it as limited-time yet,
+        // which is the case for a set with no rates: logging a pack from it still records that
+        // it is on the shelf.
+        var keys = LimitedPacks.Where(p => SameName(p, packName))
+            .Append(packKey).OfType<string>().ToHashSet(StringComparer.Ordinal);
+
+        var next = State.Prefs.AvailableLimitedPacks.Where(p => !keys.Contains(p)).ToList();
+        if (available) next.AddRange(keys.Order(StringComparer.Ordinal));
 
         State = State with { Prefs = State.Prefs with { AvailableLimitedPacks = next } };
         QueueSave();
@@ -1362,9 +1424,11 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     /// <summary>
-    /// Foil printings — currently the Deluxe set's second prints of its 1-3 diamond cards — that
-    /// a target should ignore. Null when the user collects them, which is the default.
+    /// Parallel foils across every Deluxe set: the second prints of their 1-3 diamond cards.
+    /// Counted rather than written down, because each new Deluxe set adds its own.
     /// </summary>
+    public int FoilCount => Odds?.FoilOwnershipKeys.Count ?? 0;
+
     /// <summary>
     /// The parallel-foil policy for a target. Public so a page building its own targets — the
     /// rarity advisor does — applies the same choice: two places deciding what a target contains

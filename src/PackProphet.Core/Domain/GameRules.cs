@@ -143,6 +143,15 @@ public static class GameRules
 
     public const double WonderPickCardChance = 1.0 / WonderPickCardsShown;
 
+    /// <summary>Cards in a Deluxe pack, one short of the usual five.</summary>
+    public const int DeluxePackCards = 4;
+
+    /// <summary>
+    /// Pack Hourglasses in the fifth slot of a Deluxe Wonder Pick. A Deluxe pack holds four cards,
+    /// so its offer shows those four and this in place of a fifth card, drawn like any other slot.
+    /// </summary>
+    public const int DeluxeWonderPickHourglasses = 2;
+
     /// <summary>
     /// Stamina cost is set by the highest rarity in the offer, not by what the offer is worth
     /// to you: an offer costs 4 because it contains a 2★, even if you already own that 2★.
@@ -260,7 +269,15 @@ public static class GameRules
     /// Detected by name, since no dataset records availability. This only marks a pack as
     /// needing confirmation; whether it is on sale right now is the user's answer to give.
     /// </summary>
-    public static bool IsLimitedTimePack(string packName) =>
+    public static bool IsLimitedTimePack(string packName) => IsDeluxePack(packName);
+
+    /// <summary>
+    /// A Deluxe pack: A4b's "Deluxe Pack: ex", B4b's "Deluxe Pack: Mega", and whatever follows
+    /// them. Every one holds four cards and guarantees a 4-diamond in its last slot, which is a
+    /// rule of the product rather than a fact of one set's rates, so it holds for a Deluxe set
+    /// whose rates are not published yet.
+    /// </summary>
+    public static bool IsDeluxePack(string packName) =>
         packName.Contains("Deluxe", StringComparison.OrdinalIgnoreCase);
 
     // ---- Deck legality ------------------------------------------------------------

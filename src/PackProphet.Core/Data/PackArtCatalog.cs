@@ -1,5 +1,7 @@
 namespace PackProphet.Data;
 
+using PackProphet.Domain;
+
 /// <summary>One entry from the expansions index: a set and the packs it sold.</summary>
 public sealed class ExpansionInfo
 {
@@ -32,6 +34,9 @@ public sealed class PackArtCatalog
     // "A1:Mewtwo" -> their pack id
     private readonly Dictionary<string, string> _packIds = new(StringComparer.OrdinalIgnoreCase);
 
+    // Pack names more than one set uses, "Deluxe" for A4b and B4b.
+    private readonly HashSet<string> _sharedNames = new(StringComparer.OrdinalIgnoreCase);
+
     public PackArtCatalog(
         IEnumerable<ExpansionInfo>? expansions,
         IEnumerable<string> ourPackKeys)
@@ -41,6 +46,11 @@ public sealed class PackArtCatalog
             .Where(p => p.Length == 2)
             .GroupBy(p => p[0], StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Select(p => p[1]).ToArray(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var name in ours.SelectMany(kv => kv.Value.Distinct(StringComparer.OrdinalIgnoreCase))
+                     .GroupBy(n => n, StringComparer.OrdinalIgnoreCase)
+                     .Where(g => g.Count() > 1))
+            _sharedNames.Add(name.Key);
 
         foreach (var exp in expansions ?? [])
         {
@@ -74,6 +84,24 @@ public sealed class PackArtCatalog
         _packIds.TryGetValue(packKey, out var id) ? $"{Cdn}/{id}.webp" : null;
 
     public string? UrlFor(string setCode, string packName) => UrlFor($"{setCode}:{packName}");
+
+    /// <summary>
+    /// Booster art for a pack key: the higher-resolution image where it is published, otherwise
+    /// the lower-resolution one, which is named by pack alone. Empty — the drawn placeholder —
+    /// where neither can be trusted.
+    ///
+    /// The fallback is skipped for a name more than one set uses. "Deluxe.webp" is one file for
+    /// both A4b and B4b, so it shows one set's booster on the other's tiles, and the wrong booster
+    /// is worse than a placeholder. Once the expansions index lists the new set, its tile gets
+    /// its own art from <see cref="UrlFor(string)"/>.
+    /// </summary>
+    public string Url(string packKey)
+    {
+        if (UrlFor(packKey) is { } better) return better;
+        return packKey.Split(':', 2) is [_, var name] && !_sharedNames.Contains(name)
+            ? ArtSource.PackArt(name)
+            : "";
+    }
 
     /// <summary>Their set ids are lower-case and promos are "pa"/"pb" where ours are "PROMO-A".</summary>
     private static string? MatchSetCode(string theirId, IEnumerable<string> ourSets)

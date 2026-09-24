@@ -69,6 +69,15 @@ public sealed record WonderOfferEvent(
 {
     /// <summary>Stable identity. See <see cref="PackOpenEvent.Id"/>, which it works exactly like.</summary>
     public string? Id { get; init; }
+
+    /// <summary>
+    /// A Deluxe offer, with Pack Hourglasses in its fifth slot. Null for offers logged before this
+    /// was recorded. Kept out of <see cref="LogId.Content"/>, so those offers keep their identity.
+    /// </summary>
+    public bool? Deluxe { get; init; }
+
+    /// <summary>Taken, and the hourglasses were what came out.</summary>
+    public bool ReceivedHourglasses { get; init; }
 }
 
 /// <summary>
@@ -251,11 +260,11 @@ public sealed record Prefs(string Theme = "auto", int GridColumns = 0, bool Show
     public bool AutoPackHourglasses { get; init; }
 
     /// <summary>
-    /// Copies wanted of each parallel foil — the Deluxe set's second printings of its 1-3 diamond
-    /// cards. Zero ignores them; one is the default.
+    /// Copies wanted of each parallel foil — the Deluxe sets' second printings of their 1-3
+    /// diamond cards. Zero ignores them; one is the default. One count for every Deluxe set.
     ///
     /// A count rather than a switch, and separate from the rarity plan, because a foil is not the
-    /// rarity it shares: it is 139 extra cards sold only in a limited-time pack. Someone wanting
+    /// rarity it shares: it is 139 extra cards in A4b alone, sold only in a limited-time pack. Someone wanting
     /// two of every diamond may want one parallel foil, or none.
     /// </summary>
     public int FoilCopies { get; init; } = 1;

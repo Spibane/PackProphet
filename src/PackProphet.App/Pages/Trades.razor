@@ -53,7 +53,7 @@ else
 
        A single global ranking is not enough here, which is why the grouping is a control at all.
        Sorted by how hard a card is to pull, the top of the list is always the same handful of
-       near-unpullable cards -- the 139 parallel foils swamp it -- which answers "what is rarest"
+       near-unpullable cards -- the parallel foils swamp it -- which answers "what is rarest"
        rather than "what should I do about each pack, each rarity, each set". *@
     <PageRail Id="trades-rail" OpenLabel="Filters" Count="@ActiveFilters">
         <div class="rail-group">
@@ -124,14 +124,14 @@ else
                 }
             </select>
 
-            @* Foils are the specific reason this page needed filtering: 139 cards, all at diamond
-               rarities so no rarity filter separates them, and all sold in one limited-time pack
-               that makes them the hardest things in the game to pull. *@
+            @* Foils are the specific reason this page needed filtering: every one is at a diamond
+               rarity so no rarity filter separates them, and all are sold only in limited-time
+               Deluxe packs, which makes them the hardest things in the game to pull. *@
             @if (ShowFoilFilter)
             {
                 <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
                         @onclick="() => SetFoils(NextFoilMode())"
-                        title="Parallel foils are diamond-rarity but come only from the limited-time Deluxe pack, so they dominate any ranking by pull difficulty">
+                        title="Parallel foils come only from limited-time Deluxe packs, so they top any ranking by pull difficulty">
                     Parallel Foils: @FoilWord
                 </button>
             }
@@ -181,7 +181,7 @@ else
             @* The next action, stated once and prominently, above the ranked table. *@
             @if (_shown[0].Candidate.Ready)
             {
-                @* The Answer layout, minus the strip. A ranking of 139 parallel foils has no
+                @* The Answer layout, minus the strip. A ranking of parallel foils has no
                    fixed set of boxes to enumerate -- you could not name them before looking at the
                    data, which is the precondition BoxStrip documents -- so this page gets a
                    verdict, a sentence and a list, and no picture. *@

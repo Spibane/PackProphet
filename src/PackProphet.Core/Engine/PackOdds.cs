@@ -87,11 +87,11 @@ public sealed class PackOdds
 
     /// <summary>
     /// Ownership keys of every foil printing: the second print of a 1-3 diamond card in a set
-    /// whose pull rates name foil slot codes, which today means the Deluxe set.
+    /// whose pull rates name foil slot codes, which means the Deluxe sets.
     ///
     /// A foil is a separate collectible with its own ownership key, so a target like "all
-    /// diamonds in A4b" demands both printings — 139 extra cards, obtainable only from a
-    /// limited-time pack. This is the set the UI offers to exclude.
+    /// diamonds in A4b" demands both printings — 139 extra cards in A4b alone, obtainable only
+    /// from a limited-time pack. This is the set the UI offers to exclude.
     /// </summary>
     public IReadOnlySet<string> FoilOwnershipKeys =>
         _foilKeys ??= BuildFoilKeys();

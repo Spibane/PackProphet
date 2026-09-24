@@ -129,15 +129,16 @@ else
             <div class="rail-group">
             <span class="ttl">On Sale Now</span>
             <span class="avail">
-                @foreach (var pack in Session.LimitedPacks)
+                @* One chip per pack name, so every Deluxe set shares one switch. *@
+                @foreach (var pack in Session.LimitedPackNames)
                 {
-                    var on = Session.IsLimitedPackAvailable(pack);
+                    var on = Session.IsLimitedPackNameAvailable(pack);
                     <button class="avail-chip @(on ? "on" : "off")"
                             @onclick="() => ToggleLimited(pack, !on)"
-                            title="@(pack.Split(':')[1]) packs come and go. @(on
+                            title="@pack packs come and go. @(on
                                 ? "Counted in the ranking. Tap if they are not on sale."
                                 : "Left out of the ranking, and their exclusive cards count as unobtainable. Tap when they are on sale.")">
-                        <span class="nm">@pack.Split(':')[1]</span>
+                        <span class="nm">@pack</span>
                         <span class="st">@(on ? "On Sale" : "Off Sale")</span>
                     </button>
                 }
@@ -679,8 +680,9 @@ else
                             @* Offered where the problem is visible. A released set with no
                                published rates is otherwise reported as unpullable, which is true
                                and unhelpful: the cards drop, and the standard five-card
-                               distribution has barely changed in two years. *@
-                            @if (row.CanAssume && Session.StandardRateDonor is { } standard)
+                               distribution has barely changed in two years. A Deluxe set borrows
+                               from another Deluxe set, or is not offered a donor at all. *@
+                            @if (row.CanAssume && Session.RateDonorFor(row.Set) is { } standard)
                             {
                                 <button class="btn btn-sm btn-outline-primary py-0 ms-2"
                                         @onclick:stopPropagation="true"
@@ -689,7 +691,7 @@ else
                                     Estimate with @standard's rates
                                 </button>
                             }
-                            @if (row.Set == "A4b")
+                            @if (GameRules.IsDeluxePack(row.PackName))
                             {
                                 <span class="badge text-bg-info ms-1"
                                       title="Every Deluxe pack yields a 4-diamond card">
@@ -1002,9 +1004,7 @@ else
     /// are all at the app's assumption, which is the case that needs no words.
     /// </summary>
     private string OnSaleNow =>
-        string.Join(", ", Session.LimitedPacks
-            .Where(Session.IsLimitedPackAvailable)
-            .Select(p => p.Split(':')[1]));
+        string.Join(", ", Session.LimitedPackNames.Where(Session.IsLimitedPackNameAvailable));
 
     /// <summary>Filled while its panel is open, outlined while it is not.</summary>
     private static string Toggled(bool open) => open ? "btn-secondary" : "btn-outline-secondary";
@@ -1789,13 +1789,12 @@ else
             Recompute();
         });
 
-    private Task ToggleLimited(string packKey, bool on)
+    private Task ToggleLimited(string name, bool on)
     {
-        var name = packKey.Split(':')[1];
         var label = on ? $"Including {name}\u2026" : $"Excluding {name}\u2026";
         return Busy.RunAsync(label, () =>
             {
-                Session.SetLimitedPackAvailable(packKey, on);
+                Session.SetLimitedPackNameAvailable(name, on);
                 _advisor = [];   // stale for the new availability; repriced only if reopened
                 Recompute();
             });

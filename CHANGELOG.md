@@ -273,6 +273,30 @@ until then the minor number tracks the roadmap phase.
   and reads forwards, while this is a list of work outstanding. The work is nearly always in the
   sets that just came out — an old set is either finished or has been sitting unfinished for a
   year — so oldest-first put the two sets you are actually opening at the bottom of twenty panels
+- **Ready for a second Deluxe set.** B4b, *Deluxe Pack: Mega*, is due 2026-09-29, and three
+  things about Deluxe packs were tied to the code `A4b` or to the pack's name alone:
+  - A Deluxe set with no published rates was offered **B3b's** rates, a five-card pack with no
+    guaranteed 4◆ and no foil codes, which turned its parallel foils into plain cards. It now
+    borrows from the newest measured Deluxe set, or is offered nothing
+  - **Guaranteed 4◆** was drawn on A4b's row only. It now follows the pack, since every Deluxe
+    pack holds four cards and guarantees one
+  - Booster art fell back to a file named by pack alone, and `Deluxe.webp` is one file for two
+    sets, so B4b's tiles would have shown A4b's booster. A name shared by two sets now draws the
+    placeholder until the expansions index has the new set's own art, and the deploy's gap-art
+    step no longer vendors a shared name
+- **One On Sale switch for every Deluxe pack.** The chips are one per pack name rather than one per
+  pack, so A4b and B4b do not show two identical "Deluxe" chips. Still stored per pack, so they can
+  be split if re-releases stop coinciding
+- A test now fails if a Deluxe set reprints an existing 1-3◆ alternate art — B1's Furfrou, B2a's
+  Iono or Penny — because the foil rule would call that card a foil in its original set too
+- **A Deluxe Wonder Pick is four cards and 2 Pack Hourglasses.** A Deluxe pack holds four cards,
+  so its offer's fifth slot is the hourglasses, and `/wonder` asked for a fifth card that does not
+  exist. An offer of Deluxe printings now completes at four, draws the hourglasses as the fifth
+  box, and counts them in its expected value: a fifth of two hourglasses, at twelve to a pack.
+  They do not lift an offer out of *nothing here you need* — they are in every Deluxe offer.
+  Receiving them is a choice when logging a take, and credits them to Pack Hourglasses. Logged
+  offers now record whether they were Deluxe; older ones are read by shape, four cards all sold in
+  a Deluxe pack
 
 ### v0.7.0 - 2026-09-01
 

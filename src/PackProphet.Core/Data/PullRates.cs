@@ -80,17 +80,41 @@ public sealed class PullRates
     /// the rest: a Deluxe pack holds four cards and guarantees a 4-diamond, so copying it would
     /// price an ordinary set as far better than it is.
     /// </summary>
-    public string? StandardDonor(SetCatalog sets)
-    {
-        return ModelledSets
+    public string? StandardDonor(SetCatalog sets) =>
+        NewestMeasured(sets, set => sets.Info(set)?.Packs is not { } packs
+                                    || !packs.Any(GameRules.IsLimitedTimePack));
+
+    /// <summary>
+    /// The set <paramref name="set"/> should borrow rates from: the newest measured Deluxe set
+    /// for a Deluxe set, otherwise <see cref="StandardDonor"/>. Null when there is no donor of
+    /// the right kind.
+    ///
+    /// The mirror image of the rule in <see cref="StandardDonor"/>. An ordinary set priced from
+    /// a Deluxe pack looks far better than it is; a Deluxe set priced from an ordinary pack
+    /// loses its fourth-slot guarantee, its four-card shape, and its foil codes — and without
+    /// those codes its parallel foils are counted as plain cards. Null rather than an ordinary
+    /// donor, because no estimate is better than that one.
+    /// </summary>
+    /// <param name="deluxe">
+    /// Whether <paramref name="set"/> sells Deluxe packs. The caller says so rather than this
+    /// looking it up, because for a brand-new set the card list knows its packs before the set
+    /// list does.
+    /// </param>
+    public string? DonorFor(string set, bool deluxe, SetCatalog sets) =>
+        deluxe
+            ? NewestMeasured(sets, s => !string.Equals(s, set, StringComparison.OrdinalIgnoreCase)
+                                        && sets.Info(s)?.Packs is { } packs
+                                        && packs.Any(GameRules.IsDeluxePack))
+            : StandardDonor(sets);
+
+    private string? NewestMeasured(SetCatalog sets, Func<string, bool> eligible) =>
+        ModelledSets
             .Where(set => !IsAssumed(set))
             .Where(set => !CardIndex.IsPromoSet(set))
-            .Where(set => sets.Info(set)?.Packs is not { } packs
-                          || !packs.Any(GameRules.IsLimitedTimePack))
+            .Where(eligible)
             .OrderByDescending(set => sets.ReleaseDateOf(set) ?? DateOnly.MinValue)
             .ThenByDescending(set => set, StringComparer.Ordinal)
             .FirstOrDefault();
-    }
 
     /// <summary>
     /// How many cards a pack of this set can hold, across all its variants. Empty for an unpriced

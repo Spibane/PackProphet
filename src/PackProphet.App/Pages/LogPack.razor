@@ -249,46 +249,61 @@ else if (_pack is null)
                                 <Notice Severity="Notice.Level.Warning" Dense="true">
                                     @query
 
-                                    @* The usual shape of the problem: nine packs opened in a
-                                       sitting and one picture from yesterday's still in the
-                                       folder. Without this the choice was to log the duplicate
-                                       with the nine or throw all ten away and pick the files
-                                       again -- logging clears the readings either way, so
-                                       "cancel and remove the odd one" was never on offer.
-
-                                       Only when dropping the repeats still leaves something to
-                                       log, and only when there is a repeat to drop. Over a batch
-                                       that is entirely repeats this would be a button that logs
-                                       nothing, and over one with none it says the same as the
-                                       button beside it.
-
-                                       First and primary, because it is the likelier intent: a
-                                       picture that repeats an opening is usually a picture that
-                                       should not be logged. *@
-                                    @if (plan.Repeats > 0 && plan.Repeats < plan.Ready.Count)
+                                    @if (_bulkSkips)
                                     {
-                                        <button id="log-new" class="btn btn-sm btn-primary ms-2 py-0"
+                                        <button class="btn btn-sm btn-warning ms-2 py-0"
                                                 disabled="@Busy.IsBusy" @onclick="LogOnlyNew">
-                                            Log @(plan.Ready.Count - plan.Repeats), Skipping
-                                            @plan.Repeats @Fmt.S(plan.Repeats, "Repeat")
+                                            Log @(plan.Ready.Count - plan.Repeats) Anyway
                                         </button>
                                     }
-
-                                    <button class="btn btn-sm btn-warning ms-2 py-0"
-                                            disabled="@Busy.IsBusy" @onclick="LogAllAnyway">
-                                        Log @plan.Ready.Count Anyway
-                                    </button>
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-warning ms-2 py-0"
+                                                disabled="@Busy.IsBusy" @onclick="LogAllAnyway">
+                                            Log @plan.Ready.Count Anyway
+                                        </button>
+                                    }
                                 </Notice>
                             }
 
-                            @if (plan.Ready.Count > 0)
+                            @* The usual shape of the problem: nine packs opened in a sitting and
+                               one picture from yesterday's still in the folder. Offered up front,
+                               beside the button that logs everything, rather than behind a press
+                               of it: a button reading "Log 10 packs" is the one press nobody makes
+                               when they already know one of the ten is a repeat.
+
+                               Only when dropping the repeats still leaves something to log. Over
+                               a batch that is entirely repeats it would log nothing, and over one
+                               with none it says the same as the button beside it. Primary, because
+                               a picture that repeats an opening is usually one that should not be
+                               logged; the other stays, because a match is not proof. *@
+                            @if (plan.Repeats > 0 && plan.Repeats < plan.Ready.Count)
+                            {
+                                var kept = plan.Ready.Count - plan.Repeats;
+
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button id="log-new" class="btn btn-primary"
+                                            disabled="@Busy.IsBusy" @onclick="() => LogNew(plan)">
+                                        Log @kept New, Skip @plan.Repeats
+                                        @Fmt.S(plan.Repeats, "Repeat")
+                                    </button>
+                                    <button id="log-all" class="btn btn-outline-secondary"
+                                            disabled="@Busy.IsBusy" @onclick="() => LogAll(plan)">
+                                        Log All @plan.Ready.Count
+                                    </button>
+                                </div>
+                            }
+                            else if (plan.Ready.Count > 0)
                             {
                                 <button id="log-all" class="btn btn-primary" disabled="@Busy.IsBusy"
                                         @onclick="() => LogAll(plan)">
                                     Log @plan.Ready.Count @Fmt.S(plan.Ready.Count, "pack")
                                     (@plan.Cards @Fmt.S(plan.Cards, "card") in all)
                                 </button>
+                            }
 
+                            @if (plan.Ready.Count > 0)
+                            {
                                 @* Named so it can be checked before it is pressed. Twelve packs
                                    logged in one press is twelve events and sixty cards, and
                                    "which packs" is the thing you would want to have seen. *@
@@ -1330,6 +1345,13 @@ else
     private string? _bulkQuery;
 
     /// <summary>
+    /// Whether <see cref="_bulkQuery"/> was raised by the skip-the-repeats button rather than the
+    /// log-everything one, so its Anyway logs what was asked for. A pending question from the skip
+    /// path also said nothing about repeats, so it must not wave Log All straight through.
+    /// </summary>
+    private bool _bulkSkips;
+
+    /// <summary>
     /// One picture's worth of a batch: the pack its cards say it is, those cards, and what is
     /// wrong with it.
     ///
@@ -1432,13 +1454,35 @@ else
     {
         if (plan.Ready.Count == 0) return Task.CompletedTask;
 
-        if (_bulkQuery is null && Query(plan) is { } question)
+        if ((_bulkQuery is null || _bulkSkips) && Query(plan) is { } question)
         {
             _bulkQuery = question;
+            _bulkSkips = false;
             return Task.CompletedTask;
         }
 
         return LogAllCore(plan);
+    }
+
+    /// <summary>
+    /// The batch with its repeats left out, pressed before anything was asked.
+    ///
+    /// Choosing it answers the repeat question, so only a miscount among the ones kept can still
+    /// stop it. Any question already on screen covers that: the batch's own names every short
+    /// picture, kept or not.
+    /// </summary>
+    private Task LogNew(Batch plan)
+    {
+        var kept = plan.WithoutRepeats();
+
+        if (_bulkQuery is null && Query(kept) is { } question)
+        {
+            _bulkQuery = question;
+            _bulkSkips = true;
+            return Task.CompletedTask;
+        }
+
+        return LogAllCore(kept, skipped: plan.Repeats);
     }
 
     /// <summary>
@@ -1515,12 +1559,10 @@ else
     }
 
     /// <summary>
-    /// The other second press: log the batch with the repeats left out.
+    /// The second press after <see cref="LogNew"/>: the repeats left out, the miscount answered.
     ///
     /// Re-planned from the readings rather than from the plan the first press computed, as
     /// <see cref="LogAllAnyway"/> does and for the same reason -- a confirm arrives without it.
-    /// Straight to the commit, because the question that gate asked has now been answered; a
-    /// miscount among the ones being kept was in the same sentence the user just read.
     /// </summary>
     private Task LogOnlyNew()
     {
@@ -1621,6 +1663,7 @@ else
         _bulkLogged = (opened.Count, plan.Cards, capped, skipped);
         _paid = paid;
         _bulkQuery = null;
+        _bulkSkips = false;
 
         // The batch is spent. Left on screen it is a button that opens every one of these packs a
         // second time, and the summary above says what happened without it.

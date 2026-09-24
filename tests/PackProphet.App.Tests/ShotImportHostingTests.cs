@@ -332,9 +332,8 @@ public class ShotImportHostingTests : AppHost
         var page = RenderComponent<LogPack>();
         UploadTwo(page);
 
-        await page.InvokeAsync(() => page.Find("#log-all").Click());
-        page.WaitForAssertion(() => Assert.NotNull(page.Find("#log-new")));
-
+        // Offered before anything is pressed: the button that logs everything is not the one
+        // to press when you already know one of them is a repeat.
         await page.InvokeAsync(() => page.Find("#log-new").Click());
         page.WaitForAssertion(() => Assert.Equal(2, Session.Profile.PackLog.Count));
 
@@ -361,13 +360,55 @@ public class ShotImportHostingTests : AppHost
         var page = RenderComponent<LogPack>();
         UploadTwo(page);
 
-        await page.InvokeAsync(() => page.Find("#log-all").Click());
-        page.WaitForAssertion(() =>
-            Assert.Contains("already in your history", Collapse(page.Markup)));
-
         await page.InvokeAsync(() => page.Find("#log-new").Click());
         page.WaitForAssertion(() => Assert.Single(Session.Profile.PackLog));
         Assert.Equal("Mewtwo", Session.Profile.PackLog[0].Pack);
+    }
+
+    [Fact]
+    public async Task Logging_all_still_asks_about_the_repeats()
+    {
+        // The skip button being there is not an answer to the question; pressing the other one
+        // still has to say what it is about to log twice.
+        StubTwo(HandScan(), HandScan());
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        await page.InvokeAsync(() => page.Find("#log-all").Click());
+        page.WaitForAssertion(() =>
+            Assert.Contains("already in your history", Collapse(page.Markup)));
+        Assert.Empty(Session.Profile.PackLog);
+    }
+
+    [Fact]
+    public async Task Skipping_the_repeats_still_asks_about_a_short_picture_it_keeps()
+    {
+        // Choosing to skip answers the repeat question and nothing else. A short picture among
+        // the kept ones is asked about, and its Anyway logs the kept ones -- not the repeat.
+        await ReadyAsync();
+        Session.Mutate(p => p with
+        {
+            PackLog = [.. p.PackLog,
+                       new PackOpenEvent(
+                           DateTimeOffset.Now.AddDays(-1), "A1", "Mewtwo", "unknown",
+                           [.. MewtwoHand.Select(k => Session.Index.ByKey[k].OwnershipKey)])]
+        });
+
+        StubTwo(HandScan(), HandScan(["A1-1", "A1-2", "A1-3", "A1-4"]));
+        var page = RenderComponent<LogPack>();
+        UploadTwo(page);
+
+        await page.InvokeAsync(() => page.Find("#log-new").Click());
+        page.WaitForAssertion(() =>
+            Assert.Contains("holds a number of cards that pack cannot", Collapse(page.Markup)));
+        Assert.Single(Session.Profile.PackLog);
+
+        // The short one went in beside yesterday's, and the repeat did not go in with it.
+        await page.InvokeAsync(() => page.Find("button.btn-warning").Click());
+        page.WaitForAssertion(() => Assert.Equal(2, Session.Profile.PackLog.Count));
+        Assert.Equal(4, Session.Profile.PackLog[^1].OwnershipKeys.Count);
     }
 
     [Fact]

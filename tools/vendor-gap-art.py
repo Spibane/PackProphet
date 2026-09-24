@@ -288,7 +288,18 @@ def main() -> int:
 
     # Pack art is named by pack, not by set, so the packs of a missing set come from the card data
     # rather than from the set code.
-    packs = sorted({p for s in missing for p in packs_by_set.get(s, set())})
+    #
+    # A name more than one set uses is skipped: "Deluxe" is A4b's pack and B4b's, one file in the
+    # archive, and the manifest is keyed by name, so vendoring it for B4b would redraw A4b too.
+    # The app shows a placeholder for a shared name until the expansions index has the set.
+    uses = {}
+    for s, names in packs_by_set.items():
+        for p in names:
+            uses[p] = uses.get(p, 0) + 1
+    shared = sorted({p for s in missing for p in packs_by_set.get(s, set()) if uses[p] > 1})
+    if shared:
+        log(f"not vendoring booster art named by more than one set: {', '.join(shared)}")
+    packs = sorted({p for s in missing for p in packs_by_set.get(s, set()) if uses[p] == 1})
     for p in packs:
         wanted.append((f"images/packs/{p}.webp", f"packs/{p}.webp"))
 

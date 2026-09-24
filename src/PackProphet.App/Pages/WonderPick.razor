@@ -92,11 +92,21 @@ else
                explanation second, so they go where an input goes.
 
                The set is as literal as it gets -- the game shows five cards. *@
-            <BoxStrip Label="The five cards you were offered"
+            @* A Deluxe pack holds four cards, so its offer's fifth slot is Pack Hourglasses. It
+               is drawn as the fifth box, filled, because it is part of the offer rather than a
+               card still to name. *@
+            <BoxStrip Label="@(Deluxe ? "The four cards and hourglasses you were offered" : "The five cards you were offered")"
                       Clause="you receive one at random, so the only choice is whether to spend at all"
                       Columns="@GameRules.WonderPickCardsShown">
                 @for (var i = 0; i < GameRules.WonderPickCardsShown; i++)
                 {
+                    if (Deluxe && i >= CardSlots)
+                    {
+                        <Box State="Box.Kind.Live" Label="@((i + 1).ToString())"
+                             Figure="@GameRules.DeluxeWonderPickHourglasses.ToString()" Unit="pack hourglasses" />
+                        continue;
+                    }
+
                     var card = i < _offer.Count ? _offer[i] : null;
 
                     <Box State="@(card is null ? Box.Kind.Dead : Box.Kind.Live)"
@@ -135,7 +145,7 @@ else
                it is an edit to the input rather than a third way the decision can go, and beside
                the two outcomes it read as one, on the row where every target has to be a full
                phone-width row. Which also put the commit row 40px under the tab bar. *@
-            <button class="btn btn-sm btn-link offer-clear" @onclick="Clear">Clear These Five</button>
+            <button class="btn btn-sm btn-link offer-clear" @onclick="Clear">@(Deluxe ? "Clear These Four" : "Clear These Five")</button>
 
         }
 
@@ -211,7 +221,7 @@ else
             </div>
         }
 
-        @if (_offer.Count < GameRules.WonderPickCardsShown)
+        @if (_offer.Count < CardSlots)
         {
             <div class="mt-3">
                 @* Only what could have come out of the same pack, once one card says which pack
@@ -326,6 +336,10 @@ else
                         {
                             <option value="@c.OwnershipKey">@c.Name</option>
                         }
+                        @if (Deluxe)
+                        {
+                            <option value="@HourglassChoice">@GameRules.DeluxeWonderPickHourglasses Pack Hourglasses</option>
+                        }
                     </select>
                     <button class="btn btn-primary" disabled="@(_received.Length == 0)"
                             @onclick="LogTaken">
@@ -348,7 +362,7 @@ else
                     <span class="label">Expected Value</span>
                     <span class="value">@Fmt(a.ExpectedValue) packs</span>
                     @* Averaged over the 1-in-5 rather than the best card in the offer. *@
-                    <span class="sub">Averaged over the 1-in-@GameRules.WonderPickCardsShown</span>
+                    <span class="sub">Averaged over the 1-in-@GameRules.WonderPickCardsShown@(a.HourglassSlot ? ", hourglasses included" : "")</span>
                 </div>
                 <div class="stat">
                     <span class="label">Per Stamina</span>
@@ -407,6 +421,15 @@ else
                                     <span>Nothing</span>
                                 }
                             </td>
+                        </tr>
+                    }
+                    @if (a.HourglassSlot)
+                    {
+                        <tr>
+                            <td><strong>@GameRules.DeluxeWonderPickHourglasses Pack Hourglasses</strong></td>
+                            <td class="num" data-pri="3">—</td>
+                            <td class="num" data-pri="3">—</td>
+                            <td class="num">@Fmt(a.HourglassValue * GameRules.WonderPickCardsShown) packs</td>
                         </tr>
                     }
                 </tbody>
@@ -543,6 +566,15 @@ else
 
     private string _scope = "everything";
     private string _received = "";
+
+    /// <summary>The received choice for the hourglass slot. Not an ownership key, which are filenames.</summary>
+    private const string HourglassChoice = "hourglasses";
+
+    /// <summary>An offer from a Deluxe pack: four cards, and the hourglasses in the fifth slot.</summary>
+    private bool Deluxe => WonderPickEval.IsDeluxeOffer(_offer);
+
+    /// <summary>Cards the offer holds: four from a Deluxe pack, five otherwise.</summary>
+    private int CardSlots => Deluxe ? GameRules.DeluxePackCards : GameRules.WonderPickCardsShown;
     private string? _logged;
 
     private IReadOnlyList<double> _history = [];
@@ -621,7 +653,10 @@ else
     /// allowed — only the count is capped.
     /// </summary>
     private bool CanPick(PocketCard card) =>
-        _offer.Count < GameRules.WonderPickCardsShown && FromSamePack(card);
+        _offer.Count < (Deluxe || WonderPickEval.IsDeluxeOffer([card])
+                            ? GameRules.DeluxePackCards
+                            : GameRules.WonderPickCardsShown)
+        && FromSamePack(card);
 
     /// <summary>
     /// Whether this card could have come out of the same pack as the ones already named.
@@ -657,8 +692,8 @@ else
     /// </summary>
     private string PickHeading =>
         OfferFrom is { Length: > 0 } from
-            ? $"Add Card {_offer.Count + 1} of {GameRules.WonderPickCardsShown} \u00b7 {from}"
-            : $"Add Card {_offer.Count + 1} of {GameRules.WonderPickCardsShown}";
+            ? $"Add Card {_offer.Count + 1} of {CardSlots} \u00b7 {from}"
+            : $"Add Card {_offer.Count + 1} of {CardSlots}";
 
     /// <summary>Packs every named card appears in. Empty means nothing has narrowed it yet.</summary>
     private string[] OfferPacks()
@@ -796,6 +831,9 @@ else
                                              .Take(GameRules.WonderPickCardsShown))
             _offer.Add(match.Card);
 
+        // A Deluxe offer holds four cards; a fifth reading is the hourglass slot misread.
+        if (Deluxe && _offer.Count > CardSlots) _offer.RemoveRange(CardSlots, _offer.Count - CardSlots);
+
         Appraise();
     }
 
@@ -829,7 +867,8 @@ else
     {
         if (_appraisal is null) return;
 
-        Session.LogWonderOffer(_offer, _appraisal.StaminaCost, taken: false, received: null);
+        Session.LogWonderOffer(_offer, _appraisal.StaminaCost, taken: false, received: null,
+                               deluxe: _appraisal.HourglassSlot);
         _logged = "Logged as skipped. It still counts towards your threshold.";
         Clear();
     }
@@ -838,13 +877,17 @@ else
     {
         if (_appraisal is null || _received.Length == 0) return;
 
+        var hourglasses = _appraisal.HourglassSlot && _received == HourglassChoice;
         var got = _offer.FirstOrDefault(c => c.OwnershipKey == _received);
-        if (got is null) return;
+        if (got is null && !hourglasses) return;
 
         var cost = _appraisal.StaminaCost;
-        var paid = Session.LogWonderOffer(_offer, cost, taken: true, received: got);
+        var paid = Session.LogWonderOffer(_offer, cost, taken: true, received: got,
+                                          deluxe: _appraisal.HourglassSlot, receivedHourglasses: hourglasses);
 
-        _logged = $"Logged. {got.Name} added to your collection, {cost} stamina spent.";
+        _logged = hourglasses
+            ? $"Logged. {GameRules.DeluxeWonderPickHourglasses} Pack Hourglasses added, {cost} stamina spent."
+            : $"Logged. {got!.Name} added to your collection, {cost} stamina spent.";
 
         // What the balance could not cover came out of the hourglasses, so say which. Silent, it
         // looks like the stamina went further than it did.

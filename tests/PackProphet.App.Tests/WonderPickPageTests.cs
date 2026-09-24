@@ -314,4 +314,50 @@ public class WonderPickPageTests : AppHost
         Assert.NotNull(page.Find("#wonder-target"));
         Assert.NotNull(page.Find(".page-head #stamina"));
     }
+
+    /// <summary>A Deluxe pack holds four cards, so its offer's fifth slot is Pack Hourglasses.</summary>
+    private IRenderedComponent<WonderPick> WithDeluxeOffer()
+    {
+        var page = RenderComponent<WonderPick>();
+        foreach (var card in Session.Index.BySet["A4b"].Where(c => c.Rarity == "C").Take(GameRules.DeluxePackCards))
+        {
+            var picker = page.FindComponent<PackProphet.Components.CardPicker>();
+            page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(card)).GetAwaiter().GetResult();
+        }
+
+        page.WaitForState(() => page.FindAll(".offer-commit").Count > 0, TimeSpan.FromSeconds(10));
+        return page;
+    }
+
+    [Fact]
+    public async Task A_Deluxe_offer_is_four_cards_and_the_hourglasses()
+    {
+        await ReadyAsync();
+        var page = WithDeluxeOffer();
+
+        var boxes = page.FindAll(".box-strip .box").ToArray();
+        Assert.Equal(GameRules.WonderPickCardsShown, boxes.Length);
+        Assert.Empty(page.FindAll(".box-strip .box.dead"));
+        Assert.Contains("pack hourglasses", Flat(boxes[^1].TextContent));
+
+        // Four cards complete the offer, so the picker is gone.
+        Assert.Empty(page.FindComponents<PackProphet.Components.CardPicker>());
+    }
+
+    [Fact]
+    public async Task Taking_the_hourglasses_credits_them()
+    {
+        await ReadyAsync();
+        var page = WithDeluxeOffer();
+        var before = Session.Profile.Resources.PackHourglasses;
+
+        page.Find(".offer-commit select").Change("hourglasses");
+        page.FindAll(".offer-commit button").First(b => b.TextContent.Contains("Took It")).Click();
+
+        Assert.Equal(before + GameRules.DeluxeWonderPickHourglasses, Session.Profile.Resources.PackHourglasses);
+        var logged = Session.Profile.WonderLog[^1];
+        Assert.True(logged.Deluxe);
+        Assert.True(logged.ReceivedHourglasses);
+        Assert.Null(logged.Received);
+    }
 }

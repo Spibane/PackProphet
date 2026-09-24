@@ -45,7 +45,20 @@ public sealed record OfferAppraisal(
     OfferVerdict Verdict,
     double Threshold,
     string CostDriver,
-    bool CostDriverWanted);
+    bool CostDriverWanted)
+{
+    /// <summary>
+    /// A Deluxe offer: four cards and <see cref="GameRules.DeluxeWonderPickHourglasses"/> Pack
+    /// Hourglasses in the fifth slot.
+    /// </summary>
+    public bool HourglassSlot { get; init; }
+
+    /// <summary>
+    /// The hourglass slot's share of <see cref="ExpectedValue"/>, in packs. Zero for an ordinary
+    /// offer.
+    /// </summary>
+    public double HourglassValue { get; init; }
+}
 
 /// <summary>
 /// Take it or skip it?
@@ -98,11 +111,17 @@ public sealed class WonderPickEval
     /// Value-per-stamina this offer must beat. Zero accepts anything with value in it, which is
     /// the right default before there is any history to learn from.
     /// </param>
+    /// <param name="hourglassSlot">
+    /// Whether the offer is a Deluxe one. Worked out from the cards' printings when not given;
+    /// a logged offer says so itself, because it stores ownership keys and a reprint's key
+    /// resolves to its original printing.
+    /// </param>
     public OfferAppraisal Appraise(
         IReadOnlyList<PocketCard> offer,
         ICompletionTarget target,
         Collection owned,
-        double threshold = 0)
+        double threshold = 0,
+        bool? hourglassSlot = null)
     {
         // Demand keyed by ownership key, so "do I want this card" is answered by the same target
         // that drives the pack ranking rather than by a second, subtly different rule.
@@ -120,8 +139,14 @@ public sealed class WonderPickEval
 
         var cost = StaminaCost(offer);
 
-        // The average over a uniform 1-in-5, not the best card in the offer.
-        var ev = cards.Sum(c => c.Value) * GameRules.WonderPickCardChance;
+        // The average over a uniform 1-in-5, not the best card in the offer. A Deluxe offer's
+        // fifth slot is Pack Hourglasses, and those are packs: twelve bring one forward.
+        var deluxe = hourglassSlot ?? IsDeluxeOffer(offer);
+        var cardsEv = cards.Sum(c => c.Value) * GameRules.WonderPickCardChance;
+        var hourglassEv = deluxe
+            ? GameRules.WonderPickCardChance * GameRules.DeluxeWonderPickHourglasses / GameRules.PackHourglassesPerPack
+            : 0;
+        var ev = cardsEv + hourglassEv;
         var perStamina = cost > 0 ? ev / cost : ev;
 
         // The card that set the price, and whether it is one you actually want.
@@ -132,8 +157,11 @@ public sealed class WonderPickEval
 
         var driverWanted = driver is not null && wanted.GetValueOrDefault(driver.OwnershipKey) > 0;
 
+        // Nothing wanted is judged on the cards alone. The hourglasses are in every Deluxe offer,
+        // and a fifth of two hourglasses does not make stamina worth spending on four cards you
+        // already have.
         var verdict =
-            ev <= 0 ? OfferVerdict.NothingWanted
+            cardsEv <= 0 ? OfferVerdict.NothingWanted
             // Only at a premium price: at 1 stamina there is no premium to be paying.
             : cost >= OverpricedFrom && !driverWanted ? OfferVerdict.Overpriced
             : perStamina < threshold ? OfferVerdict.BelowThreshold
@@ -141,8 +169,32 @@ public sealed class WonderPickEval
 
         return new OfferAppraisal(
             cards, ev, cost, perStamina, verdict, threshold,
-            driver?.Name ?? "", driverWanted);
+            driver?.Name ?? "", driverWanted)
+        {
+            HourglassSlot = deluxe,
+            HourglassValue = hourglassEv,
+        };
     }
+
+    /// <summary>
+    /// Whether an offer came from a Deluxe pack, by the printings named: every card is a Deluxe
+    /// printing. A reprint named by its original printing reads as ordinary, which is right,
+    /// because that is the pack it was named from.
+    /// </summary>
+    public static bool IsDeluxeOffer(IReadOnlyCollection<PocketCard> offer) =>
+        offer.Count > 0 && offer.All(IsDeluxePrinting);
+
+    public static bool IsDeluxePrinting(PocketCard card) =>
+        card.Packs is { Length: > 0 } packs && packs.Any(GameRules.IsDeluxePack);
+
+    /// <summary>
+    /// Whether a logged offer was a Deluxe one. Offers logged before the flag existed are read
+    /// by their shape: four cards, every one of them sold in a Deluxe pack.
+    /// </summary>
+    public bool WasDeluxe(WonderOfferEvent offer) =>
+        offer.Deluxe ?? (offer.OwnershipKeys.Count == GameRules.DeluxePackCards
+                         && offer.OwnershipKeys.All(k => _index.ByOwnershipKey.TryGetValue(k, out var e)
+                                                         && e.Any(IsDeluxePrinting)));
 
     /// <summary>
     /// The stamina cost at which "you are paying for a rarity that does you no good" starts to
@@ -216,7 +268,7 @@ public sealed class WonderPickEval
 
             if (cards.Length == 0) continue;
 
-            yield return Appraise(cards, target, owned).ValuePerStamina;
+            yield return Appraise(cards, target, owned, hourglassSlot: WasDeluxe(offer)).ValuePerStamina;
         }
     }
 }

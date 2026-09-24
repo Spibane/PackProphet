@@ -242,4 +242,75 @@ public class WonderPickEvalTests
         Assert.Equal(0, appraisal.ExpectedValue);
         Assert.All(appraisal.Cards, c => Assert.True(double.IsFinite(c.Value)));
     }
+
+    // ---- Deluxe offers ---------------------------------------------------------------
+
+    /// <summary>Four A4b printings: a Deluxe pack's whole offer, the hourglasses aside.</summary>
+    private static PocketCard[] DeluxeOffer() =>
+        Snapshot.Index().BySet["A4b"].Where(c => c.Rarity == "C").Take(GameRules.DeluxePackCards).ToArray();
+
+    private static ICompletionTarget WantsA4b =>
+        RarityLadderTarget.UpTo("A4b", Snapshot.Index().Ladder.IndexOf("SR")!.Value, Snapshot.Index());
+
+    [Fact]
+    public void ADeluxeOffer_CountsItsHourglassSlotAsAFifthOfTwoHourglasses()
+    {
+        var offer = DeluxeOffer();
+        var appraisal = Eval.Appraise(offer, WantsA4b, new Collection());
+
+        // Twelve Pack Hourglasses bring a pack forward, and the slot is drawn one time in five.
+        var slot = 1.0 / GameRules.WonderPickCardsShown * GameRules.DeluxeWonderPickHourglasses
+                   / GameRules.PackHourglassesPerPack;
+
+        Assert.True(appraisal.HourglassSlot);
+        Assert.Equal(slot, appraisal.HourglassValue, 9);
+        Assert.Equal(appraisal.Cards.Sum(c => c.Value) / GameRules.WonderPickCardsShown + slot,
+                     appraisal.ExpectedValue, 9);
+    }
+
+    [Fact]
+    public void AnOrdinaryOffer_HasNoHourglassSlot()
+    {
+        var appraisal = Eval.Appraise(OfRarity("C", 5), WantsA1, new Collection());
+
+        Assert.False(appraisal.HourglassSlot);
+        Assert.Equal(0, appraisal.HourglassValue);
+    }
+
+    [Fact]
+    public void AReprintNamedByItsOriginalPrinting_IsNotADeluxeOffer()
+    {
+        // A1-1 and A4b-1 are one card. Named from A1, the offer came from an A1 pack.
+        var a1 = Snapshot.Index().ByKey["A1-1"];
+        var a4b = Snapshot.Index().ByKey["A4b-1"];
+        Assert.Equal(a1.OwnershipKey, a4b.OwnershipKey);
+
+        Assert.False(WonderPickEval.IsDeluxeOffer([a1]));
+        Assert.True(WonderPickEval.IsDeluxeOffer([a4b]));
+    }
+
+    [Fact]
+    public void ADeluxeOfferOfCardsYouHave_IsStillNothingWanted()
+    {
+        // The hourglasses are in every Deluxe offer. They sweeten an offer; they do not make four
+        // cards you already have worth a stamina.
+        var offer = DeluxeOffer();
+        var owned = new Collection(offer.ToDictionary(c => c.OwnershipKey, _ => 9));
+
+        var appraisal = Eval.Appraise(offer, WantsA4b, owned);
+
+        Assert.Equal(OfferVerdict.NothingWanted, appraisal.Verdict);
+        Assert.True(appraisal.ExpectedValue > 0);
+    }
+
+    [Fact]
+    public void ALoggedOffer_SaysWhetherItWasDeluxe_AndOldOnesAreReadByShape()
+    {
+        var keys = DeluxeOffer().Select(c => c.OwnershipKey).ToList();
+        var a1Keys = OfRarity("C", 5).Select(c => c.OwnershipKey).ToList();
+
+        Assert.True(Eval.WasDeluxe(new WonderOfferEvent(DateTimeOffset.Now, keys, 1, false, null)));
+        Assert.False(Eval.WasDeluxe(new WonderOfferEvent(DateTimeOffset.Now, a1Keys, 1, false, null)));
+        Assert.False(Eval.WasDeluxe(new WonderOfferEvent(DateTimeOffset.Now, keys, 1, false, null) { Deluxe = false }));
+    }
 }

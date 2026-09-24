@@ -102,7 +102,7 @@ public sealed class RarityLadderTarget : ICompletionTarget
             if (remaining <= 0) continue;
 
             // Every entry listing this card, so its pack rates pool across sets: a Deluxe
-            // reprint is obtainable from both its original set's packs and A4b's.
+            // reprint is obtainable from both its original set's packs and the Deluxe set's.
             var suppliers = index.ByOwnershipKey[card.OwnershipKey];
             result.Add(new Demand(card.OwnershipKey, remaining, suppliers));
         }

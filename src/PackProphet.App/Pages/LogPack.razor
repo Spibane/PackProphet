@@ -47,20 +47,20 @@ else if (_pack is null)
 
         <div class="rail-group">
             <span class="ttl">Limited-time</span>
-            @* The same setting as on the Packs page — there is one answer to "is Deluxe on sale" — and
-               it is repeated here because this is the page you are on when you find out. It never
-               filters the picker: you can log a pack you opened whatever the app assumed about the
-               shelf. *@
+            @* The same setting as on the Packs page — one answer to "is Deluxe on sale", for every
+               Deluxe set — and it is repeated here because this is the page you are on when you
+               find out. It never filters the picker: you can log a pack you opened whatever the
+               app assumed about the shelf. *@
             @if (Session.LimitedPacks.Count > 0)
             {
                 <span class="avail">
-                    @foreach (var pack in Session.LimitedPacks)
+                    @foreach (var pack in Session.LimitedPackNames)
                     {
-                        var on = Session.IsLimitedPackAvailable(pack);
+                        var on = Session.IsLimitedPackNameAvailable(pack);
                         <button class="avail-chip @(on ? "on" : "off")"
-                                @onclick="() => Session.SetLimitedPackAvailable(pack, !on)"
-                                title="@(pack.Split(':')[1]) packs come and go. This only affects which packs the Which pack page recommends. You can log one either way.">
-                            <span class="nm">@pack.Split(':')[1]</span>
+                                @onclick="() => Session.SetLimitedPackNameAvailable(pack, !on)"
+                                title="@pack packs come and go. This only affects which packs the Which pack page recommends. You can log one either way.">
+                            <span class="nm">@pack</span>
                             <span class="st">@(on ? "On Sale" : "Off Sale")</span>
                         </button>
                     }

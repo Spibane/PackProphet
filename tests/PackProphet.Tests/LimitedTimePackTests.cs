@@ -137,6 +137,29 @@ public class LimitedTimePackTests
     }
 
     [Fact]
+    public void NoFoilIsAlsoListedInASetWithoutFoils()
+    {
+        // A foil is decided by artwork: a second print on a rung whose set names a foil code.
+        // A Deluxe set that REPRINTS an existing 1-3 diamond alternate art — B1's Furfrou, B2a's
+        // Iono or Penny, A1's Eevee — would share that artwork, and the card would become a
+        // "foil" in the set it came from too: dropped from ordinary targets by the foil setting,
+        // badged on the trade board. This fails on the snapshot refresh that brings such a
+        // reprint, which is when the rule needs to learn the difference.
+        var odds = Snapshot.Odds();
+        var index = Snapshot.Index();
+        var foilSets = odds.SetsWithFoils.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var leaked = odds.FoilOwnershipKeys
+            .SelectMany(k => index.ByOwnershipKey[k])
+            .Where(c => !foilSets.Contains(c.Set))
+            .Select(c => c.Key)
+            .ToArray();
+
+        Assert.True(leaked.Length == 0,
+            $"Alternate arts counted as parallel foils: {string.Join(", ", leaked)}");
+    }
+
+    [Fact]
     public void OnlyTheDeluxeSetHasFoils()
     {
         Assert.Equal(new[] { "A4b" }, Snapshot.Odds().SetsWithFoils.OrderBy(s => s).ToArray());

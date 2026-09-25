@@ -16,7 +16,6 @@ else if (_pack is null)
     <div class="page-head folded">
         <RailToggle />
         <h1 class="title">Log a Pack</h1>
-        <span class="subtitle">Which pack did you open?</span>
     </div>
 
 
@@ -60,7 +59,7 @@ else if (_pack is null)
                         var on = Session.IsLimitedPackNameAvailable(pack);
                         <button class="avail-chip @(on ? "on" : "off")"
                                 @onclick="() => Session.SetLimitedPackNameAvailable(pack, !on)"
-                                title="@pack packs come and go. This only affects which packs the Which pack page recommends. You can log one either way.">
+                                title="Affects recommendations only.">
                             <span class="nm">@pack</span>
                             <span class="st">@(on ? "On Sale" : "Off Sale")</span>
                         </button>
@@ -118,8 +117,8 @@ else if (_pack is null)
         <div class="shot-panel" id="log-shots" hidden="@(!_shotsOpen)">
             <ShotImport @ref="_shots" Group="pack" Choices="@ShotChoices">
                 <Intro>
-                    Screenshot the <strong>Opening Results</strong> screen, with all five cards
-                    showing. The cards say which pack it was.
+                    Screenshot the <strong>Opening Results</strong> screen, all five cards
+                    showing.
                 </Intro>
                 <Actions Context="reading">
                     @{
@@ -239,8 +238,7 @@ else if (_pack is null)
                                 <Notice Severity="Notice.Level.Warning" Dense="true">
                                     @plan.Unidentified of these pictures
                                     @(plan.Unidentified == 1 ? "does" : "do") not say which pack
-                                    @(plan.Unidentified == 1 ? "it is" : "they are"): too few
-                                    cards named, or cards that fit more than one pack. Use that
+                                    @(plan.Unidentified == 1 ? "it is" : "they are"). Use that
                                     picture's own button above, or name its slots first.
                                 </Notice>
                             }
@@ -348,9 +346,7 @@ else if (_pack is null)
                     {
                         <span class="text-danger-emphasis">
                             @string.Join(", ", done.Capped) hit the @GameRules.PackPointsCap
-                            pack-point cap, so further packs of
-                            @(done.Capped.Count == 1 ? "that set" : "those sets") earn nothing.
-                            Spend before opening.
+                            pack-point cap. Spend before opening more.
                         </span>
                     }
                 </Notice>
@@ -395,9 +391,7 @@ else if (_pack is null)
                    the honest claim is the one about order. *@
                 <p class="small text-body-secondary">
                     The @RecentPromos.Window newest in
-                    @Session.Sets.DisplayName(_promoSet), newest first. This is what arrived most
-                    recently, not what is still being handed out — the game publishes no event
-                    list.
+                    @Session.Sets.DisplayName(_promoSet), newest first.
                 </p>
 
                 <ul class="promo-list">
@@ -605,7 +599,7 @@ else
        Tapping a filled slot takes that card back out -- the chips' one job, kept. *@
     <div class="pack-slots">
         <BoxStrip Label="@($"The {SlotCount} cards")"
-                  Clause="@(_picked.Count > 0 ? "tap one to take it back out" : null)"
+                  Clause="@(_picked.Count > 0 ? "tap one to remove it" : null)"
                   Columns="@SlotCount">
             @for (var i = 0; i < SlotCount; i++)
             {
@@ -615,7 +609,7 @@ else
                     var card = _picked[slot];
                     <Box State="Box.Kind.Live" Label="@((slot + 1).ToString())">
                         <button class="slot-card" @onclick="() => Unpick(card)"
-                                title="Take @card.Name back out"
+                                title="Remove @card.Name"
                                 style="@card.ArtVars"></button>
                         <span class="slot-cap">
                             <span class="nm">@card.Name</span>
@@ -648,7 +642,7 @@ else
             @if (_justLogged.Value.capped)
             {
                 <span class="text-danger-emphasis">
-                    (at the @GameRules.PackPointsCap cap, so further packs of this set earn nothing). Spend before opening.
+                    (at the @GameRules.PackPointsCap cap). Spend before opening more.
                 </span>
             }
 
@@ -1022,8 +1016,7 @@ else
 
     private string AdoptWarning =>
         AdoptCostsTheRest
-            ? "Opening one pack clears the other pictures. They are not logged, and you would have "
-              + "to choose them again. Log them all at once with the button below instead."
+            ? "Clears the other pictures. To keep them, log them all below."
             : "";
 
     private void AdoptShot(ShotReading reading, string pack)
@@ -1147,19 +1140,19 @@ else
             var sizes = PackSizes;
             if (sizes.Count == 0)
                 return _picked.Count == 0
-                    ? "Name each card that came out of the pack."
-                    : "Name the rest of the cards that came out.";
+                    ? "Name each card."
+                    : "Name the rest.";
 
             var target = sizes.Min();
             var left = target - _picked.Count;
 
             if (_picked.Count == 0)
                 return sizes.Count == 1
-                    ? $"Name the {Words(target)} cards that came out."
-                    : "Name the cards that came out.";
+                    ? $"Name the {Words(target)} cards."
+                    : "Name the cards.";
 
             return left <= 0
-                ? "Name the rest of the cards that came out."
+                ? "Name the rest."
                 : left == 1 ? "One more card." : $"{Words(left)} more cards.";
         }
     }
@@ -1189,7 +1182,7 @@ else
 
             return after == before
                 ? $"{set} is at the {GameRules.PackPointsCap:N0}-point cap, so this pack earns none."
-                : $"Committing takes {set} points to {after:N0} of {GameRules.PackPointsCap:N0}.";
+                : $"Takes {set} points to {after:N0} of {GameRules.PackPointsCap:N0}.";
         }
     }
 
@@ -1222,10 +1215,7 @@ else
                 ? $"{counts.First()} cards"
                 : string.Join(" or ", counts.OrderBy(n => n)) + " cards";
 
-            return $"A {set} pack holds {sizes}, and you have picked {_picked.Count}. " +
-                   "Log it anyway if that is what you meant, but the odds check on History " +
-                   "compares what you record against what the model predicted, so a miscount " +
-                   "there looks like the model being wrong.";
+            return $"A {set} pack holds {sizes}. You picked {_picked.Count}.";
         }
     }
 
@@ -1500,19 +1490,14 @@ else
             said.Add(
                 $"{plan.Repeats} of these pictures "
                 + $"{(plan.Repeats == 1 ? "records a pack" : "record packs")} already in your "
-                + "history: same pack, same cards. Log "
-                + $"{(plan.Repeats == 1 ? "it" : "them")} anyway if you really opened "
-                + $"{(plan.Repeats == 1 ? "it" : "them")} twice.");
+                + "history: same pack, same cards.");
         }
 
         if (plan.Short > 0)
         {
             said.Add(
                 $"{plan.Short} of these {Fmt.S(plan.Short, "picture")} "
-                + $"{(plan.Short == 1 ? "holds" : "hold")} a number of cards that pack cannot. "
-                + "Log them anyway if that is what you meant, but the odds check on History "
-                + "compares what you record against what the model predicted, so a miscount there "
-                + "looks like the model being wrong.");
+                + $"{(plan.Short == 1 ? "holds" : "hold")} a number of cards that pack cannot.");
         }
 
         return said.Count == 0 ? null : string.Join(" ", said);

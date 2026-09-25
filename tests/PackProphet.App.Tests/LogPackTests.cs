@@ -297,8 +297,8 @@ public class LogPackTests : AppHost
         page.WaitForAssertion(() =>
         {
             var warned = page.Find(".todo-strip.short");
-            Assert.Contains("odds check", Flat(warned.TextContent));
-            Assert.Contains("anyway", Flat(warned.TextContent));
+            Assert.Contains("pack holds", Flat(warned.TextContent));
+            Assert.Contains("Anyway", Flat(warned.TextContent));
         });
     }
 

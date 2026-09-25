@@ -318,7 +318,7 @@ public class TradeBoardPageTests : AppHost
         var page = await PageAsync();
 
         var rerun = page.FindAll(".page-head .actions button")
-            .FirstOrDefault(b => b.GetAttribute("aria-label") == "Work the plan out again");
+            .FirstOrDefault(b => b.GetAttribute("aria-label") == "Recalculate");
 
         Assert.NotNull(rerun);
     }

@@ -33,18 +33,16 @@
    reliably reapplied to the DOM's selectedIndex, so the visible choice can snap back to the first
    option even though the filter did change. *@
 <div class="search-grid mb-2">
-    <input class="form-control form-control-sm" placeholder="Name, or words from the card text" aria-label="Search cards by name or rules text"
+    <input class="form-control form-control-sm" placeholder="Name or card text" aria-label="Search cards"
            @bind="_text" @bind:event="oninput" @bind:after="OnTyped" />
 
     <div class="btn-group btn-group-sm" role="group" aria-label="Card pool">
         <button class="btn @(_ownedOnly ? "btn-secondary" : "btn-outline-secondary")"
-                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@Aria.Flag(_ownedOnly)"
-                title="Only cards you already own">
+                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@Aria.Flag(_ownedOnly)">
             I Own
         </button>
         <button class="btn @(_ownedOnly ? "btn-outline-secondary" : "btn-secondary")"
-                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@Aria.Flag(!_ownedOnly)"
-                title="Every card in the game">
+                @onclick="() => SetPool(!_ownedOnly)" aria-pressed="@Aria.Flag(!_ownedOnly)">
             All
         </button>
     </div>
@@ -147,8 +145,7 @@
 @if (!Session.FactsReady && (_kind.Length > 0 || _subtype.Length > 0 || _stage.Length > 0))
 {
     <Notice Severity="Notice.Level.Info" Dense="true">
-        Card detail is still downloading, so type and stage filters have nothing to
-        match yet. Name search works now.
+        Card detail is loading. Type and stage filters match nothing yet.
     </Notice>
 }
 
@@ -158,7 +155,7 @@
 {
     <p class="small text-body-secondary mb-1">
         Showing
-        <strong>@(_ownedOnly ? "cards you own" : "all cards")</strong>
+        <strong>@(_ownedOnly ? "owned cards" : "all cards")</strong>
         @if (_set.Length > 0) { <span>&middot; @_set</span> }
         @if (_rarity.Length > 0) { <span>&middot; @RarityLabel</span> }
         @if (_kind.Length > 0) { <span>&middot; @_kind</span> }
@@ -170,10 +167,7 @@
 
 @if (Query.IsEmpty)
 {
-    <p class="small text-body-secondary">
-        Browse with the dropdowns, or search by name or card text: try
-        <em>asleep</em>, <em>poisoned</em> or <em>draw</em>.
-    </p>
+    @* Nothing until a filter or a search is set. *@
 }
 else if (_results.Count == 0)
 {
@@ -183,8 +177,8 @@ else if (_results.Count == 0)
     @if (_ownedOnly && _elsewhere > 0)
     {
         <Notice Severity="Notice.Level.Info">
-            None of the cards <strong>you own</strong> match, but
-            <strong>@_elsewhere</strong> @Fmt.S(_elsewhere, "card") in the game @Fmt.S(_elsewhere, "does", "do").
+            No owned card matches; <strong>@_elsewhere</strong> in the game
+            @Fmt.S(_elsewhere, "does", "do").
             <button class="btn btn-sm btn-outline-primary ms-1 py-0"
                     @onclick="() => SetPool(false)">Search All Cards</button>
         </Notice>
@@ -192,7 +186,7 @@ else if (_results.Count == 0)
     else
     {
         <p class="small text-body-secondary">
-            No card matches those filters.
+            No matches.
         </p>
     }
 }
@@ -212,9 +206,6 @@ else
             <button class="btn btn-sm btn-primary" @onclick="PickAll">
                 Add All @_matches.Count
             </button>
-            <span class="small text-body-secondary">
-                Everything matching these filters, in one step
-            </span>
         </div>
     }
 
@@ -334,7 +325,7 @@ else
     @if (_more > 0)
     {
         <p class="small text-body-secondary mt-1 mb-0">
-            &hellip; and @_more more. Narrow the search to see them.
+            &hellip; and @_more more.
         </p>
     }
 }
@@ -362,11 +353,9 @@ else
     }
 
     private static string OwnedTip(int owned, IReadOnlyList<(PocketCard Card, int Count)> spread) =>
-        owned == 0 ? "you own none of this card"
-        : spread.Count > 1
-            ? $"you own {owned} copies across {spread.Count} different arts, and any of them " +
-              "fills the deck slot"
-            : owned == 1 ? "you own 1 copy" : $"you own {owned} copies";
+        owned == 0 ? "none owned"
+        : spread.Count > 1 ? $"{owned} owned across {spread.Count} arts"
+        : $"{owned} owned";
 
     private static string SpreadTip(IReadOnlyList<(PocketCard Card, int Count)> spread) =>
         string.Join("\n", spread.Select(x => $"{x.Card.Set} {x.Card.Number} ×{x.Count}"));

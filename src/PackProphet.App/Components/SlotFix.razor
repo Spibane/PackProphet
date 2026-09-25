@@ -33,8 +33,8 @@
         <button type="button" class="slot-shot flex-shrink-0 @(_zoom ? "zoom" : "")"
                 aria-pressed="@Aria.Flag(_zoom)" @onclick="() => _zoom = !_zoom"
                 aria-label="@(_zoom
-                    ? $"Hide the enlarged card at {Where}"
-                    : $"Show the card at {Where} larger")">
+                    ? $"Hide enlarged {Where}"
+                    : $"Show {Where} larger")">
             <img src="@Slot.Thumb" alt="@($"The unrecognised card at {Where}")" />
         </button>
     }
@@ -53,7 +53,7 @@
                 <span class="slot-pick" style="@card.ArtVars" role="img" aria-label=""></span>
                 <span>
                     <a href="card/@card.Key">@card.Name</a>
-                    <span class="d-block small text-body-secondary">@card.Key, you said so</span>
+                    <span class="d-block small text-body-secondary">@card.Key</span>
                 </span>
                 <button type="button" class="btn btn-sm btn-outline-secondary ms-auto"
                         @onclick="Clear">
@@ -74,7 +74,7 @@
                 }
             </label>
             <input id="@_id" class="form-control form-control-sm" type="search"
-                   placeholder="@(Narrowed ? $"Type a name from {OnlyLabel}" : "Type the card's name")"
+                   placeholder="@(Narrowed ? $"Search {OnlyLabel}" : "Card name")"
                    autocomplete="off"
                    value="@_text" @oninput="OnTyped" />
 
@@ -99,7 +99,7 @@
                 @if (_more > 0)
                 {
                     <p class="small text-body-secondary mb-0 mt-1">
-                        @_more.ToString("N0") more. Type a little more of the name.
+                        @_more.ToString("N0") more. Keep typing.
                     </p>
                 }
             }

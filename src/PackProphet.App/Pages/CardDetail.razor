@@ -15,7 +15,7 @@ else if (_card is null)
 {
     <PageShell Measure="PageShell.Width.Text">
         <p>No card with the code <code>@Key</code>.</p>
-        <a class="btn btn-sm btn-primary" href="collection">Back to the Collection</a>
+        <a class="btn btn-sm btn-primary" href="collection">Back to Collection</a>
     </PageShell>
 }
 else
@@ -30,7 +30,7 @@ else
 
     <div class="page-head">
         <BackLink Label="Back" OnBack="Back"
-                  Title="@($"Back to {History.LastListPage}, or press Escape")" />
+                  Title="Back (Escape)" />
         <h1 class="title">@_card.Name</h1>
         <span class="subtitle">@_card.Set&thinsp;@_card.Number</span>
         <span class="actions">
@@ -59,15 +59,15 @@ else
                     class="big-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
                     style="@_card.ArtVars"
                     popovertarget="card-zoom"
-                    aria-label="@($"See the art for {_card.Name} at twice the size")"
-                    title="See it larger"></button>
+                    aria-label="Enlarge art"
+                    title="Enlarge"></button>
 
             @* Said in words as well as drawn: the ring alone does not explain itself, and being
                two copies away is worth knowing. *@
             @if (Session.HasGoldFlair(_card))
             {
                 <p class="small mb-0 flair-note">
-                    Gold flair earned: @_owned copies.
+                    Gold flair: @_owned copies.
                 </p>
             }
             @* Same rule as the flair itself, so the hint does not promise gold to a four-diamond
@@ -84,7 +84,7 @@ else
                row that sized themselves, so the count floated wherever the label left it and the
                control had no edge of its own. *@
             <div class="own-row">
-                <span class="label">You own</span>
+                <span class="label">Owned</span>
                 <span class="steps">
                     <button class="step" @onclick="() => Bump(-1)"
                             disabled="@(_owned == 0)" aria-label="Remove one">&minus;</button>
@@ -111,8 +111,7 @@ else
                 @{ var hearted = Session.WantedOnHeartList(_card.OwnershipKey) > 0; }
                 <button class="btn btn-sm want-heart @(hearted ? "on" : "")"
                         @onclick="() => Session.ToggleWanted(_card.OwnershipKey)"
-                        aria-pressed="@Aria.Flag(hearted)"
-                        title="@(hearted ? $"On your {AppSession.WantListName} list. Tap to take it off" : $"Add to your {AppSession.WantListName} list")">
+                        aria-pressed="@Aria.Flag(hearted)">
                     <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false">
                         <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
                               fill="@(hearted ? "currentColor" : "none")"
@@ -137,15 +136,14 @@ else
                         <span class="want-pair">
                             <button class="btn btn-sm @(wanted > 0 ? "btn-primary" : "btn-outline-secondary")"
                                     @onclick="() => Session.BumpWanted(list.Id, _card.OwnershipKey, 1)"
-                                    title="@(wanted == 0 ? $"Add to {list.Name}" : $"Wanting {wanted} on {list.Name}. Tap for one more")">
+                                    title="One more per tap.">
                                 @list.Name@(wanted > 0 ? $" ×{wanted}" : "")
                             </button>
                             @if (wanted > 0)
                             {
                                 <button class="btn btn-sm btn-outline-secondary"
                                         @onclick="() => Session.BumpWanted(list.Id, _card.OwnershipKey, -1)"
-                                        title="Want one fewer on @list.Name"
-                                        aria-label="Want one fewer on @list.Name">&minus;</button>
+                                        aria-label="One fewer on @list.Name">&minus;</button>
                             }
                         </span>
                     }
@@ -159,8 +157,8 @@ else
             {
                 <p class="small text-body-secondary mb-0">
                     Also listed as
-                    @string.Join(", ", _reprints.Where(c => c.Key != _card.Key).Select(c => $"{c.Set} {c.Number}")).
-                    One copy counts for all of them.
+                    @string.Join(", ", _reprints.Where(c => c.Key != _card.Key).Select(c => $"{c.Set} {c.Number}"));
+                    one copy counts for all.
                 </p>
             }
         </div>
@@ -187,10 +185,8 @@ else
                         <p class="says">@says</p>
                     }
 
-                    <p class="then">
-                        Only <strong>pull</strong> and <strong>pack points</strong> are priced in
-                        packs. Shinedust and stamina are separate currencies with no exchange rate.
-                    </p>
+                    @* Only pull and pack points are priced in packs. Shinedust and stamina are
+                       separate currencies with no exchange rate. *@
                 </div>
             </div>
 
@@ -247,11 +243,11 @@ else
             </dl>
         }
 
-        <h2 class="sub-head">Packs That Can Give It</h2>
+        <h2 class="sub-head">Packs</h2>
         @if (_packs.Count == 0)
         {
             <p class="small text-body-secondary">
-                None: @(_card.IsPromo ? "promos come from events, not packs." : "this card is not sold in packs.")
+                None.
             </p>
         }
         else
@@ -278,9 +274,8 @@ else
         @if (_printingPoints is int printPoints)
         {
             <p class="small text-body-secondary mt-2 mb-0">
+                @* Per printing: alternate arts are priced far above their base card. *@
                 This printing costs <strong>@printPoints.ToString("N0")</strong> pack points.
-                Alternate arts are priced far above their base card, so each printing has its own
-                price.
             </p>
         }
 
@@ -300,12 +295,12 @@ else
             <p class="text-body-secondary">
                 @if (!Session.FactsReady)
                 {
-                    <span>Card detail is still downloading&hellip;</span>
+                    <span>Loading card detail&hellip;</span>
                 }
                 else
                 {
                     @* Not a dead end: art, rarity, packs and routes are all still shown. *@
-                    <span>No printed detail published for this card yet.</span>
+                    <span>No card detail yet.</span>
                 }
             </p>
         }
@@ -336,10 +331,8 @@ else
                                else on the page would say so. *@
                             @if (!OwnsAnyNamed(from))
                             {
-                                <span class="badge text-bg-warning ms-1"
-                                      title="You own none. Any printing of it will do: the game evolves on the printed name.">
-                                    You own none
-                                </span>
+                                @* Any printing will do: the game evolves on the printed name. *@
+                                <span class="badge text-bg-warning ms-1">None Owned</span>
                             }
                         }
                     </span>
@@ -426,7 +419,7 @@ else
         <button type="button" class="zoom-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
                 style="@_card.ArtVars"
                 popovertarget="card-zoom" popovertargetaction="hide"
-                aria-label="@($"Close the larger art for {_card.Name}")" autofocus></button>
+                aria-label="Close art" autofocus></button>
     </div>
 }
 
@@ -608,7 +601,7 @@ else
     private string LeadFrom()
     {
         if (_routes?.Cheapest is not { } best)
-            return "No route in the game gives you this card.";
+            return "No route gives this card.";
 
         var route = RouteName(best.Route);
         if (best.Route != AcquisitionRoute.Pull || _packs.Count == 0) return route;

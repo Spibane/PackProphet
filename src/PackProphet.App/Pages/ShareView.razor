@@ -16,8 +16,7 @@ else if (_shared is null)
     </div>
     <PageShell Measure="PageShell.Width.Wide">
         <p>
-            This link could not be read. It may be truncated from being copied, edited by hand,
-            or made by a version of PackProphet this one no longer understands.
+            This link could not be read. Ask for it again.
         </p>
     </PageShell>
 }
@@ -37,26 +36,22 @@ else
             {
                 <span>Wanted by @_shared.OwnerName</span>
             }
-            (shared read-only)
+            (read-only)
         </span>
     </div>
 
-    @* Said plainly rather than assumed: the whole list arrived inside the link itself, so nothing
-       about opening this page sent anything anywhere. What the owner already has is deliberately
-       not part of it — this is a want-list, not their collection. *@
+    @* The whole list arrives inside the link, decoded in the browser, so opening this page sends
+       nothing anywhere. What the owner already has is deliberately not part of it — this is a
+       want-list, not their collection. A link may fail to decode because it was truncated, edited
+       by hand, or made by an incompatible version. *@
     @* One shell for the page, not one per block. Three of them stacked here, and the first wore
        `pb-0` to close the seam its own padding had opened between it and the next -- which is the
        shell being used as a wrapper for a paragraph rather than as the page's body. *@
     <PageShell>
-    <Notice Severity="Notice.Level.Info">
-        Read-only, and decoded entirely in your browser. Opening the link contacted no
-        server. Only the wanted cards travelled in it, not @_shared.OwnerName's collection.
-    </Notice>
-
     @if (_rows.Count == 0)
     {
         <EmptyState>
-            Nothing in this list is a card the current card data knows about.
+            None of these cards are in the current card data.
         </EmptyState>
     }
     else
@@ -67,9 +62,8 @@ else
                 <span class="value">@_rows.Count</span>
             </div>
             <div class="stat">
-                <span class="label">You Could Help With</span>
+                <span class="label">You Can Offer</span>
                 <span class="value">@_canHelpWith</span>
-                <span class="sub">Cards you already own at least one of</span>
             </div>
         </div>
 
@@ -106,9 +100,6 @@ else
                 }
             </tbody>
         </DataTable>
-        <p class="small text-body-secondary">
-            Rows you own at least one of are highlighted: those are what you have to offer.
-        </p>
     }
     </PageShell>
 }

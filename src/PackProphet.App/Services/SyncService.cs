@@ -244,8 +244,7 @@ public sealed class SyncService : IAsyncDisposable
         {
             Fail(string.IsNullOrWhiteSpace(typed)
                 ? "Type the code from your other device first."
-                : $"“{typed.Trim()}” is not a valid code. It is twelve characters, like "
-                + "PACK-7K3M-92QX. Check it against the other device.");
+                : $"“{typed.Trim()}” is not a valid code. Codes look like PACK-7K3M-92QX.");
             return false;
         }
 
@@ -273,8 +272,7 @@ public sealed class SyncService : IAsyncDisposable
             {
                 // The code parsed, so it is not a typo -- it is a code for a document that does not
                 // exist. Worth separating, because the useful next step is different.
-                Fail("Nothing is stored under that code. Check it on the other device, or set sync "
-                   + "up here and type this device's code over there instead.");
+                Fail("Nothing is stored under that code. Check it on the other device.");
                 return false;
             }
 
@@ -340,8 +338,8 @@ public sealed class SyncService : IAsyncDisposable
             LastMerge = MergeReport.None;
             Status = SyncStatus.Unpaired;
             Message = deleteRemote
-                ? "Unpaired, and the stored copy is deleted. Your collection is still here."
-                : "Unpaired. Your collection is still here, and the stored copy is untouched.";
+                ? "Sync stopped and the stored copy deleted. Your collection is still here."
+                : "Sync stopped. Your collection is still here.";
 
             Notify();
         }
@@ -361,16 +359,15 @@ public sealed class SyncService : IAsyncDisposable
     private string? Blocked()
     {
         if (!_session.Loaded)
-            return "Waiting for your collection to load before syncing.";
+            return "Waiting for your collection to load.";
 
         if (_session.LoadFailed)
-            return "The collection saved here could not be read, so nothing was synced -- syncing "
-                 + "now would copy that loss to your other device. Restore from a backup, or open "
-                 + "this on the device that still has your cards.";
+            // Syncing now would copy that loss to the other device.
+            return "The collection saved here could not be read, so nothing was synced. Restore a "
+                 + "backup, or use the device that still has your cards.";
 
         if (_session.StorageUnavailable)
-            return "This browser is giving the app no storage, so there is nothing here to sync "
-                 + "from. Your other device is untouched.";
+            return "This browser gives the app no storage, so nothing was synced.";
 
         return null;
     }
@@ -402,8 +399,7 @@ public sealed class SyncService : IAsyncDisposable
     /// means the page is not on a secure origin. Naming that is more use than "something failed".
     /// </summary>
     private const string CryptoUnavailable =
-        "This browser would not derive a key from the code. Sync needs WebCrypto, which needs a "
-        + "secure connection. Your collection here is unaffected.";
+        "Sync needs a secure (https) connection. Your collection here is unaffected.";
 
     /// <summary>
     /// Failures worth reporting rather than crashing on: interop, network, and the JSON of a
@@ -485,9 +481,8 @@ public sealed class SyncService : IAsyncDisposable
                 && StateMerge.NothingRecorded(_session.State)
                 && !StateMerge.NothingRecorded(_ancestor))
             {
-                Fail("This device came up with an empty collection where it should have one, so "
-                   + "nothing was synced. Your stored copy is untouched. Reload the page, and "
-                   + "restore from a backup if it is still empty.");
+                Fail("This device's collection is unexpectedly empty, so nothing was synced. "
+                   + "Reload, and restore a backup if it is still empty.");
                 return;
             }
 
@@ -570,8 +565,7 @@ public sealed class SyncService : IAsyncDisposable
     {
         var json = await _crypto.OpenAsync(remote.Payload, remote.Nonce);
         if (json is null)
-            return new Opened(null, "The stored copy would not open with this code. Nothing here "
-                                  + "was changed.");
+            return new Opened(null, "The stored copy would not open with this code. Nothing was changed.");
 
         var state = StateSerializer.Deserialize(json);
         if (state is not null) return new Opened(state, null);
@@ -580,8 +574,7 @@ public sealed class SyncService : IAsyncDisposable
         // would drop the fields it does not know and the next push would store that loss. After a
         // release that is the likely reading, and it needs its own sentence.
         return new Opened(null, NewerSchema(json)
-            ? "The stored copy was written by a newer version of PackProphet. Reload this page to "
-            + "update, then sync again."
+            ? "The stored copy is from a newer PackProphet. Reload to update, then sync again."
             : "The stored copy could not be read. Nothing here was changed.");
     }
 
@@ -671,7 +664,7 @@ public sealed class SyncService : IAsyncDisposable
         PushOutcome.TooLarge =>
             "This collection is too large to sync. Export a backup instead.",
         PushOutcome.Gone =>
-            "The stored copy is gone: an unused pairing expires. Set sync up again to make a new code.",
+            "The stored copy has expired. Set up sync again for a new code.",
         PushOutcome.Refused =>
             "The server refused that code.",
         PushOutcome.Superseded =>
@@ -679,9 +672,9 @@ public sealed class SyncService : IAsyncDisposable
         PushOutcome.TooFast =>
             "Too many saves too quickly. Nothing was lost; try again in a moment.",
         PushOutcome.AlreadyThere =>
-            "There is a stored copy this device could not read. That is usually a different "
-            + "pairing code: set sync up again with the code from the device that has your "
-            + "collection.",
+            // Usually a different pairing code.
+            "This device cannot read the stored copy. Set up sync again with the code from the "
+            + "device that has your collection.",
         _ => "Sync did not finish.",
     };
 

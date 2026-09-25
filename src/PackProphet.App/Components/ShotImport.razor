@@ -63,7 +63,10 @@
                        @onchange="@(() => ChooseScreen(value))" />
                 <label class="form-check-label" for="@($"{_group}-{value?.ToString() ?? "auto"}")">
                     @label
-                    <span class="d-block small text-body-secondary">@hint</span>
+                    @if (hint is { Length: > 0 })
+                    {
+                        <span class="d-block small text-body-secondary">@hint</span>
+                    }
                 </label>
             </div>
         }
@@ -77,7 +80,7 @@
 @* Said next to the control rather than in the label, because it is the one thing about this input
    that is not obvious from looking at it. *@
 <p class="small text-body-secondary mb-2">
-    Several at once is fine: up to @MaxFiles, each read on its own.
+    Up to @MaxFiles at once.
 </p>
 
 @if (_busy)
@@ -150,10 +153,7 @@
                        would be pointing at a list the answer is not in, so it says what it did with
                        it instead: the cards are cards either way, and the event they came from is
                        logged on the page that page is for. *@
-                    <text>
-                        The cards are added the same way. Logging the pack or the pick itself is on
-                        its own page.
-                    </text>
+                    <text>Log the pack or pick itself on its own page.</text>
                 }
             </Notice>
         }
@@ -167,7 +167,7 @@
                 @if (reading.Screen == CardScreen.OwnershipGrid)
                 {
                     <tr>
-                        <th scope="row" class="fw-normal">Named by Their Place in the List</th>
+                        <th scope="row" class="fw-normal">Named by Position</th>
                         <td class="text-end">
                             @reading.Matches.Count(m => m.Source == MatchSource.GridPosition).ToString("N0")
                         </td>
@@ -184,7 +184,7 @@
                 {
                     <tr>
                         <th scope="row" class="fw-normal text-warning-emphasis">
-                            Card Slots Not Recognised
+                            Not Recognised
                         </th>
                         <td class="text-end text-warning-emphasis">
                             @reading.UnreadCells.ToString("N0")
@@ -206,16 +206,14 @@
         {
             <Notice Severity="Notice.Level.Warning">
                 Only @reading.NamedCount of the @GameRules.WonderPickCardsShown cards have been named.
-                Cards mid-animation, or partly behind another card, are the usual reason. Name
-                the rest below, or take the shot again.
+                Name the rest below, or retake the shot.
             </Notice>
         }
 
         @if (reading.Matches.Count == 0 && reading.UnreadCells == 0)
         {
             <Notice Severity="Notice.Level.Warning">
-                Card slots were found but none could be named. A set released in the last few weeks may
-                not have its artwork in this build yet.
+                No card could be named. A very new set may not be recognisable yet.
             </Notice>
         }
 
@@ -262,7 +260,7 @@
                                     else
                                     {
                                         @* Said, not left blank. A blank cell reads as "none". *@
-                                        <span class="text-body-secondary" title="The badge could not be read">Not read</span>
+                                        <span class="text-body-secondary">Not read</span>
                                     }
                                 </td>
                             }
@@ -306,7 +304,7 @@
                     }
                 </h3>
                 <p class="small text-body-secondary mb-1">
-                    Name one and it joins the list above. Leave it and nothing happens to it.
+                    Unnamed slots are left out.
                 </p>
 
                 @{ var pool = PoolFor(reading); }
@@ -525,8 +523,7 @@
         catch (InvalidOperationException)
         {
             // The only way this throws: more files than the cap.
-            _tooMany = $"That is more than {MaxFiles} pictures. "
-                       + $"Choose up to {MaxFiles} at a time.";
+            _tooMany = $"More than {MaxFiles} pictures. Choose up to {MaxFiles}.";
             return;
         }
 
@@ -692,9 +689,9 @@
     /// </summary>
     private static string ReadAs(ShotMatch match) => match switch
     {
-        { Source: MatchSource.GridPosition } => "blank slot, named by the cards around it",
-        { Source: MatchSource.Manual } => "you named it",
-        { IsMarginal: true } => "artwork recognised, less certainly",
-        _ => "artwork recognised",
+        { Source: MatchSource.GridPosition } => "blank, named by position",
+        { Source: MatchSource.Manual } => "by hand",
+        { IsMarginal: true } => "artwork, less sure",
+        _ => "artwork",
     };
 }

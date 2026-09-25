@@ -262,7 +262,7 @@ public class ScreenshotImportPageTests : AppHost
         // this replaces was covering that too, by accident.
         page.WaitForAssertion(() =>
         {
-            Assert.Contains("you named it", page.Markup);
+            Assert.Contains("by hand", page.Markup);
             Assert.Contains("Named by Hand", page.Markup);
         });
         Assert.DoesNotContain("could not be named", page.Markup);
@@ -342,7 +342,7 @@ public class ScreenshotImportPageTests : AppHost
 
         Assert.Contains("Bulbasaur", page.Markup);
         Assert.Contains("Caterpie", page.Markup);                       // slot 5, drawn blank
-        Assert.Contains("blank slot, named by the cards around it", page.Markup);
+        Assert.Contains("blank, named by position", page.Markup);
 
         // Nothing hedged: every recognised card landed inside the comfortable distance.
         Assert.DoesNotContain("less certainly", page.Markup);

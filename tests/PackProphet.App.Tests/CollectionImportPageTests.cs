@@ -69,7 +69,7 @@ public class CollectionImportPageTests : AppHost
 
         Pick(page, $"{Header}\nA1-3,Venusaur,4\nA1-4,Venusaur ex,1\n");
 
-        Assert.Contains("What This File Says", Text(page));
+        Assert.Contains("This File", Text(page));
 
         // Two cards in the file, and the collection is still the two it started with.
         Assert.Equal(2, Session.Owned.DistinctOwned);
@@ -212,8 +212,8 @@ public class CollectionImportPageTests : AppHost
 
         Pick(page, "name,hp\nPikachu,60\n");
 
-        Assert.Contains("no rows this could read as a collection", Text(page));
-        Assert.DoesNotContain("What This File Says", Text(page));
+        Assert.Contains("has no rows to read", Text(page));
+        Assert.DoesNotContain("This File", Text(page));
         Assert.Equal(2, Session.Owned.DistinctOwned);
     }
 
@@ -228,7 +228,7 @@ public class CollectionImportPageTests : AppHost
 
         Pick(page, $"{Header}\nZ9-1,Nothing,1\nZ9-2,Nothing,1\n");
 
-        Assert.Contains("nothing to import", Text(page));
+        Assert.Contains("Nothing to import", Text(page));
         Assert.Empty(page.FindAll("#dest-replace"));
         Assert.Empty(page.FindAll(".btn-primary"));
     }
@@ -244,7 +244,7 @@ public class CollectionImportPageTests : AppHost
 
         PickFile(page, Workbook(), "user_genetic_apex.xlsx");
 
-        Assert.Contains("What This File Says", Text(page));
+        Assert.Contains("This File", Text(page));
         Assert.DoesNotContain("Rows Not Recognised", Text(page));
 
         page.Find(".btn-primary").Click();
@@ -302,21 +302,6 @@ public class CollectionImportPageTests : AppHost
         // Still two collections, and the second file landed in the one the first made.
         Assert.Equal(2, Session.Profiles.Count);
         Assert.Equal(2, Session.Owned.DistinctOwned);
-    }
-
-    /// <summary>
-    /// The figure that will make someone recount: the file has more rows than they have cards,
-    /// because a card printed in several sets is written once per set. Said on the page rather
-    /// than left to be discovered.
-    /// </summary>
-    [Fact]
-    public async Task The_export_says_why_it_has_more_rows_than_the_collection_has_cards()
-    {
-        var page = await PageAsync();
-        var markup = Text(page);
-
-        Assert.Contains("3,879 rows", markup);
-        Assert.Contains("3,664 cards", markup);
     }
 
     /// <summary>

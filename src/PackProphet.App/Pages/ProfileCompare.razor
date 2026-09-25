@@ -15,10 +15,7 @@ else if (!Session.MultipleProfiles)
         <span class="subtitle">Trades you could make with yourself</span>
     </div>
     <PageShell Measure="PageShell.Width.Wide">
-        <p>
-            Only one collection, so nothing to compare yet. You can trade with your own alt
-            account.
-        </p>
+        <p>Only one collection. Add another to compare.</p>
         <a class="btn btn-sm btn-primary" href="settings">Add a Collection</a>
     </PageShell>
 }
@@ -60,7 +57,7 @@ else
             <label class="small">
                 <input type="checkbox" class="form-check-input me-1" checked="@_readyOnly"
                        @onchange="e => _readyOnly = (bool)(e.Value ?? false)" />
-                Only What Both Can Afford Today
+                Affordable Today Only
             </label>
         </div>
     </PageSheet>
@@ -73,11 +70,10 @@ else
        seam its own padding opened between it and the next -- which is the shell being used as a
        wrapper for a paragraph rather than as the page's body. *@
     <PageShell Measure="PageShell.Width.Wide" Class="sections">
+    @* How Shares and trades work is the game's to explain. What stays is where the balances
+       come from, which the game cannot say. *@
     <p class="small text-body-secondary">
-        Rarity decides which applies. <strong>Shares</strong> carry 1 to 4 diamonds one way, free,
-        @GameRules.SharesReceivedPerDay received a day. Above that it is a <strong>trade</strong>:
-        both cards must be the same rarity, and both sides pay that rarity's shinedust and one
-        stamina. Balances come from each collection's own Resources page.
+        Balances come from each collection's Resources page.
     </p>
 
     @if (_swaps is null)
@@ -86,10 +82,9 @@ else
     }
     else if (_swaps.Nothing)
     {
-        <EmptyState>
-            Nothing to move: neither collection holds a spare the other still wants at a rarity
-            that can be shared or traded.
-        </EmptyState>
+        @* Neither collection holds a spare the other still wants at a rarity that can be shared
+           or traded. *@
+        <EmptyState>Nothing to move.</EmptyState>
     }
     else
     {
@@ -99,12 +94,11 @@ else
             @if (_swaps.IncomingShares.Count > 0 || _swaps.OutgoingShares.Count > 0)
             {
                 <div class="verdict-lead" aria-live="polite">
-                    <span class="micro">The call</span>
+                    <span class="micro">The Call</span>
 
                     <div class="lead-head">
                       <div class="lead-text">
                         <h2 class="name take">@ShareTotal @Card(ShareTotal) Can Just Be Sent</h2>
-                        <p class="then">No card back, no dust, no stamina</p>
                         <p class="says">
                         @if (_swaps.IncomingShares.Count > 0)
                         {
@@ -114,10 +108,9 @@ else
                                 @Fmt.PacksPhrase(_swaps.IncomingShares[0].PacksSaved) here.
                             </span>
                         }
+                        @* One a day per account, and the two directions run at the same time. *@
                         <span>
-                            One a day per account, so moving all of them takes about
-                            @_swaps.AllSharesDays @Day(_swaps.AllSharesDays), because the two
-                            directions run at the same time.
+                            About @_swaps.AllSharesDays @Day(_swaps.AllSharesDays) to move them all.
                         </span>
                         </p>
                       </div>
@@ -125,9 +118,6 @@ else
                 </div>
 
                 <h2>Free to Send</h2>
-                <p class="small text-body-secondary">
-                    Diamonds only, one way, and free. The accounts have to be friends in-game.
-                </p>
 
                 <div class="share-cols">
                     <div>
@@ -149,7 +139,7 @@ else
 
                 @if (_swaps.Swaps.Count > 0 || _swaps.Unpayable.Count > 0)
                 {
-                    <h2>Trades, for What a Share Cannot Carry</h2>
+                    <h2>Trades</h2>
                 }
             }
 
@@ -161,9 +151,8 @@ else
                         <h2 class="name skip">No Trade Is Possible Yet</h2>
                         <p class="says">
                             @_swaps.Unpayable.Count @Card(_swaps.Unpayable.Count) in
-                            @_swaps.Theirs.Name would fill a gap here, but they are above the
-                            diamonds so a Share cannot carry them, and @_swaps.Mine.Name holds no
-                            spare at those rarities to trade back.
+                            @_swaps.Theirs.Name would fill a gap here, but @_swaps.Mine.Name has
+                            no spare at those rarities to trade back.
                         </p>
                       </div>
                     </div>
@@ -191,8 +180,7 @@ else
                         @if (best.Mutual)
                         {
                             <span>
-                                Both accounts gain something they wanted: about
-                                @Fmt.PacksPhrase(best.IncomingSaves) saved here and
+                                About @Fmt.PacksPhrase(best.IncomingSaves) saved here and
                                 @Fmt.PacksPhrase(best.OutgoingSaves) there.
                             </span>
                         }
@@ -200,8 +188,7 @@ else
                         {
                             <span>
                                 Saves about @Fmt.PacksPhrase(best.IncomingSaves) here.
-                                @_swaps.Theirs.Name gets @best.Outgoing.Name, which it did not ask
-                                for. It is there because the game demands a card back.
+                                @_swaps.Theirs.Name gets @best.Outgoing.Name as payment.
                             </span>
                         }
                         @if (!best.Ready)
@@ -214,10 +201,8 @@ else
                 </div>
 
                 <p class="small text-body-secondary">
-                    @_swaps.Swaps.Count @Swap(_swaps.Swaps.Count) found, @_swaps.Mutual of them
-                    wanted by both sides.
-                    <strong>@_swaps.ReadyNow</strong> can be done today. Trade stamina regenerates
-                    one per 12 hours on each account.
+                    @_swaps.Swaps.Count @Swap(_swaps.Swaps.Count), @_swaps.Mutual wanted by both
+                    sides. <strong>@_swaps.ReadyNow</strong> can be done today.
                 </p>
 
                 <DataTable Label="Possible swaps">
@@ -226,7 +211,7 @@ else
                             <th scope="col">@_swaps.Mine.Name Gets</th>
                             <th scope="col">@_swaps.Theirs.Name Gets</th>
                             <th scope="col">Rarity</th>
-                            <th scope="col" class="num" title="Expected packs the receiving account would not have to open">Packs Saved</th>
+                            <th scope="col" class="num">Packs Saved</th>
                             <th scope="col" class="num">Dust Each</th>
                             <th scope="col">Status</th>
                         </tr>
@@ -244,17 +229,11 @@ else
                                     <span class="small text-body-secondary ms-1">@swap.Outgoing.Set</span>
                                     @if (swap.Mutual)
                                     {
-                                        <span class="badge text-bg-success ms-2"
-                                              title="Wanted on that side too, so the swap closes two gaps for one stamina each">
-                                            Wanted
-                                        </span>
+                                        <span class="badge text-bg-success ms-2">Wanted</span>
                                     }
                                     else
                                     {
-                                        <span class="badge text-bg-secondary ms-2"
-                                              title="Not wanted there: it is the payment, sent only because the game requires a card back">
-                                            Payment
-                                        </span>
+                                        <span class="badge text-bg-secondary ms-2">Payment</span>
                                     }
                                 </td>
                                 <td>
@@ -284,8 +263,7 @@ else
                 @if (_readyOnly && Rows.Count == 0)
                 {
                     <p class="text-body-secondary">
-                        None of the @_swaps.Swaps.Count swaps can be paid for on both accounts
-                        today. Uncheck the filter to see what to save toward.
+                        None of the @_swaps.Swaps.Count swaps is affordable today.
                     </p>
                 }
             }
@@ -296,10 +274,7 @@ else
             {
                 <h2>Wanted, but Nothing to Pay With</h2>
                 <p class="small text-body-secondary">
-                    @_swaps.Theirs.Name holds these spare and @_swaps.Mine.Name wants them, but
-                    they are above 4 diamonds and there is no spare at that rarity to send back.
-                    Any spare at that rung unlocks the swap, and it need not be one anyone
-                    wants.
+                    Any spare at the same rarity unlocks the swap.
                 </p>
                 <DataTable Label="Wanted, with nothing to pay with" Fit="true">
                     <thead>
@@ -327,11 +302,9 @@ else
 
             @if (_swaps.Unwanted.Count > 0)
             {
+                @* Wanted over there and spare here, but every swap at those rarities is already
+                   paired above. *@
                 <h2>Yours to Send, Once Something Comes Back</h2>
-                <p class="small text-body-secondary">
-                    @_swaps.Theirs.Name wants these and @_swaps.Mine.Name has them spare, but every
-                    swap at those rarities is already paired above.
-                </p>
                 <ul class="small mb-0">
                     @foreach (var gift in _swaps.Unwanted.Take(30))
                     {
@@ -347,7 +320,7 @@ else
                 @if (_swaps.Unwanted.Count > 30)
                 {
                     <p class="small text-body-tertiary">
-                        and @(_swaps.Unwanted.Count - 30) more.
+                        And @(_swaps.Unwanted.Count - 30) more.
                     </p>
                 }
             }

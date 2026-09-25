@@ -216,17 +216,17 @@
 
     private static readonly (string Label, string Href, string Sub)[] PageList =
     [
-        ("Log", "log", "Log a pack you just opened"),
-        ("Collection", "collection", "Browse and mark what you own"),
-        ("Packs", "packs", "Which pack to open next: the ranking"),
-        ("Progress", "progress", "What every set still needs, and where it comes from"),
+        ("Log", "log", "Log a pack"),
+        ("Collection", "collection", "Mark what you own"),
+        ("Packs", "packs", "Which pack to open next"),
+        ("Progress", "progress", "What every set still needs"),
         ("Decks", "decks", "Saved decks and the builder"),
-        ("Chases", "chase", "Your chase lists: cards you want, for any reason"),
+        ("Chases", "chase", "Cards you want"),
         ("Wonder Pick", "wonder", "Take it or skip it"),
-        ("Trades", "trades", "Which trade deserves your next stamina"),
-        ("Wishlist", "board", "What to put in the game's 20 trade slots"),
+        ("Trades", "trades", "Where the next trade stamina goes"),
+        ("Wishlist", "board", "What to put in the 20 trade slots"),
         ("Resources", "resources", "Stamina, hourglasses and shinedust"),
-        ("History", "history", "What you have opened"),
+        ("History", "history", "What you opened"),
         ("Settings", "settings", "Targets, backup, appearance"),
     ];
 
@@ -242,15 +242,15 @@
             // Three imports in three places, because the same five cards mean different things
             // depending on where you are. Named by the in-game screen rather than by what the app
             // does with it, since the screen is what the user is looking at.
-            new("Action", "Import Cards from a My Cards Screenshot", "Read your card list off the game",
+            new("Action", "Import Cards from a My Cards Screenshot", "Read your card list",
                 "collection/screenshot"),
-            new("Action", "Log a Pack from a Screenshot", "Reads the pack from the cards", "log"),
+            new("Action", "Log a Pack from a Screenshot", null, "log"),
             new("Action", "Read a Wonder Pick from a Screenshot", "Appraise the offer", "wonder"),
             new("Action", "Import a Collection from Another Tracker", "Read a CSV export",
                 "collection/import"),
-            new("Action", "Export This Collection as CSV", "For a spreadsheet or another tracker",
+            new("Action", "Export This Collection as CSV", null,
                 "collection/export"),
-            new("Action", "New Deck", "Build one by hand", "decks/new"),
+            new("Action", "New Deck", null, "decks/new"),
             new("Action", "New Chase List", null, null, () => Nav.NavigateTo($"chase/{Session.CreateChaseList()}")),
             new("Action", $"Theme: {ThemeName(Session.Theme)}", "Switch light, dark or auto", null, () => _ = Session.SetThemeAsync(NextTheme())),
             new("Action", $"Colours: {SkinName(Session.Skin)}", "Switch paper or slate", null, () => _ = Session.SetSkinAsync(NextSkin())),
@@ -276,7 +276,7 @@
         if (Focus.Available)
         {
             actions.Add(new("Action", "Jump to the Cards",
-                            "Keyboard entry: arrows to move, digits to set a count", null,
+                            "Arrows move, digits set a count", null,
                             () => _ = Focus.FocusAsync()));
         }
 
@@ -326,7 +326,7 @@
             .Where(w => Matches(w.Name, q))
             .Take(MaxPerGroup)
             .Select(w => new Item("Chase list", w.Name,
-                $"{Session.MissingInChaseList(w)} of {Session.WantedTotal(w)} still missing",
+                $"{Session.MissingInChaseList(w)} of {Session.WantedTotal(w)} missing",
                 $"chase/{w.Id}"));
 
     /// <summary>
@@ -349,7 +349,7 @@
     private string Owned(PocketCard card)
     {
         var n = Session.CountOf(card);
-        return n == 0 ? "Not owned" : $"You own {n}";
+        return n == 0 ? "Not owned" : $"{n} owned";
     }
 
     public async ValueTask DisposeAsync()

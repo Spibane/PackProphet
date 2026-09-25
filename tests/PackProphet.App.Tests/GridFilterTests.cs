@@ -121,7 +121,7 @@ public class GridFilterTests : AppHost
         var opener = page.Find(".page-head .actions [popovertarget='set-sheet']");
         Assert.Equal("set-sheet", page.Find(".set-sheet").Id);
         Assert.True(page.Find(".set-sheet").HasAttribute("popover"));
-        Assert.Contains("Change Set", opener.TextContent);
+        Assert.Equal("Set", opener.TextContent.Trim());
 
         // And the gap strip is in the rail rather than being a strip.
         var gaps = page.FindAll(".gap-strip").ToArray();

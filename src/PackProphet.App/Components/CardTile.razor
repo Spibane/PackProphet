@@ -124,7 +124,7 @@
         @* Out of the tab order: a focus stop per tile would put thousands of them between the grid
            and whatever follows it. The keyboard route to detail is `i` on the cursor, which
            gridkeys.js sends to KeyOpen. *@
-        <a class="info" href="card/@Card.Key" title="@Card.Name: card detail"
+        <a class="info" href="card/@Card.Key" title="@Card.Name"
            aria-label="Detail for @Card.Name"
            tabindex="-1"
            @onclick:stopPropagation="true" @onpointerdown:stopPropagation="true"
@@ -160,8 +160,7 @@
                 @oncontextmenu:stopPropagation="true"
                 tabindex="-1"
                 aria-pressed="@Aria.Flag(Wanted > 0)"
-                aria-label="@(Wanted > 0 ? $"On your chase list: {Card.Name}" : $"Add {Card.Name} to your chase list")"
-                title="@(Wanted > 0 ? "On your chase list" : "Add to your chase list")">
+                aria-label="Want @Card.Name">
             @* Drawn, not typed: the heart characters that carry a filled and an outlined form are
                not in every system font, and the pair that are do not match each other's weight. *@
             <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" focusable="false">

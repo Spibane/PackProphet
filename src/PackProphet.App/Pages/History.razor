@@ -12,16 +12,13 @@ else
 {
     <div class="page-head">
         <h1 class="title">History</h1>
-        <span class="subtitle">From the packs you have logged</span>
     </div>
 
     <PageShell Measure="PageShell.Width.Wide" Class="sections">
         @if (_log.Count == 0)
         {
             <EmptyState>
-                Nothing logged yet. Every pack you record on
-                <a href="log">Log a Pack</a> lands here, and this page also checks the odds
-                engine against what you actually pulled.
+                Nothing logged yet. <a href="log">Log a Pack</a>.
             </EmptyState>
             @* A returning player has a real history the app has not seen, so the empty page says
                so rather than implying they have opened nothing. *@
@@ -30,15 +27,14 @@ else
                 <p class="text-body-secondary">
                     The game counted <strong>@baseline.PacksOpened</strong> packs and
                     <strong>@baseline.WonderPicks</strong> Wonder Picks before
-                    @baseline.At.ToLocalTime().ToString("d MMM yyyy"). Totals only, so nothing
-                    here can be broken down from them.
+                    @baseline.At.ToLocalTime().ToString("d MMM yyyy").
                 </p>
             }
             else
             {
                 <p class="text-body-secondary">
-                    Played before finding this? Put the game's own lifetime totals into
-                    <a href="settings">Settings</a> and they will be counted here.
+                    Played before? Enter the game's lifetime totals in
+                    <a href="settings">Settings</a>.
                 </p>
             }
         }
@@ -124,7 +120,7 @@ else
                     <div class="hits-empty">
                         <span class="value">No Hits Yet</span>
                         <span class="sub">
-                            @_log.Count @Fmt.S(_log.Count, "pack") in. Adjust what counts below if this is too strict.
+                            @_log.Count @Fmt.S(_log.Count, "pack") in.
                         </span>
                     </div>
                 }
@@ -155,7 +151,7 @@ else
                                page under the reader, and re-rolling on every render would make it
                                flicker on unrelated updates. *@
                             <button class="btn btn-sm btn-outline-secondary align-self-start"
-                                    @onclick="Shuffle">Show Me Another</button>
+                                    @onclick="Shuffle">Show Another</button>
                         }
                     </div>
 
@@ -201,8 +197,7 @@ else
                         }
                     </div>
                     <p class="small text-body-secondary mb-0">
-                        Defaults to everything above the diamonds. At least one rung must stay
-                        selected.
+                        At least one must stay on.
                     </p>
                 </div>
             </details>
@@ -216,8 +211,7 @@ else
                And it is a reading rather than a verdict, which is the line this page does not
                cross: it says what a bar of two IS, not whether you should have opened more. *@
             <p class="small text-body-secondary">
-                Last @DaysShown days. @Allowance a day is the free allowance@(Session.Profile.Resources.Premium ? " with premium" : ""),
-                so a bar of @AllowanceWord is a day you kept up.
+                Last @DaysShown days. A bar of @AllowanceWord is a day you kept up.
             </p>
             @* The label carries the shape of the chart, not just its title. "Packs opened per
                day" names the picture and says nothing about it; a reader who cannot see the bars
@@ -345,13 +339,11 @@ else
                 {
                     <div class="btn-group btn-group-sm" role="group" aria-label="Sample">
                         <button class="btn @(_lifetime ? "btn-outline-secondary" : "btn-secondary")"
-                                @onclick="() => SetLifetimeCheck(false)" aria-pressed="@Aria.Flag(!_lifetime)"
-                                title="Only the packs logged here, where both sides are measured">
+                                @onclick="() => SetLifetimeCheck(false)" aria-pressed="@Aria.Flag(!_lifetime)">
                             Logged Packs
                         </button>
                         <button class="btn @(_lifetime ? "btn-secondary" : "btn-outline-secondary")"
-                                @onclick="() => SetLifetimeCheck(true)" aria-pressed="@Aria.Flag(_lifetime)"
-                                title="Scaled up to every pack the game says you have opened">
+                                @onclick="() => SetLifetimeCheck(true)" aria-pressed="@Aria.Flag(_lifetime)">
                             All @Session.LifetimePacks Packs
                         </button>
                     </div>
@@ -368,13 +360,10 @@ else
                    Only where there is a sample to name. With nothing priceable in scope the
                    section below already says so, and "0 packs is a small sample" above it is the
                    page hedging about a comparison it has not made. *@
-                <p class="small text-body-secondary">
-                    What you pulled against what the engine predicted for the packs you opened.
-                    @if (_scopePacks >= 1)
-                    {
-                        <text>@SampleCaveat</text>
-                    }
-                </p>
+                @if (_scopePacks >= 1)
+                {
+                    <p class="small text-body-secondary">@SampleCaveat</p>
+                }
             }
             else
             {
@@ -382,23 +371,9 @@ else
                    of them is visible in the table. *@
                 <p class="small text-body-secondary">
                     All @Session.LifetimePacks packs the game counted, split across sets by what
-                    your collection holds. Only the ratios are used, so inflation from trades and
-                    Wonder Picks largely cancels. Two caveats:
+                    you hold. <strong>Held</strong> includes trades, Wonder Picks and shop cards,
+                    so it runs high.
                 </p>
-                <ul class="small text-body-secondary">
-                    <li>
-                        <strong>Held</strong> is your collection, not your pulls, and the only
-                        record of an unlogged pack that exists. It counts cards from trades,
-                        Wonder Picks and the points shop and misses ones you traded away, so it
-                        runs high on the tradeable rungs. Promos and sets with no published rates
-                        are left out of both sides.
-                    </li>
-                    <li>
-                        Deluxe packs are estimated only from the cards <em>only they</em> can give
-                        (the foils and their own new cards). Everything else in one is a
-                        reprint credited to its own set.
-                    </li>
-                </ul>
                 @if (_mix.Count > 0)
                 {
                     <p class="small text-body-secondary">
@@ -412,17 +387,16 @@ else
                        about which packs those were, and a total spread by guesswork would look
                        like a measurement. *@
                     <Notice Severity="Notice.Level.Warning" Dense="true">
-                        Your collection has nothing in it that any pack could have produced, so
-                        the total cannot be split across sets. The figures below are the logged
-                        packs only.
+                        Nothing you hold comes from a pack, so the figures below are logged packs
+                        only.
                     </Notice>
                 }
             }
             @if (_unpriceable > 0)
             {
                 <Notice Severity="Notice.Level.Info" Dense="true">
-                    @_unpriceable logged @Fmt.S(_unpriceable, "pack") came from a set with no published pull rates, so
-                    they are left out of the comparison entirely rather than counted as zero.
+                    @_unpriceable logged @Fmt.S(_unpriceable, "pack") with no published pull rates
+                    left out.
                 </Notice>
             }
             @if (_accuracy.Count == 0)
@@ -485,8 +459,8 @@ else
                 Also Remove the Cards
             </label>
             <p class="small text-body-secondary">
-                Deleting returns the @GameRules.PackPointsPerPack pack points that opening earned,
-                floored at zero, and any pack hourglasses it spent. Only the date is editable.
+                Deleting also returns the pack's @GameRules.PackPointsPerPack points and any
+                hourglasses it spent.
             </p>
 
             <DataTable Label="Recent packs">
@@ -521,8 +495,7 @@ else
                             </td>
                             <td class="text-end">
                                 <button class="btn btn-sm @(_confirming == entry ? "btn-danger" : "btn-outline-danger") py-0 px-2"
-                                        @onclick="() => ConfirmDelete(entry)" aria-live="polite"
-                                        title="@(_confirming == entry ? "Tap again to delete" : "Delete this logged pack")">
+                                        @onclick="() => ConfirmDelete(entry)" aria-live="polite">
                                     @(_confirming == entry ? "Really?" : "Delete")
                                 </button>
                             </td>
@@ -533,7 +506,7 @@ else
             @if (_log.Count > RecentShown)
             {
                 <p class="small text-body-secondary">
-                    Showing the most recent @RecentShown of @_log.Count.
+                    Latest @RecentShown of @_log.Count.
                 </p>
             }
         }
@@ -574,15 +547,14 @@ else
     {
         {
             if (packs < 100)
-                return $"{packs} {Fmt.S(packs, "pack")} is a small sample, so a rarity a fifth off is ordinary "
-                     + "variance rather than evidence the model is wrong.";
+                return $"{packs} {Fmt.S(packs, "pack")} is a small sample. A rarity a fifth off is "
+                     + "ordinary variance.";
 
             if (packs < 500)
-                return $"{packs} {Fmt.S(packs, "pack")} is enough to notice a persistent gap and not enough to "
-                     + "trust a single row. Read it as a check on the model, not on your luck.";
+                return $"{packs} {Fmt.S(packs, "pack")} is enough to spot a persistent gap in the model, "
+                     + "not to trust one row.";
 
-            return $"{packs} {Fmt.S(packs, "pack")} is a large enough sample that a gap which does not close is "
-                 + "worth reporting. It is still a check on the model, not on your luck.";
+            return $"{packs} {Fmt.S(packs, "pack")} is enough that a gap which persists points at the model.";
         }
     }
     private const int RecentShown = 25;

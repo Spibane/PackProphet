@@ -697,7 +697,7 @@ public class ShotImportHostingTests : AppHost
                       .Select(i => InputFileContent.CreateFromBinary([1, 2, 3], $"{i}.png"))
                       .ToArray());
 
-        Assert.Contains("more than 20 pictures", page.Markup);
+        Assert.Contains("More than 20 pictures", page.Markup);
         Assert.Contains("Open GA: Mewtwo with these", Collapse(page.Markup));
     }
 
@@ -715,7 +715,7 @@ public class ShotImportHostingTests : AppHost
 
         // Said, not silently truncated: reading the first twenty of twenty-one would log nineteen
         // packs and lose one without ever mentioning it.
-        Assert.Contains("more than 20 pictures", page.Markup);
+        Assert.Contains("More than 20 pictures", page.Markup);
         Assert.Empty(page.FindAll("button.btn-primary"));
     }
 
@@ -940,7 +940,7 @@ public class ShotImportHostingTests : AppHost
 
         // On the fact rather than on the sentence: what has to reach the reader is that the
         // picture holds more than one offer and that only the first five would be used.
-        Assert.Contains("two offers", page.Markup);
+        Assert.Contains("Crop to one offer", page.Markup);
         Assert.Contains("Crop to one", page.Markup);
     }
 }

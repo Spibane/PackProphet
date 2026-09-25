@@ -76,17 +76,15 @@
                            in the state where the grid cannot change a count by being touched. *@
                         <button class="btn btn-sm @(Mode == Tap.Off ? "btn-secondary" : "btn-outline-secondary")"
                                 @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)"
-                                title="@($"A {Gesture} changes nothing. Right-click or shift-click still removes one.")">
+                                title="Right-click or shift-click still removes one.">
                             Off
                         </button>
                         <button class="btn btn-sm @(Mode == Tap.Add ? "btn-success" : "btn-outline-secondary")"
-                                @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)"
-                                title="@($"{GestureVerb} adds a copy")">
+                                @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)">
                             Add
                         </button>
                         <button class="btn btn-sm @(Mode == Tap.Remove ? "btn-danger" : "btn-outline-secondary")"
-                                @onclick="() => SetMode(Tap.Remove)" aria-pressed="@Aria.Flag(Mode == Tap.Remove)"
-                                title="@($"{GestureVerb} removes a copy")">
+                                @onclick="() => SetMode(Tap.Remove)" aria-pressed="@Aria.Flag(Mode == Tap.Remove)">
                             Remove
                         </button>
                     </div>
@@ -117,11 +115,9 @@
                 <span class="ttl" id="@(_gridId)-layout">Layout</span>
                 <div class="rail-seg" role="group" aria-labelledby="@(_gridId)-layout">
                     <button class="btn btn-sm @(ListView ? "btn-outline-secondary" : "btn-secondary")"
-                            @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
-                            title="Card images in a grid">Grid</button>
+                            @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)">Grid</button>
                     <button class="btn btn-sm @(ListView ? "btn-secondary" : "btn-outline-secondary")"
-                            @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
-                            title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
+                            @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)">
                         List
                     </button>
                 </div>
@@ -132,11 +128,9 @@
                 {
                     <div class="rail-seg" role="group" aria-label="Row height">
                         <button class="btn btn-sm @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
-                                @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
-                                title="Short rows, most cards per screen">Compact</button>
+                                @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)">Compact</button>
                         <button class="btn btn-sm @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
-                                @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
-                                title="Taller rows with attack and ability text shown in full">Roomy</button>
+                                @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)">Roomy</button>
                     </div>
                 }
 
@@ -148,8 +142,7 @@
                 @if (ColumnsClamped)
                 {
                     <p class="rail-note">
-                        Showing @EffectiveColumns on a screen this narrow. Your setting is kept for
-                        wider ones.
+                        Showing @EffectiveColumns columns at this width.
                     </p>
                 }
             </div>
@@ -161,14 +154,14 @@
             <div class="rail-group">
                 <span class="ttl">Selecting</span>
                 <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
-                        title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
+                        title="Arrow keys move, 0-9 set a count, enter adds, minus removes, i opens card detail, w wants. Shift+move selects a range.">
                     Keyboard
                 </button>
                 @if (ShowSweepToggle)
                 {
                     <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
                             @onclick="ToggleSweep"
-                            title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
+                            title="Drag to @(Removing ? "remove" : "add") in bulk">
                         Sweep @(Sweeping ? "On" : "Off")
                     </button>
                 }
@@ -203,18 +196,15 @@ else
                grid of three thousand buttons can change a number you will read as fact later. *@
             <div class="btn-group btn-group-sm" role="group" aria-label="@Gesture action">
                 <button class="btn @(Mode == Tap.Off ? "btn-secondary" : "btn-outline-secondary")"
-                        @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)"
-                        title="@($"A {Gesture} changes nothing")">
+                        @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)">
                     Off
                 </button>
                 <button class="btn @(Mode == Tap.Add ? "btn-success" : "btn-outline-secondary")"
-                        @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)"
-                        title="@($"{GestureVerb} adds a copy")">
+                        @onclick="() => SetMode(Tap.Add)" aria-pressed="@Aria.Flag(Mode == Tap.Add)">
                     Add
                 </button>
                 <button class="btn @(Mode == Tap.Remove ? "btn-danger" : "btn-outline-secondary")"
-                        @onclick="() => SetMode(Tap.Remove)" aria-pressed="@Aria.Flag(Mode == Tap.Remove)"
-                        title="@($"{GestureVerb} removes a copy")">
+                        @onclick="() => SetMode(Tap.Remove)" aria-pressed="@Aria.Flag(Mode == Tap.Remove)">
                     Remove
                 </button>
             </div>
@@ -273,11 +263,9 @@ else
            means anything once you are in list mode and this row has to survive a phone. *@
         <div class="btn-group btn-group-sm layout-switch" role="group" aria-label="Layout">
             <button class="btn @(ListView ? "btn-outline-secondary" : "btn-secondary")"
-                    @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)"
-                    title="Card images in a grid">Grid</button>
+                    @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(!ListView)">Grid</button>
             <button class="btn @(ListView ? "btn-secondary" : "btn-outline-secondary")"
-                    @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)"
-                    title="Compact rows with the set and number, type, rarity, an exact count you can type into, and the printed text">
+                    @onclick="() => SetList(!ListView)" aria-pressed="@Aria.Flag(ListView)">
                 List
             </button>
         </div>
@@ -294,8 +282,7 @@ else
            the two agree about when there is something to scroll back from. Below the breakpoint the
            bar is already carrying more than fits on one line and the thumb is on the other button. *@
         <button class="btn btn-sm btn-outline-secondary to-top-bar" data-to-top type="button"
-                @onclick="ScrollToTopAsync"
-                title="Back to the top of the list" aria-label="Back to the top of the list">
+                @onclick="ScrollToTopAsync">
             <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" focusable="false">
                 <path d="M8 13V4M3.5 8.5 8 3.5l4.5 5" fill="none" stroke="currentColor"
                       stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
@@ -319,11 +306,9 @@ else
         {
             <div class="btn-group btn-group-sm" role="group" aria-label="Row height">
                 <button class="btn @(Roomy ? "btn-outline-secondary" : "btn-secondary")"
-                        @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)"
-                        title="Short rows, most cards per screen">Compact</button>
+                        @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(!Roomy)">Compact</button>
                 <button class="btn @(Roomy ? "btn-secondary" : "btn-outline-secondary")"
-                        @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)"
-                        title="Taller rows with attack and ability text shown in full">Roomy</button>
+                        @onclick="() => SetRoomy(!Roomy)" aria-pressed="@Aria.Flag(Roomy)">Roomy</button>
             </div>
         }
 
@@ -335,7 +320,7 @@ else
            knowing about it. It is also the switch a pointer user wants when they stop tapping and
            start typing counts. *@
         <button class="btn btn-sm btn-outline-secondary" @onclick="() => FocusGridAsync()"
-                title="Put the keyboard cursor on the cards. Arrow keys move, 0-9 set a count, enter adds one, minus removes one, i opens card detail, w wants it. Shift+move selects a range to add or remove in bulk.">
+                title="Arrow keys move, 0-9 set a count, enter adds, minus removes, i opens card detail, w wants. Shift+move selects a range.">
             Keyboard
         </button>
 
@@ -343,7 +328,7 @@ else
         {
             <button class="btn btn-sm @(Sweeping ? "btn-primary" : "btn-outline-primary")"
                     @onclick="ToggleSweep"
-                    title="Drag across cards to @(Removing ? "remove" : "add") them in bulk">
+                    title="Drag to @(Removing ? "remove" : "add") in bulk">
                 Sweep @(Sweeping ? "On" : "Off")
             </button>
         }
@@ -379,7 +364,7 @@ else
    It scrolls rather than animates, because a virtualised list of thousands smooth-scrolled is
    every row in between rendered and every image in between queued for nothing. *@
 <button class="to-top" data-to-top type="button" @onclick="ScrollToTopAsync"
-        title="Back to the top of the list" aria-label="Back to the top of the list">
+        title="Back to top" aria-label="Back to top">
     <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
         <path d="M8 13V4M3.5 8.5 8 3.5l4.5 5" fill="none" stroke="currentColor"
               stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
@@ -406,7 +391,7 @@ else
         <span><kbd>0</kbd>&ndash;<kbd>9</kbd> set count</span>
         <span><kbd>enter</kbd> add one</span>
         <span><kbd>&minus;</kbd> remove one</span>
-        <span><kbd>shift</kbd>+move select a range, then <kbd>enter</kbd>/<kbd>&minus;</kbd> applies to all</span>
+        <span><kbd>shift</kbd>+move select a range</span>
         <span><kbd>i</kbd> card detail, <kbd>esc</kbd> back</span>
         @if (OnWant.HasDelegate)
         {
@@ -416,7 +401,7 @@ else
 
     @if (Cards.Count == 0)
     {
-        <p class="p-4 text-body-secondary">Nothing matches those filters.</p>
+        <p class="p-4 text-body-secondary">No matches.</p>
     }
     else if (ListView)
     {
@@ -511,8 +496,7 @@ else
                         <button class="want @(wanted > 0 ? "on" : "")" @onclick="() => OnWant.InvokeAsync(card)"
                                 @onclick:stopPropagation="true"
                                 aria-pressed="@Aria.Flag(wanted > 0)"
-                                aria-label="@(wanted > 0 ? $"On your want list: {card.Name}" : $"Add {card.Name} to your want list")"
-                                title="@(wanted > 0 ? "On your want list" : "Add to your want list")">
+                                aria-label="Want @card.Name">
                             <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
                                 <path d="M8 14S1.6 9.8 1.6 5.9A3.4 3.4 0 0 1 8 4.3a3.4 3.4 0 0 1 6.4 1.6C14.4 9.8 8 14 8 14z"
                                       fill="@(wanted > 0 ? "currentColor" : "none")"
@@ -1061,9 +1045,9 @@ else
 
     private string ModeTitle => Mode switch
     {
-        Tap.Add => $"{GestureVerb} adds a copy. Press for removing.",
-        Tap.Remove => $"{GestureVerb} removes a copy. Press to switch it off.",
-        _ => $"A {Gesture} changes nothing. Press to start adding.",
+        Tap.Add => "Press to remove instead.",
+        Tap.Remove => "Press to turn off.",
+        _ => "Press to add.",
     };
 
     /// <summary>
@@ -1076,8 +1060,6 @@ else
     /// <summary>The same word as a name rather than as part of a sentence.</summary>
     private string GestureName => ListView ? "Drag" : "Tap";
 
-    /// <summary>The same distinction as a sentence opener: "Dragging across cards", "Tapping a card".</summary>
-    private string GestureVerb => ListView ? "Dragging across cards" : "Tapping a card";
 
     /// <summary>
     /// Shift-click and right-click are one-off inversions of the current mode, so a single

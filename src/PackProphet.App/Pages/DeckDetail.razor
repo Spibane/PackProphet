@@ -44,7 +44,7 @@ else
             }
             else
             {
-                <span class="badge text-bg-success wide-only">You Own Every Card</span>
+                <span class="badge text-bg-success wide-only">All Owned</span>
             }
         }
 
@@ -97,7 +97,7 @@ else
                 <strong>This deck has unsaved changes.</strong>
                 <button class="btn btn-sm btn-primary" @onclick="SaveAndLeave">Save and Leave</button>
                 <button class="btn btn-sm btn-outline-danger" @onclick="DiscardAndLeave">Discard and Leave</button>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">Stay Here</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="Stay">Stay</button>
             </div>
         </Notice>
     }
@@ -145,17 +145,12 @@ else
             <h2 class="sub-head">Cards</h2>
             @if (_draft.DeckBuilderNrs.Count > 0)
             {
-                <p class="small text-body-secondary mb-1">
-                    The ★ marks the card that fronts this deck in the grid view.
-                    @if (_draft.FaceNr is null)
-                    {
-                        <span>Unset, so it uses the rarest Pokémon in the deck.</span>
-                    }
-                </p>
+                @* Unset, the face falls back to the rarest Pokémon in the deck. *@
+                <p class="small text-body-secondary mb-1">★ picks the deck's face in the grid view.</p>
             }
             @if (_draft.DeckBuilderNrs.Count == 0)
             {
-                <p class="small text-body-secondary">Empty. Search on the right and tap a card to add it.</p>
+                <p class="small text-body-secondary">No cards yet.</p>
             }
             else
             {
@@ -179,7 +174,7 @@ else
                                     <button class="face-pick @(IsFace(entry.Nr) ? "on" : "")"
                                             @onclick="() => SetFace(entry.Nr)"
                                             aria-pressed="@Aria.Flag(IsFace(entry.Nr))"
-                                            title="@(IsFace(entry.Nr) ? "This is the deck's face card. Tap to unset" : "Use as the deck's face card")">
+                                            title="@(IsFace(entry.Nr) ? "Face card, tap to unset" : "Use as face card")">
                                         ★
                                     </button>
                                 </td>
@@ -209,13 +204,13 @@ else
             <h2 class="sub-head">Legality</h2>
             @if (_report is null || _draft.DeckBuilderNrs.Count == 0)
             {
-                <EmptyState>Add cards and the deck rules run here.</EmptyState>
+                <EmptyState>Add cards to check.</EmptyState>
             }
             else
             {
                 @if (_report.Findings.Count == 0)
                 {
-                    <p class="small text-success-emphasis mb-0">Legal, and every rule was checkable.</p>
+                    <p class="small text-success-emphasis mb-0">Legal, fully verified.</p>
                 }
                 @foreach (var finding in _report.Findings)
                 {
@@ -229,7 +224,7 @@ else
             @if (_shareSvg is null)
             {
                 <p class="small text-body-secondary">
-                    A code needs a legal 20-card deck: the game will not scan a partial one.
+                    Needs a legal 20-card deck.
                 </p>
             }
             else
@@ -245,7 +240,7 @@ else
                         @* Newer game versions no longer offer text codes, so this is for older
                            clients rather than the normal route. *@
                         <details>
-                            <summary class="small text-body-secondary">Show the Code as Text</summary>
+                            <summary class="small text-body-secondary">Code as Text</summary>
                             <textarea class="form-control form-control-sm mt-1" rows="3" readonly>@_shareCode</textarea>
                         </details>
                     </div>
@@ -258,11 +253,7 @@ else
 
             @if (_missingCount > 0)
             {
-                <h2 class="sub-head">What You Still Need</h2>
-                <p class="small text-body-secondary">
-                    Cheapest route per card. Trade and Wonder Pick are priced in their own
-                    currencies, which do not convert into packs.
-                </p>
+                <h2 class="sub-head">Still Needed</h2>
                 <DataTable Label="Cards this deck still needs">
                     <thead>
                         <tr><th scope="col">Card</th><th scope="col" class="num">Need</th><th scope="col">Cheapest Route</th></tr>
@@ -282,16 +273,16 @@ else
                     </tbody>
                 </DataTable>
 
-                <h2 class="sub-head">Best Packs for This Deck</h2>
+                <h2 class="sub-head">Best Packs</h2>
                 @if (_ranked.Count == 0)
                 {
                     <p class="small text-body-secondary">
-                        No purchasable pack supplies any of the missing cards.
+                        No pack sells the missing cards.
                     </p>
                 }
                 else
                 {
-                    <DataTable Label="Best Packs for This Deck" Class="pack-table">
+                    <DataTable Label="Best packs for this deck" Class="pack-table">
                         <thead>
                             @* The percentage and the same figure as packs, in the wording the
                                Which-pack table uses. A bare "6.9%" is not a number anyone acts on;
@@ -301,10 +292,7 @@ else
                             <tr>
                                 <th scope="col">Pack</th>
                                 <th scope="col" class="num">Chance of a Hit</th>
-                                <th scope="col" class="num"
-                                    title="1 / the chance of a hit: how many packs, on average, before this one gives you something for the deck">
-                                    Packs per New Card
-                                </th>
+                                <th scope="col" class="num">Packs per New Card</th>
                                 <th scope="col" class="num">Cards It Can Give</th>
                             </tr>
                         </thead>
@@ -357,9 +345,7 @@ else
         {
             var left = GameRules.DeckSize - (_draft?.DeckBuilderNrs.Count ?? 0);
 
-            return left == GameRules.DeckSize
-                ? $"Pick the {GameRules.DeckSize} cards this deck is made of."
-                : left == 1 ? "One more card." : $"{left} more cards.";
+            return left == 1 ? "One more card." : $"{left} more cards.";
         }
     }
 
@@ -693,7 +679,7 @@ else
         var cheapest = routes.Cheapest;
         if (cheapest is null)
         {
-            parts.Add("no pack route: this card cannot be bought or pulled");
+            parts.Add("not in packs or the shop");
         }
         else if (cheapest.Route == AcquisitionRoute.PackPoints)
         {
@@ -710,7 +696,7 @@ else
         var share = routes.Options.FirstOrDefault(o => o.Route == AcquisitionRoute.Share);
         if (share is { Available: true })
         {
-            parts.Add("or ask a friend to share it, free and nothing back");
+            parts.Add("or ask a friend to share it");
         }
         else
         {

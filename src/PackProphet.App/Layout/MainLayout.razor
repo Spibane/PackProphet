@@ -35,8 +35,7 @@
             {
                 <strong>Your changes are not being saved.</strong>
                 <span>
-                    The browser refused the write, which usually means its storage for this site is
-                    full. Export a backup now. Anything you do until this clears will be lost
+                    Storage for this site is probably full. Export a backup now: changes are lost
                     on reload.
                 </span>
             }
@@ -44,18 +43,17 @@
             {
                 <strong>This browser is not letting the app store anything.</strong>
                 <span>
-                    Private browsing or blocked site data will do that. The app works for now, but
-                    nothing will survive a reload, so export a backup before you close the tab.
+                    Nothing will survive a reload. Export a backup before closing the tab.
                 </span>
             }
             else
             {
                 <strong>Saved data was found but could not be read.</strong>
+                @* The app started empty rather than refuse to open. Importing a backup or entering
+                   cards does not overwrite the set-aside text. *@
                 <span>
-                    The app has started empty rather than refuse to open. The unreadable text has
-                    been set aside untouched under <code>packprophet.state.unreadable</code> in
-                    this site's local storage, so it can still be recovered by hand.
-                    Importing a backup or entering cards will not overwrite it.
+                    It is kept untouched in local storage under
+                    <code>packprophet.state.unreadable</code>.
                 </span>
             }
             <a href="settings">Open Settings</a>

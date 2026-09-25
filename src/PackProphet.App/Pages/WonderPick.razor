@@ -64,13 +64,14 @@ else
                that resolves. Dismissing hides the paragraph, not the page. *@
             @if (Session.ShowWonderIntro)
             {
+                @* The game shows the cards; what it cannot show is the bar, which comes from the
+                   offers you have been getting. *@
                 <p class="lead-note">
-                    The game shows the cards. What it cannot show is <strong>the bar</strong>:
-                    how good an offer has to be to be worth a stamina. That comes from the offers
-                    you have been getting, so log every one, taken or skipped.
+                    Log every offer, taken or skipped. That sets <strong>the bar</strong> an offer
+                    must clear to be worth a stamina.
                     <button class="x" @onclick="() => Session.SetShowWonderIntro(false)"
-                            title="Hide this for good. Settings brings it back."
-                            aria-label="Hide the explanation">&times;</button>
+                            title="Settings brings it back."
+                            aria-label="Hide this note">&times;</button>
                 </p>
             }
             @* No paragraph restating the game here. Two used to: how a Wonder Pick works, and
@@ -95,9 +96,7 @@ else
             @* A Deluxe pack holds four cards, so its offer's fifth slot is Pack Hourglasses. It
                is drawn as the fifth box, filled, because it is part of the offer rather than a
                card still to name. *@
-            <BoxStrip Label="@(Deluxe ? "The four cards and hourglasses you were offered" : "The five cards you were offered")"
-                      Clause="you receive one at random, so the only choice is whether to spend at all"
-                      Columns="@GameRules.WonderPickCardsShown">
+            <BoxStrip Label="The Offer" Columns="@GameRules.WonderPickCardsShown">
                 @for (var i = 0; i < GameRules.WonderPickCardsShown; i++)
                 {
                     if (Deluxe && i >= CardSlots)
@@ -120,7 +119,7 @@ else
                                -- one line, saying the thing that decides. *@
                             <button class="offer-card @(Held(card) > 0 ? "have" : "")"
                                     @onclick="() => Remove(card)"
-                                    title="Remove @card.Name from the offer"
+                                    title="Remove @card.Name"
                                     style="@card.ArtVars">
                                 <span class="x" aria-hidden="true">&times;</span>
                             </button>
@@ -183,10 +182,7 @@ else
                readings survive the button being tapped shut and opened again. *@
             <div class="shot-panel" id="wonder-shots" hidden="@(!_shotsOpen)">
                 <ShotImport @ref="_shots" Group="wonder" Choices="@ShotChoices">
-                    <Intro>
-                        Screenshot the <strong>Wonder Pick</strong> screen. One offer per picture
-                        (@GameRules.WonderPickCardsShown cards).
-                    </Intro>
+                    <Intro>One Wonder Pick offer per picture.</Intro>
                     <Actions Context="reading">
                         <button class="btn btn-primary" aria-live="polite"
                                 title="@AdoptWarning"
@@ -211,9 +207,8 @@ else
                             @* More than one offer in frame. Taking the first five would appraise
                                a mixture of two offers, which is worse than saying so. *@
                             <p class="small text-warning-emphasis mt-2 mb-0">
-                                More than @GameRules.WonderPickCardsShown cards, so this is
-                                probably two offers. Crop to one and try again &mdash; only the
-                                first @GameRules.WonderPickCardsShown would be used.
+                                More than @GameRules.WonderPickCardsShown cards. Crop to one offer;
+                                only the first @GameRules.WonderPickCardsShown would be used.
                             </p>
                         }
                     </Actions>
@@ -255,7 +250,7 @@ else
         @if (_appraisal is { } a)
         {
             <div class="verdict-lead" aria-live="polite">
-                <span class="micro">The call</span>
+                <span class="micro">The Call</span>
 
                 <div class="lead-head">
                     <div class="lead-text">
@@ -273,25 +268,19 @@ else
                         <p class="then">
                             @if (_history.Count >= MinSamplesForThreshold)
                             {
-                                <text>
-                                    That bar comes from your own @_history.Count logged offers.
-                                </text>
+                                <text>Bar set by your @_history.Count logged offers.</text>
                                 @if (Session.WonderStamina >= GameRules.StaminaCap)
                                 {
                                     @* Was three clauses on why the cap lowers the bar. The
                                        reader needs to know that it did, not the arithmetic. *@
-                                    <text>
-                                        Lowered right now because you are at the cap: holding out
-                                        costs you the next one.
-                                    </text>
+                                    <text>Lowered while you are at the cap.</text>
                                 }
                             }
                             else
                             {
                                 <text>
-                                    @_history.Count of @MinSamplesForThreshold logged offers, so
-                                    this takes anything useful for now. Log every offer, taken or
-                                    skipped &mdash; the bar is only as good as what is behind it.
+                                    @_history.Count of @MinSamplesForThreshold logged offers. Until
+                                    then, anything useful is a take.
                                 </text>
                             }
                         </p>
@@ -343,7 +332,7 @@ else
                     </select>
                     <button class="btn btn-primary" disabled="@(_received.Length == 0)"
                             @onclick="LogTaken">
-                        Took It &mdash; Spend a Stamina
+                        Took It
                     </button>
                 </span>
 
@@ -352,10 +341,7 @@ else
                 </button>
             </div>
 
-            <p class="commit-note">
-                Log every offer, taken or skipped. The bar is only as good as the distribution
-                behind it.
-            </p>
+            <p class="commit-note">Log every offer, taken or skipped.</p>
 
             <div class="summary">
                 <div class="stat">
@@ -370,13 +356,12 @@ else
                     @* Never called a price. Wonder Stamina and Pack Hourglasses are separate
                        currencies with no exchange rate, so packs-per-stamina only ranks one
                        offer against another. *@
-                    <span class="sub">For comparing offers, not a price</span>
                 </div>
                 <div class="stat">
-                    <span class="label">The Price Is Set By</span>
+                    <span class="label">Price Set By</span>
                     <span class="value">@(a.CostDriver.Length > 0 ? a.CostDriver : "—")</span>
                     <span class="sub">
-                        @(a.CostDriverWanted ? "which you still want" : "which you do not need")
+                        @(a.CostDriverWanted ? "Wanted" : "Not needed")
                     </span>
                 </div>
             </div>
@@ -496,7 +481,7 @@ else
 
             builder.OpenElement(2, "figcaption");
             builder.AddAttribute(3, "class", "micro");
-            builder.AddContent(4, "Against your own offers");
+            builder.AddContent(4, "Your Past Offers");
             builder.CloseElement();
 
             builder.OpenElement(5, "svg");
@@ -798,9 +783,7 @@ else
 
     private string AdoptWarning =>
         AdoptCostsTheRest
-            ? "Appraising one offer clears the other pictures. Nothing is recorded either way, but "
-              + "you would have to choose them again. Appraise them one at a time from a fresh "
-              + "upload, or start with the one you are deciding about."
+            ? "Clears the other pictures."
             : "";
 
     private void AdoptShot(ShotReading reading)
@@ -862,7 +845,7 @@ else
 
         Session.LogWonderOffer(_offer, _appraisal.StaminaCost, taken: false, received: null,
                                deluxe: _appraisal.HourglassSlot);
-        _logged = "Logged as skipped. It still counts towards your threshold.";
+        _logged = "Logged as skipped.";
         Clear();
     }
 
@@ -903,29 +886,20 @@ else
 
     private string Why(OfferAppraisal a) => a.Verdict switch
     {
-        OfferVerdict.NothingWanted =>
-            "Every card in this offer is one you already have enough of, so the pick cannot "
-            + "advance anything. Skipping costs you nothing at all.",
+        // The price is set by the offer's highest rarity, not by what it is worth to you. A bar
+        // below usual at the cap is because capped stamina is not regenerating.
+        OfferVerdict.NothingWanted => "You have enough of every card here.",
 
         OfferVerdict.Overpriced =>
-            $"It costs {a.StaminaCost} of your {GameRules.StaminaCap} stamina because it "
-            + $"contains {a.CostDriver}, and you do not need {a.CostDriver}. The price is set "
-            + "by the offer's highest rarity, not by what it is worth to you, so you would be "
-            + $"paying near the maximum for the rest: about {Fmt(a.ExpectedValue)} packs' worth.",
+            $"{a.StaminaCost} stamina because of {a.CostDriver}, which you do not need. "
+            + $"The rest is worth about {Fmt(a.ExpectedValue)} packs.",
 
         OfferVerdict.BelowThreshold =>
-            $"About {Fmt(a.ValuePerStamina)} packs per stamina, against the "
-            + $"{Fmt(a.Threshold)} you have been holding out for. Stamina refills one every "
-            + $"{GameRules.StaminaRegen.TotalHours:N0} hours while offers rotate every "
-            + $"{GameRules.WonderOfferLifetime.TotalHours:N0}, so spending here costs you a "
-            + "better offer later.",
+            $"About {Fmt(a.ValuePerStamina)} packs per stamina, under your bar of {Fmt(a.Threshold)}.",
 
         _ => Session.WonderStamina >= GameRules.StaminaCap
-            ? $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina, and you "
-              + "are at the cap, so that stamina is not regenerating. Waiting has a cost right "
-              + "now, which is why the bar is lower than usual."
-            : $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina, above "
-              + "the bar you have been holding out for."
+            ? $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina, and you are at the cap."
+            : $"About {Fmt(a.ExpectedValue)} packs' worth for {a.StaminaCost} stamina, above your bar."
     };
 
     // Forwards to the shared formatter. Five pages each had their own version of this and they

@@ -37,7 +37,7 @@ else
             }
             @if (_pending)
             {
-                <span class="chip-pending" title="Applying shortly, keep tapping to make more changes">
+                <span class="chip-pending">
                     Updating&hellip;
                 </span>
             }
@@ -70,7 +70,7 @@ else
         @* Grouped by series so this stays usable as sets accumulate. *@
         <div class="rail-group">
             <span class="ttl">Ranking For</span>
-            <ScopePicker Label="What to rank packs against"
+            <ScopePicker Label="Target"
                          Grouped="true" Merged="true" Scope="@Scope" OnScope="OnScope" />
         </div>
 
@@ -92,28 +92,24 @@ else
             @* Which plan the chips are editing, and how to reach the other one. This used to be
                a label reading "default" with no route to a per-set plan unless a single set was
                already scoped — so the word promised a distinction the page never offered. It
-               now says what to do at every scope. *@
+               now says what to do at every scope. Every other set follows the default; the
+               override starts as a copy of it. *@
             <p class="plan-scope">
                 @if (PlanScope is not null)
                 {
-                    <span>These apply to <strong>@ScopedSet</strong> only. Every other set follows the default.</span>
-                    <button class="chip-link" @onclick="ClearOverride"
-                            title="Follow the default plan again">Use the Default Here</button>
+                    <span><strong>@ScopedSet</strong> only.</span>
+                    <button class="chip-link" @onclick="ClearOverride">Use the Default Here</button>
                 }
                 else if (ScopedSet is not null)
                 {
-                    <span>This is the <strong>default</strong>, used by every set without a plan of its own.</span>
-                    <button class="chip-link" @onclick="StartOverride"
-                            title="Give @ScopedSet its own plan, starting from the default">
+                    <span>The <strong>default</strong> plan.</span>
+                    <button class="chip-link" @onclick="StartOverride">
                         Give @ScopedSet Its Own
                     </button>
                 }
                 else
                 {
-                    <span>
-                        This is the <strong>default</strong>, used by every set without a plan
-                        of its own. Pick a single set above to give it one.
-                    </span>
+                    <span>The <strong>default</strong> plan. Pick one set above to give it its own.</span>
                 }
             </p>
             </div>
@@ -135,9 +131,7 @@ else
                     var on = Session.IsLimitedPackNameAvailable(pack);
                     <button class="avail-chip @(on ? "on" : "off")"
                             @onclick="() => ToggleLimited(pack, !on)"
-                            title="@pack packs come and go. @(on
-                                ? "Counted in the ranking. Tap if they are not on sale."
-                                : "Left out of the ranking, and their exclusive cards count as unobtainable. Tap when they are on sale.")">
+                            title="@(on ? null : "Left out of the ranking.")">
                         <span class="nm">@pack</span>
                         <span class="st">@(on ? "On Sale" : "Off Sale")</span>
                     </button>
@@ -209,15 +203,15 @@ else
                         <p class="says">
                             @chance.Lead<strong class="key">@chance.Figure</strong> gives you a
                             card you still need &mdash; roughly
-                            <strong>@PackCount(st.PacksToNextUseful)</strong> between new cards, and
+                            <strong>@PackCount(st.PacksToNextUseful)</strong> between new cards,
                             <strong>@MorePacks(st.PacksToFinishItsShare)</strong> to finish its
-                            share of your target.
+                            share.
                         </p>
 
                         @* The same figure as calendar time, which is the one that changes a
                            decision: nobody plans in packs, they plan in days. *@
                         <p class="then">
-                            At @GameRules.PacksPerDay(Premium) free packs a day that is about
+                            At @GameRules.PacksPerDay(Premium) free packs a day, about
                             <strong>@Days(st.PacksToFinishItsShare, Premium)</strong>@if (!Premium)
                             {
                                 <text>, or @Days(st.PacksToFinishItsShare, true) with premium</text>
@@ -281,8 +275,7 @@ else
                 {
                     var rs = row.Standing!;
                     <button class="ranked-row @(row.PackKey == Verdict?.PackKey ? "current" : "")"
-                            @onclick="() => SelectPack(row.PackKey)"
-                            title="Read the verdict for @row.PackName">
+                            @onclick="() => SelectPack(row.PackKey)">
                         <span class="art" aria-hidden="true"
                               style="--art:url('@Session.PackArtUrl(row.PackKey)')"></span>
                         <span class="nm">
@@ -296,10 +289,7 @@ else
                     </button>
                 }
             </div>
-            <p class="note">
-                Chance a pack gives you something you need. Tap a row to swap the verdict above to
-                that pack; the full table is below.
-            </p>
+            <p class="note">Tap a pack to read its verdict.</p>
         </div>
         </div>
 
@@ -343,8 +333,7 @@ else
                     </tbody>
                 </DataTable>
                 <p class="small text-body-secondary mb-0">
-                    Expected packs to finish <em>that rarity alone</em>, opening the best available
-                    pack each time.
+                    Packs to finish <em>that rarity alone</em>.
                 </p>
             </div>
         }
@@ -355,16 +344,12 @@ else
                 @* The game sells ten of a set in one action, so the batch gets a real answer
                    rather than being left to intuition. *@
                 @* Two clauses on why a batch cannot beat ten singles went with the copy cut.
-                   The reader came here to pick a set, not to be talked out of the button. *@
-                <p class="small text-body-secondary">
-                    Figures below cover the whole batch of @GameRules.PacksPerBatch.
-                </p>
+                   The reader came here to pick a set, not to be talked out of the button. The
+                   figures cover the whole batch, which the first column heading says. *@
 
                 @if (_batches.Count == 0)
                 {
-                    <p class="small text-body-secondary mb-0">
-                        Nothing outstanding that a purchasable pack can supply.
-                    </p>
+                    <p class="small text-body-secondary mb-0">Nothing a pack can supply.</p>
                 }
                 else
                 {
@@ -419,10 +404,6 @@ else
             <div class="mb-3">
                 @* No single pack can complete a multi-set target, so a fixed budget is worth
                    splitting rather than sinking into whichever pack currently ranks first. *@
-                <p class="small text-body-secondary">
-                    How many packs to spend, split across whichever pack keys best serve the
-                    current target.
-                </p>
 
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <label for="allocate-budget" class="small text-body-secondary">Packs</label>
@@ -433,9 +414,7 @@ else
 
                 @if (_allocation is null || _allocation.Rows.Count == 0)
                 {
-                    <p class="small text-body-secondary mb-0">
-                        Nothing outstanding that a purchasable pack can supply.
-                    </p>
+                    <p class="small text-body-secondary mb-0">Nothing a pack can supply.</p>
                 }
                 else
                 {
@@ -462,10 +441,8 @@ else
                         </tbody>
                     </DataTable>
                     <p class="small text-body-secondary mb-0">
-                        Expected to satisfy @_allocation.ExpectedNewCards.ToString("N1") of the
-                        @_outstanding outstanding demands
-                        (@_allocation.ChanceOfFinishing.ToString("P1") chance of finishing all of
-                        them).
+                        Expected: @_allocation.ExpectedNewCards.ToString("N1") of @_outstanding cards,
+                        @_allocation.ChanceOfFinishing.ToString("P1") chance of all.
                     </p>
                 }
             </div>
@@ -476,12 +453,10 @@ else
             <div class="mb-3">
                 @* Pack points are a byproduct of opening rather than an alternative to it: you
                    earn five per pack whatever you do. So this panel asks which cards deserve a
-                   limited, per-set budget rather than "buy or pull?". *@
+                   limited, per-set budget rather than "buy or pull?". The earn rate, the cap and
+                   the per-set rule are the game's, and the game states them. *@
                 <p class="small text-body-secondary">
-                    @GameRules.PackPointsPerPack per pack, spendable
-                    <strong>only in the set that earned them</strong>, capped at
-                    @GameRules.PackPointsCap. Logging packs adds them; set a starting balance here
-                    if you were already playing.
+                    Logging a pack adds its points. Enter any balance you already had.
                 </p>
 
                 @if (_capWarnings.Count > 0)
@@ -493,10 +468,7 @@ else
                                 <strong>@warning.Set</strong>
                                 @if (warning.AtCap)
                                 {
-                                    <span>
-                                        is at the cap: every further pack of this set earns
-                                        <strong>nothing</strong>. Spend before you open.
-                                    </span>
+                                    <span>is at the cap. Spend before you open.</span>
                                 }
                                 else
                                 {
@@ -536,7 +508,7 @@ else
                                 <td class="small">
                                     @if (row.AffordableNow.Count == 0)
                                     {
-                                        <span class="text-body-tertiary">Nothing You Still Need</span>
+                                        <span class="text-body-tertiary">Nothing Needed</span>
                                     }
                                     else
                                     {
@@ -548,7 +520,7 @@ else
                                            spent in this set, so these are cards from outside it. *@
                                         @if (row.BeyondTarget)
                                         {
-                                            <span class="d-block text-body-tertiary">Outside Your Plan</span>
+                                            <span class="d-block text-body-tertiary">Outside the Plan</span>
                                         }
                                     }
                                 </td>
@@ -560,17 +532,12 @@ else
                 <h2 class="sub-head">Where Points Are Worth Spending</h2>
                 @if (_pointsShop.Count == 0)
                 {
-                    <p class="small text-body-secondary mb-0">
-                        Nothing you still need is better bought than pulled, at this scope.
-                    </p>
+                    <p class="small text-body-secondary mb-0">Nothing worth buying with points.</p>
                 }
                 else
                 {
-                    <p class="small text-body-secondary">
-                        Ranked by <em>packs saved per pack's worth of points</em>, not by price:
-                        a Crown returns about 2.5, an Immersive 0.3. Anything at or below 1.0 is
-                        left out.
-                    </p>
+                    @* Ranked by packs saved per pack's worth of points, not by price: a Crown
+                       returns about 2.5, an Immersive 0.3. Anything at or below 1.0 is left out. *@
                     <DataTable Label="Where Points Are Worth Spending" Fit="true">
                         <thead>
                             <tr>
@@ -661,8 +628,7 @@ else
                                question. *@
                             @if (row.Best)
                             {
-                                <span class="badge text-bg-primary ms-1"
-                                      title="Best pack for @Session.ScopeLabel(Scope) right now">Open This</span>
+                                <span class="badge text-bg-primary ms-1">Open This</span>
                             }
                             @if (row.Mark is { Length: > 0 } mark)
                             {
@@ -672,9 +638,9 @@ else
                                every row it prices says so. *@
                             @if (Session.AssumedRates.TryGetValue(row.Set, out var donor))
                             {
-                                <span class="badge text-bg-secondary ms-1"
-                                      title="@row.Set has no published pull rates, so these odds use @donor's distributions applied to @row.Set's own contents">
-                                    Rates assumed from @donor
+                                @* The donor's distributions applied to this set's own contents. *@
+                                <span class="badge text-bg-secondary ms-1">
+                                    Rates Assumed from @donor
                                 </span>
                             }
                             @* Offered where the problem is visible. A released set with no
@@ -686,17 +652,13 @@ else
                             {
                                 <button class="btn btn-sm btn-outline-primary py-0 ms-2"
                                         @onclick:stopPropagation="true"
-                                        @onclick="() => Assume(row.Set, standard)"
-                                        title="Price @row.Set using @standard's pull rates, applied to @row.Set's own card counts">
-                                    Estimate with @standard's rates
+                                        @onclick="() => Assume(row.Set, standard)">
+                                    Estimate with @standard's Rates
                                 </button>
                             }
                             @if (GameRules.IsDeluxePack(row.PackName))
                             {
-                                <span class="badge text-bg-info ms-1"
-                                      title="Every Deluxe pack yields a 4-diamond card">
-                                    Guaranteed 4&#9670;
-                                </span>
+                                <span class="badge text-bg-info ms-1">Guaranteed 4&#9670;</span>
                             }
                             </span>
                           </span>
@@ -733,15 +695,15 @@ else
                                 @if (supplied.Count == 0)
                                 {
                                     <p class="small text-body-secondary mb-0">
-                                        Nothing outstanding. The ranking is stale, reopen the page.
+                                        Nothing outstanding. Reopen the page.
                                     </p>
                                 }
                                 else
                                 {
+                                    @* Trade and Wonder Pick are priced in their own currencies and
+                                       never converted into packs. *@
                                     <div class="small text-body-secondary mb-1">
-                                        @supplied.Count @Text.Fmt.S(supplied.Count, "card") you still need, cheapest route each.
-                                        Trade and Wonder Pick are priced in their own currencies
-                                        and never converted into packs.
+                                        @supplied.Count @Text.Fmt.S(supplied.Count, "card") still needed.
                                     </div>
 
                                     @* Where in the pack the chance actually is. The column above
@@ -761,7 +723,7 @@ else
                                                 <span class="slot @(slot.Chance <= 0 ? "none" : "")">
                                                     <span class="pos">@slot.Label</span>
                                                     <span class="pct">
-                                                        @(slot.Chance <= 0 ? "nothing you need" : slot.Chance.ToString("P2"))
+                                                        @(slot.Chance <= 0 ? "None" : slot.Chance.ToString("P2"))
                                                     </span>
                                                 </span>
                                             }
@@ -801,17 +763,17 @@ else
            control only reachable by scrolling past all of them may as well not exist. *@
         <div class="summary">
             <div class="stat">
-                <span class="label">Cards Still Needed</span>
+                <span class="label">Cards Needed</span>
                 <span class="value">@_outstanding</span>
             </div>
             <div class="stat">
-                <span class="label">Expected packs</span>
+                <span class="label">Expected Packs</span>
                 <span class="value">@Fmt(_bestCase)</span>
                 <span class="sub">
                     @* Always say what the number covers. When a pack is unavailable its exclusive
                        cards leave the estimate, so the figure can fall even though the situation
                        got worse — shown bare, that reads as "cheaper". *@
-                    to finish @_priceable of @_outstanding, opening the best pack each time
+                    to finish @_priceable of @_outstanding
                 </span>
             </div>
             @if (Session.AssumedRates.Count > 0)
@@ -833,7 +795,7 @@ else
             }
 
             <div class="stat">
-                <span class="label">Time at Your Rate</span>
+                <span class="label">Time</span>
                 <span class="value">@Days(_bestCase, Premium)</span>
                 <span class="sub">@RateNote()</span>
             </div>
@@ -843,8 +805,7 @@ else
         {
             var stuck = _unreachable.Sum(d => d.Remaining);
             <Notice Severity="Notice.Level.Warning">
-                <strong>@stuck @Text.Fmt.S(stuck, "card") cannot be obtained right
-                now,</strong> so the estimate above covers @_priceable of @_outstanding.
+                <strong>@stuck @Text.Fmt.S(stuck, "card") cannot be obtained right now.</strong>
             </Notice>
         }
 
@@ -855,7 +816,6 @@ else
                inferred from an empty ranking. *@
             <Notice Severity="Notice.Level.Info">
                 <strong>@_neverInPack.Count @Text.Fmt.S(_neverInPack.Count, "card") never came from a pack.</strong>
-                An event or a promo only.
                 <div class="supplied mt-2">
                     @foreach (var (card, remaining) in _neverInPack.Take(UnreachableShown))
                     {
@@ -1381,7 +1341,7 @@ else
             // Off sale: real numbers, because we know its rates — it just cannot be bought today.
             .. all.Where(s => unavailable.Contains(s.PackKey))
                   .Select(s => new PackRow(s.PackKey, s, false, "Off Sale",
-                      $"{s.PackName} is limited-time and you have marked it unavailable, so it is left out of the estimate", 0)),
+                      "Left out of the estimate", 0)),
 
             // No published rates — but WHY matters, so the badge distinguishes a set that is out
             // and simply unpriced from one that is not out yet. Both were previously reported the
@@ -1391,8 +1351,8 @@ else
                 x.PackKey, null, false,
                 x.Released ? "Rates Unknown" : "Not Out Yet",
                 x.Released
-                    ? $"{x.PackKey.Split(':')[0]} is out, but nobody has published its pull rates yet. The cards drop, the odds are simply unknown, so it cannot be counted in the estimate"
-                    : $"{x.PackKey.Split(':')[0]} has not been released{(x.ReleasesOn is { } d ? $", due {d:d MMM yyyy}" : "")}, so nothing in it can be pulled yet",
+                    ? "No published pull rates, so left out of the estimate"
+                    : x.ReleasesOn is { } d ? $"Due {d:d MMM yyyy}" : null,
                 x.Cards, CanAssume: x.Released)),
         ];
 
@@ -1611,8 +1571,8 @@ else
         // common pool, and a collection past its commons kills exactly those.
         var run = dead.Count == dead[^1] && dead[0] == 1;
         return run
-            ? $"the first {Words(dead.Count)} cards come from the common pool, and you have finished those"
-            : "some positions can only give you a card you already have";
+            ? $"first {Words(dead.Count)}: commons, all owned"
+            : "dashed ones give duplicates only";
     }
 
     private static string Words(int n) => n switch

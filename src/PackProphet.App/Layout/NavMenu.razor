@@ -33,7 +33,7 @@
 
        A plain anchor, not a NavLink: a wordmark that filled in like a pressed button whenever you
        were on the collection would read as a sixth destination in the row. *@
-    <a class="brand" href="collection" title="Your collection">
+    <a class="brand" href="collection" title="Collection">
         @* Filled, where the same drawing is an outline everywhere else. A line drawing of a pack
            is the same weight as the line drawings on the buttons beside it, which is what made the
            name disappear into the row; a solid one is a different kind of mark rather than a
@@ -78,7 +78,7 @@
     @* The hotkey alone would be invisible, and on a phone there is no Ctrl+K, so the palette gets a
        button. The shortcut is printed on it rather than hidden in a tooltip. *@
     <button class="palette-btn ms-auto" @onclick="() => Palette.Toggle()"
-            title="Jump to a card, set, deck or action (Ctrl+K)" aria-label="Open the command palette">
+            title="Jump to a card, set, deck or action (Ctrl+K)" aria-label="Command palette">
         <span class="glyph" aria-hidden="true">
             <svg viewBox="0 0 16 16" width="14" height="14" focusable="false">
                 <circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.6" />

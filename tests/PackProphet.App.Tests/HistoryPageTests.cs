@@ -101,7 +101,7 @@ public class HistoryPageTests : AppHost
 
         // And when it does appear, it appears with a number in it.
         if (markup.Contains("is a small sample", StringComparison.Ordinal))
-            Assert.Contains("ordinary variance rather than evidence the model is wrong", markup);
+            Assert.Contains("ordinary variance", markup);
     }
 
     [Fact]

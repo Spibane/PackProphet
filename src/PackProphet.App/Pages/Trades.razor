@@ -131,8 +131,7 @@ else
             @if (ShowFoilFilter)
             {
                 <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
-                        @onclick="() => SetFoils(NextFoilMode())"
-                        title="Parallel foils come only from limited-time Deluxe packs, so they top any ranking by pull difficulty">
+                        @onclick="() => SetFoils(NextFoilMode())">
                     Parallel Foils: @FoilWord
                 </button>
             }
@@ -154,13 +153,10 @@ else
         @if (_stamina.AtCap)
         {
             <Notice Severity="Notice.Level.Warning">
-                <strong>Trade stamina is full, so it has stopped regenerating.</strong>
+                <strong>Trade stamina is full and not regenerating.</strong>
                 @if (_stamina.WastedSinceFull > 0)
                 {
-                    <span>
-                        Roughly @_stamina.WastedSinceFull more would have arrived by now. Spending
-                        one starts the clock again.
-                    </span>
+                    <span>Roughly @_stamina.WastedSinceFull more would have arrived by now.</span>
                 }
             </Notice>
         }
@@ -172,10 +168,9 @@ else
                opener here would also be one the rail cannot survive -- `.sheet:popover-open` beats
                the rule that makes the rail a column, so opening it by button at a desk would drop
                the whole rail to the bottom of the screen as a sheet. *@
-            <EmptyState>
-                Nothing outstanding to trade for at this target: either it is complete, or
-                everything left in it is a rarity that cannot be traded.
-            </EmptyState>
+            @* Either the target is complete, or everything left in it is a rarity that cannot be
+               traded. *@
+            <EmptyState>Nothing to trade for at this target.</EmptyState>
         }
         else
         {
@@ -199,17 +194,14 @@ else
                         @if (_shown[0].Candidate.Shareable)
                         {
                             <span>
-                                Or better, <strong>ask for it as a Share</strong>. It is
-                                @Session.Index.Symbol(_shown[0].Candidate.Want), so a friend can send it for
-                                nothing: no card back, no dust, no stamina, one a day. Trade only if
-                                nobody will.
+                                Or better, <strong>ask for it as a Share</strong>. Trade only if
+                                nobody sends it.
                             </span>
                         }
                         else
                         {
                             <span>
-                                Saves about @Fmt.PacksPhrase(_shown[0].Candidate.PacksSaved), the most of
-                                anything you can trade for right now. Offer one of your
+                                Saves about @Fmt.PacksPhrase(_shown[0].Candidate.PacksSaved). Offer one of your
                                 @_shown[0].Candidate.CouldOffer.Count spare
                                 @Session.Index.Symbol(_shown[0].Candidate.Want) cards.
                             </span>
@@ -222,7 +214,7 @@ else
             else
             {
                 <div class="verdict-lead" aria-live="polite">
-                    <span class="micro">The call</span>
+                    <span class="micro">The Call</span>
                     <div class="lead-head">
                       <div class="lead-text">
                         <h2 class="name skip">No Trade to Make Right Now</h2>
@@ -235,40 +227,20 @@ else
             }
 
             @* Whether dust is actually the thing stopping you, which it usually is not: stamina
-               allows about two trades a day while dust accumulates. *@
-            @if (_shown[0].Candidate.Dust > 0)
+               allows about two trades a day while dust accumulates. Said only when it is -- the
+               reassurance that dust is not the limit answered a question nobody asked.
+
+               A grouped view shows one row per group, the best trade in each by the chosen
+               measure; a group is absent when nothing in it is outstanding and tradeable. *@
+            @if (_shown[0].Candidate.Dust > 0
+                 && TradeQueue.DustIsTheConstraint(
+                        Session.Profile.Resources.Shinedust, _shown[0].Candidate.Dust, _stamina.Reachable))
             {
                 var price = _shown[0].Candidate.Dust;
                 var funded = ResourcePlan.DustRunway(Session.Profile.Resources.Shinedust, price);
                 <p class="small text-body-secondary">
-                    @if (TradeQueue.DustIsTheConstraint(
-                            Session.Profile.Resources.Shinedust, price, _stamina.Reachable))
-                    {
-                        <span>
-                            <strong>Dust is the constraint here.</strong> Your balance funds
-                            @funded @(funded == 1 ? "trade" : "trades") at @price.ToString("N0")
-                            each, fewer than the @_stamina.Reachable you could pay for in stamina.
-                        </span>
-                    }
-                    else
-                    {
-                        <span>
-                            Dust is not what is stopping you: your balance funds
-                            @(funded >= 100 ? "well over 100" : funded.ToString())
-                            @(funded == 1 ? "trade" : "trades") at @price.ToString("N0") each,
-                            against @_stamina.Reachable stamina you could spend today. Treat the
-                            dust column as a check, not a cost.
-                        </span>
-                    }
-                </p>
-            }
-
-            @if (_view != "all")
-            {
-                <p class="small text-body-secondary">
-                    One row per @(_view == "rarity" ? "rarity" : _view): the best trade
-                    available in each, by the measure chosen above. A group is absent when nothing
-                    in it is outstanding and tradeable.
+                    <strong>Dust is the constraint.</strong> Enough for
+                    @funded @(funded == 1 ? "trade" : "trades") at @price.ToString("N0") each.
                 </p>
             }
 
@@ -284,9 +256,9 @@ else
                         @* A column rather than a badge on the name. Most rows are shareable, so as
                            a badge it repeated down the whole table; as a column it is scannable,
                            and the rows that say no stand out. *@
-                        <th scope="col" data-pri="3" title="Whether a friend could simply send it: 1-4 diamonds only">Share?</th>
-                        <th scope="col" class="num" data-pri="2" title="Expected packs you would not have to open">Packs Saved</th>
-                        <th scope="col" class="num" data-pri="3" title="Pack points still to earn in this card's own set before the shop could sell it">Points Short</th>
+                        <th scope="col" data-pri="3">Share?</th>
+                        <th scope="col" class="num" data-pri="2">Packs Saved</th>
+                        <th scope="col" class="num" data-pri="3" title="Pack points still to earn in this card's set">Points Short</th>
                         <th scope="col" class="num" data-pri="3">Dust</th>
                         <th scope="col" data-pri="3">What You Could Offer</th>
                         <th scope="col" data-pri="1">Status</th>
@@ -318,17 +290,11 @@ else
                             <td class="small" data-pri="3">
                                 @if (row.Candidate.Shareable)
                                 {
-                                    <span class="text-success-emphasis"
-                                          title="A friend sends it and gets nothing back: no card at this rarity, no dust, no stamina. One a day. Ask before spending on a trade.">
-                                        Ask Instead
-                                    </span>
+                                    <span class="text-success-emphasis">Ask Instead</span>
                                 }
                                 else
                                 {
-                                    <span class="text-body-secondary"
-                                          title="Above 4 diamonds, so a Share cannot carry it. Trading or opening packs is the only way.">
-                                        No
-                                    </span>
+                                    <span class="text-body-secondary">No</span>
                                 }
                             </td>
                             <td class="num" data-pri="2">@Fmt.Packs(row.Candidate.PacksSaved, Fmt.NoPackRoute)</td>
@@ -339,11 +305,11 @@ else
                                 }
                                 else if (row.Candidate.PointsShort == 0)
                                 {
-                                    <span class="text-success-emphasis" title="Your balance in this set already covers it">Buy It</span>
+                                    <span class="text-success-emphasis">Buy It</span>
                                 }
                                 else
                                 {
-                                    <span title="@row.Candidate.PointsShort points, about @row.Candidate.PacksOfPointsShort packs of @row.Candidate.Want.Set">
+                                    <span title="About @row.Candidate.PacksOfPointsShort packs of @row.Candidate.Want.Set">
                                         @row.Candidate.PointsShort.ToString("N0")
                                     </span>
                                 }
@@ -352,7 +318,7 @@ else
                             <td class="small" data-pri="3">
                                 @if (row.Candidate.CouldOffer.Count == 0)
                                 {
-                                    <span class="text-body-secondary">No Spare at This Rarity</span>
+                                    <span class="text-body-secondary">No Spare</span>
                                 }
                                 else
                                 {
@@ -370,20 +336,9 @@ else
                 </tbody>
             </DataTable>
 
-        @* How the economy works, under the ranking rather than over it. It explains why the
-           numbers are what they are, which is worth reading once and is not worth 126px above the
-           answer on every later visit. The verdict above the table stays there: that is the
-           answer, not an explanation of it. *@
-        <p class="small text-body-secondary">
-            Every trade costs <strong>1 stamina</strong> whatever the rarity, so stamina is the
-            scarce thing, not dust. Value below is <strong>expected packs saved</strong>.
-        </p>
-
-            <p class="small text-body-secondary">
-                <strong>share?</strong> says whether a friend could just send the card instead
-                (1 to 4 diamonds, one a day, nothing back). The rows saying <em>no</em> are
-                the ones a trade is for.
-            </p>
+        @* Two footnotes on how the economy works -- one stamina per trade whatever the rarity,
+           and what a Share is -- went with the copy cut. Both are the game's rules, and the
+           columns already say what each row costs. *@
         }
     </div>
     </PageShell>
@@ -630,7 +585,7 @@ else
         : Scope.StartsWith("chase:", StringComparison.Ordinal)
             ? Session.ChaseListById(Scope[6..])?.Name ?? "a chase list"
         : Scope.StartsWith("series:", StringComparison.Ordinal) ? $"series {Scope[7..]}"
-        : Scope == "everything" ? "everything you collect"
+        : Scope == "everything" ? "everything"
         : $"{Scope}: {Session.Sets.DisplayName(Scope)}";
 
     private string ViewLabel => _view switch
@@ -689,9 +644,9 @@ else
     {
         TradeGate.None => "ready",
         TradeGate.NotTradeable =>
-            $"{Session.Index.Symbol(row.Want)} cannot be traded: packs and points are the only routes",
+            $"{Session.Index.Symbol(row.Want)} cannot be traded",
         TradeGate.NoSpareAtRarity =>
-            $"needs a spare {Session.Index.Symbol(row.Want)} to offer, and you have none going free",
+            $"you have no spare {Session.Index.Symbol(row.Want)} to offer",
         TradeGate.NotEnoughDust =>
             $"{(row.Dust - Session.Profile.Resources.Shinedust).ToString("N0")} more dust needed",
         TradeGate.NoStamina => _stamina.UntilNext is { } t

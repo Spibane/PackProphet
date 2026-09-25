@@ -102,7 +102,7 @@ else
                     <button class="btn btn-sm @Seg(Session.ProgressOrder == ByRelease)"
                             @onclick="() => SetOrder(ByRelease)"
                             aria-pressed="@Aria.Flag(Session.ProgressOrder == ByRelease)"
-                            title="Newest set first: an old set is either finished or has been unfinished for a year, and the work is in the ones that just came out">Release</button>
+                            title="Newest set first">Release</button>
                     <button class="btn btn-sm @Seg(Session.ProgressOrder == ByClosest)"
                             @onclick="() => SetOrder(ByClosest)"
                             aria-pressed="@Aria.Flag(Session.ProgressOrder == ByClosest)"
@@ -126,9 +126,6 @@ else
                 </label>
                 @* An unreleased set is 100% outstanding and nothing can be done about any of it,
                    so it would otherwise lead the page on the strength of being entirely missing. *@
-                <p class="rail-note">
-                    An unreleased set is missing in full, and nothing can be opened toward it yet.
-                </p>
             </div>
 
             <div class="rail-group">
@@ -140,13 +137,13 @@ else
                     <RarityChips Plan="Draft" OnCycle="CycleTier" />
                 </span>
                 <p class="rail-note">
-                    This is the <strong>default</strong>, used by every set without a plan of its
-                    own. Give one its own on <a href="packs">Which Pack</a>.
+                    <strong>Default</strong> for every set. Override one on
+                    <a href="packs">Which Pack</a>.
                 </p>
                 @if (_pending)
                 {
                     <p class="rail-note">
-                        <span class="chip-pending" title="Applying shortly, keep tapping to make more changes">
+                        <span class="chip-pending" title="Applying shortly">
                             Updating&hellip;
                         </span>
                     </p>
@@ -170,15 +167,14 @@ else
                     @if (_candidates == 0)
                     {
                         <text>
-                            No sets to report on yet. Mark what you own on the
-                            <a href="collection">Collection</a> page and they appear here.
+                            No sets yet. Mark what you own in
+                            <a href="collection">Collection</a>.
                         </text>
                     }
                     else
                     {
                         <text>
-                            Every set you collect is finished. Aim higher in Copies Wanted, or
-                            start a chase list for the cards outside your plan.
+                            Every set is finished. Raise Copies Wanted, or start a chase list.
                         </text>
                     }
                     </ChildContent>
@@ -214,7 +210,7 @@ else
                                     <span class="code">@row.Set</span>
                                     <span class="full" title="@row.Name">@row.Name</span>
                                 </span>
-                                <span class="p-pct" title="@row.Satisfied of @row.Wanted cards you collect">
+                                <span class="p-pct" title="@row.Satisfied of @row.Wanted cards">
                                     @row.Fraction.ToString("P0")
                                 </span>
                             </div>
@@ -241,14 +237,13 @@ else
                                 {
                                     <text>
                                         <span class="key">No published odds</span> for @row.Set yet.
-                                        Which Pack can borrow another set's to estimate it.
+                                        Which Pack can borrow another set's.
                                     </text>
                                 }
                                 else if (row.NoPackRoute)
                                 {
                                     <text>
-                                        <span class="key">No pack</span> can finish this set — what
-                                        is left comes only from trade or the shop.
+                                        <span class="key">No pack</span> can finish this set.
                                     </text>
                                 }
                                 else
@@ -351,7 +346,7 @@ else
                                     <span class="sub">
                                         @if (row.Tradeable == 0)
                                         {
-                                            <text>None of them tradeable</text>
+                                            <text>None tradeable</text>
                                         }
                                         else
                                         {
@@ -584,7 +579,7 @@ else
         var unwanted = Session.Index.Ladder.Rungs.Count(r => row.Plan.Copies(r.Index) == 0);
         return unwanted == 0
             ? null
-            : $"the {unwanted} dashed {Fmt.S(unwanted, "rung")} are ones this set's plan wants none of";
+            : "dashed: not in plan";
     }
 
     // ---- the plan chips, as on the Packs page ------------------------------------------------
@@ -751,12 +746,11 @@ else
     {
         var list = new List<Caveat>(4);
 
-        // Named before the unreachable count, because for a set awaiting rates that count is
-        // every outstanding card -- and "241 of the 241 come from no pack" is not what is true.
-        if (awaitingRates)
-            list.Add(new Caveat($"{set}'s odds are unpublished, so it cannot be ranked yet."));
-        else if (unreachable > 0)
-            list.Add(new Caveat($"{unreachable} of the {shortOf} come from no pack."));
+        // No caveat for a set awaiting rates: its sentence and its Packs box already say so. It
+        // still suppresses the unreachable count, which for such a set is every outstanding card
+        // -- and "241 of 241 in no pack" is not what is true.
+        if (!awaitingRates && unreachable > 0)
+            list.Add(new Caveat($"{unreachable} of {shortOf} in no pack."));
 
         // Warn, not a plain note: a capped balance is not a caveat on a figure, it is packs being
         // opened for nothing.

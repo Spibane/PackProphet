@@ -52,12 +52,10 @@ else
                 <div class="rail-seg" role="group" aria-labelledby="decks-layout">
                     <button class="btn btn-sm @(Session.DeckGrid ? "btn-outline-secondary" : "btn-secondary")"
                             @onclick="() => Session.SetDeckGrid(false)"
-                            aria-pressed="@Aria.Flag(!Session.DeckGrid)"
-                            title="A table, for comparing">List</button>
+                            aria-pressed="@Aria.Flag(!Session.DeckGrid)">List</button>
                     <button class="btn btn-sm @(Session.DeckGrid ? "btn-secondary" : "btn-outline-secondary")"
                             @onclick="() => Session.SetDeckGrid(true)"
-                            aria-pressed="@Aria.Flag(Session.DeckGrid)"
-                            title="Cards, for recognising">Grid</button>
+                            aria-pressed="@Aria.Flag(Session.DeckGrid)">Grid</button>
                 </div>
             </div>
 
@@ -80,13 +78,12 @@ else
                     @* Your own arrangement, which no computed key can express: the three above rank
                        decks by a property, and "these two first because I am playing them this
                        week" is not a property of a deck. *@
-                    <option value="custom" selected="@(_order == "custom")">My Own Order</option>
+                    <option value="custom" selected="@(_order == "custom")">Custom</option>
                 </select>
 
                 @if (_order == "custom")
                 {
-                    <span class="rail-hint">Drag a deck by its handle, or focus one and use the
-                    arrow keys.</span>
+                    <span class="rail-hint">Drag by the handle, or use the arrow keys.</span>
                 }
             </div>
         </PageRail>
@@ -96,8 +93,8 @@ else
         @if (_decks.Count == 0)
         {
             <EmptyState>
-                No decks yet. <a href="decks/import">Import one</a> from the game's share code,
-                or <a href="decks/new">build one from scratch</a>.
+                No decks yet. <a href="decks/import">Import one</a> or
+                <a href="decks/new">build one</a>.
             </EmptyState>
         }
         else if (Session.DeckGrid)
@@ -164,7 +161,7 @@ else
                                 else if (deck.Report is { FullyVerified: false })
                                 {
                                     <span class="badge text-bg-secondary"
-                                          title="Some rules could not be checked: card detail is missing for this set">
+                                          title="Card detail missing for this set">
                                         Unverified
                                     </span>
                                 }
@@ -187,7 +184,7 @@ else
                                 <a class="btn btn-sm btn-outline-secondary" href="decks/@deck.Id">Open</a>
                                 <button class="btn btn-sm @(_confirming == deck.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(deck.Id)" aria-live="polite"
-                                        title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete this deck")">
+                                        title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete deck")">
                                     @(_confirming == deck.Id ? "Really?" : "Delete")
                                 </button>
                             </div>
@@ -271,7 +268,7 @@ else
                                 else if (!deck.Report.FullyVerified)
                                 {
                                     <span class="badge text-bg-secondary"
-                                          title="Some rules could not be checked: card detail is missing for this set">
+                                          title="Card detail missing for this set">
                                         Unverified
                                     </span>
                                 }
@@ -286,7 +283,7 @@ else
                                    flag would arm every delete button at once. *@
                                 <button class="btn btn-sm @(_confirming == deck.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(deck.Id)" aria-live="polite"
-                                        title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete this deck")">
+                                        title="@(_confirming == deck.Id ? "Tap again to delete" : "Delete deck")">
                                     @(_confirming == deck.Id ? "Really?" : "Delete")
                                 </button>
                             </td>
@@ -329,7 +326,7 @@ else
     {
         "name" => "By Name",
         "size" => "Fullest First",
-        "custom" => "Your Own Order",
+        "custom" => "Custom Order",
         _ => "Closest to Buildable First",
     };
 

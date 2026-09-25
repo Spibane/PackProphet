@@ -13,7 +13,6 @@ else
     <div class="page-head">
         <BackLink To="collection" Label="Collection" />
         <h1 class="title">Import from a Screenshot</h1>
-        <span class="subtitle">Read your cards straight off the game</span>
     </div>
 
     <PageShell Measure="PageShell.Width.Form">
@@ -23,9 +22,8 @@ else
            Pick screen, where it is an offer to weigh up rather than anything to record. *@
         <ShotImport Group="cards" Choices="@Layouts" ChoiceLegend="Which Card List">
             <Intro>
-                In the game: the <strong>My Cards</strong> screen, in either layout. The list runs
-                past one screenful, so scroll and shoot it in several goes. They are read
-                separately and applied as one.
+                In the game: <strong>My Cards</strong>, in either layout. Scroll and shoot it in
+                several goes.
             </Intro>
             @* Together rather than Actions: the collection is one thing, not one thing per picture.
                Applying picture by picture would make several undo steps out of a single import, and
@@ -70,8 +68,7 @@ else
                                destroy something: every other outcome adds a card, and this one
                                removes counts the user typed in by hand. *@
                             <span class="d-block small text-body-secondary">
-                                Off by default: it deletes counts. A card that could not be
-                                read looks missing too.
+                                Deletes counts. A card that could not be read looks missing too.
                             </span>
                         </label>
                     </div>
@@ -107,24 +104,6 @@ else
                 </div>
             </Notice>
         }
-
-        @* Folded away, and short even so. Someone who opens this wants to know whether to trust
-           the reading, not how the reading is done. *@
-        <details class="mt-4">
-            <summary class="small text-body-secondary">How This Works, and Where It Fails</summary>
-            <div class="pt-2 small text-body-secondary">
-                <p>
-                    Each card's artwork was reduced to 128 bits offline, and those fingerprints ship
-                    with the app. A screenshot is read by finding the card-sized slots in it and
-                    taking the nearest match to each. Nothing is uploaded.
-                </p>
-                <p class="mb-0">
-                    It gives up rather than guessing: artwork too alike to choose between, a slot
-                    matching nothing, a list out of number order. Those are the slots counted above
-                    as not recognised, and they are left out of what gets applied.
-                </p>
-            </div>
-        </details>
     </PageShell>
 }
 
@@ -135,12 +114,9 @@ else
     /// </summary>
     private static readonly (CardScreen? Value, string Label, string Hint)[] Layouts =
     [
-        (null, "Work it out from the picture",
-         "Told apart by how many cards fit across a row."),
-        (CardScreen.OwnershipGrid, "Five across, with blanks",
-         "The whole set, blanks for what you are missing."),
-        (CardScreen.CopiesGrid, "Three across, with copy counts",
-         "Only cards you own, with copy counts."),
+        (null, "Work It Out", ""),
+        (CardScreen.OwnershipGrid, "Five across, with blanks", "The whole set."),
+        (CardScreen.CopiesGrid, "Three across, with copy counts", "Only cards you own."),
     ];
 
     private bool _applyFound = true;

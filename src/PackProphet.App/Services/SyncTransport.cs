@@ -216,8 +216,8 @@ public sealed class SyncTransport
         "22001" => "That collection is larger than the host will accept.",
         _ => (int)status switch
         {
-            429 => "Too many requests in a short time. Nothing was synced; try again in a minute.",
-            403 => "The host refused this app. If sync is behind a proxy, check the origin it allows.",
+            429 => "Too many requests. Nothing was synced; try again in a minute.",
+            403 => "The host refused this app. Check the origin the sync proxy allows.",
             413 => "That collection is larger than the host will accept.",
             >= 500 => "The sync host is having trouble. Nothing was synced; your collection here is unaffected.",
             _ => $"The sync host refused the request ({(int)status}). Your collection here is unaffected.",

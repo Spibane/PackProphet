@@ -15,7 +15,6 @@ else
     <div class="page-head">
         <BackLink To="settings" Label="Settings" />
         <h1 class="title">Import and Export</h1>
-        <span class="subtitle">Move a collection between trackers</span>
     </div>
 
     <PageShell Measure="PageShell.Width.Form" Class="sections">
@@ -23,8 +22,7 @@ else
         @* The file never leaves the browser, and that is the first thing someone handing over
            their whole collection wants to know. *@
         <p class="text-body-secondary">
-            Export your collection from your other tracker and pick the file here: a CSV
-            or an Excel workbook, whichever it gives you. It is read
+            Pick a CSV or Excel export from another tracker. It is read
             <strong>in this browser</strong> and never uploaded.
         </p>
 
@@ -35,7 +33,7 @@ else
 
             @if (_reading)
             {
-                <Notice Severity="Notice.Level.Info">Reading the file&hellip;</Notice>
+                <Notice Severity="Notice.Level.Info">Reading&hellip;</Notice>
             }
 
             @if (_problem is not null)
@@ -46,22 +44,15 @@ else
             <details class="mt-3">
                 <summary class="small text-body-secondary">Which Files Work</summary>
                 <div class="pt-2 small text-body-secondary">
+                    @* A file recording only whether a card is held imports as one copy each, and
+                       promos match as P-A-1 or PROMO-A-1. *@
                     <p>
-                        Any CSV or <code>.xlsx</code> with a column naming the card
-                        (<code>Id</code>, <code>card_id</code> or <code>card number</code>)
-                        and a column counting copies, such as <code>NumberOwned</code> or
-                        <code>quantity</code>. A file recording only whether a card is held
-                        imports as one copy each.
-                    </p>
-                    <p>
-                        The card can be one column of <code>A1-1</code>, or a
-                        <code>set_id</code> of <code>A1</code> beside a number on its own.
-                        Promos are matched whether they are written <code>P-A-1</code> or
-                        <code>PROMO-A-1</code>.
+                        A card column (<code>Id</code>, <code>card_id</code> or
+                        <code>card number</code>, optionally beside a <code>set_id</code>) and a
+                        count column such as <code>NumberOwned</code> or <code>quantity</code>.
                     </p>
                     <p class="mb-0">
-                        Some trackers export <strong>one set per file</strong>. Import them one
-                        after another, choosing <em>merge</em> for every file after the first.
+                        One set per file? Import each, choosing <em>merge</em> after the first.
                     </p>
                 </div>
             </details>
@@ -73,7 +64,7 @@ else
             @* The figures come before the destination on purpose. The question the user is being
                asked is not "where should this go" but "is this the right file", and that is
                answered by the counts. *@
-            <h2>What This File Says</h2>
+            <h2>This File</h2>
             <DataTable Label="Import summary" Fit="true" Class="mb-3">
                 <tbody>
                     <tr>
@@ -105,8 +96,7 @@ else
             @if (p.DistinctOwned == 0)
             {
                 <Notice Severity="Notice.Level.Warning">
-                    Nothing in that file matched a card, so there is nothing to import. Check it is
-                    a collection export rather than a deck list or a card database.
+                    Nothing to import: no card in that file matched. Is it a collection export?
                 </Notice>
             }
 
@@ -117,9 +107,9 @@ else
                    look at. *@
                 <Notice Severity="Notice.Level.Warning">
                     <p class="mb-1">
-                        @p.RowsUnmatched.ToString("N0") @Fmt.S(p.RowsUnmatched, "row") did not match a card and
-                        will not be imported. Most often this is a set added to the other tracker before this
-                        one has it.
+                        @* Most often a set the other tracker added before this one has it. *@
+                        @p.RowsUnmatched.ToString("N0") @Fmt.S(p.RowsUnmatched, "row") matched no card and
+                        will be skipped.
                     </p>
                     <ul class="mb-0 ps-3">
                         @foreach (var problem in p.Problems.Take(ProblemsShown))
@@ -136,7 +126,7 @@ else
 
             @if (p.DistinctOwned > 0)
             {
-                <h2>Where It Should Go</h2>
+                <h2>Import Into</h2>
 
                 <fieldset class="mb-3">
                     <legend class="visually-hidden">Import Destination</legend>
@@ -148,8 +138,7 @@ else
                         <label class="form-check-label" for="dest-new">
                             <strong>A New Collection</strong>
                             <span class="d-block small text-body-secondary">
-                                Nothing already here is touched. The safe choice, and the one to
-                                take if you are not sure the file is right.
+                                Nothing here is touched.
                             </span>
                         </label>
                     </div>
@@ -157,7 +146,7 @@ else
                     @if (_destination == Destination.NewCollection)
                     {
                         <div class="ms-4 mb-2" style="max-width: 22rem">
-                            <label class="form-label small mb-1" for="dest-name">Call It</label>
+                            <label class="form-label small mb-1" for="dest-name">Name</label>
                             <input class="form-control form-control-sm" id="dest-name"
                                    @bind="_newName" @bind:event="oninput" />
                         </div>
@@ -170,8 +159,7 @@ else
                         <label class="form-check-label" for="dest-merge">
                             <strong>Merge into @Session.Profile.Name</strong>
                             <span class="d-block small text-body-secondary">
-                                Keeps whichever count is larger for each card, and keeps anything
-                                the file does not mention.
+                                Keeps the larger count for each card.
                             </span>
                         </label>
                     </div>
@@ -185,10 +173,9 @@ else
                             <span class="d-block small text-body-secondary">
                                 @* Said plainly, with the number, because this is the one option
                                    that throws work away. *@
-                                Everything currently in it is discarded,
+                                Discards all
                                 @Session.Owned.DistinctOwned.ToString("N0")
-                                @Fmt.S(Session.Owned.DistinctOwned, "card"), and the file
-                                becomes the whole collection.
+                                @Fmt.S(Session.Owned.DistinctOwned, "card") in it.
                             </span>
                         </label>
                     </div>
@@ -208,7 +195,7 @@ else
                     @* Not "Ctrl+Z": the promise has to hold on the device the page is used on,
                        and the control that keeps it appears in the confirmation below. *@
                     <p class="small text-body-secondary mt-2 mb-0">
-                        You can undo this afterwards.
+                        You can undo this.
                     </p>
                 }
             }
@@ -220,21 +207,10 @@ else
             }
         }
 
-        <h2>Send This Collection Somewhere Else</h2>
-        <p class="small text-body-secondary">
-            A plain CSV, aimed at no site in particular: one row per card with
-            <code>set</code>, <code>number</code>, <code>card_id</code>, <code>name</code>,
-            <code>rarity</code> and <code>quantity</code>. The card is named both ways
-            (<code>A1-1</code> and <code>A1</code> plus <code>1</code>), so a tracker
-            expecting either will find it.
-        </p>
-        <p class="small text-body-secondary">
-            @* The one thing about the file that will surprise anyone who compares the two
-               numbers, so it is said before they do. *@
-            A card printed in more than one set is written once per set, so the file has
-            @Entries.ToString("N0") rows for
-            @Session.Index.DistinctOwnableCards.ToString("N0") cards.
-        </p>
+        @* A plain CSV, one row per card, with set, number, card_id, name, rarity and quantity. The
+           card is named both ways (A1-1, and A1 plus 1) so a tracker expecting either finds it, and
+           a card printed in several sets is written once per set. *@
+        <h2>Export</h2>
 
         <button class="btn btn-outline-primary btn-sm" @onclick="Download"
                 disabled="@(!Session.Ready)">
@@ -254,11 +230,11 @@ else
                     @if (Session.CanUndo)
                     {
                         <button class="btn btn-sm btn-outline-primary py-0" @onclick="UndoImport">
-                            Undo That
+                            Undo
                         </button>
                     }
                     <a class="btn btn-sm btn-outline-primary py-0" href="collection">
-                        See the Collection
+                        Open Collection
                     </a>
                 </div>
             </Notice>
@@ -280,9 +256,6 @@ else
     private string _newName = "Imported collection";
 
     private string? _exported;
-
-    /// <summary>Rows an export will have: set entries, not ownable cards.</summary>
-    private int Entries => Session.Ready ? Session.Index.All.Count : 0;
 
     private bool _reading;
     private bool _applying;
@@ -311,14 +284,14 @@ else
         var name = TrackerExport.FileName(DateTimeOffset.Now);
 
         await Store.DownloadAsync(name, csv);
-        _exported = $"{name} downloaded. It stays on this device unless you upload it somewhere.";
+        _exported = $"{name} downloaded.";
     }
 
     private string ApplyLabel => _destination switch
     {
         Destination.Merge => "Merge In",
         Destination.Replace => $"Replace {Session.Profile.Name}",
-        _ => "Create the Collection",
+        _ => "Create Collection",
     };
 
     private static string Describe(ImportProblem problem) => problem.Kind switch
@@ -360,9 +333,8 @@ else
             // instead of putting up a table of zeroes.
             if (preview.RowsRead == 0)
             {
-                _problem = "That file has no rows this could read as a collection. It needs a "
-                         + "header row naming a card column and a count column, in a CSV or an "
-                         + "Excel workbook.";
+                _problem = "That file has no rows to read. It needs a header row naming a card "
+                         + "column and a count column.";
                 return;
             }
 
@@ -374,7 +346,7 @@ else
         }
         catch (IOException)
         {
-            _problem = "That file was too large to read.";
+            _problem = "That file is too large.";
         }
         finally
         {
@@ -410,8 +382,7 @@ else
                     // No undo offered, and none implied: switching collections clears the history.
                     // Nothing was lost, so the way back is to delete this collection.
                     _done = $"{preview.DistinctOwned:N0} {Fmt.S(preview.DistinctOwned, "card")} imported into "
-                          + $"{Session.Profile.Name}, now the collection you are looking at. "
-                          + "Delete it in Settings if it is not what you wanted.";
+                          + $"{Session.Profile.Name}, now open. Delete it in Settings to undo.";
                     break;
 
                 case Destination.Merge:

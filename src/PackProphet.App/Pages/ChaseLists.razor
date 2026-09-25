@@ -52,12 +52,10 @@ else if (Id is null)
                 <div class="rail-seg" role="group" aria-labelledby="chase-layout">
                     <button class="btn btn-sm @(Session.ChaseGrid ? "btn-outline-secondary" : "btn-secondary")"
                             @onclick="() => Session.SetChaseGrid(false)"
-                            aria-pressed="@Aria.Flag(!Session.ChaseGrid)"
-                            title="A table, for comparing">List</button>
+                            aria-pressed="@Aria.Flag(!Session.ChaseGrid)">List</button>
                     <button class="btn btn-sm @(Session.ChaseGrid ? "btn-secondary" : "btn-outline-secondary")"
                             @onclick="() => Session.SetChaseGrid(true)"
-                            aria-pressed="@Aria.Flag(Session.ChaseGrid)"
-                            title="Cards, for recognising">Grid</button>
+                            aria-pressed="@Aria.Flag(Session.ChaseGrid)">Grid</button>
                 </div>
             </div>
 
@@ -73,13 +71,12 @@ else if (Id is null)
                     <option value="name" selected="@(_order == "name")">By Name</option>
                     <option value="size" selected="@(_order == "size")">Biggest First</option>
                     @* Your own arrangement, which no computed key can express. *@
-                    <option value="custom" selected="@(_order == "custom")">My Own Order</option>
+                    <option value="custom" selected="@(_order == "custom")">Custom</option>
                 </select>
 
                 @if (_order == "custom")
                 {
-                    <span class="rail-hint">Drag a list by its handle, or focus one and use the
-                    arrow keys.</span>
+                    <span class="rail-hint">Drag by the handle, or use the arrow keys.</span>
                 }
             </div>
         </PageRail>
@@ -87,12 +84,10 @@ else if (Id is null)
 
     <div class="shelf-main">
 
-        @* A chase list is the one target the app cannot derive, so the empty state says what it is
-           for rather than only that there is nothing here. *@
+        @* The one fact about a chase list the screen does not show: an alternate art is not the
+           plain printing. *@
         <p class="text-body-secondary small mb-3">
-            Any cards you want, for any reason, priced by the pack ranking like a rarity target.
-            It wants a particular <strong>printing</strong> &mdash; the alternate art, not the
-            plain one.
+            Each card is a specific <strong>printing</strong>.
         </p>
 
         @* The action as well as the fact. The decks page next door answers both questions an
@@ -149,7 +144,7 @@ else if (Id is null)
                                 @if (list.Id == Session.Profile.WantListId)
                                 {
                                     <span class="badge text-bg-info"
-                                          title="The heart on a card in the collection grid adds it to this list">
+                                          title="Collection hearts add cards here">
                                         Hearts
                                     </span>
                                 }
@@ -169,7 +164,7 @@ else if (Id is null)
                                 @if (list.Unobtainable > 0)
                                 {
                                     <span class="badge text-bg-secondary"
-                                          title="No pack on sale can give these: a promo, or a set with no published pull rates">
+                                          title="No pack on sale gives these">
                                         @list.Unobtainable unobtainable
                                     </span>
                                 }
@@ -193,7 +188,7 @@ else if (Id is null)
                                 <a class="btn btn-sm btn-outline-primary" href="packs?chase=@list.Id">Rank</a>
                                 <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(list.Id)" aria-live="polite"
-                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this chase list")">
+                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete list")">
                                     @(_confirming == list.Id ? "Really?" : "Delete")
                                 </button>
                             </div>
@@ -213,7 +208,7 @@ else if (Id is null)
         }
         else
         {
-            <DataTable Label="Your chase lists">
+            <DataTable Label="Chase lists">
                 <thead>
                     <tr>
                         @if (_order == "custom")
@@ -223,7 +218,7 @@ else if (Id is null)
                         <th scope="col">Chase List</th>
                         <th scope="col" class="num">Cards Wanted</th>
                         <th scope="col" class="num">Still Missing</th>
-                        <th scope="col">Rarest Still Wanted</th>
+                        <th scope="col">Rarest Wanted</th>
                         <th scope="col"><span class="visually-hidden">Actions</span></th>
                     </tr>
                 </thead>
@@ -245,7 +240,7 @@ else if (Id is null)
                                 @if (list.Id == Session.Profile.WantListId)
                                 {
                                     <span class="badge text-bg-info ms-1"
-                                          title="The heart on a card in the collection grid adds it to this list">
+                                          title="Collection hearts add cards here">
                                         Hearts
                                     </span>
                                 }
@@ -288,7 +283,7 @@ else if (Id is null)
                                    flag would arm every delete button at once. *@
                                 <button class="btn btn-sm @(_confirming == list.Id ? "btn-danger" : "btn-outline-danger")"
                                         @onclick="() => ConfirmDelete(list.Id)" aria-live="polite"
-                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete this chase list")">
+                                        title="@(_confirming == list.Id ? "Tap again to delete" : "Delete list")">
                                     @(_confirming == list.Id ? "Really?" : "Delete")
                                 </button>
                             </td>
@@ -338,9 +333,9 @@ else
 
     <PageSheet Id="list-actions" Label="List">
         <div class="rail-group">
-            <span class="ttl">Send It Somewhere</span>
+            <span class="ttl">Share</span>
             <button class="btn btn-sm btn-outline-secondary" @onclick="MakeShareLink">
-                Share This List
+                Share Link
             </button>
             @* The link is the better artefact and the wrong shape for where these trades actually
                happen. A Discord thread or a subreddit comment takes a few lines of text: nobody
@@ -366,10 +361,9 @@ else
     {
         <PageShell>
             <input class="form-control form-control-sm" readonly value="@_shareLink"
-                   onfocus="this.select()" aria-label="Shareable read-only link for this chase list" />
+                   onfocus="this.select()" aria-label="Share link" />
             <p class="small text-body-secondary mt-1 mb-0">
-                Tap the field to select it, then copy. Shows only what is wanted, not what you
-                already own. Nothing is uploaded, the whole list travels inside the link.
+                Shows what you want, not what you own.
             </p>
             @* A want-list nobody can act on is half a share: the reader learns exactly what to
                send and has no way to find you. Said here, where the link is made, rather than
@@ -377,16 +371,14 @@ else
             @if (string.IsNullOrWhiteSpace(Session.Profile.InGameName))
             {
                 <Notice Severity="Notice.Level.Warning" Dense="true" Class="mt-2 mb-0">
-                    No in-game name on this collection, so the link says what you want without
-                    saying who to send it to.
-                    <a href="settings">Add one in Settings</a> and share the link again.
+                    The link has no in-game name. <a href="settings">Add one in Settings</a>, then
+                    share again.
                 </Notice>
             }
             else
             {
                 <p class="small text-body-secondary mt-1 mb-0">
-                    The link says to find you in-game as
-                    <strong>@Session.Profile.InGameName</strong>.
+                    The link names you as <strong>@Session.Profile.InGameName</strong>.
                 </p>
             }
         </PageShell>
@@ -401,17 +393,12 @@ else
                than pushing the page it belongs to off the screen. *@
             <textarea class="form-control form-control-sm trade-text" readonly rows="8"
                       onfocus="this.select()"
-                      aria-label="Your wanted cards as plain text">@_tradeText</textarea>
-            <p class="small text-body-secondary mt-1 mb-0">
-                Tap the box to select it all, then copy. Only what is still missing, with the
-                rarity beside each card, which is what decides whether a trade is allowed.
-            </p>
+                      aria-label="Wanted cards as text">@_tradeText</textarea>
             @if (string.IsNullOrWhiteSpace(Session.Profile.InGameName))
             {
                 <Notice Severity="Notice.Level.Warning" Dense="true" Class="mt-2 mb-0">
-                    No in-game name on this collection, so the message says what you want without
-                    saying who to send it to.
-                    <a href="settings">Add one in Settings</a> and copy it again.
+                    The message has no in-game name. <a href="settings">Add one in Settings</a>,
+                    then copy again.
                 </Notice>
             }
         </PageShell>
@@ -435,14 +422,11 @@ else
             <span class="sub">
                 @if (_unreachable > 0)
                 {
-                    <span>
-                        Covers @(_missing - _unreachable) of @_missing, and @_unreachable
-                        cannot be pulled right now
-                    </span>
+                    <span>Covers @(_missing - _unreachable) of @_missing; @_unreachable in no pack</span>
                 }
                 else
                 {
-                    <span>Opening the best pack each time</span>
+                    <span>Best pack each time</span>
                 }
             </span>
         </div>
@@ -455,7 +439,7 @@ else
         <div class="list-col">
         @if (_cards.Count == 0)
         {
-            <EmptyState>Nothing on this list yet. Search below and tap a card to want it.</EmptyState>
+            <EmptyState>Nothing on this list yet.</EmptyState>
         }
         else
         {
@@ -470,7 +454,7 @@ else
                         <th scope="col" data-pri="3">Type</th>
                         <th scope="col" data-pri="2">Rarity</th>
                         <th scope="col" data-pri="3">Set</th>
-                        <th scope="col" data-pri="3">What It Costs</th>
+                        <th scope="col" data-pri="3">Cost</th>
                         <th scope="col" class="num" data-pri="2">Owned</th>
                         <th scope="col" class="num">Want</th>
                         <th scope="col"><span class="visually-hidden">Remove</span></th>
@@ -544,8 +528,8 @@ else
                         </td>
 
                         <td class="acts"><button class="step remove" @onclick="() => Remove(card)"
-                                title="Remove @card.Name from this list"
-                                aria-label="Remove @card.Name from this list">&times;</button></td>
+                                title="Remove @card.Name"
+                                aria-label="Remove @card.Name">&times;</button></td>
                     </tr>
                 }
                 </tbody>
@@ -568,7 +552,7 @@ else
             @* All cards by default here, the opposite of the deck builder: a chase list is mostly
                made of things you do not have yet. *@
             <CardPicker Level="2" ByPrinting="true" AllCardsDefault="true"
-                        Heading="Add Cards to This List" PickedLabel="wanted"
+                        Heading="Add Cards" PickedLabel="wanted"
                         PickedOf="WantedOf" OnPick="Add" OnPickAll="AddAll" />
         </div>
     </div>
@@ -793,7 +777,7 @@ else
         else
             // Said plainly rather than left blank: a promo or a rate-less set is not a cheap
             // card, it is one no pack can give you.
-            parts.Add("no pack sells it");
+            parts.Add("not in packs");
 
         if (points is { Available: true, Points: { } cost })
             parts.Add($"{cost:N0} pts");

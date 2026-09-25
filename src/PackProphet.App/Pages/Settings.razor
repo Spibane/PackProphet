@@ -13,8 +13,8 @@
        anywhere else, so the moment it is on, this line stops being accurate. *@
     <span class="subtitle">
         @(Sync.Paired
-            ? "Stored in this browser, and encrypted on the sync server"
-            : "Everything here is stored in this browser only")
+            ? "Stored in this browser and encrypted on the sync server"
+            : "Stored in this browser only")
     </span>
 </div>
 
@@ -30,11 +30,8 @@
    deck's detail -- and the notes under these headings are not that. They are labels on controls,
    a line or two each, and the widest thing on this page is the pairing panel's table. *@
 <PageShell Measure="PageShell.Width.Wide" Class="sections">
+    @* The same control sits in the top bar. Auto follows the device's system setting live. *@
     <h2>Appearance</h2>
-    <p class="small text-body-secondary">
-        The same control sits in the top bar. <strong>Auto</strong> follows this device's
-        system setting and changes with it, including while the app is open.
-    </p>
     <div class="btn-group btn-group-sm mb-4" role="group" aria-label="Theme">
         @foreach (var (value, label) in Themes)
         {
@@ -47,10 +44,6 @@
        light and a dark form, so the pairs are not alternatives to each other. Only here and in
        the command palette -- the top bar's one cycling button is already the widest thing in a
        row that has to survive a phone. *@
-    <p class="small text-body-secondary mb-2">
-        <strong>Colours.</strong> Paper is warm and neutral, with red marking what is chosen;
-        slate is the greys and blues the app shipped with. Either works in light or dark.
-    </p>
     <div class="btn-group btn-group-sm mb-4" role="group" aria-label="Colours">
         @foreach (var (value, label) in Skins)
         {
@@ -68,8 +61,7 @@
         <label class="form-check-label" for="gapstrip">
             Show the Evolution-Gap Bar on the Collection Page
             <span class="d-block small text-body-secondary">
-                Names the cards you own that cannot evolve yet. The
-                <em>fills an evolution gap</em> filter works either way.
+                Owned cards that cannot evolve yet.
             </span>
         </label>
     </div>
@@ -82,10 +74,6 @@
                @onchange="e => Session.SetShowWonderIntro((bool)(e.Value ?? false))" />
         <label class="form-check-label" for="wonderintro">
             Explain What Wonder Pick Decides
-            <span class="d-block small text-body-secondary">
-                A paragraph on the Wonder Pick page about the bar an offer has to clear to be
-                worth a stamina.
-            </span>
         </label>
     </div>
 
@@ -110,8 +98,8 @@
        shop, the trade board — so it is editable here as well as on the Packs page. *@
     <h2>What Counts as Complete</h2>
     <p class="small text-body-secondary">
-        One chip per rarity, carrying how many copies you want; tap to cycle none, one, two. This
-        is the <strong>default</strong>, followed by every set without its own plan.
+        Tap a rarity to cycle the copies wanted. This is the <strong>default</strong> for every
+        set without its own plan.
     </p>
     @if (Session.Ready)
     {
@@ -126,7 +114,7 @@
         @if (Overrides().Count > 0)
         {
             <p class="small text-body-secondary mb-1">
-                These sets have their own plan and ignore the default:
+                Sets with their own plan:
             </p>
             <div class="d-flex flex-wrap gap-2 mb-4">
                 @foreach (var set in Overrides())
@@ -134,8 +122,7 @@
                     <span class="avail-chip on">
                         <span class="ttl">@set</span>
                         <span class="small"><PlanSummary Plan="Session.Profile.Targets.PlanFor(set)" /></span>
-                        <button class="chip-link" @onclick="() => ClearOverride(set)"
-                                title="Follow the default plan again">Use Default</button>
+                        <button class="chip-link" @onclick="() => ClearOverride(set)">Use Default</button>
                     </span>
                 }
             </div>
@@ -143,8 +130,7 @@
         else
         {
             <p class="small text-body-secondary mb-4">
-                Every set follows this default. Give one its own from
-                <a href="packs">Which Pack</a>, with that set selected.
+                Give a set its own plan on <a href="packs">Which Pack</a>.
             </p>
         }
     }
@@ -152,13 +138,11 @@
     @* Placed before "your data" because it is the first thing a returning player is offered:
        without it every count on the History page reads as a fraction of the truth. *@
     <h2>What the Game Already Counted</h2>
+    @* The game gives counts only, never which packs, so per-set figures, the points ledger and
+       the odds checks use packs logged here. *@
     <p class="small text-body-secondary">
-        Open your profile in PTCGP and read off its lifetime totals. Everything you log from now
-        on is <strong>added</strong> to these, so nothing is counted twice.
-    </p>
-    <p class="small text-body-secondary">
-        The game gives counts only, never which packs, so per-set figures, the points ledger and
-        the odds checks use packs logged here.
+        The lifetime totals on your in-game profile. Packs logged here are
+        <strong>added</strong> to them.
     </p>
     <div class="d-flex gap-3 flex-wrap align-items-end mb-2">
         <label class="small">
@@ -180,16 +164,15 @@
     @if (Session.Lifetime is { } lt)
     {
         <p class="small text-body-secondary mb-4">
-            Read on @lt.At.ToLocalTime().ToString("d MMM yyyy, HH:mm"):
-            @lt.PacksOpened packs and @lt.WonderPicks Wonder Picks. Logging since then brings the
-            totals to <strong>@Session.LifetimePacks</strong> packs and
+            Read @lt.At.ToLocalTime().ToString("d MMM yyyy, HH:mm"). Totals now
+            <strong>@Session.LifetimePacks</strong> packs and
             <strong>@Session.LifetimeWonderPicks</strong> Wonder Picks.
         </p>
     }
     else
     {
         <p class="small text-body-secondary mb-4">
-            Not set, so History counts only what has been logged here.
+            Not set.
         </p>
     }
 
@@ -203,9 +186,8 @@
         <label class="form-check-label" for="autopackhg">
             Spend Pack Hourglasses Past the Day's Free Packs
             <span class="d-block small text-body-secondary">
-                @GameRules.PacksPerDay(false) free packs a day,
-                @GameRules.PacksPerDay(true) with premium. Each pack logged after that takes
-                @GameRules.PackHourglassesPerPack from the balance on
+                Past @GameRules.PacksPerDay(false) a day (@GameRules.PacksPerDay(true) with
+                premium), each logged pack takes @GameRules.PackHourglassesPerPack from
                 <a href="resources">Resources</a>.
             </span>
         </label>
@@ -216,18 +198,14 @@
        frequent, creating and deleting are not, and a delete button in the chrome of every page is
        how collections get erased by accident. *@
     <h2>Collections</h2>
-    <p class="small text-body-secondary">
-        Each holds its own cards, plan, decks, logs and resources. One is active at a time.
-        @if (Session.MultipleProfiles)
-        {
-            <span>
-                <a href="compare">Compare two of them</a> to find the trades you could make with
-                yourself.
-            </span>
-        }
-    </p>
+    @if (Session.MultipleProfiles)
+    {
+        <p class="small text-body-secondary">
+            <a href="compare">Compare two</a> to find trades with yourself.
+        </p>
+    }
 
-    <DataTable Label="Your collections">
+    <DataTable Label="Collections">
         <thead>
             <tr>
                 <th scope="col">Collection</th>
@@ -299,12 +277,12 @@
     @* No delete button while there is one collection: the app has nowhere to put a tap without
        one, so the offer could only be refused. *@
     <p class="small text-body-tertiary">
-        Deleting a collection cannot be undone. Export covers every collection at once.
+        Deleting a collection cannot be undone.
     </p>
 
     <div class="input-group input-group-sm mb-2" style="max-width:22rem">
         <label class="visually-hidden" for="new-profile">Name for the New Collection</label>
-        <input class="form-control" id="new-profile" placeholder="Name a new collection"
+        <input class="form-control" id="new-profile" placeholder="New collection"
                @bind="_newProfile"
                @bind:event="oninput" @onkeydown="NewProfileKey" />
         <button class="btn btn-outline-primary" @onclick="AddProfile"
@@ -332,12 +310,11 @@
         @if (!Sync.Paired)
         {
             <p class="small text-body-secondary">
-                No account. One device makes a code, the other types it. That code is the
-                encryption key, applied before anything leaves this browser, so the server
-                stores what it cannot read.
+                No account: one device makes a code, the other types it. The code is the
+                encryption key, so the server stores only what it cannot read.
             </p>
             <p class="small text-body-secondary">
-                Which is why the code cannot be recovered. Write it down.
+                The code cannot be recovered. Write it down.
             </p>
 
             <div class="d-flex gap-2 flex-wrap mb-3">
@@ -374,8 +351,7 @@
                 <code class="fs-5 user-select-all">@PairingCode.Format(Sync.Code!)</code>
             </p>
             <p class="small text-body-secondary">
-                Treat it like a password: anyone with it can read and change your
-                collection. Losing it costs you the stored copy, not this device's.
+                Anyone with this code can read and change your collection.
             </p>
 
             <div class="d-flex gap-2 flex-wrap mb-3">
@@ -393,7 +369,7 @@
                 @* Two buttons because they are genuinely different acts. Stopping affects this
                    device; deleting affects every device on the code, and cannot be undone. *@
                 <Notice Severity="Notice.Level.Warning" Class="mb-3">
-                    <p class="mb-2">Either way, your collection here is untouched.</p>
+                    <p class="mb-2">Either way, this device keeps its collection.</p>
                     <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-sm btn-outline-secondary"
                                 @onclick="() => Unpair(false)">
@@ -431,7 +407,7 @@
         @if (Sync.LastMerge.Notes.Count > 0)
         {
             <Notice Severity="Notice.Level.Info" Class="mb-3">
-                <p class="mb-1">Both devices had changed these, so one had to be picked:</p>
+                <p class="mb-1">Changed on both devices, so one was kept:</p>
                 <ul class="mb-0 small">
                     @foreach (var note in Sync.LastMerge.Notes)
                     {
@@ -442,8 +418,7 @@
         }
 
         <p class="small text-body-secondary mb-4">
-            Syncs on open, and a few seconds after any change. Press <strong>Sync Now</strong> to
-            pull in a device someone is using right now.
+            Syncs on open and a few seconds after any change.
         </p>
     }
 
@@ -451,21 +426,18 @@
     @if (Sync.Paired)
     {
         <p class="small text-body-secondary">
-            This browser holds your collection, and sync keeps an encrypted copy on the server.
-            There is still no account, and the server still cannot read it, so an export is
-            the only backup that survives losing the code.
+            An export is the only backup that survives losing the sync code.
         </p>
     }
     else
     {
         <p class="small text-body-secondary">
-            Everything is stored in this browser only: nothing is uploaded and no account
-            exists. That also means clearing site data erases it, so export a backup.
+            Clearing site data erases everything. Export a backup.
         </p>
     }
     <p class="small text-body-secondary">
-        <kbd>Ctrl</kbd>+<kbd>Z</kbd> (or <kbd>&#8984;</kbd>+<kbd>Z</kbd>) undoes anything, on any
-        page. The last @AppSession.UndoDepth changes are kept, for this session only.
+        <kbd>Ctrl</kbd>+<kbd>Z</kbd> (<kbd>&#8984;</kbd>+<kbd>Z</kbd>) undoes the last
+        @AppSession.UndoDepth changes on any page, this session only.
     </p>
     <div class="d-flex gap-2 flex-wrap mb-4">
         <button class="btn btn-sm btn-primary" @onclick="Export">Export Backup</button>
@@ -517,13 +489,13 @@
                 <tr><td>Cards</td><td>@Session.Index.All.Count entries</td></tr>
                 <tr><td>Ownable Cards</td><td>@Session.Index.DistinctOwnableCards</td></tr>
                 <tr><td>Sets</td><td>@Session.Index.BySet.Count</td></tr>
-                <tr><td>Packs We Can Price</td><td>@Session.Odds!.PriceablePacks.Count()</td></tr>
+                <tr><td>Priced Packs</td><td>@Session.Odds!.PriceablePacks.Count()</td></tr>
                 <tr>
-                    <td>Packs We Cannot</td>
+                    <td>Unpriced Packs</td>
                     <td>
                         @Session.Odds!.UnpriceablePacks.Count()
                         <span class="text-body-secondary small">
-                            (no published pull rates yet)
+                            (no published pull rates)
                         </span>
                     </td>
                 </tr>
@@ -537,9 +509,7 @@
                         <td>
                             @string.Join(", ", Session.SetsAwaitingRates)
                             <div class="text-body-secondary small">
-                                Out now, but nobody has published their pull rates. The
-                                <a href="packs">Which Pack</a> page offers to estimate them from
-                                the newest measured set of the same kind: a Deluxe set from another Deluxe set.
+                                Estimate them on <a href="packs">Which Pack</a>.
                             </div>
                         </td>
                     </tr>
@@ -552,15 +522,11 @@
                             @foreach (var (set, donor) in Session.AssumedRates.OrderBy(kv => kv.Key))
                             {
                                 <div>
-                                    <strong>@set</strong> using @donor's distributions
+                                    <strong>@set</strong> using @donor's rates
                                     <button class="btn btn-sm btn-link p-0 align-baseline"
                                             @onclick="() => Session.SetAssumedRates(set, null)">Stop</button>
                                 </div>
                             }
-                            <div class="text-body-secondary small">
-                                Only the slot shape is borrowed: per-card odds come from
-                                each set's own card counts.
-                            </div>
                         </td>
                     </tr>
                 }
@@ -571,38 +537,29 @@
            running app rather than to the repository, so the offer is made here. *@
         <h2>Licence and Source</h2>
         <p class="small text-body-secondary">
-            PackProphet is free software under the
+            Free software under the
             <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">
-                GNU Affero General Public License, version 3 or later</a>.
-            You may use, study, change and share it, and the complete source of this running copy
-            is at
+                GNU AGPL, version 3 or later</a>. Source:
             <a href="https://github.com/Spibane/PackProphet" target="_blank" rel="noopener">
                 github.com/Spibane/PackProphet</a>.
         </p>
+        @* The licence follows the card data: the only community dataset carrying attack text,
+           ability text and evolution stage for every set is itself AGPL. *@
         <p class="small text-body-secondary">
-            The licence follows the card data: the only community dataset carrying attack text,
-            ability text and evolution stage for every set is itself AGPL. Card data comes from
+            Card data from
             <a href="https://github.com/chase-mew/pokemon-tcg-pocket-cards" target="_blank" rel="noopener">chase-mew/pokemon-tcg-pocket-cards</a>
             and
             <a href="https://github.com/flibustier/pokemon-tcg-pocket-database" target="_blank" rel="noopener">flibustier/pokemon-tcg-pocket-database</a>,
             artwork from
             <a href="https://github.com/flibustier/pokemon-tcg-exchange" target="_blank" rel="noopener">pokemon-tcg-exchange</a>,
-            and all of it originates from
+            all originally from
             <a href="https://pocket.limitlesstcg.com/cards" target="_blank" rel="noopener">Limitless TCG</a>.
-            Full credits, including the reverse-engineered deck format and bundled third-party
-            code, are in
+            Full credits in
             <a href="https://github.com/Spibane/PackProphet/blob/main/NOTICE.md" target="_blank" rel="noopener">NOTICE.md</a>.
         </p>
         <p class="small text-body-tertiary">
             Pokémon and Pokémon TCG Pocket are trademarks of Nintendo, Creatures Inc. and
-            GAME FREAK inc. This is an unofficial fan tool, unaffiliated with and unendorsed by
-            any of them.
-        </p>
-
-        <p class="small text-body-secondary">
-            Card data is fetched from the community database so new sets appear without an
-            update. If that fetch fails, a snapshot bundled with the app is used instead, and
-            this row will say so.
+            GAME FREAK inc. This unofficial fan tool is not affiliated with or endorsed by them.
         </p>
     }
 
@@ -610,19 +567,16 @@
        not depend on that, and a credit that disappears while the app is still reading its data is
        a credit that is missing on a slow connection.
 
-       The repository is named twice on this page, and for two different reasons. The licence
-       section has to offer it: the app is AGPL-3.0-or-later and section 13 requires that anyone
-       interacting with it over a network be offered its Corresponding Source. This is the credit,
-       and it is what someone looking for the author reads -- so it names them, links their
-       profile, and points at the project rather than making them find it in a licence notice.
+       The repository link lives in the licence section, which has to offer it: the app is
+       AGPL-3.0-or-later and section 13 requires that anyone interacting with it over a network be
+       offered its Corresponding Source. This is the credit: it names the author and links their
+       profile.
 
        The handle rather than a legal name, deliberately and consistently: it is the name on the
        commits, on the domain and on the repository. *@
     <h2>Made By</h2>
     <p class="small text-body-secondary">
         Built by <a href="https://github.com/Spibane" target="_blank" rel="noopener">Spibane</a>.
-        The source lives at
-        <a href="https://github.com/Spibane/PackProphet" target="_blank" rel="noopener">github.com/Spibane/PackProphet</a>.
     </p>
 </PageShell>
 
@@ -644,7 +598,7 @@
         var code = await Sync.PairNewAsync();
         _syncNote = code is null
             ? null
-            : $"Sync is on. Type {PairingCode.Format(code)} on your other device.";
+            : "Sync is on.";
     }
 
     private async Task Join()
@@ -657,7 +611,7 @@
 
         _joining = false;
         _typed = "";
-        _syncNote = "Joined. Both devices now hold everything either of them had.";
+        _syncNote = "Joined.";
     }
 
     private async Task SyncNow()
@@ -667,8 +621,8 @@
 
         if (Sync.Status != SyncStatus.Synced) return;
         _syncNote = Sync.LastCameFromElsewhere
-            ? "Synced, and brought in changes from another device."
-            : "Synced. Everything was already up to date.";
+            ? "Synced, with changes from another device."
+            : "Synced. Already up to date.";
     }
 
     private async Task Unpair(bool deleteRemote)
@@ -746,7 +700,7 @@
     {
         _deleting = null;
         Session.DuplicateProfile(profile.Id);
-        Say($"copied {profile.Name}. The copy is not active until you switch to it.");
+        Say($"copied {profile.Name}.");
     }
 
     /// <summary>
@@ -772,7 +726,7 @@
         var name = _newProfile.Trim();
         _newProfile = "";
         Session.CreateProfile(name);
-        Say($"added {name}, with the same plan as {Session.Profile.Name}. Switch to it to start entering cards.");
+        Say($"added {name}.");
     }
 
     private void NewProfileKey(KeyboardEventArgs e)
@@ -798,7 +752,7 @@
         Session.SetLifetime(packs, wonder);
         _message = packs <= 0 && wonder <= 0
             ? "Lifetime totals cleared."
-            : $"Saved: {packs} packs and {wonder} Wonder Picks before today.";
+            : "Lifetime totals saved.";
         _offerUndo = true;
     }
 
@@ -868,7 +822,7 @@
             var imported = StateSerializer.Deserialize(json);
             if (imported is null)
             {
-                _message = "That file could not be read as a PackProphet backup, so nothing changed.";
+                _message = "Not a PackProphet backup. Nothing changed.";
                 return;
             }
 
@@ -878,7 +832,7 @@
         }
         catch (IOException)
         {
-            _message = "That file was too large to read.";
+            _message = "File too large to read.";
         }
     }
 
@@ -903,8 +857,8 @@
         });
 
         _message = Session.MultipleProfiles
-            ? $"{Session.Profile.Name}: collection, pack log and Wonder Pick log erased. Your other collections are untouched."
-            : "Collection, pack log and Wonder Pick log erased.";
+            ? $"{Session.Profile.Name}: collection and logs erased. Other collections untouched."
+            : "Collection and logs erased.";
         _offerUndo = true;
     }
 

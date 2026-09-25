@@ -19,8 +19,7 @@ else
            the controls are behind a button, where a badge reading "3" would say there are settings
            without saying what they are. *@
         <span class="subtitle">
-            @GameRules.TradeBoardSlots slots, seen by anyone looking to trade
-            &middot; @TuningSummary
+            @GameRules.TradeBoardSlots slots &middot; @TuningSummary
         </span>
 
         <span class="actions">
@@ -28,7 +27,7 @@ else
                minute retyping the board in the game. Re-running is the natural next act, and it
                was reachable only by changing a control and changing it back. *@
             <button class="btn btn-sm btn-outline-secondary" @onclick="Rerun"
-                    aria-label="Work the plan out again" title="Work the plan out again">
+                    aria-label="Recalculate" title="Recalculate">
                 &#8635;
             </button>
         </span>
@@ -38,8 +37,8 @@ else
 
     <PageRail Id="board-rail" OpenLabel="Tuning" Count="@TuningCount">
         <div class="rail-group">
-            <span class="ttl">Working Toward</span>
-            <ScopePicker Label="What the slots should work toward" Scope="@Scope" OnScope="OnScope" />
+            <span class="ttl">Target</span>
+            <ScopePicker Label="Target" Scope="@Scope" OnScope="OnScope" />
         </div>
 
         @* Three knobs, each with its own visible label. They wrapped the old bar to three rows at
@@ -52,7 +51,7 @@ else
             <span class="ttl">Tuning</span>
 
         <select id="liquid" class="form-select form-select-sm"
-                aria-label="How many board slots to keep for cards that attract an offer"
+                aria-label="Slots kept for likely offers"
                 @onchange="OnLiquid">
             @for (var n = 0; n <= 8; n++)
             {
@@ -74,13 +73,13 @@ else
         {
             <button class="btn btn-sm @(_foils == "with" ? "btn-secondary" : "btn-outline-secondary")"
                     @onclick="CycleFoils"
-                    title="Foils are listed as the 1-3 diamond cards they are printed as. Exclude them if the game will not let you wishlist a foil printing.">
+                    title="Listed at their printed diamond rarity. Exclude them if the game will not wishlist one.">
                 @(_foils == "with" ? "Parallel Foils Included" : "Parallel Foils Left Out")
             </button>
         }
 
         <select id="floor" class="form-select form-select-sm"
-                aria-label="Leave out cards cheaper than this" @onchange="OnFloor">
+                aria-label="Minimum price" @onchange="OnFloor">
             <option value="0" selected="@(_floor == 0)">Any Price</option>
             <option value="15" selected="@(_floor == 15)">15+ Packs Only</option>
             <option value="50" selected="@(_floor == 50)">50+ Packs Only</option>
@@ -148,8 +147,7 @@ else
                change it is a dead end that knows the answer. *@
             <EmptyState>
                 <ChildContent>
-                    Nothing in this scope can go on the board. The @_floor-pack floor may be
-                    excluding all of it.
+                    Nothing can go on the board. The @_floor-pack floor may be why.
                 </ChildContent>
                 <Action>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="() => SetFloor(0)">
@@ -160,10 +158,7 @@ else
         }
         else if (_plan.Slots.Count == 0)
         {
-            <EmptyState>
-                Nothing in this scope can go on the board: either it is complete, or everything
-                left in it is untradeable.
-            </EmptyState>
+            <EmptyState>Nothing left here is tradeable.</EmptyState>
         }
         else
         {
@@ -182,13 +177,13 @@ else
                the headline counts the edits and the cost is stated in the only currency that
                applies here, which is effort. *@
             <div class="verdict-lead">
-                <span class="micro">What to change</span>
+                <span class="micro">What to Change</span>
 
                 @if (_plan.Unchanged)
                 {
                     <div class="lead-head">
                         <div class="lead-text">
-                            <h2 class="name take">Your Board Is Already Right</h2>
+                            <h2 class="name take">Already Right</h2>
                             <p class="says">
                                 All @_plan.Keep.Count slots still earn their place.
                             </p>
@@ -213,7 +208,7 @@ else
                                 }
                                 @if (_plan.Keep.Count > 0)
                                 {
-                                    <text>The other @_plan.Keep.Count still earn their slots.</text>
+                                    <text>The other @_plan.Keep.Count stay.</text>
                                 }
                             </p>
 
@@ -243,7 +238,7 @@ else
                    are about to check against the game's. The width follows the caption rather than
                    a column count -- see BoxStrip -- because the caption is what has to stay
                    readable. *@
-                <BoxStrip Label="@(_plan.Unchanged ? "The board" : "The board, and what changes")"
+                <BoxStrip Label="@(_plan.Unchanged ? "The Board" : "The Board and Changes")"
                           Clause="@SlotClause(_plan)" Columns="0" Class="board-strip">
                     @foreach (var edit in BoardEdits(_plan))
                     {
@@ -279,7 +274,7 @@ else
                 {
                     <div class="lead-actions">
                         <button class="btn btn-sm btn-primary" @onclick="AcceptPlan">
-                            I Have Made These Changes in the Game
+                            Made These Changes
                         </button>
                     </div>
                 }
@@ -296,10 +291,10 @@ else
                         <th scope="col" data-pri="1">Card</th>
                         <th scope="col" data-pri="1">Set</th>
                         <th scope="col" data-pri="2">Rarity</th>
-                        <th scope="col" class="num" data-pri="2" title="On average, how many packs before you get it, or the packs' worth of points to buy it outright, whichever is fewer">Packs to Get It</th>
-                        <th scope="col" data-pri="3" title="A pull figure is an average you could beat or miss badly; a points figure is a guarantee after that many packs of the set">How</th>
+                        <th scope="col" class="num" data-pri="2">Packs to Get It</th>
+                        <th scope="col" data-pri="3">How</th>
                         <th scope="col" class="num" data-pri="3">Dust to Trade</th>
-                        <th scope="col" data-pri="3">A card to give?</th>
+                        <th scope="col" data-pri="3">Spare to Give</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -317,14 +312,14 @@ else
                                 @if (slot.Band == BoardBand.Liquid)
                                 {
                                     <span class="badge text-bg-secondary ms-1"
-                                          title="Estimated from the card's drop rate and how long its set has been on sale, so more copies exist in other people's collections. It says nothing about whether anyone will part with one.">
+                                          title="Estimated from drop rate and time on sale">
                                         Widely Held
                                     </span>
                                 }
                                 @if (IsFoil(slot.Card))
                                 {
                                     <span class="badge text-bg-info ms-1"
-                                          title="A Deluxe-pack parallel foil, listed as its printed diamond rarity">
+                                          title="Deluxe-pack parallel foil">
                                         Foil
                                     </span>
                                 }
@@ -341,22 +336,15 @@ else
                             <td class="small" data-pri="3">
                                 @if (slot.SparesAtRarity > 0)
                                 {
-                                    @* What the number means, spelled out: these are your surplus
-                                       cards at the same rarity, one of which the trade would cost
-                                       you. A bare count next to a rarity glyph read as neither. *@
-                                    <span title="You hold @slot.SparesAtRarity surplus @Session.Index.Symbol(slot.Card) @Fmt.S(slot.SparesAtRarity, "card"), and a trade would cost you one of them">
-                                        Yes, @slot.SparesAtRarity spare
-                                        @Session.Index.Symbol(slot.Card) to give
-                                    </span>
+                                    @* Your surplus cards at the same rarity, one of which the trade
+                                       would cost you. The column heading names what the count is. *@
+                                    <span>@slot.SparesAtRarity spare</span>
                                 }
                                 else
                                 {
                                     @* Flagged rather than removed: you may pull a spare tomorrow,
                                        and the request is what generates the offer. *@
-                                    <span class="text-warning-emphasis"
-                                          title="A trade is a swap at the same rarity, and you have no surplus @Session.Index.Symbol(slot.Card) to hand over">
-                                        No spare @Session.Index.Symbol(slot.Card) to give
-                                    </span>
+                                    <span class="text-warning-emphasis">None</span>
                                 }
                             </td>
                         </tr>
@@ -364,47 +352,13 @@ else
                 </tbody>
             </DataTable>
 
-        @* Why the board is built this way, under the board rather than over it. Both paragraphs
-           are worth reading once -- the game's wishlist advertises rather than tracks, and foils
-           are listed at their printed rarity -- and neither is worth 378px above the answer on
-           every later visit. The verdict and the "I have made these changes" button stay above:
-           those are the answer and the action, not the explanation. *@
+        @* Under the board rather than over it: what the board is chosen by. The foil note, the
+           "widely held" heuristic and the no-spare note went: the foil button's tooltip, the badge's
+           tooltip and the Spare to Give column carry them. A card with no spare is kept anyway
+           because a spare may turn up. *@
         <p class="small text-body-secondary">
-            Other players see your wishlist and offer. It holds the @GameRules.TradeBoardSlots
-            <strong>tradeable cards that cost you most to get any other way</strong>, a few kept
-            for cards someone plausibly has spare.
+            Holds the @GameRules.TradeBoardSlots tradeable cards that cost most to get any other way.
         </p>
-
-        @if (ShowFoilFilter)
-        {
-            <p class="small text-body-secondary">
-                <strong>Parallel foils</strong> count as the 1-3 diamond cards they are printed
-                as, which sets their dust price. Exclude them above if the game will not let you
-                wishlist one.
-            </p>
-        }
-
-            @* The limits of the one heuristic on this page. It is a guess about other players made
-               from data about card drops, which is worth knowing before deciding whether to keep
-               the slots reserved. *@
-            @if (_plan.Slots.Any(s => s.Band == BoardBand.Liquid))
-            {
-                <p class="small text-body-secondary">
-                The @_plan.Slots.Count(s => s.Band == BoardBand.Liquid)
-                    <strong>&ldquo;widely held&rdquo;</strong> slots go to cards more copies of
-                    which likely exist &mdash; drop rate times time on sale, which cannot know who
-                    would part with one. Set the reserve to <strong>0</strong> to rank on cost
-                    alone.
-                </p>
-            }
-
-            @if (_plan.Slots.Any(s => s.SparesAtRarity == 0))
-            {
-                <p class="small text-body-secondary">
-                    A trade needs a same-rarity card back, so <em>no spare to give</em> means you
-                    could not honour the request today. Kept anyway &mdash; a spare may turn up.
-                </p>
-            }
 
         }
     </div>
@@ -447,10 +401,10 @@ else
         get
         {
             var parts = new List<string>();
-            if (_liquidSlots > 0) parts.Add($"{_liquidSlots} slot{(_liquidSlots == 1 ? "" : "s")} for likely offers");
+            if (_liquidSlots > 0) parts.Add($"{_liquidSlots} slot{(_liquidSlots == 1 ? "" : "s")} for offers");
             if (ShowFoilFilter && _foils != "with") parts.Add("no parallel foils");
-            if (_floor > 0) parts.Add($"nothing under {_floor:0} packs");
-            return parts.Count == 0 ? "every card that fits, at any price" : string.Join(" \u00b7 ", parts);
+            if (_floor > 0) parts.Add($"{_floor:0}+ packs only");
+            return parts.Count == 0 ? "any price" : string.Join(" \u00b7 ", parts);
         }
     }
 
@@ -743,8 +697,7 @@ else
         var filled = plan.Keep.Count + plan.Add.Count;
         if (filled >= GameRules.TradeBoardSlots) return null;
 
-        return $"{GameRules.TradeBoardSlots - filled} slots stay empty: "
-             + "nothing else in this scope is worth asking for";
+        return $"{GameRules.TradeBoardSlots - filled} stay empty";
     }
 
     /// <summary>

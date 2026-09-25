@@ -12,16 +12,11 @@ else
 {
     <div class="page-head">
         <h1 class="title">Resources</h1>
-        <span class="subtitle">What regenerates, and what it is costing you to sit on</span>
     </div>
 
     <PageShell Measure="PageShell.Width.Wide" Class="sections">
         @* Three panels, never a total. Pack, Wonder and Trade each have their own hourglass and
            their own pool, and nothing in the game exchanges between them. *@
-        <p class="small text-body-secondary">
-            Three separate systems, each with its own hourglasses. Nothing converts between
-            them.
-        </p>
 
         @* One button for both currencies: it is one day's income, and two buttons would have to be
            pressed together to mean anything. Refuses a second go on the same day -- a double tap
@@ -31,10 +26,6 @@ else
                     disabled="@Session.DailyHourglassesAdded">
                 @(Session.DailyHourglassesAdded ? "Today's Dailies Added" : "Add Today's Dailies")
             </button>
-            <span class="small text-body-secondary">
-                @GameRules.DailyPackHourglasses pack and @GameRules.DailyWonderHourglasses Wonder
-                hourglasses, once a day.
-            </span>
         </div>
 
         <div class="pools">
@@ -48,7 +39,7 @@ else
                 <div class="pool-figures">
                     <div class="fig">
                         <span class="v">@_pack.FromHourglasses</span>
-                        <span class="l">Packs Your Hourglasses Cover</span>
+                        <span class="l">Packs From Hourglasses</span>
                     </div>
                     <div class="fig">
                         <span class="v">@(_pack.UntilNextFree is { } t ? Short(t) : "Ready")</span>
@@ -56,23 +47,12 @@ else
                     </div>
                 </div>
 
-                @* Premium is a +50% rate, and every timeline in the app respects it. Stated as
-                   arithmetic: 240 packs is four months, or under three. *@
+                @* Premium is a +50% rate, and every timeline in the app respects it. *@
                 <label class="form-check form-switch small mt-2">
                     <input class="form-check-input" type="checkbox" checked="@_premium"
                            @onchange="OnPremium" />
                     Premium Membership
                 </label>
-                <p class="small text-body-secondary mb-0">
-                    @if (_premium)
-                    {
-                        <span>3 packs a day. Without it, 2 (a third slower).</span>
-                    }
-                    else
-                    {
-                        <span>2 packs a day. With premium, 3 (@HalfAgain() faster).</span>
-                    }
-                </p>
 
                 <div class="pool-entry">
                     <label class="small">
@@ -109,20 +89,14 @@ else
            regenerate and nothing to time — only a cap that stops paying you. *@
         <h2>Pack Points</h2>
         <p class="small text-body-secondary">
-            Five per pack, spendable only in the set that earned them, capped at
-            @GameRules.PackPointsCap.ToString("N0"). <strong>Packs opened at the cap earn
-            nothing.</strong> What they are worth buying is on <a href="packs">Which Pack</a>.
-        </p>
-        @* Was three clauses on why the figures start behind. The instruction is the part that
-           matters. *@
-        <p class="small text-body-secondary">
-            Correct these from the game's shop screen; logging carries on from what you enter.
+            Capped at @GameRules.PackPointsCap.ToString("N0") per set. <strong>Packs opened at
+            the cap earn nothing.</strong> Correct balances from the in-game shop.
         </p>
 
         @if (_pointRows.Count == 0)
         {
             <p class="small text-body-secondary">
-                No balances yet. Add a set below, or log a pack and one appears.
+                No balances yet.
             </p>
         }
         else
@@ -136,8 +110,8 @@ else
                         @* The goal per set: points are only spendable inside the set that earned
                            them, so "how far off" is a per-set question with a per-set answer. *@
                         <th scope="col">Rarest Still Wanted</th>
-                        <th scope="col" class="num" title="Packs of this set, and only this set, to open before that card is affordable. Points cannot cross-fund">Packs to Afford It</th>
-                        <th scope="col" class="num" title="Cards from this set you still need that the balance already covers">Can Buy Now</th>
+                        <th scope="col" class="num">Packs to Afford It</th>
+                        <th scope="col" class="num" title="Wanted cards the balance covers">Can Buy Now</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -218,8 +192,7 @@ else
                     .OrderBy(g => g.Key, StringComparer.Ordinal))
                 {
                     <button class="btn btn-sm btn-outline-primary py-0"
-                            @onclick="() => AddSeries(series.Key)"
-                            title="Show every @series.Key set that earns points, so the whole series can be typed in one pass">
+                            @onclick="() => AddSeries(series.Key)">
                         All @series.Key (@series.Count())
                     </button>
                 }
@@ -236,7 +209,7 @@ else
            constraint: if it funds far more trades than stamina allows, it is not a cost. *@
         @if (_dustSaved > 0)
         {
-            <h2>Is shinedust actually the problem?</h2>
+            <h2>Shinedust</h2>
             <DataTable Label="Shinedust costs" Fit="true">
                 <thead>
                     <tr><th scope="col">Rarity</th><th scope="col" class="num">Dust Each</th><th scope="col" class="num">Trades Funded</th></tr>
@@ -253,9 +226,7 @@ else
                 </tbody>
             </DataTable>
             <p class="small text-body-secondary">
-                Compare those against the @Session.TradeOutlook.Reachable @Fmt.S(Session.TradeOutlook.Reachable, "trade") your stamina can
-                pay for right now. Where the dust column is the larger number, dust is not what is
-                stopping you.
+                Stamina covers @Session.TradeOutlook.Reachable @Fmt.S(Session.TradeOutlook.Reachable, "trade") now.
             </p>
         }
     </PageShell>
@@ -415,17 +386,6 @@ else
 
         // Released so the fields follow saved state again, which now matches what was typed.
         _touched = false;
-    }
-
-    /// <summary>
-    /// The premium rate increase, from the constants rather than as a written "50%": if the
-    /// membership ever changes, a hardcoded figure here would be the lie nobody notices.
-    /// </summary>
-    private string HalfAgain()
-    {
-        var with = GameRules.PacksPerDay(true);
-        var without = GameRules.PacksPerDay(false);
-        return without <= 0 ? "much" : $"{(with - without) / (double)without:P0}";
     }
 
     /// <summary>

@@ -34,7 +34,7 @@ else
            phone this line wraps, and as a run of text it broke wherever the width ran out --
            "412 / copies", a figure on one line and its unit on the next, which reads as two facts
            rather than one. Segments break only at the dots. *@
-        <span class="subtitle" title="Distinct cards you own here, total copies including duplicates, and progress against the rarities you have chosen to collect">
+        <span class="subtitle">
             <span class="seg">@Label(_set)</span>
             <span class="seg"><strong>@Stats.Owned of @Stats.Cards</strong> owned</span>
             @* Copies as well as cards, since they answer different questions: one is how far
@@ -83,10 +83,7 @@ else
                the thing the bar is for -- so the button gives up a word instead. The aria label
                keeps the full one either way. *@
             <button class="btn btn-sm btn-outline-secondary" popovertarget="set-sheet"
-                    aria-label="Change Set" title="@CurrentSetLabel">
-                <span class="wide-only">Change Set</span>
-                <span class="narrow-only" aria-hidden="true">Set</span>
-            </button>
+                    title="@CurrentSetLabel">Set</button>
         </span>
     </div>
 
@@ -121,8 +118,7 @@ else
             @if (_series == AllSets)
             {
                 <button class="set-tab @(_set == AllSets ? "active" : "")"
-                        @onclick="() => SelectSet(AllSets)" disabled="@Busy.IsBusy"
-                        title="Every card from every series">
+                        @onclick="() => SelectSet(AllSets)" disabled="@Busy.IsBusy">
                     All cards
                     <span class="pct">@ProgressOf(_allCards).ToString("P0")</span>
                 </button>
@@ -130,8 +126,7 @@ else
             else
             {
                 <button class="set-tab @(_set == SeriesAll ? "active" : "")"
-                        @onclick="() => SelectSet(SeriesAll)" disabled="@Busy.IsBusy"
-                        title="Every card in series @_series">
+                        @onclick="() => SelectSet(SeriesAll)" disabled="@Busy.IsBusy">
                     All @_series
                     <span class="pct">@ProgressOf(SeriesCards).ToString("P0")</span>
                 </button>
@@ -197,33 +192,33 @@ else
             @if (_search is { Length: > 0 })
             {
                 <button class="chip-filter" @onclick="ClearSearch"
-                        aria-label="Clear the name search">Name: @_search &times;</button>
+                        aria-label="Clear name search">Name: @_search &times;</button>
             }
             @if (_own != "all")
             {
                 <button class="chip-filter" @onclick="ClearOwnFilter"
-                        aria-label="Clear the ownership filter">@OwnFilterLabel &times;</button>
+                        aria-label="Clear ownership filter">@OwnFilterLabel &times;</button>
             }
             @if (_rarities.Count > 0)
             {
                 <button class="chip-filter" @onclick="ClearRarityFilter"
-                        aria-label="Clear the rarity filter"><span
+                        aria-label="Clear rarity filter"><span
                         class="glyphs @RarityFilterClass">@RarityFilterLabel</span> &times;</button>
             }
             @if (_types.Count > 0)
             {
                 <button class="chip-filter" @onclick="ClearTypeFilter"
-                        aria-label="Clear the type filter">@TypeFilterLabel &times;</button>
+                        aria-label="Clear type filter">@TypeFilterLabel &times;</button>
             }
             @if (_pack is { Length: > 0 })
             {
                 <button class="chip-filter" @onclick="ClearPackFilter"
-                        aria-label="Clear the pack filter">@_pack &times;</button>
+                        aria-label="Clear pack filter">@_pack &times;</button>
             }
         </FilterChips>
 
         <Filters>
-            <select class="form-select form-select-sm" aria-label="Filter by what you own" @onchange="OnOwnFilter">
+            <select class="form-select form-select-sm" aria-label="Ownership" @onchange="OnOwnFilter">
                 <option value="all">All Cards</option>
                 <option value="missing">Missing Only</option>
                 <option value="owned">Owned Only</option>
@@ -275,7 +270,7 @@ else
                             @onclick="() => ToggleType(type)"
                             aria-pressed="@Aria.Flag(_types.Contains(type))"
                             disabled="@(!Session.FactsReady)"
-                            title="@(Session.FactsReady ? type : $"{type}, still loading card detail")">
+                            title="@(Session.FactsReady ? type : $"{type}, loading")">
                         <EnergyPip Type="@type" />
                         <span class="visually-hidden">@type</span>
                     </button>
@@ -308,8 +303,7 @@ else
                     @foreach (var p in PackChoices)
                     {
                         <button class="pack-pick @(_pack == p ? "on" : "")"
-                                @onclick="() => TogglePack(p)" aria-pressed="@Aria.Flag(_pack == p)"
-                                title="@(_pack == p ? $"Show every pack in {_set} again" : $"Only cards from {p}")">
+                                @onclick="() => TogglePack(p)" aria-pressed="@Aria.Flag(_pack == p)">
                             <span class="pack-thumb" aria-hidden="true"
                                   style="--art:url('@Session.PackArtUrl($"{_set}:{p}")')"></span>
                             <span class="nm">@p</span>
@@ -355,13 +349,12 @@ else
                     <span class="ttl">This Set</span>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="MarkTargetOwned"
                             disabled="@Busy.IsBusy"
-                            title="Mark every card this set's plan wants as owned">
+                            title="Mark the target as owned">
                         Fill Target
                     </button>
                     <button class="btn btn-sm btn-outline-danger" @onclick="ClearSet"
-                            disabled="@Busy.IsBusy" aria-live="polite"
-                            title="Set every card in this set back to zero. Undo works.">
-                        @(_confirmClear ? "Clear. Sure?" : "Clear Set")
+                            disabled="@Busy.IsBusy" aria-live="polite">
+                        @(_confirmClear ? "Sure?" : "Clear Set")
                     </button>
                 </div>
             }
@@ -410,10 +403,10 @@ else
                             aria-expanded="@Aria.Flag(_showGaps)">
                         <span class="chev" aria-hidden="true">@(_showGaps ? "▾" : "▸")</span>
                         <strong>@gaps.BlockedCards</strong>
-                        @(gaps.BlockedCards == 1 ? "card you own cannot evolve" : "cards you own cannot evolve")
+                        @(gaps.BlockedCards == 1 ? "owned card cannot evolve" : "owned cards cannot evolve")
                         <span class="text-body-secondary">
                             (@gaps.Gaps.Count missing
-                            @(gaps.Gaps.Count == 1 ? "link" : "links"), across every set)
+                            @(gaps.Gaps.Count == 1 ? "link" : "links"), all sets)
                         </span>
                     </button>
 
@@ -421,19 +414,19 @@ else
                        rather than something that resolves. The filter and the Settings toggle both remain,
                        so dismissing hides the bar rather than the feature. *@
                     <button class="x" @onclick="() => Session.SetShowGapStrip(false)"
-                            title="Hide this bar for good. The 'fills an evolution gap' filter still works, and Settings brings it back."
-                            aria-label="Hide the evolution gap bar">&times;</button>
+                            title="Hide. Settings brings it back."
+                            aria-label="Hide evolution gaps">&times;</button>
 
                     @if (_showGaps)
                     {
-                        <p class="small text-body-secondary mb-2">
-                            Any printing works: the game evolves on the printed name.
-                            @if (_own != "gaps")
-                            {
-                                <button class="btn btn-sm btn-outline-primary py-0 ms-1"
-                                        @onclick="ShowGapFills">Show Them in the Grid</button>
-                            }
-                        </p>
+                        @* Any printing fills a gap: the game evolves on the printed name. *@
+                        @if (_own != "gaps")
+                        {
+                            <p class="mb-2">
+                                <button class="btn btn-sm btn-outline-primary py-0"
+                                        @onclick="ShowGapFills">Show in Grid</button>
+                            </p>
+                        }
 
                         <ul class="gap-list">
                             @foreach (var gap in gaps.Gaps)
@@ -452,10 +445,7 @@ else
 
                                     @if (gap.NoPackRoute)
                                     {
-                                        <span class="badge text-bg-warning"
-                                              title="No printing of it comes from a pack you can open, so opening will never produce one">
-                                            No Pack Has It
-                                        </span>
+                                        <span class="badge text-bg-warning">No Pack Has It</span>
                                     }
 
                                     <span class="text-body-secondary">
@@ -465,21 +455,15 @@ else
                                     @if (gap.Requires is { } deeper)
                                     {
                                         <span class="text-body-secondary">
-                                            (and it needs @deeper, which you also lack)
+                                            (also needs @deeper)
                                         </span>
                                     }
                                 </li>
                             }
                         </ul>
 
-                        @if (gaps.Unverified > 0)
-                        {
-                            <p class="small text-body-tertiary mb-0">
-                                @gaps.Unverified of @gaps.Checked owned Pokémon have no stage data published
-                                yet, so a gap among them cannot be detected. A clean list is not proof there
-                                are none.
-                            </p>
-                        }
+                        @* Owned Pokémon with no published stage data (gaps.Unverified) cannot be
+                           checked, so a clean list is not proof there are no gaps. *@
                     }
                 </div>
             }

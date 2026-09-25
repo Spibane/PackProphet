@@ -17,17 +17,10 @@
     @if (Outlook.AtCap)
     {
         <Notice Severity="Notice.Level.Warning" Dense="true" Class="mb-2">
-            <strong>Full, so nothing is regenerating.</strong>
+            <strong>Full and not regenerating.</strong>
             @if (Outlook.WastedSinceFull > 0)
             {
-                <span>
-                    About @Outlook.WastedSinceFull more would have arrived by now if you had spent
-                    some. That is gone, and the meter stays stopped until you do.
-                </span>
-            }
-            else
-            {
-                <span>Every 12 hours from here is one you will not get back.</span>
+                <span>About @Outlook.WastedSinceFull more would have arrived by now.</span>
             }
         </Notice>
     }
@@ -35,10 +28,6 @@
     {
         <p class="small text-body-secondary mb-2">
             Next in @Short(Outlook.UntilNext) &middot; full in @Short(Outlook.UntilFull).
-            @if (Outlook.UntilFull is { TotalHours: > 24 })
-            {
-                <span>No hurry until then. Nothing is being wasted yet.</span>
-            }
         </p>
     }
 
@@ -53,7 +42,7 @@
         </div>
         <div class="fig">
             <span class="v">@Outlook.Reachable</span>
-            <span class="l">Spendable If You Cash Them</span>
+            <span class="l">Total Spendable</span>
         </div>
     </div>
 
@@ -68,8 +57,7 @@
     @if (Outlook.Balance != Outlook.Entered)
     {
         <p class="small text-body-tertiary mb-1">
-            You told us @Outlook.Entered; the rest is regeneration since. Re-enter it if the game
-            disagrees.
+            You entered @Outlook.Entered; the rest is regeneration.
         </p>
     }
 

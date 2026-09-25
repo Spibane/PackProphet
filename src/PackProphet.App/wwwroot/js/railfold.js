@@ -125,7 +125,31 @@
 
     // Named the way ppScroll is, and for the same reason: one function, called from the component
     // that knows when it is worth calling, rather than a module for .NET to import and hold.
-    window.ppRail = { pin };
+    // Whether the rail is folded away on a desktop. Stamped on the root element, like the theme, so
+    // it is in place before Blazor renders anything and a cold start does not flash the column.
+    // Storage failures leave it shown.
+    const FOLD_KEY = 'packprophet.rail.hidden';
+
+    function isHidden() {
+        return document.documentElement.dataset.rail === 'hidden';
+    }
+
+    function setHidden(hidden) {
+        if (hidden) document.documentElement.dataset.rail = 'hidden';
+        else delete document.documentElement.dataset.rail;
+        try { localStorage.setItem(FOLD_KEY, hidden ? '1' : '0'); } catch { /* shown next load */ }
+    }
+
+    function toggle() {
+        setHidden(!isHidden());
+        return isHidden();
+    }
+
+    try {
+        if (localStorage.getItem(FOLD_KEY) === '1') document.documentElement.dataset.rail = 'hidden';
+    } catch { /* shown */ }
+
+    window.ppRail = { pin, isHidden, toggle };
 
     // And once on load, for the window that was already wide when the page arrived -- a reload
     // while the sheet was open restores neither the popover nor this listener's chance to have

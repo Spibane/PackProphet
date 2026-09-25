@@ -317,6 +317,25 @@ main > .page-head {
 .page-body.railed > * { grid-area: 1 / 2; }
 .page-body.railed > .page-rail { grid-area: 1 / 1; }
 
+/* The rail folded away from the page bar -- see RailToggle. Desktop only: below the fold width the
+   rail is already a sheet, and the toggle goes with it. The body gets back the leading padding the
+   column had taken. The toggle only shows on a page that has a rail to fold. */
+main .page-head .rail-toggle { display: none; }
+@media (width > 900px) {
+    main:has(.page-body.railed) .rail-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    :root[data-rail="hidden"] .page-body.railed {
+        grid-template-columns: minmax(0, 1fr);
+        padding-inline-start: 1rem;
+    }
+    :root[data-rail="hidden"] .page-body.railed:has(> .grid-wrap) { padding-inline-start: 0; }
+    :root[data-rail="hidden"] .page-body.railed > * { grid-area: 1 / 1; }
+    :root[data-rail="hidden"] .page-body.railed > .page-rail { display: none; }
+}
+
 /* The strip naming the set under your thumb shares the grid's cell instead of taking a row above
    it. A third bar is the thing the rail exists to remove, and "which set am I in" is worth an
    overlay over the first row of cards and not a strip of page that is there the whole way down.

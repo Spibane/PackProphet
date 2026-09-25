@@ -1,0 +1,55 @@
+@* Hides the rail on a desktop, from the page bar. Rendered first in the bar so it sits over the
+   column it folds.
+
+   One setting for every page, not one per page: the rail is the same width everywhere, so a page
+   that kept its rail while the next one dropped it would move the shell as you navigate -- the
+   thing the shared width exists to prevent.
+
+   State lives in js/railfold.js as an attribute on the root element, so the fold is already in
+   place on a cold start before Blazor renders. Below the fold width the stylesheet hides this
+   button: there the rail is a sheet, and the sheet has its own opener. *@
+
+@inject IJSRuntime JS
+
+<button type="button" class="btn btn-sm btn-outline-secondary rail-toggle"
+        aria-pressed="@Aria.Flag(_hidden)"
+        aria-label="@(_hidden ? "Show controls" : "Hide controls")"
+        title="@(_hidden ? "Show controls" : "Hide controls")"
+        @onclick="ToggleAsync">
+    <svg viewBox="0 0 24 24" width="16" height="16" focusable="false" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" />
+        <line x1="9" y1="4" x2="9" y2="20" stroke="currentColor" stroke-width="1.8" />
+    </svg>
+</button>
+
+@code {
+    private bool _hidden;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            _hidden = await JS.InvokeAsync<bool>("ppRail.isHidden");
+            if (_hidden) StateHasChanged();
+        }
+        catch (JSException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+            // Prerendering, where there is no JS to call yet.
+        }
+    }
+
+    private async Task ToggleAsync()
+    {
+        try
+        {
+            _hidden = await JS.InvokeAsync<bool>("ppRail.toggle");
+        }
+        catch (JSException)
+        {
+        }
+    }
+}

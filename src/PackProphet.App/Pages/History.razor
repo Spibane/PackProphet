@@ -855,7 +855,7 @@ else
         var favourite = _log.GroupBy(e => $"{e.Set}:{e.Pack}")
             .OrderByDescending(g => g.Count())
             .First();
-        _favouritePack = favourite.Key.Split(':')[1];
+        _favouritePack = Session.PackLabel(favourite.Key);
         _favouriteCount = favourite.Count();
 
         var byDay = _log.GroupBy(e => e.At.ToLocalTime().Date)

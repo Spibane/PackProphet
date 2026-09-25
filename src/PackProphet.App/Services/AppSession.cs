@@ -74,6 +74,20 @@ public sealed class AppSession : IAsyncDisposable
     /// </summary>
     public string PackArtUrl(string packKey) => PackArt.Url(packKey);
 
+    /// <summary>A pack's on-screen name — see <see cref="CardIndex.PackLabel"/>.</summary>
+    public string PackLabel(string packKey) =>
+        Data is null ? packKey[(packKey.IndexOf(':') + 1)..] : Index.PackLabel(packKey, Sets);
+
+    /// <summary>
+    /// The set beside a pack's label: its name for a multi-pack set, and just its code where the
+    /// label already is the set's name.
+    /// </summary>
+    public string PackSetLabel(string packKey)
+    {
+        var set = packKey.Split(':')[0];
+        return PackLabel(packKey) == Sets.DisplayName(set) ? set : Sets.DisplayName(set);
+    }
+
     /// <summary>
     /// The card's type as one column: its energy for a Pokémon, its trainer kind otherwise.
     /// Empty when the facts table has not caught up with the card list, which it often has

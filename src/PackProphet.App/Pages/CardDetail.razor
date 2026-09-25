@@ -263,7 +263,7 @@ else
                         <span class="pack-thumb"
                               style="--art:url('@Session.PackArtUrl(packKey)')"></span>
                         <span>
-                            @packKey.Split(':')[1]
+                            @Session.PackLabel(packKey)
                             <span class="small text-body-secondary">@packKey.Split(':')[0]</span>
                             @if (Session.UnavailablePacks.Contains(packKey))
                             {
@@ -613,7 +613,7 @@ else
         var route = RouteName(best.Route);
         if (best.Route != AcquisitionRoute.Pull || _packs.Count == 0) return route;
 
-        var names = _packs.Select(k => k.Split(':')[1]).Distinct().ToArray();
+        var names = _packs.Select(Session.PackLabel).Distinct().ToArray();
         return names.Length switch
         {
             1 => $"{route} · {names[0]}",

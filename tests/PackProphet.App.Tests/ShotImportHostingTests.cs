@@ -157,7 +157,7 @@ public class ShotImportHostingTests : AppHost
         var page = RenderComponent<LogPack>();
         UploadTwo(page);
 
-        Assert.Contains("Mewtwo, Pikachu", Collapse(page.Markup));
+        Assert.Contains("GA: Mewtwo, GA: Pikachu", Collapse(page.Markup));
 
         // Re-found inside InvokeAsync and waited for, because logging runs through UiBusy, which
         // defers the work off the click -- see GridFilterTests.
@@ -258,7 +258,7 @@ public class ShotImportHostingTests : AppHost
         Upload(again);
 
         page.WaitForAssertion(() => Assert.Contains(
-            "You already logged a Mewtwo pack with exactly these cards",
+            "You already logged a GA: Mewtwo pack with exactly these cards",
             Collapse(again.Markup)));
     }
 
@@ -496,7 +496,7 @@ public class ShotImportHostingTests : AppHost
         UploadTwo(page);
 
         var first = page.FindAll("button.btn-primary:not(#log-all)").ElementAt(0);
-        Assert.Contains("Open Mewtwo with these", Collapse(first.TextContent));
+        Assert.Contains("Open GA: Mewtwo with these", Collapse(first.TextContent));
 
         first.Click();
 
@@ -676,7 +676,7 @@ public class ShotImportHostingTests : AppHost
         // The failure names its own file, because "that file could not be read" beside two pictures
         // does not say which one to retake.
         Assert.Contains("one.png", page.Markup);
-        Assert.Equal("Open Mewtwo with these 5 cards",
+        Assert.Equal("Open GA: Mewtwo with these 5 cards",
                      Collapse(page.Find("button.btn-primary").TextContent));
     }
 
@@ -690,7 +690,7 @@ public class ShotImportHostingTests : AppHost
 
         var page = RenderComponent<LogPack>();
         Upload(page);
-        Assert.Contains("Open Mewtwo with these", Collapse(page.Markup));
+        Assert.Contains("Open GA: Mewtwo with these", Collapse(page.Markup));
 
         page.FindComponent<InputFile>().UploadFiles(
             Enumerable.Range(0, 21)
@@ -698,7 +698,7 @@ public class ShotImportHostingTests : AppHost
                       .ToArray());
 
         Assert.Contains("more than 20 pictures", page.Markup);
-        Assert.Contains("Open Mewtwo with these", Collapse(page.Markup));
+        Assert.Contains("Open GA: Mewtwo with these", Collapse(page.Markup));
     }
 
     [Fact]
@@ -733,7 +733,7 @@ public class ShotImportHostingTests : AppHost
         // Named, not asked. All five are Mewtwo-exclusive, so the picture settles it.
         // Whitespace collapsed: the label spans several lines in the markup.
         var label = Collapse(page.Find("button.btn-primary").TextContent);
-        Assert.Equal("Open Mewtwo with these 5 cards", label);
+        Assert.Equal("Open GA: Mewtwo with these 5 cards", label);
     }
 
     [Fact]

@@ -154,7 +154,7 @@ else if (_pack is null)
                                 else
                                 {
                                     <text>
-                                        Open @guess.PackKey.Split(':')[1] with these
+                                        Open @Session.PackLabel(guess.PackKey) with these
                                         @reading.NamedCount @Fmt.S(reading.NamedCount, "card")
                                     </text>
                                 }
@@ -205,7 +205,7 @@ else if (_pack is null)
                                         @onclick="() => AdoptShot(reading, pack)">
                                     @(Confirming(reading, pack)
                                         ? "Really? Other screenshots will be deleted."
-                                        : pack.Split(':')[1])
+                                        : Session.PackLabel(pack))
                                 </button>
                             }
                         </div>
@@ -309,7 +309,7 @@ else if (_pack is null)
                                    "which packs" is the thing you would want to have seen. *@
                                 <p class="small text-body-secondary mb-0 mt-2">
                                     @string.Join(", ", plan.Ready
-                                        .GroupBy(r => r.Pack.Split(':')[1])
+                                        .GroupBy(r => Session.PackLabel(r.Pack))
                                         .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
                                         .Select(g => g.Count() > 1 ? $"{g.Key} ×{g.Count()}" : g.Key))
                                 </p>
@@ -448,6 +448,7 @@ else if (_pack is null)
             @foreach (var pack in PacksShown())
             {
                 var name = pack.Split(':')[1];
+                var label = Session.PackLabel(pack);
                 var set = pack.Split(':')[0];
                 var pinned = Session.IsPackPinned(pack);
 
@@ -456,7 +457,7 @@ else if (_pack is null)
                    by dropping one of them. *@
                 <div class="pack-cell @(pinned ? "pinned" : "")">
                     <button class="pack-choice" @onclick="() => Choose(pack)" disabled="@Busy.IsBusy"
-                            title="@name, @set @Session.Sets.DisplayName(set)">
+                            title="@label, @Session.PackSetLabel(pack)">
                         @* Stacked, not layered. Set logo above, booster below. Layering them in
                            one box looked wrong because the art is sized to `contain`, so the logo
                            bled out around its edges.
@@ -481,7 +482,7 @@ else if (_pack is null)
                             <span class="art-img"
                                   style="background-image:url('@Session.PackArtUrl(pack)')"></span>
                         </span>
-                        <span class="nm">@name</span>
+                        <span class="nm">@label</span>
                         <span class="st">@set</span>
                         @if (GameRules.IsLimitedTimePack(name))
                         {
@@ -494,10 +495,8 @@ else if (_pack is null)
                        find with a mouse is no control at all. *@
                     <button class="pin-pack @(pinned ? "on" : "")" aria-pressed="@Aria.Flag(pinned)"
                             @onclick="() => Session.SetPackPinned(pack, !pinned)"
-                            aria-label="@(pinned ? $"Unpin {name}" : $"Pin {name}")"
-                            title="@(pinned
-                                     ? $"{name} is pinned to the front. Unpin it and it goes back to sitting with its series."
-                                     : $"Pin {name} to the front, whichever series is showing.")">
+                            aria-label="@(pinned ? $"Unpin {label}" : $"Pin {label}")"
+                            title="@(pinned ? $"Unpin {label}" : $"Pin {label} to the front")">
                         @(pinned ? "\u2605" : "\u2606")
                     </button>
                 </div>
@@ -519,8 +518,8 @@ else
            ten pixels and "Mega Altaria" rendered as "M.". The arrow is still the same control and
            still the same size to tap -- the aria-label carries the wording the eye loses. *@
         <BackLink Label="Change Pack" OnBack="Reset" Compact="true"
-                  Title="Pick a different pack. Nothing typed here is kept." />
-        <h1 class="title">@_pack.Split(':')[1]</h1>
+                  Title="Nothing typed here is kept." />
+        <h1 class="title">@Session.PackLabel(_pack)</h1>
         @* The instruction has to match the view. In the tile grid a tap on a card picks it; in
            list mode a tap on a row does nothing and the row's own + is what picks. Telling
            someone to tap in a view where tapping does nothing is worse than saying nothing. *@
@@ -659,9 +658,8 @@ else
                  && !Session.IsLimitedPackAvailable(_pack))
             {
                 <div class="mt-1">
-                    You just opened a limited-time pack that the ranking is leaving out.
-                    <button class="btn btn-sm btn-outline-success py-0 ms-1"
-                            @onclick="MarkPackOnSale">Mark @(_pack.Split(':')[1]) on Sale</button>
+                    <button class="btn btn-sm btn-outline-success py-0"
+                            @onclick="MarkPackOnSale">Mark @Session.PackLabel(_pack) on Sale</button>
                 </div>
             }
         </Notice>
@@ -877,7 +875,7 @@ else
     }
 
     private Task Choose(string pack) =>
-        Busy.RunAsync($"Loading {pack.Split(':')[1]}\u2026", () => ChooseCore(pack));
+        Busy.RunAsync($"Loading {Session.PackLabel(pack)}\u2026", () => ChooseCore(pack));
 
     private void ChooseCore(string pack)
     {
@@ -1540,9 +1538,8 @@ else
         var earlier = RepeatOpenings.Match(Session.Profile.PackLog, pack, keys);
         if (earlier is null) return null;
 
-        return $"You already logged a {pack.Split(':')[1]} pack with exactly these cards on "
-               + $"{earlier.At.ToLocalTime():d MMM yyyy}. Log it anyway if you really opened it "
-               + "twice.";
+        return $"You already logged a {Session.PackLabel(pack)} pack with exactly these cards on "
+               + $"{earlier.At.ToLocalTime():d MMM yyyy}.";
     }
 
     /// <summary>

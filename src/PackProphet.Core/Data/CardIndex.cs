@@ -148,4 +148,74 @@ public sealed class CardIndex
     /// <summary>Sets that contain openable packs, in a stable order. Excludes promo sets.</summary>
     public IEnumerable<string> OpenableSets =>
         OpenablePackKeys.Select(k => k.Split(':')[0]).Distinct().OrderBy(s => s, StringComparer.Ordinal);
+
+    /// <summary>
+    /// What a pack is called on screen. A set with one pack shows the set's name, which is what the
+    /// game calls it. A set with several shows the pack's own name after the set's initials, as in
+    /// "GA: Mewtwo", because a later set can print another Mewtwo pack.
+    ///
+    /// The raw pack names cannot be shown as they are. Upstream shortens the older single-pack sets
+    /// ("Paldean", "Secluded", "Deluxe"), names a few after their cover Pokémon ("Mew",
+    /// "Gardevoir"), and spells the newer ones out in full ("Pulsing Aura"). The raw name stays the
+    /// key, because saved pack logs and settings are keyed on it.
+    /// </summary>
+    public string PackLabel(string packKey, SetCatalog sets)
+    {
+        var at = packKey.IndexOf(':');
+        if (at < 0) return packKey;
+
+        var set = packKey[..at];
+        var pack = packKey[(at + 1)..];
+        _packsPerSet ??= OpenablePackKeys
+            .GroupBy(k => k.Split(':')[0], StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+        if (!_packsPerSet.TryGetValue(set, out var n)) return pack;
+        if (n == 1) return sets.Info(set) is null ? pack : sets.DisplayName(set);
+
+        return $"{SetPrefix(set, sets)}: {pack}";
+    }
+
+    /// <summary>
+    /// The set's initials, or its code where it has no catalogued name or where two multi-pack
+    /// sets share the same initials, so a prefix never names two sets.
+    /// </summary>
+    private string SetPrefix(string set, SetCatalog sets)
+    {
+        _prefixes ??= BuildPrefixes(sets);
+        return _prefixes.TryGetValue(set, out var prefix) ? prefix : set;
+    }
+
+    private Dictionary<string, string> BuildPrefixes(SetCatalog sets)
+    {
+        var initials = _packsPerSet!
+            .Where(kv => kv.Value > 1 && sets.Info(kv.Key) is not null)
+            .ToDictionary(kv => kv.Key, kv => Initials(sets.DisplayName(kv.Key)), StringComparer.OrdinalIgnoreCase);
+
+        var clashing = initials.Values
+            .GroupBy(v => v, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return initials.ToDictionary(
+            kv => kv.Key,
+            kv => kv.Value.Length == 0 || clashing.Contains(kv.Value) ? kv.Key : kv.Value,
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static readonly HashSet<string> MinorWords =
+        new(["a", "an", "and", "of", "the", "to", "in", "on", "for"], StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>"Genetic Apex" is "GA", "Space-Time Smackdown" is "STS", "Wisdom of Sea and Sky" is "WSS".</summary>
+    internal static string Initials(string name) =>
+        new(name.Split([' ', '-'], StringSplitOptions.RemoveEmptyEntries)
+                .Where(w => !MinorWords.Contains(w))
+                .Select(w => w.FirstOrDefault(char.IsLetterOrDigit))
+                .Where(c => c != default)
+                .Select(char.ToUpperInvariant)
+                .ToArray());
+
+    private Dictionary<string, int>? _packsPerSet;
+    private Dictionary<string, string>? _prefixes;
 }

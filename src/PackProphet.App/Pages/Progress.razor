@@ -689,7 +689,7 @@ else
                 ? null
                 : Session.Ranker.Rank(target, Session.Owned)
                     .Where(s => !unavailable.Contains(s.PackKey))
-                    .Select(s => (string?)s.PackName)
+                    .Select(s => (string?)Session.PackLabel(s.PackKey))
                     .FirstOrDefault();
 
             rows.Add(new SetRow(

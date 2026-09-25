@@ -59,7 +59,7 @@
 
     <select class="form-select form-select-sm" @bind="_subtype" @bind:after="OnFilterChanged"
             aria-label="@SubtypeLabel">
-        <option value="">@("Any " + SubtypeLabel)</option>
+        <option value="">@("Any " + SubtypePlaceholder)</option>
         @* Built from the data rather than hardcoded, so a new element or trainer kind becomes
            filterable on its own. Grouped only when both kinds are in play — with one chosen, the
            group heading repeats the dropdown to the left. *@
@@ -153,15 +153,17 @@
    especially the pool, which is a pair of buttons rather than a labelled control. *@
 @if (!Query.IsEmpty)
 {
+    @* The space before each dot is inside its span: Razor drops the whitespace between elements,
+       so written outside it the clause arrived as "all cards· matching". *@
     <p class="small text-body-secondary mb-1">
         Showing
         <strong>@(_ownedOnly ? "owned cards" : "all cards")</strong>
-        @if (_set.Length > 0) { <span>&middot; @_set</span> }
-        @if (_rarity.Length > 0) { <span>&middot; @RarityLabel</span> }
-        @if (_kind.Length > 0) { <span>&middot; @_kind</span> }
-        @if (_subtype.Length > 0) { <span>&middot; @_subtype</span> }
-        @if (ShowStageInSummary) { <span>&middot; @_stage</span> }
-        @if (_text.Length > 0) { <span>&middot; matching &ldquo;@_text&rdquo;</span> }
+        @if (_set.Length > 0) { <span> &middot; @_set</span> }
+        @if (_rarity.Length > 0) { <span> &middot; @RarityLabel</span> }
+        @if (_kind.Length > 0) { <span> &middot; @_kind</span> }
+        @if (_subtype.Length > 0) { <span> &middot; @_subtype</span> }
+        @if (ShowStageInSummary) { <span> &middot; @_stage</span> }
+        @if (_text.Length > 0) { <span> &middot; matching &ldquo;@_text&rdquo;</span> }
     </p>
 }
 
@@ -292,7 +294,7 @@ else
 
                 @* Set only. The number within a set says nothing about the card and is not what
                    anyone recognises it by. *@
-                <span class="id">@card.Set</span>
+                <span class="id" title="@card.Set">@ColumnSet(card.Set)</span>
 
                 @* Owned and in-deck are different facts and both matter here: the pool can be "all
                    cards", so a row may be one you do not have. *@
@@ -588,6 +590,13 @@ else
     private static string? Blank(string value) => value.Length == 0 ? null : value;
 
     /// <summary>
+    /// A set code short enough for the row's set column: "PROMO-A" as "P-A", which is how the card
+    /// itself prints it. At full length it clipped to "PR…" in the column every other code fits.
+    /// </summary>
+    private static string ColumnSet(string set) =>
+        set.StartsWith("PROMO-", StringComparison.OrdinalIgnoreCase) ? "P-" + set[6..] : set;
+
+    /// <summary>
     /// Computed once per change rather than during render: as a property it ran twice per
     /// render, once for the empty check and once for the loop.
     /// </summary>
@@ -735,6 +744,13 @@ else
         "Pokémon" => "Element",
         _ => "Element or Kind"
     };
+
+    /// <summary>
+    /// The same words on the box itself, where "Any Element or Kind" was wider than the box at
+    /// every width: 146px of text in 123px on a phone. The label stays spelled out for a screen
+    /// reader, which has no box to fit.
+    /// </summary>
+    private string SubtypePlaceholder => _kind.Length == 0 ? "Element/Kind" : SubtypeLabel;
 
     private IReadOnlySet<string> SubtypeValues =>
         Subtypes.SelectMany(g => g.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);

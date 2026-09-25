@@ -1288,6 +1288,8 @@ main .page-head .rail-toggle { display: none; }
     stroke: var(--bs-primary);
     stroke-width: 1;
     stroke-dasharray: 3 2;
+    /* The drawing stretches on a phone; the line and its dashes should not. */
+    vector-effect: non-scaling-stroke;
 }
 .offer-hist .axis {
     display: flex;
@@ -1338,6 +1340,9 @@ main .page-head .rail-toggle { display: none; }
     .offer-commit .took { flex-direction: column; align-items: stretch; gap: .4rem; }
     .offer-commit .took .form-select,
     .offer-commit .btn { inline-size: 100%; min-block-size: 3rem; }
+    /* Under the verdict, not beside it. Full width in a row flexbox took the whole line and left
+       the verdict one word wide, running under the chart. */
+    .verdict-lead .lead-head:has(> .offer-hist) { flex-direction: column; align-items: stretch; }
     .offer-hist { inline-size: 100%; }
     .offer-hist svg { inline-size: 100%; }
 }
@@ -5516,7 +5521,17 @@ tr.row-best {
    scrolling filter bar hides controls the user does not know are there. */
 .search-grid { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
 .search-grid > input[type="text"], .search-grid > input:not([type]) { flex: 1 1 12rem; min-width: 0; }
-.search-grid > select { flex: 0 1 9.5rem; }
+.search-grid > select {
+    flex: 0 1 9.5rem;
+    /* The arrow a quarter-rem further out than Bootstrap's, and the text allowed up to it: at
+       9.5rem the longest placeholder needs the 8px this gives back. */
+    padding-inline-end: 1.75rem;
+    background-position: right .5rem center;
+}
+/* Two to a row, edge to edge. At 9.5rem they left a strip empty on the right. */
+@media (width < 600px) {
+    .search-grid > select { flex-basis: calc(50% - .175rem); }
+}
 
 /* Draft state. Reads as plain text until something is actually unsaved, so it is not one more
    badge competing for attention on a clean deck. */
@@ -5622,7 +5637,9 @@ tr.row-best {
     .pick-row .hp { display: none; }
 }
 @media (width < 600px) {
-    .pick-row { grid-template-columns: 1.7rem minmax(0, 1fr) minmax(0, 1.1fr) 2.2rem; }
+    /* Five tracks for the five cells left: art, name, moves, set, owned. This had four, so the
+       owned count fell onto a second implicit row under every result. */
+    .pick-row { grid-template-columns: 1.7rem minmax(0, 1fr) minmax(0, 1.1fr) 2.2rem auto; }
     .pick-row .rr, .pick-row .ind { display: none; }
 }
 

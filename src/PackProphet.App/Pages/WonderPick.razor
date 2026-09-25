@@ -20,7 +20,9 @@ else
            which is on screen exactly when there is nothing else to show. The bar's job is the
            setting: what counts as wanted decides every figure here, and it is folded away. *@
         <span class="subtitle">
-            <span class="lbl">Target:</span> @Session.ScopeLabel(Scope)
+            @* In a .seg because the folded phone bar makes .subtitle a flex container, and flex
+               trims the space between the label and a bare text run after it: "Target:everything". *@
+            <span class="seg"><span class="lbl">Target:</span> @Session.ScopeLabel(Scope)</span>
         </span>
 
         <span class="actions">
@@ -488,6 +490,9 @@ else
             builder.AddAttribute(6, "viewBox", $"0 0 {w} {h}");
             builder.AddAttribute(7, "width", w);
             builder.AddAttribute(8, "height", h);
+            // Stretched rather than letterboxed when the phone layout widens it: the axis labels
+            // under it sit at the chart's edges, and a 200-wide drawing centred in the row did not.
+            builder.AddAttribute(9, "preserveAspectRatio", "none");
             builder.AddAttribute(9, "role", "img");
             builder.AddAttribute(10, "aria-label",
                 $"This offer is worth {Fmt(a.ValuePerStamina)} packs per stamina, against a bar of "

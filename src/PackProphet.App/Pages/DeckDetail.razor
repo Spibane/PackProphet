@@ -315,7 +315,7 @@ else
                                     <td>
                                         <span class="pack-thumb"
                                               style="--art:url('@Session.PackArtUrl(standing.PackKey)')"></span>
-                                        <strong>@standing.PackName</strong>
+                                        <strong>@Session.PackLabel(standing.PackKey)</strong>
                                         <span class="small text-body-secondary">@standing.Set</span>
                                         @if (standing == _ranked[0])
                                         {

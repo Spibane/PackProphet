@@ -727,15 +727,8 @@ else
             if (_offer.Count == 0) return "";
 
             var packs = OfferPacks();
-            return packs.Length == 1 ? PackName(packs[0]) : _offer[0].Set;
+            return packs.Length == 1 ? Session.PackLabel(packs[0]) : _offer[0].Set;
         }
-    }
-
-    /// <summary>A pack is stored as "SET:Name"; only the name is worth showing beside the set.</summary>
-    private static string PackName(string pack)
-    {
-        var at = pack.IndexOf(':');
-        return at >= 0 ? pack[(at + 1)..] : pack;
     }
 
     private void Add(PocketCard card)

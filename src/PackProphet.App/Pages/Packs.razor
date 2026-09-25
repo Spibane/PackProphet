@@ -200,8 +200,8 @@ else
                           aria-hidden="true"></span>
 
                     <div class="lead-text">
-                        <h2 class="name">@lead.PackName</h2>
-                        <p class="from">@Session.Sets.DisplayName(lead.Set)</p>
+                        <h2 class="name">@Session.PackLabel(lead.PackKey)</h2>
+                        <p class="from">@Session.PackSetLabel(lead.PackKey)</p>
 
                         @* The figure in words, then the two that follow from it. "34.2%" is a
                            number you have to convert before you can act on it; "about 1 pack in 3"
@@ -262,7 +262,7 @@ else
 
                 <div class="lead-actions">
                     <a class="btn btn-sm btn-primary" href="log?pack=@Uri.EscapeDataString(lead.PackKey)">
-                        Log a @lead.PackName Pack
+                        Log a @Session.PackLabel(lead.PackKey) Pack
                     </a>
                     <span class="served">@CardCount(st.DemandsServed) it can give</span>
                 </div>
@@ -286,7 +286,7 @@ else
                         <span class="art" aria-hidden="true"
                               style="--art:url('@Session.PackArtUrl(row.PackKey)')"></span>
                         <span class="nm">
-                            <strong>@row.PackName</strong>
+                            <strong>@Session.PackLabel(row.PackKey)</strong>
                             <span class="sub">@row.Set &middot; @CardCount(rs.DemandsServed) it can give</span>
                         </span>
                         <span class="bar" aria-hidden="true">
@@ -385,7 +385,7 @@ else
                                     <td>
                                         <span class="pack-thumb"
                                               style="--art:url('@Session.PackArtUrl(b.PackKey)')"></span>
-                                        <strong>@b.PackKey.Split(':')[1]</strong>
+                                        <strong>@Session.PackLabel(b.PackKey)</strong>
                                         <span class="text-body-secondary small">@b.PackKey.Split(':')[0]</span>
                                     </td>
                                     <td class="num">@b.ExpectedNewCards.ToString("N1")</td>
@@ -453,7 +453,7 @@ else
                                     <td>
                                         <span class="pack-thumb"
                                               style="--art:url('@Session.PackArtUrl(row.PackKey)')"></span>
-                                        <strong>@row.PackName</strong>
+                                        <strong>@Session.PackLabel(row.PackKey)</strong>
                                         <span class="text-body-secondary small">@row.Set</span>
                                     </td>
                                     <td class="num">@row.Packs</td>
@@ -654,7 +654,7 @@ else
                             <span class="pack-thumb"
                                   style="--art:url('@Session.PackArtUrl(row.PackKey)')"></span>
                             <span class="pack-name">
-                            <strong>@row.PackName</strong>
+                            <strong>@Session.PackLabel(row.PackKey)</strong>
                             <span class="text-body-secondary small">@row.Set</span>
                             @* The top row is tinted, and a tint with nothing to explain it reads
                                as a stray selection rather than as the answer to the page's
@@ -719,7 +719,7 @@ else
                             <a class="btn btn-sm btn-outline-secondary"
                                href="@LogHref(row.PackKey)"
                                @onclick:stopPropagation="true"
-                               title="Log a @row.PackName pack you just opened">Log</a>
+                               title="Log a @Session.PackLabel(row.PackKey) pack">Log</a>
                         </td>
                     </tr>
 

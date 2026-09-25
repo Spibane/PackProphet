@@ -670,7 +670,7 @@
 
         return cards.Length == 0
             ? null
-            : (cards, string.Join(" or ", packs.Select(k => k.Split(':')[1])));
+            : (cards, string.Join(" or ", packs.Select(Session.PackLabel)));
     }
 
     /// <summary>Whether this reading came off the one screen that prints how many copies you hold.</summary>

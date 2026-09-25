@@ -18,11 +18,10 @@ else
            could build today is the thing you came to find out, and it is the figure that changes
            when you open a pack. *@
         <span class="subtitle">
-            @Session.Profile.Decks.Count saved
+            <span class="seg">@Session.Profile.Decks.Count saved</span>
             @if (_decks.Count > 0)
             {
-                <text> &middot; </text>
-                <strong>@Buildable buildable today</strong>
+                <span class="seg"><strong>@Buildable buildable today</strong></span>
             }
         </span>
 

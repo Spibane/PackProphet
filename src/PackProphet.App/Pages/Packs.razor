@@ -21,19 +21,20 @@ else
            Led by the word on the button that changes it, so the reading and its control are named
            the same thing. *@
         <span class="subtitle">
-            <span class="lbl">Target:</span> @Session.ScopeLabel(Scope)
+            <span class="seg"><span class="lbl">Target:</span> @Session.ScopeLabel(Scope)</span>
             @if (!IsChaseScope)
             {
-                <text> &middot; </text>
-                <PlanSummary Plan="Draft" Foils="@(ScopeHasFoils ? Session.FoilCopies : 0)" />
-                @if (PlanScope is not null)
-                {
-                    <text>, </text><span>@ScopedSet only</span>
-                }
+                <span class="seg">
+                    <PlanSummary Plan="Draft" Foils="@(ScopeHasFoils ? Session.FoilCopies : 0)" />
+                    @if (PlanScope is not null)
+                    {
+                        <text>, </text><span>@ScopedSet only</span>
+                    }
+                </span>
             }
             @if (OnSaleNow is { Length: > 0 } onSale)
             {
-                <text> &middot; @onSale on sale</text>
+                <span class="seg">@onSale on sale</span>
             }
             @if (_pending)
             {

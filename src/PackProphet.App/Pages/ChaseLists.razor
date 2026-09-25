@@ -21,11 +21,10 @@ else if (Id is null)
            are finished is what you came to find out, and it is the figure that moves when you open
            a pack. *@
         <span class="subtitle">
-            @Session.ChaseLists.Count saved
+            <span class="seg">@Session.ChaseLists.Count saved</span>
             @if (_lists.Count > 0)
             {
-                <text> &middot; </text>
-                <strong>@Complete complete</strong>
+                <span class="seg"><strong>@Complete complete</strong></span>
             }
         </span>
         <span class="actions">

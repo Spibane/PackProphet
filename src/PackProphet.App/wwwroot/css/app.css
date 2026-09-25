@@ -187,8 +187,11 @@
    Nowrap would have made that case unbreakable.
 
    .filters is still on the segment that states them, and still means what it meant -- it just no
-   longer draws its own separator, because every segment gets one now. */
-.page-head .subtitle > .seg:not(:last-child)::after {
+   longer draws its own separator, because every segment gets one now.
+
+   Only when another segment follows, rather than :not(:last-child): Which pack ends its line with
+   an "Updating..." chip, and a dot between the last reading and a status is not a join. */
+.page-head .subtitle > .seg:has(~ .seg)::after {
     content: "\00b7";
     margin-inline: .32rem;
     color: var(--bs-tertiary-color);

@@ -1370,6 +1370,15 @@ else
         }
         _attached = true;
 
+        // A grid that has just mounted has no previous list to scroll away from. Left armed, the
+        // next render sent it to the top, straight over the place recalled below.
+        _contentChanged = false;
+
+        // Back where this list was left, if it was: see js/scroll.js.
+        try { await JS.InvokeVoidAsync("ppScroll.recall", _gridEl); }
+        catch { /* cosmetic; the list opens at its top */ }
+        if (_disposed) return;
+
         // Each line below is an await, and the component can be disposed during any of them —
         // navigating off /collection inside the few hundred milliseconds the three dynamic
         // imports take is enough. So check after every one. Continuing past disposal would pass

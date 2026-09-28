@@ -445,7 +445,14 @@ public sealed class SyncService : IAsyncDisposable
             if (remote is null)
             {
                 // Swept as abandoned, or deleted from another device. Re-establishing it under the
-                // same code is right: the user still has the code and still expects it to work.
+                // same code is right: the user still has the code and still expects it to work --
+                // but not with a state that never loaded, which would store nothing under it.
+                if (UnexpectedlyEmpty())
+                {
+                    Fail(EmptyHere);
+                    return;
+                }
+
                 var restored = await PushAsync(_session.State, null);
                 if (restored == PushOutcome.Stored)
                 {
@@ -473,16 +480,24 @@ public sealed class SyncService : IAsyncDisposable
 
             // Last line of defence, and the one that does not depend on getting the ordering
             // right somewhere else. Nothing local, something in the ancestor: the merge would
-            // read every card, deck and list as deleted here, honour it, and push that up. A user
-            // who really did clear everything leaves the deletions recorded behind them, which an
-            // unloaded state cannot have, so this cannot be reached by resetting a collection --
-            // only by state that was never loaded.
-            if (_ancestor is not null
-                && StateMerge.NothingRecorded(_session.State)
-                && !StateMerge.NothingRecorded(_ancestor))
+            // read every card, deck and list as deleted here, honour it, and push that up. See
+            // UnexpectedlyEmpty for why a collection erased on purpose does not land here.
+            //
+            // So the empty side takes no part. The stored copy is taken as it stands, with nothing
+            // merged into it and nothing pushed, which is what this device would have held had its
+            // state loaded. Refusing instead left the empty collection on screen and in local
+            // storage, one edit away from being pushed as the truth.
+            if (UnexpectedlyEmpty())
             {
-                Fail("This device's collection is unexpectedly empty, so nothing was synced. "
-                   + "Reload, and restore a backup if it is still empty.");
+                if (StateMerge.NothingRecorded(opened.State))
+                {
+                    Fail(EmptyHere);
+                    return;
+                }
+
+                await AdoptAsync(opened.State);
+                await RememberAsync(opened.State, remote.Version);
+                Done(fromElsewhere: true, MergeReport.None);
                 return;
             }
 
@@ -530,6 +545,22 @@ public sealed class SyncService : IAsyncDisposable
 
         Fail("Another device kept writing while this one tried to. Try again in a moment.");
     }
+
+    /// <summary>
+    /// Nothing here, nothing here at launch either, and something in the last copy both sides
+    /// shared: storage that was cleared or never read, not a reset. Launch matters because erasing
+    /// a collection with no pack log leaves no tombstone, and without it this would restore what
+    /// the user had just erased.
+    /// </summary>
+    private bool UnexpectedlyEmpty() =>
+        _ancestor is not null
+        && _session.LoadedEmpty
+        && StateMerge.NothingRecorded(_session.State)
+        && !StateMerge.NothingRecorded(_ancestor);
+
+    private const string EmptyHere =
+        "This device's collection is unexpectedly empty, so nothing was synced. "
+        + "Reload, and restore a backup if it is still empty.";
 
     /// <summary>Wait out the device that beat us, for longer each time and never in step with it.</summary>
     private static Task BackOffAsync(int attempt, PushOutcome why)

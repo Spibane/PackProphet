@@ -62,6 +62,14 @@ public sealed class AppSession : IAsyncDisposable
     /// Anything that treats absence as intent has to wait for this.
     /// </summary>
     public bool Loaded { get; private set; }
+
+    /// <summary>
+    /// True when the saved state had nothing in it at launch: a first run, or storage that was
+    /// cleared. Not true of a collection erased since, which is the user's doing and has to sync
+    /// as a deletion -- an erase with no pack log leaves no tombstone, so the state alone cannot
+    /// tell the two apart.
+    /// </summary>
+    public bool LoadedEmpty { get; private set; }
     public CardIndex Index => Data?.Index ?? throw new InvalidOperationException("Card data not loaded.");
     public CardFacts Facts => Data?.Facts ?? CardFacts.Empty;
     public SetCatalog Sets => Data?.Sets ?? new SetCatalog(null, []);
@@ -190,6 +198,7 @@ public sealed class AppSession : IAsyncDisposable
     {
         Data = await _loader.LoadAsync(ct);
         State = await _store.LoadAsync(ct);
+        LoadedEmpty = PackProphet.Sync.StateMerge.NothingRecorded(State);
         Loaded = true;
         // After the state load, because the engine is built over the user's assumed-rate
         // choices as well as over the published data.

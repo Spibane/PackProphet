@@ -484,7 +484,7 @@ else
                             <td>
                                 <span class="pack-thumb"
                                       style="--art:url('@Session.PackArtUrl($"{entry.Set}:{entry.Pack}")')"></span>
-                                <strong>@entry.Pack</strong>
+                                <strong>@Session.PackLabel($"{entry.Set}:{entry.Pack}")</strong>
                                 <span class="small text-body-secondary">@entry.Set</span>
                             </td>
                             <td class="small">

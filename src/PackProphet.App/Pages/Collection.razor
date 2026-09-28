@@ -3,6 +3,8 @@
 @implements IDisposable
 @inject AppSession Session
 @inject UiBusy Busy
+@inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <PageTitle>Collection · PackProphet</PageTitle>
 
@@ -118,7 +120,7 @@ else
             @if (_series == AllSets)
             {
                 <button class="set-tab @(_set == AllSets ? "active" : "")"
-                        @onclick="() => SelectSet(AllSets)" disabled="@Busy.IsBusy">
+                        @onclick="() => PickSet(AllSets)" disabled="@Busy.IsBusy">
                     All cards
                     <span class="pct">@ProgressOf(_allCards).ToString("P0")</span>
                 </button>
@@ -126,14 +128,14 @@ else
             else
             {
                 <button class="set-tab @(_set == SeriesAll ? "active" : "")"
-                        @onclick="() => SelectSet(SeriesAll)" disabled="@Busy.IsBusy">
+                        @onclick="() => PickSet(SeriesAll)" disabled="@Busy.IsBusy">
                     All @_series
                     <span class="pct">@ProgressOf(SeriesCards).ToString("P0")</span>
                 </button>
                 @foreach (var set in Session.Sets.SetsIn(_series))
                 {
                     <button class="set-tab @(set == _set ? "active" : "")"
-                            @onclick="() => SelectSet(set)" disabled="@Busy.IsBusy"
+                            @onclick="() => PickSet(set)" disabled="@Busy.IsBusy"
                             title="@Session.Sets.DisplayName(set)">
                         @* A wrapper from the set, so the row can be read at a glance rather than
                            decoded from two-character codes: B2a and B2b are the same three
@@ -513,6 +515,7 @@ else
         // tab you were on and look as though the rest had vanished.
         _series = AllSets;
         _set = AllSets;
+        Remember();
     }
 
     /// <summary>What the collapsed picker says you are looking at.</summary>
@@ -534,6 +537,48 @@ else
     /// </summary>
     [SupplyParameterFromQuery(Name = "set")] public string? SetParam { get; set; }
 
+    /// <summary>A whole series, for "All A". Read only when there is no set.</summary>
+    [SupplyParameterFromQuery(Name = "series")] public string? SeriesParam { get; set; }
+
+    /// <summary>What <c>?set=</c> says for every set. Not a set code, so it cannot collide.</summary>
+    private const string AllSetsParam = "all";
+
+    /// <summary>
+    /// The view the URL names, or null when it names none or names one that does not exist. An
+    /// unknown set is ignored rather than shown as an empty tab: a stale bookmark should land on
+    /// something.
+    /// </summary>
+    private (string Set, string Series)? FromQuery()
+    {
+        if (SetParam is { Length: > 0 } set)
+        {
+            if (_sets.Contains(set)) return (set, Session.Sets.SeriesOf(set));
+            if (set == AllSetsParam) return (AllSets, AllSets);
+        }
+
+        if (SeriesParam is { Length: > 0 } series && Session.Sets.Series.Contains(series))
+            return (SeriesAll, series);
+
+        return null;
+    }
+
+    /// <summary>
+    /// Put the view in the URL. Picking a set changed the page and not the address, so card detail's
+    /// back link -- which returns to the last URL, not the last page -- opened the collection on
+    /// the newest set rather than the one you had left. Replaced rather than pushed: a set is a
+    /// view of this page, and browser back should leave it rather than step through every tab.
+    /// </summary>
+    private void Remember()
+    {
+        var query = _set switch
+        {
+            AllSets => $"set={AllSetsParam}",
+            SeriesAll => $"series={Uri.EscapeDataString(_series)}",
+            _ => $"set={Uri.EscapeDataString(_set)}",
+        };
+        Nav.NavigateTo($"collection?{query}", replace: true);
+    }
+
     protected override async Task OnInitializedAsync()
     {
         Session.Changed += OnChanged;
@@ -542,18 +587,14 @@ else
         if (Session.Ready)
         {
             _sets = Session.Index.BySet.Keys.OrderBy(SetOrder).ToArray();
-            // An unknown set in the URL is ignored rather than shown as an empty tab: a stale
-            // bookmark should land on something.
             // The newest set, not the first one printed. _sets is in release order, and opening on
             // A1 meant every visit started on the set you finished longest ago -- the packs you are
             // actually opening are for the set that just came out.
             //
             // Promo sets are skipped even though they sort last: they are not openable, so the
             // newest of them is never the set you are working through.
-            _set = SetParam is { Length: > 0 } wanted && _sets.Contains(wanted)
-                ? wanted
-                : _sets.LastOrDefault(set => !CardIndex.IsPromoSet(set)) ?? _sets.LastOrDefault() ?? "A1";
-            _series = Session.Sets.SeriesOf(_set);
+            var newest = _sets.LastOrDefault(set => !CardIndex.IsPromoSet(set)) ?? _sets.LastOrDefault() ?? "A1";
+            (_set, _series) = FromQuery() ?? (newest, Session.Sets.SeriesOf(newest));
             _allCards = Session.Index.All
                 .DistinctBy(c => c.OwnershipKey)
                 .OrderBy(Session.Sets.SortKey, StringComparer.Ordinal)
@@ -570,11 +611,10 @@ else
     /// </summary>
     protected override void OnParametersSet()
     {
-        if (!Session.Ready || SetParam is not { Length: > 0 } wanted) return;
-        if (wanted == _set || !_sets.Contains(wanted)) return;
+        if (!Session.Ready || FromQuery() is not { } named) return;
+        if (named == (_set, _series)) return;
 
-        _set = wanted;
-        _series = Session.Sets.SeriesOf(_set);
+        (_set, _series) = named;
         _pack = "";
     }
 
@@ -589,10 +629,24 @@ else
         return SelectSetCore(set);
     }
 
-    private Task SelectSetCore(string set) =>
+    private async Task SelectSetCore(string set)
+    {
         // Switching sets re-filters and re-chunks up to a few hundred tiles, which is slow
         // enough on a phone to look like a stall without a hint that work is happening.
-        Busy.RunAsync($"Loading {Label(set)}\u2026", () => { _set = set; _pack = ""; });
+        await Busy.RunAsync($"Loading {Label(set)}\u2026", () => { _set = set; _pack = ""; });
+        Remember();
+    }
+
+    /// <summary>
+    /// A set tab. Picking one is the whole of what the sheet is for, so it shuts behind it. The
+    /// series select does not: choosing a series is the step before choosing a set.
+    /// </summary>
+    private async Task PickSet(string set)
+    {
+        await SelectSet(set);
+        try { await JS.InvokeVoidAsync("ppSheet.hide", "set-sheet"); }
+        catch (JSException) { /* stays open; the X still shuts it */ }
+    }
 
     private string Label(string set) => set switch
     {

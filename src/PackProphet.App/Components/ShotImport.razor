@@ -248,6 +248,17 @@
                             <td>
                                 <a href="card/@match.Card.Key">@match.Card.Name</a>
                                 <span class="d-block small text-body-secondary">@match.Card.Key</span>
+                                @* A foil and its plain card look nearly alike in a screenshot. *@
+                                @if (Session.Index.FoilTwin(match.Card) is not null)
+                                {
+                                    var foil = match.Card.VariantIndex != 0;
+                                    <button type="button"
+                                            class="btn btn-sm py-0 mt-1 @(foil ? "btn-primary" : "btn-outline-secondary")"
+                                            aria-pressed="@Aria.Flag(foil)"
+                                            @onclick="() => FlipFoil(shot, match)">
+                                        Foil
+                                    </button>
+                                }
                             </td>
                             <td class="small">@ReadAs(match)</td>
                             @if (ShowsCopies(reading))
@@ -472,7 +483,13 @@
         /// that impossible to recognise. Invalidated wherever the two inputs move: a re-read under
         /// a different screen, and a slot being named.
         /// </summary>
-        public ShotReading Fixed => _fixed ??= Reading.WithManual(Picks);
+        public ShotReading Fixed => _fixed ??= Reading.WithManual(Picks).WithSwaps(Swaps);
+
+        /// <summary>
+        /// Named cards the user has switched to their other printing, by position. Beside the
+        /// reading for the same reason as <see cref="Picks"/>.
+        /// </summary>
+        public Dictionary<(int Row, int Col), PocketCard> Swaps { get; } = [];
 
         /// <summary>Forgets the folded reading, after a pick has changed what it would be.</summary>
         public void Refold() => _fixed = null;
@@ -489,6 +506,19 @@
     {
         if (card is null) shot.Picks.Remove((slot.Row, slot.Col));
         else shot.Picks[(slot.Row, slot.Col)] = card;
+
+        shot.Refold();
+    }
+
+    /// <summary>
+    /// Switches a named card between its plain and foil printing. Pressing it again goes back
+    /// to what was read.
+    /// </summary>
+    private void FlipFoil(Shot shot, ShotMatch match)
+    {
+        if (!shot.Swaps.Remove((match.Row, match.Col))
+            && Session.Index.FoilTwin(match.Card) is { } twin)
+            shot.Swaps[(match.Row, match.Col)] = twin;
 
         shot.Refold();
     }

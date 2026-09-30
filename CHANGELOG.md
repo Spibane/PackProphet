@@ -311,6 +311,10 @@ until then the minor number tracks the roadmap phase.
   still draws the 2 Pack Hourglasses as its fifth box; naming a fifth card makes it the event offer,
   and the hourglasses leave the box, the expected value and the choices when logging a take. Where
   the game puts the hourglasses among the five does not matter to the verdict
+- **A read card can be switched to its foil.** A Deluxe foil and its plain card look nearly alike
+  in a screenshot, so the reader can name either. Every recognised card that has one gets a
+  **Foil** button, on the Collection import, Log a Pack and Wonder Pick alike. Foils are paired from
+  the card list, so a Deluxe set with no rates yet has the button too
 
 ### v0.7.0 - 2026-09-01
 

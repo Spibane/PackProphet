@@ -204,6 +204,24 @@ public sealed record ShotReading(
         };
     }
 
+    /// <summary>
+    /// The same reading with some named cards replaced by the card the user says they are, by
+    /// position. The foil toggle is the use: a foil and its plain printing fingerprint almost
+    /// alike, so the reading can name either. The match keeps its source and distance, because
+    /// the art is still what found the slot.
+    /// </summary>
+    public ShotReading WithSwaps(IReadOnlyDictionary<(int Row, int Col), PocketCard> swaps)
+    {
+        if (swaps.Count == 0) return this;
+
+        return this with
+        {
+            Matches = Matches
+                .Select(m => swaps.TryGetValue((m.Row, m.Col), out var card) ? m with { Card = card } : m)
+                .ToArray(),
+        };
+    }
+
     /// <summary>Sets the reading touched, for the coverage warning: a set absent from the table cannot appear here at all.</summary>
     public IReadOnlyList<string> SetsSeen =>
         Matches.Select(m => m.Card.Set).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();

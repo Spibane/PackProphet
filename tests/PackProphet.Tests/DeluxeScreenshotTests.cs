@@ -121,4 +121,43 @@ public class DeluxeScreenshotTests
         Assert.NotEmpty(reading.Notes);
     }
 
+    // ---- foils --------------------------------------------------------------------------
+
+    [Fact]
+    public void A_Deluxe_diamond_card_pairs_with_its_foil_both_ways()
+    {
+        var plain = Ix.ByKey["B4b-78"];
+        var foil = Ix.ByKey["B4b-288"];
+
+        Assert.Equal("Frigibax", plain.Name);
+        Assert.Equal(foil, Ix.FoilTwin(plain));
+        Assert.Equal(plain, Ix.FoilTwin(foil));
+
+        // A4b pairs the same way, which is where the rule came from.
+        var a4b = Ix.BySet["A4b"].First(c => c.Rarity == "C" && c.VariantIndex == 0);
+        Assert.NotNull(Ix.FoilTwin(a4b));
+    }
+
+    [Fact]
+    public void Only_a_Deluxe_diamond_card_has_a_foil_twin()
+    {
+        // An RR alternate art is not a foil, and an ordinary set's second print is an alternate art.
+        Assert.Null(Ix.FoilTwin(Ix.BySet["B4b"].First(c => c.Rarity == "RR")));
+        Assert.Null(Ix.FoilTwin(Ix.ByKey["B2a-34"]));
+    }
+
+    [Fact]
+    public void A_swap_replaces_the_card_and_keeps_where_it_was_found()
+    {
+        var reading = new ScreenshotReader(Ix, Table).Read(DeluxeWonderPick(), CardScreen.WonderPick);
+        var frigibax = reading.Matches.Single(m => m.Card.Name == "Frigibax");
+        var twin = Ix.FoilTwin(frigibax.Card)!;
+
+        var swapped = reading.WithSwaps(new Dictionary<(int, int), PocketCard> { [(frigibax.Row, frigibax.Col)] = twin });
+        var after = swapped.Matches.Single(m => m.Row == frigibax.Row && m.Col == frigibax.Col);
+
+        Assert.Equal(twin, after.Card);
+        Assert.Equal(frigibax.Distance, after.Distance);
+        Assert.Equal(MatchSource.Art, after.Source);
+    }
 }

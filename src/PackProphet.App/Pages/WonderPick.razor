@@ -654,25 +654,21 @@ else
     /// from that pack — not five cards from the game. The picker let you build an offer that
     /// cannot exist, and an appraisal of an impossible offer is a number with nothing behind it.
     ///
-    /// Two conditions, because a pack belongs to a set: same set, and some pack in common. Cards
-    /// can sit in more than one pack of their set, so what narrows is the INTERSECTION — name a
-    /// card in both Charizard and Mewtwo and both stay open until a card names one of them.
+    /// Asked of a printing, against every pack the cards already named could have come from
+    /// through ANY of their printings — see <see cref="OfferPacks"/>. A pack belongs to a set, so
+    /// a pack in common is a set in common too.
     ///
-    /// A card whose pack list is empty does not narrow anything. Promos have none, and the data
-    /// runs ahead of itself for a new set; treating "no data" as "no packs in common" would lock
-    /// the picker to one card with no way to see why.
+    /// A printing that lists no pack does not narrow anything. Promos have none, and the data runs
+    /// ahead of itself for a new set; treating "no data" as "no packs in common" would lock the
+    /// picker to one card with no way to see why.
     /// </summary>
     private bool FromSamePack(PocketCard card)
     {
         if (_offer.Count == 0) return true;
 
-        if (!string.Equals(card.Set, _offer[0].Set, StringComparison.OrdinalIgnoreCase))
-            return false;
-
         var common = OfferPacks();
-        return common.Length == 0
-            || card.Packs is not { Length: > 0 } packs
-            || packs.Any(p => common.Contains(p, StringComparer.OrdinalIgnoreCase));
+        var own = Session.Index.PacksContaining(card).ToArray();
+        return common.Count == 0 || own.Length == 0 || own.Any(common.Contains);
     }
 
     /// <summary>
@@ -684,20 +680,58 @@ else
             ? $"Add Card {_offer.Count + 1} of {GameRules.WonderPickCardsShown} \u00b7 {from}"
             : $"Add Card {_offer.Count + 1} of {GameRules.WonderPickCardsShown}";
 
-    /// <summary>Packs every named card appears in. Empty means nothing has narrowed it yet.</summary>
-    private string[] OfferPacks()
+    /// <summary>
+    /// Every pack, as "B4b:Deluxe Pack Mega", that could have produced all the cards named so far.
+    /// Empty means nothing has narrowed it yet.
+    ///
+    /// By every printing of each card, not the one that was tapped. A Deluxe set reprints earlier
+    /// sets, so Frigibax is in Paldean Wonders' pack and in Deluxe Pack: Mega, and the picker lists
+    /// both. Narrowed by the printing alone, a Frigibax named from B2a shut out Mega Manectric,
+    /// which is in B2b and B4b and in the same Deluxe pack as Frigibax. The printing someone taps
+    /// first is an accident of the list's order; what they saw was the card.
+    /// </summary>
+    private IReadOnlySet<string> OfferPacks()
     {
-        string[]? common = null;
+        HashSet<string>? common = null;
         foreach (var card in _offer)
         {
-            if (card.Packs is not { Length: > 0 } packs) continue;
+            var packs = PacksOfEveryPrinting(card);
+            if (packs.Count == 0) continue;
 
-            common = common is null
-                ? packs
-                : common.Intersect(packs, StringComparer.OrdinalIgnoreCase).ToArray();
+            if (common is null) common = packs;
+            else common.IntersectWith(packs);
         }
 
         return common ?? [];
+    }
+
+    private HashSet<string> PacksOfEveryPrinting(PocketCard card) =>
+        (Session.Index.ByOwnershipKey.TryGetValue(card.OwnershipKey, out var printings) ? printings : [card])
+            .Where(p => p.Openable)
+            .SelectMany(Session.Index.PacksContaining)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Once the offer is narrowed to one set, each card named from another printing becomes its
+    /// printing in that set. The appraisal reads which pack a card is sold in — a Deluxe offer is
+    /// four cards and the hourglasses — and a Frigibax still standing as B2a's would read as an
+    /// ordinary one.
+    /// </summary>
+    private void PinToOfferSet()
+    {
+        var packs = OfferPacks();
+        var sets = packs.Select(k => k.Split(':')[0]).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (sets.Length != 1) return;
+
+        for (var i = 0; i < _offer.Count; i++)
+        {
+            var card = _offer[i];
+            if (string.Equals(card.Set, sets[0], StringComparison.OrdinalIgnoreCase)) continue;
+            if (!Session.Index.ByOwnershipKey.TryGetValue(card.OwnershipKey, out var printings)) continue;
+
+            if (printings.FirstOrDefault(p => Session.Index.PacksContaining(p).Any(packs.Contains)) is { } there)
+                _offer[i] = there;
+        }
     }
 
     /// <summary>
@@ -706,17 +740,22 @@ else
     /// whether anything actually changed.
     /// </summary>
     private string OfferPackKey =>
-        _offer.Count == 0 ? "" : $"{_offer[0].Set}|{string.Join(',', OfferPacks().Order(StringComparer.Ordinal))}";
+        _offer.Count == 0 ? "" : string.Join(',', OfferPacks().Order(StringComparer.Ordinal));
 
-    /// <summary>The pack the offer is being read as, for the picker's heading. Empty until one set.</summary>
+    /// <summary>
+    /// The packs the offer could still be from, for the picker's heading: one pack by name, a few
+    /// joined with "or", and the sets when there are more. Empty until a card is named.
+    /// </summary>
     private string OfferFrom
     {
         get
         {
             if (_offer.Count == 0) return "";
 
-            var packs = OfferPacks();
-            return packs.Length == 1 ? Session.PackLabel(packs[0]) : _offer[0].Set;
+            var packs = OfferPacks().Order(StringComparer.Ordinal).ToArray();
+            if (packs.Length is > 0 and <= 3) return string.Join(" or ", packs.Select(Session.PackLabel));
+
+            return string.Join(" or ", packs.Select(k => k.Split(':')[0]).Distinct(StringComparer.OrdinalIgnoreCase));
         }
     }
 
@@ -730,6 +769,7 @@ else
         if (!CanPick(card)) return;
 
         _offer.Add(card);
+        PinToOfferSet();
         _logged = null;
         Appraise();
     }

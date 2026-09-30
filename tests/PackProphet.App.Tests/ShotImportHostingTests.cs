@@ -943,4 +943,31 @@ public class ShotImportHostingTests : AppHost
         Assert.Contains("Crop to one offer", page.Markup);
         Assert.Contains("Crop to one", page.Markup);
     }
+
+    // ------------------------------------------------------------------ foils
+
+    [Fact]
+    public async Task A_read_card_can_be_switched_to_its_foil_and_back()
+    {
+        // A Deluxe foil and its plain card fingerprint nearly alike, so the reading can name
+        // either. B4b-78 is Frigibax, B4b-288 its foil.
+        StubScan(HandScan(["B4b-78", "B4b-3", "B4b-4", "B4b-5"]));
+        await ReadyAsync();
+
+        var page = RenderComponent<LogPack>();
+        Upload(page);
+
+        AngleSharp.Dom.IElement FoilButton() => page.FindAll("tr")
+            .Single(r => r.TextContent.Contains("Frigibax", StringComparison.Ordinal))
+            .QuerySelectorAll("button").Single(b => Collapse(b.TextContent) == "Foil");
+
+        Assert.Equal("false", FoilButton().GetAttribute("aria-pressed"));
+        FoilButton().Click();
+
+        Assert.Contains("B4b-288", page.Markup);
+        Assert.Equal("true", FoilButton().GetAttribute("aria-pressed"));
+
+        FoilButton().Click();
+        Assert.Contains("B4b-78", page.Markup);
+    }
 }

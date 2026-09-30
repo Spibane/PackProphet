@@ -103,6 +103,31 @@ public sealed class CardIndex
     public int? DeckNrOf(PocketCard card) =>
         _nrByKey.TryGetValue(card.Key, out var nr) ? nr : null;
 
+    /// <summary>
+    /// The other printing of a Deluxe set's 1-3 diamond card: the foil of a plain card, or the
+    /// plain card of a foil. Null where there is none, or where the pairing is not one to one.
+    ///
+    /// Paired from the card list, not from pull rates, so it holds for a Deluxe set whose rates
+    /// are not published yet. A foil is the same name and rarity in the same set under a non-zero
+    /// variant index, which is how A4b and B4b both print them. The two look nearly alike in a
+    /// screenshot, which is what this is for: a reading can name one and the user the other.
+    /// </summary>
+    public PocketCard? FoilTwin(PocketCard card)
+    {
+        if (card.Rarity is not ("C" or "U" or "R")
+            || card.Packs is not { Length: > 0 } packs || !packs.Any(GameRules.IsDeluxePack)
+            || !BySet.TryGetValue(card.Set, out var set))
+            return null;
+
+        var twins = set
+            .Where(c => c.Key != card.Key && c.Name == card.Name && c.Rarity == card.Rarity
+                        && (c.VariantIndex == 0) != (card.VariantIndex == 0))
+            .Take(2)
+            .ToArray();
+
+        return twins.Length == 1 ? twins[0] : null;
+    }
+
     /// <summary>Every pack key that can yield the given card.</summary>
     public IEnumerable<string> PacksContaining(PocketCard card) =>
         card.IsPackObtainable ? card.Packs!.Select(p => PackKey(card.Set, p)) : [];

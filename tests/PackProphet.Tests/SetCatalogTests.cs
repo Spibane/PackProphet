@@ -182,4 +182,30 @@ public class SetCatalogTests
         Assert.True(string.CompareOrdinal(sets.SortKey(first), sets.SortKey(last)) < 0);
         Assert.True(string.CompareOrdinal(sets.SortKey(last), sets.SortKey(nextSet)) < 0);
     }
+
+    [Fact]
+    public void A_sets_packs_are_the_card_datas_where_the_two_disagree()
+    {
+        // sets.json names B4a's pack after B4's; every B4a card says otherwise.
+        Assert.Equal(["Ruler of the Skies"], Real().Info("B4a")!.Packs);
+
+        var ix = Snapshot.Index();
+        var catalog = new SetCatalog(Snapshot.PublishedSets(), ix.BySet.Keys, ix.AllPackKeys);
+
+        Assert.Equal(ix.AllPackKeys.Where(k => k.StartsWith("B4a:", StringComparison.Ordinal))
+                                   .Select(k => k[4..]),
+                     catalog.Info("B4a")!.Packs);
+        Assert.Equal("Team Rocket\u2019s Ambition", catalog.DisplayName("B4a"));
+    }
+
+    [Fact]
+    public void A_set_the_card_data_does_not_have_keeps_the_set_lists_packs()
+    {
+        var published = Snapshot.PublishedSets();
+        published["B"].Add(new SetInfo { Code = "B9z", Packs = ["Future"] });
+
+        var catalog = new SetCatalog(published, Snapshot.Index().BySet.Keys, Snapshot.Index().AllPackKeys);
+
+        Assert.Equal(["Future"], catalog.Info("B9z")!.Packs);
+    }
 }

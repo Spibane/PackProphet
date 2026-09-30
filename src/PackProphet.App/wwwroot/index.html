@@ -151,10 +151,17 @@
 
     <!-- Resolved against the BASE href, not the current URL. A deep link like /packs is served
          index.html by the Pages 404 fallback, so a bare relative path would register
-         /packs/service-worker.js — a 404, and a scope that covers nothing. -->
+         /packs/service-worker.js — a 404, and a scope that covers nothing.
+
+         updateViaCache 'none', because the worker's list of files, service-worker-assets.js, is
+         pulled in with importScripts, and by default an update check lets that come from the HTTP
+         cache. The host sends everything with a four-hour max-age, so for four hours after a
+         deploy a browser that had the site open fetched the new worker, handed it the old list,
+         watched every file fail its integrity hash against that list, and kept the old version.
+         Refreshing does nothing about that; this does. -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register(new URL('service-worker.js', document.baseURI))
+            navigator.serviceWorker.register(new URL('service-worker.js', document.baseURI), { updateViaCache: 'none' })
                 .catch(err => console.warn('Service worker registration failed', err));
         }
     </script>

@@ -361,6 +361,10 @@ until then the minor number tracks the roadmap phase.
   heading. Chosen together on Log a Pack, they are read back into the packs they show, whatever
   size those packs are, and logged as a batch. The row the Next button covers is read from its
   picture, and a card no screenshot held is left as a slot to name by hand
+- **A deploy reaches a browser that already has the site.** The offline copy updates itself by
+  fetching a new worker and that worker's list of files, and the list came from the browser's
+  cache, four hours old, so every new file failed against it and the old version stayed however
+  often the page was refreshed. The list is now always fetched fresh
 
 ### v0.7.0 - 2026-09-01
 

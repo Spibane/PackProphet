@@ -450,4 +450,16 @@ public class TileCaptionTests : AppHost
         Assert.Null(Tile(card).Find(".art img").GetAttribute("data-state"));
     }
 
+    [Fact]
+    public void The_placeholder_carries_the_cards_type_for_its_outline()
+    {
+        var card = new PocketCard { Set = "Z9z", Number = 7, Name = "Bulbasaur", Rarity = "C",
+                                    Image = "cPK_10_999070_00_FUSHIGIDANE_C.webp" };
+
+        var typed = RenderComponent<CardTile>(p => { p.Add(t => t.Card, card); p.Add(t => t.Type, "Grass"); });
+        Assert.Equal("grass", typed.Find(".art-none").GetAttribute("data-type"));
+
+        // Not known yet: no attribute, so the grey outline stands.
+        Assert.Null(Tile(card).Find(".art-none").GetAttribute("data-type"));
+    }
 }

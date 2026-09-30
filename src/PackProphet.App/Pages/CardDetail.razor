@@ -57,7 +57,7 @@ else
                lines above, and role="img" with the same text made a screen reader read it twice. *@
             <button type="button"
                     class="big-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
-                    style="@_card.ArtVars"
+                    style="@_card.ArtVars" data-type="@TypeSlug"
                     popovertarget="card-zoom"
                     aria-label="Enlarge art"
                     title="Enlarge"></button>
@@ -417,7 +417,7 @@ else
        it, and Escape. An X would be a 24px target over a surface that is entirely a target. *@
     <div class="art-zoom" popover id="card-zoom">
         <button type="button" class="zoom-art @(Session.HasGoldFlair(_card) ? "gold-flair" : "")"
-                style="@_card.ArtVars"
+                style="@_card.ArtVars" data-type="@TypeSlug"
                 popovertarget="card-zoom" popovertargetaction="hide"
                 aria-label="Close art" autofocus></button>
     </div>
@@ -425,6 +425,10 @@ else
 
 @code {
     [Parameter] public string Key { get; set; } = "";
+
+    /// <summary>The card's type, or its first of two, for the placeholder outline's colour.</summary>
+    private string? TypeSlug => _card is null ? null
+        : Session.TypesOf(_card) is [var type, ..] ? type.ToLowerInvariant() : null;
 
     private PocketCard? _card;
     private CardFact? _fact;

@@ -68,7 +68,7 @@
            aria-hidden, like the spinner: the tile's own label names the card, and a screen reader
            reading "Illumise B4a 2" after it would be repeating the label for no one who needed
            it. *@
-        <span class="art-none" aria-hidden="true"
+        <span class="art-none" aria-hidden="true" data-type="@Type?.ToLowerInvariant()"
               data-set="@Card.Set" data-nr="@Card.Number"><span class="nm">@Card.Name</span></span>
 
         @* How many you own, back on the art at every width rather than only on a phone.
@@ -180,6 +180,12 @@
     [Parameter, EditorRequired] public PocketCard Card { get; set; } = default!;
     [Parameter] public int Index { get; set; }
 
+    /// <summary>
+    /// The card's type, or its first of two, for the placeholder's outline to be drawn in that
+    /// type's colour. Null leaves it grey.
+    /// </summary>
+    [Parameter] public string? Type { get; set; }
+
     /// <summary>Element id, so the grid's aria-activedescendant can point at this tile.</summary>
     [Parameter] public string? DomId { get; set; }
 
@@ -236,21 +242,23 @@
     private bool _lastShowInfo = true;
     private bool _lastGold;
     private int _lastWanted = -1;
+    private string? _lastType;
     private string? _lastArt;
 
     protected override bool ShouldRender()
     {
-        // Where the art comes from can change after the first paint -- the art probe runs in the
-        // background -- and a tile drawn before it answered would otherwise keep its first answer
-        // until it scrolled away. The url rather than HasArt: a reprint given its original's art
-        // has art before and after, at a different address.
+        // The type and where the art comes from both arrive after the first paint -- the detail
+        // table and the art probe load in the background -- and a tile drawn before either would
+        // otherwise keep its first answer until it scrolled away. The url rather than HasArt: a
+        // reprint given its original's art has art before and after, at a different address.
         var art = Card.ArtUrl;
         if (ReferenceEquals(_lastCard, Card) && _lastCount == Count
             && _lastIndex == Index && _lastPicked == Picked && _lastShowInfo == ShowInfo
             && _lastGold == Gold && _lastWanted == Wanted
-            && _lastArt == art)
+            && _lastType == Type && _lastArt == art)
             return false;
 
+        _lastType = Type;
         _lastArt = art;
 
         _lastCard = Card;

@@ -42,6 +42,16 @@ public enum DataSource
 /// Empty when the manifest is absent, which is a development build, every test, and any deploy
 /// where upstream had nothing missing — all of which are honestly "nothing known to be missing".
 /// </param>
+/// <summary>
+/// What the boot-time art probe found: sets with no art at all, and promo sets short of their
+/// newest few, as shortfalls for the notice bar; and those promos by card key, so their tiles can
+/// draw the placeholder without asking.
+/// </summary>
+public sealed record ArtProbe(IReadOnlyList<SetShortfall> Gaps, IReadOnlySet<string> MissingCards)
+{
+    public static ArtProbe None { get; } = new([], new HashSet<string>());
+}
+
 public sealed record CardData(
     CardIndex Index, PullRates Rates, CardFacts Facts, SetCatalog Sets, PackArtCatalog PackArt,
     IReadOnlyDictionary<string, Rarity> Rarities,
@@ -156,6 +166,8 @@ public sealed class CardDataLoader
 
     private readonly HttpClient _http;
     private readonly TimeSpan _artManifestDeadline;
+    private readonly bool _probeArt;
+    private readonly TimeProvider _clock;
     private CardData? _cached;
 
     /// <param name="artManifestDeadline">
@@ -163,10 +175,18 @@ public sealed class CardDataLoader
     /// <see cref="DefaultArtManifestDeadline"/>, which is what the app uses; a caller supplies its
     /// own only where the wall clock is not a measure of anything, which in practice means tests.
     /// </param>
-    public CardDataLoader(HttpClient http, TimeSpan? artManifestDeadline = null)
+    /// <param name="probeArt">
+    /// Whether to ask the art CDN about new sets at boot — see <see cref="ProbeArtAsync"/>. Off
+    /// only in tests, where every remote request is a 404 and would read as every new set missing.
+    /// </param>
+    /// <param name="clock">What "recent" is measured from. The system clock but in tests.</param>
+    public CardDataLoader(HttpClient http, TimeSpan? artManifestDeadline = null, bool probeArt = true,
+                          TimeProvider? clock = null)
     {
         _http = http;
         _artManifestDeadline = artManifestDeadline ?? DefaultArtManifestDeadline;
+        _probeArt = probeArt;
+        _clock = clock ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -330,6 +350,194 @@ public sealed class CardDataLoader
                 "Neither the CDN nor the vendored snapshot could be loaded.");
 
         return _cached = loaded with { VendoredArtSets = art.Sets, ArtGaps = art.Gaps };
+    }
+
+    /// <summary>How recent a set has to be for its art to be asked about at boot.</summary>
+    public static readonly TimeSpan ArtProbeWindow = TimeSpan.FromDays(60);
+
+    /// <summary>
+    /// How long to wait for the art CDN's answer. Asked after boot rather than during it, because
+    /// a cold jsDelivr edge took over three seconds to 404 B4b's missing art on release day, and a
+    /// present file it has not cached yet up to eleven. A timeout reads as "not known", which
+    /// leaves the set on the ordinary chain, so waiting longer costs nothing but the answer.
+    /// </summary>
+    public static readonly TimeSpan ArtProbeDeadline = TimeSpan.FromSeconds(20);
+
+    /// <summary>
+    /// New sets that neither art source has, found by asking about one card of each.
+    ///
+    /// The manifest can only say what was missing when the site was deployed, and a set released
+    /// since has no entry in it. Left to the grid, such a set is discovered card by card: every
+    /// tile walks both sources, twice each with a pause between, six at a time, so a screenful of
+    /// a new set spends twenty seconds or more looking like a connection problem before it draws
+    /// the placeholder. One HEAD per source for its first card answers the same question for the
+    /// whole set, which is what the deploy's own check does with a directory.
+    ///
+    /// A fetch sees the status where an img does not, so a 404 is told apart from throttling or a
+    /// timeout, and only two 404s count. Anything else is "not known" and changes nothing. Asked
+    /// only of sets released in the last <see cref="ArtProbeWindow"/>, or not yet in the set list,
+    /// that this deployment did not vendor or already report.
+    ///
+    /// Run after boot, by AppSession, beside the card detail. The grid is already up and queued by
+    /// then; what the answer does is re-render the set's tiles with nowhere to look, and tell the
+    /// notice bar. Empty when the probe is switched off.
+    /// </summary>
+    public async Task<ArtProbe> ProbeArtAsync(CardData data, CancellationToken ct = default)
+    {
+        if (!_probeArt) return ArtProbe.None;
+        var art = (Sets: data.VendoredArtSets, Gaps: data.ArtGaps);
+
+        var today = DateOnly.FromDateTime(_clock.GetUtcNow().UtcDateTime);
+        var since = today.AddDays(-ArtProbeWindow.Days);
+
+        var unknown = data.Index.BySet
+            .Where(kv => kv.Value.Count > 0)
+            .Where(kv => !art.Sets.Contains(kv.Key, StringComparer.OrdinalIgnoreCase)
+                         && !art.Gaps.Any(g => string.Equals(g.Set, kv.Key, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+
+        var asked = unknown
+            .Where(kv => !CardIndex.IsPromoSet(kv.Key))
+            .Where(kv => data.Sets.Info(kv.Key)?.ReleasedOn is not { } released || released >= since)
+            .ToArray();
+
+        var promos = unknown.Where(kv => CardIndex.IsPromoSet(kv.Key)).ToArray();
+
+        if (asked.Length == 0 && promos.Length == 0) return ArtProbe.None;
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(ArtProbeDeadline);
+
+        var sets = Task.WhenAll(asked.Select(async kv =>
+            await MissingAsync(kv.Value.MinBy(c => c.Number)!, cts.Token) == true
+                ? new SetShortfall(kv.Key, 0, kv.Value.Count)
+                : null));
+
+        var runs = Task.WhenAll(promos.Select(async kv =>
+        {
+            var run = await NewestMissingAsync(kv.Value, cts.Token);
+            return (Gap: run.Count == 0 ? null : new SetShortfall(kv.Key, kv.Value.Count - run.Count, kv.Value.Count),
+                    Cards: run);
+        }));
+
+        var bare = (await sets).OfType<SetShortfall>();
+        var partial = await runs;
+
+        return new ArtProbe(
+            [.. bare, .. partial.Select(r => r.Gap).OfType<SetShortfall>()],
+            partial.SelectMany(r => r.Cards).Select(c => c.Key).ToHashSet(StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>How far down a promo set's newest cards to look, once the newest has no art.</summary>
+    private const int PromoRun = 16;
+
+    /// <summary>How many of a promo run to ask about at a time.</summary>
+    private const int PromoBatch = 4;
+
+    /// <summary>
+    /// A promo set's newest cards that neither source has art for, newest first.
+    ///
+    /// A promo set is never published whole, so its directory is always there and asking about
+    /// one card says nothing about the rest. What goes missing is the newest few, added to the end
+    /// of the list since the art was last drawn: PROMO-B 95 to 103 in 2.11.0. So the newest card
+    /// is asked about first, and when it has art that is the whole cost. When it does not, the
+    /// next <see cref="PromoRun"/> are asked a few at a time, counting down from the top to the
+    /// first card that has art or cannot be answered. A few at a time because the grid is loading
+    /// its own art on the same connection, and a burst of thirty requests on top of it lost some.
+    /// </summary>
+    private async Task<IReadOnlyList<PocketCard>> NewestMissingAsync(
+        IReadOnlyList<PocketCard> cards, CancellationToken ct)
+    {
+        var newest = cards.OrderByDescending(c => c.Number).Take(PromoRun + 1).ToArray();
+        if (await MissingAsync(newest[0], ct) != true) return [];
+
+        var run = new List<PocketCard> { newest[0] };
+        foreach (var batch in newest.Skip(1).Chunk(PromoBatch))
+        {
+            var answers = await Task.WhenAll(batch.Select(c => MissingAsync(c, ct)));
+            foreach (var (card, missing) in batch.Zip(answers))
+            {
+                if (missing != true) return run;
+                run.Add(card);
+            }
+        }
+
+        return run;
+    }
+
+    /// <summary>
+    /// True when neither source has this card's art, false when either does, null when that could
+    /// not be told. Both at once: asked in turn, two cold 404s came to 2.5 seconds.
+    /// </summary>
+    private async Task<bool?> MissingAsync(PocketCard card, CancellationToken ct)
+    {
+        var absent = await Task.WhenAll(ArtSource.RemoteCandidates(card.Set, card.Number)
+                                                 .Select(url => AbsentAsync(url, ct)));
+
+        if (absent.All(a => a == true)) return true;
+        if (absent.Any(a => a == false)) return false;
+        return null;
+    }
+
+    /// <summary>A second go for an answer that did not come, or came as a 403.</summary>
+    private static readonly TimeSpan ReaskAfter = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Whether one source lacks one file: true on a 404 or on jsDelivr refusing the file outright,
+    /// false on a success, null when neither came back after a second try.
+    ///
+    /// A 403 is read rather than trusted either way, because jsDelivr sends two. One is throttling,
+    /// which passes. The other is permanent for a file it cannot serve: the mirror repository is
+    /// past jsDelivr's 50 MB package limit, and a file jsDelivr has not already indexed is refused
+    /// with "Package size exceeded", which for this app is the same as the file not being there.
+    /// </summary>
+    private async Task<bool?> AbsentAsync(string url, CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            switch (await StatusOfAsync(url, ct))
+            {
+                case System.Net.HttpStatusCode.NotFound: return true;
+                case { } ok when (int)ok is >= 200 and < 300: return false;
+                case System.Net.HttpStatusCode.Forbidden when await RefusedAsync(url, ct): return true;
+            }
+
+            try { await Task.Delay(ReaskAfter, ct); }
+            catch (OperationCanceledException) { return null; }
+        }
+
+        return null;
+    }
+
+    /// <summary>Whether a 403 from jsDelivr is its package-size refusal, which does not pass.</summary>
+    private async Task<bool> RefusedAsync(string url, CancellationToken ct)
+    {
+        try
+        {
+            using var response = await _http.GetAsync(url, ct);
+            return response.StatusCode == System.Net.HttpStatusCode.Forbidden
+                   && (await response.Content.ReadAsStringAsync(ct))
+                          .Contains("Package size exceeded", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception e) when (e is HttpRequestException or OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The status a HEAD comes back with, or null when it does not come back.</summary>
+    private async Task<System.Net.HttpStatusCode?> StatusOfAsync(string url, CancellationToken ct)
+    {
+        try
+        {
+            using var head = new HttpRequestMessage(HttpMethod.Head, url);
+            using var response = await _http.SendAsync(head, ct);
+            return response.StatusCode;
+        }
+        catch (Exception e) when (e is HttpRequestException or OperationCanceledException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

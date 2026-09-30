@@ -163,8 +163,11 @@ public abstract class AppHost : TestContext
         // and the loader then reports "no vendored art" -- indistinguishable from the 404 that
         // means it. No page test asserts on that today; this is so none of them starts flaking the
         // day one does.
+        //
+        // And without the art probe: every remote request here is a 404, which the probe would
+        // read as every new set missing its art. CardDataLoaderTests asks it directly.
         Services.AddSingleton(sp => new CardDataLoader(sp.GetRequiredService<HttpClient>(),
-                                                       TimeSpan.FromSeconds(30)));
+                                                       TimeSpan.FromSeconds(30), probeArt: false));
         Services.AddSingleton<LocalStorageStateStore>();
         // A factory, not an instance: passing Store() here would call it during
         // construction, which is the very thing the laziness below exists to avoid.

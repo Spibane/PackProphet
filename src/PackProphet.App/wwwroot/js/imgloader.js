@@ -153,9 +153,25 @@ function cachedDone(img, url, ok) {
 /// data-src changed on an element we are already tracking: re-fetch for the new card.
 function onSrcChanged(img) {
     const want = img.dataset.src;
-    if (!want || img.dataset.loadedSrc === want) return;
 
-    if (img.dataset.state === 'loading') {
+    // Nowhere left to look: its set was found to have no art while this tile was queued, waiting
+    // for a retry, or mid-walk. Stop now rather than finishing a walk of sources already known to
+    // be empty, which on a cold CDN is seconds a tile.
+    if (!want) {
+        img._abort?.();
+        drop(img);
+        img.dataset.state = 'error';
+        img.classList.add('img-failed');
+        return;
+    }
+    if (img.dataset.loadedSrc === want) return;
+
+    // Pointed at different art mid-walk -- a reprint handed its original's art once its own set
+    // turned out to have none. The walk it is on is for the old chain, so it is given up rather
+    // than finished, and the tile goes round again for the new one.
+    if (img.dataset.state === 'loading' && img._abort) {
+        img._abort();
+    } else if (img.dataset.state === 'loading') {
         img.dataset.stale = '1';   // let the in-flight load finish, then redo it
         return;
     }
@@ -180,14 +196,30 @@ function pumpVisible() {
     while (inflight < MAX_INFLIGHT && queue.length) {
         const img = queue.shift();
         // Virtualize may have removed the row while it sat in the queue.
-        if (!img.isConnected || !img.dataset.src) { delete img.dataset.state; continue; }
+        if (!img.isConnected) { delete img.dataset.state; continue; }
+
+        // Its set turned out to have no art while it waited (see CardDataLoader.ProbeArtAsync):
+        // the tile has been re-rendered with nowhere to look, so it is finished, as a failure.
+        // Clearing the state instead would put the spinner back on a tile that will never load.
+        if (!img.dataset.src) { img.dataset.state = 'error'; img.classList.add('img-failed'); continue; }
         inflight++;
         img.dataset.state = 'loading';
         const requested = img.dataset.src;
         const chain = candidates(img);
         let step = 0;
 
+        // For onSrcChanged: give the slot back and forget this walk, without counting a result.
+        img._abort = () => {
+            delete img._abort;
+            img.onload = img.onerror = null;
+            img.removeAttribute('src');
+            delete img.dataset.state;
+            inflight--;
+            pump();
+        };
+
         const settle = ok => {
+            delete img._abort;
             inflight--;
             img.dataset.state = ok ? 'done' : 'error';
             if (ok) {
@@ -227,6 +259,7 @@ function pumpVisible() {
             // the wait would idle a sixth of the budget per failing tile.
             if (!retried.has(requested)) {
                 retried.add(requested);
+                delete img._abort;
                 inflight--;
                 img.onload = img.onerror = null;
                 delete img.dataset.state;

@@ -320,6 +320,16 @@ until then the minor number tracks the roadmap phase.
   time, and Promo B's nine newest read as complete. Any gap in a promo set is now reported, and a set
   nearly all there is said with its count: *Promo B is still missing attack and ability detail for
   9 cards*
+- **A new set without art says so, and looks it at once.** Only the deploy knew which sets lacked
+  art, so a set released since the last deploy was found out tile by tile: twenty seconds and more
+  of spinners per screen before the placeholder, and nothing on the notice bar. After the app opens
+  it now asks both art sources about one card of each recent set, and about the newest cards of
+  each promo set, which go missing a few at a time. A set or promo with no art draws the placeholder
+  straight away and is named on the notice bar, and a reprint in it is drawn from the set it was
+  first printed in, since the artwork file is the same: 236 of B4b's 429 cards. Only two answers
+  saying "not there" count, so a slow or throttled source changes nothing
+- **The notice bar shows on a first visit too.** It waited for a collection, but a first visit on
+  release day is looking at exactly the set the bar is about
 
 ### v0.7.0 - 2026-09-01
 

@@ -315,6 +315,11 @@ until then the minor number tracks the roadmap phase.
   in a screenshot, so the reader can name either. Every recognised card that has one gets a
   **Foil** button, on the Collection import, Log a Pack and Wonder Pick alike. Foils are paired from
   the card list, so a Deluxe set with no rates yet has the button too
+- **The notice bar names a promo set missing a few cards' detail.** A numbered set is published
+  whole or not at all, so a tenth of slack costs nothing there; a promo set grows a few cards at a
+  time, and Promo B's nine newest read as complete. Any gap in a promo set is now reported, and a set
+  nearly all there is said with its count: *Promo B is still missing attack and ability detail for
+  9 cards*
 
 ### v0.7.0 - 2026-09-01
 

@@ -63,16 +63,36 @@ public class SiteNoticeTests
         // result — the newest set may be short, and short of everything, and nothing else may be
         // short at all. A set coming in part-described fails here, which is the point.
         //
-        // The one partial reading is a promo set's newest run, PROMO-B 94 of 103 in 2.11.0,
-        // which the tenth of slack passes over. That is the right answer for nine promos, and
-        // the margin is two: eleven undescribed would name Promo B on every page.
+        // The one partial reading allowed is a promo set short of its newest run, PROMO-B 94 of
+        // 103 in 2.11.0. A promo set grows a few cards at a time, so it has no tenth of slack and
+        // is reported for those nine; what must not happen is a promo missing from the middle.
         var short_ = DataLag.DetailShortfalls(Snapshot.Index(), Snapshot.Facts());
+        var awaiting = Snapshot.AwaitingDetail();
 
         Assert.All(short_, g =>
         {
-            Assert.True(g.Set == Snapshot.NewestSet() && g.Nothing,
-                $"{g.Set} is short of detail in the shipped snapshot, {g.Have}/{g.Of}");
+            var arriving = CardIndex.IsPromoSet(g.Set)
+                ? Snapshot.Index().BySet[g.Set].Count(c => awaiting.Contains(c.Key)) == g.Short
+                : g.Set == Snapshot.NewestSet() && g.Nothing;
+
+            Assert.True(arriving, $"{g.Set} is short of detail in the shipped snapshot, {g.Have}/{g.Of}");
         });
+    }
+
+    [Fact]
+    public void A_promo_set_short_of_its_newest_few_is_reported_with_the_count()
+    {
+        // Nine of 103 is under the tenth of slack a numbered set gets, and it is still news: a
+        // promo set is never published whole, so any gap in it is the newest promos arriving.
+        var sets = new SetCatalog(Snapshot.PublishedSets(), Snapshot.Index().BySet.Keys);
+        var promo = Assert.Single(
+            DataLag.DetailShortfalls(Snapshot.Index(), Snapshot.Facts()), g => g.Set == "PROMO-B");
+
+        var notice = DataLag.Waiting([], [promo], sets);
+
+        Assert.NotNull(notice);
+        Assert.Equal($"{sets.DisplayName("PROMO-B")} is still missing attack and ability detail for {promo.Short} cards.",
+                     notice.Text);
     }
 
     [Fact]

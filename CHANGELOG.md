@@ -301,6 +301,11 @@ until then the minor number tracks the roadmap phase.
   A4b's, so the shared "Deluxe" switch could not say so. One chip per pack now, under the name the
   game uses (*Deluxe Pack: Mega*, *Deluxe Pack: ex*), newest first. The setting was always stored
   per pack, so nothing was lost. A pack with no rates has no chip until its rates are estimated
+- **Deluxe screenshots are read as Deluxe packs.** Every card in a B4b pack can be a reprint, and a
+  reprint's art is its original's, so one pack was read as four cards from four sets. Where exactly
+  one set prints every card in a pack or Wonder Pick, each is named as that set's printing. The
+  four-card results screen, two by two with a count on each card, was read as your own card list;
+  it is read as a pack
 
 ### v0.7.0 - 2026-09-01
 

@@ -481,7 +481,9 @@ else
                     @* data-src-alt is the rest of the chain -- see ArtSource. The loader walks it
                        on error, so a set whose art has not reached the usual source yet draws from
                        wherever it has reached instead of as a placeholder. *@
-                    <img class="thumb" data-src="@card.ArtUrl" data-src-alt="@card.ArtFallbackUrls"
+                    <img class="thumb @(card.HasArt ? null : "img-failed")"
+                         data-src="@card.ArtUrl" data-src-alt="@card.ArtFallbackUrls"
+                         data-state="@(card.HasArt ? null : "error")"
                          alt="" decoding="async" draggable="false" />
                     <span class="art-wait" aria-hidden="true"></span>
                 </span>
@@ -1608,7 +1610,7 @@ else
         if (_images is null) return;
 
         var urls = _flat.Count <= PrefetchLimit
-            ? _flat.Select(c => c.ArtUrl).ToArray()
+            ? _flat.Select(c => c.ArtUrl).Where(u => u.Length > 0).ToArray()
             : [];
 
         try

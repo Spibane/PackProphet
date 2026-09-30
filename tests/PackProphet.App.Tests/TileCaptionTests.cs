@@ -424,4 +424,30 @@ public class TileCaptionTests : AppHost
                     < markup.IndexOf("fact-row", StringComparison.Ordinal),
             "the printed facts must follow the answer, not precede it");
     }
+
+    [Fact]
+    public void A_card_from_a_set_with_no_art_draws_the_placeholder_without_asking()
+    {
+        // Rendered in the state the loader leaves a tile that has failed everywhere, so the
+        // placeholder is there on the first frame and nothing is queued to find it out.
+        var card = new PocketCard { Set = "Z9z", Number = 7, Name = "Bulbasaur", Rarity = "C",
+                                    Image = "cPK_10_999070_00_FUSHIGIDANE_C.webp" };
+        try
+        {
+            ArtSource.UseMissing(["Z9z"]);
+            var img = Tile(card).Find(".art img");
+
+            Assert.Equal("error", img.GetAttribute("data-state"));
+            Assert.Contains("img-failed", img.ClassList);
+            Assert.Equal("", img.GetAttribute("data-src"));
+        }
+        finally
+        {
+            ArtSource.UseMissing(null);
+        }
+
+        // And an ordinary card is left for the loader, with no state of its own.
+        Assert.Null(Tile(card).Find(".art img").GetAttribute("data-state"));
+    }
+
 }

@@ -41,7 +41,10 @@
     <span class="art @(Gold ? "flair gold-flair" : "")">
         @* No rarity badge. The art carries the rarity mark itself. The list layout does show
            rarity, because there the art is a 32px thumbnail. *@
+        @* A set known to have no art yet is rendered as the loader leaves a tile that failed,
+           so it draws the placeholder at once and is never queued. *@
         <img data-src="@Card.ArtUrl" data-src-alt="@Card.ArtFallbackUrls"
+             data-state="@(Card.HasArt ? null : "error")" class="@(Card.HasArt ? null : "img-failed")"
              alt="@Card.Name" decoding="async" draggable="false" />
 
         @* Shown only while the art is on its way, hidden by CSS the moment it arrives or fails.
@@ -233,13 +236,22 @@
     private bool _lastShowInfo = true;
     private bool _lastGold;
     private int _lastWanted = -1;
+    private string? _lastArt;
 
     protected override bool ShouldRender()
     {
+        // Where the art comes from can change after the first paint -- the art probe runs in the
+        // background -- and a tile drawn before it answered would otherwise keep its first answer
+        // until it scrolled away. The url rather than HasArt: a reprint given its original's art
+        // has art before and after, at a different address.
+        var art = Card.ArtUrl;
         if (ReferenceEquals(_lastCard, Card) && _lastCount == Count
             && _lastIndex == Index && _lastPicked == Picked && _lastShowInfo == ShowInfo
-            && _lastGold == Gold && _lastWanted == Wanted)
+            && _lastGold == Gold && _lastWanted == Wanted
+            && _lastArt == art)
             return false;
+
+        _lastArt = art;
 
         _lastCard = Card;
         _lastCount = Count;

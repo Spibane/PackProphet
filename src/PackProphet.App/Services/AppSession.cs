@@ -214,6 +214,57 @@ public sealed class AppSession : IAsyncDisposable
         // and blocking startup on it made the app look broken. Columns that depend on it stay
         // blank until it lands, then fill in.
         _ = LoadFactsInBackgroundAsync();
+
+        // And whether a new set has any art yet, for the same reason: it can take the CDN several
+        // seconds to say no, and the answer only changes how that set's tiles are drawn.
+        _ = ProbeArtInBackgroundAsync();
+    }
+
+    /// <summary>
+    /// Sets found to have no art anywhere lose their candidates, so their tiles draw the
+    /// placeholder instead of walking both sources card by card, and join the notice bar's gaps.
+    /// </summary>
+    private async Task ProbeArtInBackgroundAsync()
+    {
+        try
+        {
+            if (Data is not { } data) return;
+
+            var probe = await _loader.ProbeArtAsync(data);
+            var bare = probe.Gaps;
+            if (bare.Count == 0 || Data is null) return;
+
+            var missing = bare.Where(g => g.Nothing).Select(g => g.Set).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            bool Unseen(PocketCard c) => missing.Contains(c.Set) || probe.MissingCards.Contains(c.Key);
+
+            // Each reprint among them, pointed at a printing of the same card in a set that has
+            // its art. The oldest, since that is the one most certainly drawn by now.
+            var standIns = new Dictionary<string, (string Set, int Number)>(StringComparer.OrdinalIgnoreCase);
+            foreach (var card in Index.All.Where(Unseen))
+            {
+                var elsewhere = Index.ByOwnershipKey.TryGetValue(card.OwnershipKey, out var printings)
+                    ? printings.Where(p => !Unseen(p))
+                               .OrderBy(p => Sets.SortKey(p.Set), StringComparer.Ordinal)
+                               .FirstOrDefault()
+                    : null;
+                if (elsewhere is not null) standIns[card.Key] = (elsewhere.Set, elsewhere.Number);
+            }
+
+            ArtSource.UseStandIns(standIns);
+            ArtSource.UseMissing(missing, probe.MissingCards);
+
+            // A reprint drawn from its original is a card with art, and the notice counts it so.
+            var drawn = bare.Select(g => g with
+            {
+                Have = g.Have + standIns.Keys.Count(k => k.StartsWith(g.Set + "-", StringComparison.OrdinalIgnoreCase)),
+            });
+            Data = Data with { ArtGaps = [.. Data.ArtGaps, .. drawn] };
+            Changed?.Invoke();
+        }
+        catch
+        {
+            // A guess about decoration. Without it the grid finds out the slow way, as it always did.
+        }
     }
 
     private void RebuildCollection() => Owned = new Collection(Profile.Collection);

@@ -38,7 +38,7 @@ public class CardDataLoaderTests
         new(new HttpClient(new SnapshotHandler(onRemote, artManifest))
         {
             BaseAddress = new Uri("https://test.local/")
-        }, artDeadline ?? Unhurried);
+        }, artDeadline ?? Unhurried, probeArt: false);
 
     /// <summary>A connection held open with no response — a network that drops packets to the CDN.</summary>
     private static async Task<HttpResponseMessage> Hang(CancellationToken ct)
@@ -199,7 +199,7 @@ public class CardDataLoaderTests
             [pinned + "sets.json"] = Snapshot("sets.json"),
         });
         var loader = new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") },
-                                        Unhurried);
+                                        Unhurried, probeArt: false);
 
         var data = await loader.LoadAsync();
 
@@ -325,7 +325,7 @@ public class CardDataLoaderTests
     {
         var handler = new SnapshotHandler(remoteFiles: remoteFiles);
         return (new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") },
-                                   Unhurried),
+                                   Unhurried, probeArt: false),
                 handler);
     }
 
@@ -510,5 +510,178 @@ public class CardDataLoaderTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => Loader(Hang).LoadFactsAsync(ct: cancelled.Token));
+    }
+
+    // ------------------------------------------------------------------ art probe
+
+    /// <summary>The day after B4b's release, so "recent" does not depend on when the suite runs.</summary>
+    private sealed class ReleaseWeek : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(2026, 10, 1, 12, 0, 0, TimeSpan.Zero);
+    }
+
+    /// <summary>
+    /// What the art probe finds after a load, with remote requests answered by these files.
+    /// </summary>
+    private static async Task<(CardData Data, IReadOnlyList<PackProphet.Data.SetShortfall> Bare, ArtProbe Probe)> ProbedAsync(
+        IReadOnlyDictionary<string, string>? remoteFiles = null,
+        Func<CancellationToken, Task<HttpResponseMessage>>? onRemote = null)
+    {
+        var handler = new SnapshotHandler(onRemote, remoteFiles: remoteFiles);
+        var loader = new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") },
+                                        Unhurried, clock: new ReleaseWeek());
+        var data = await loader.LoadAsync();
+        var probe = await loader.ProbeArtAsync(data);
+        return (data, probe.Gaps, probe);
+    }
+
+    [Fact]
+    public async Task A_new_set_neither_source_has_is_reported_missing_its_art()
+    {
+        // The newest set in the snapshot, released inside the window, with both sources answering
+        // 404 for its first card: the deploy's manifest cannot know about it, and this can.
+        var (data, bare, _) = await ProbedAsync();
+
+        var gap = Assert.Single(bare, g => g.Set == "B4b");
+        Assert.True(gap.Nothing);
+        Assert.Equal(data.Index.BySet["B4b"].Count, gap.Of);
+
+        // Nothing older is asked about: art for an old set is not news.
+        Assert.DoesNotContain(bare, g => g.Set == "A1");
+    }
+
+    [Fact]
+    public async Task A_set_either_source_has_is_left_alone()
+    {
+        var (_, bare, _) = await ProbedAsync(new Dictionary<string, string>
+        {
+            ["cards-by-set/B4b/1.webp"] = "{}",
+        });
+
+        Assert.DoesNotContain(bare, g => g.Set == "B4b");
+    }
+
+    [Fact]
+    public async Task Only_a_404_counts_as_missing()
+    {
+        // jsDelivr throttles a burst with 403s. That is a source that is busy, not one without the
+        // file, and a set is only called missing on two answers that say so.
+        var (_, bare, _) = await ProbedAsync(onRemote: _ =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden)));
+
+        Assert.DoesNotContain(bare, g => g.Set == "B4b");
+    }
+
+    [Fact]
+    public void A_set_with_no_art_has_no_candidates_and_a_vendored_one_keeps_its_own()
+    {
+        try
+        {
+            ArtSource.UseMissing(["B4b"]);
+            var card = new PocketCard { Set = "B4b", Number = 1, Name = "Bulbasaur", Rarity = "C",
+                                        Image = "cPK_10_000010_00_FUSHIGIDANE_C.webp" };
+
+            Assert.False(card.HasArt);
+            Assert.Equal("", card.ArtUrl);
+            Assert.Empty(ArtSource.Candidates(card));
+
+            ArtSource.UseVendored(["B4b"]);
+            Assert.True(card.HasArt);
+            Assert.StartsWith(ArtSource.OwnOrigin, card.ArtUrl);
+        }
+        finally
+        {
+            ArtSource.UseMissing(null);
+            ArtSource.UseVendored(null);
+        }
+    }
+
+    [Fact]
+    public async Task The_probe_does_not_hold_the_boot()
+    {
+        // A cold jsDelivr edge can take seconds to say no. The load returns without asking, and
+        // the answer is the session's to fold in afterwards.
+        var handler = new SnapshotHandler(onRemote: ct => Task.Delay(Timeout.Infinite, ct)
+                                              .ContinueWith(_ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)));
+        var loader = new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") },
+                                        Unhurried, clock: new ReleaseWeek());
+
+        await loader.LoadAsync();
+
+        Assert.DoesNotContain(handler.Requests, u => u.EndsWith(".webp", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_reprint_in_a_set_with_no_art_is_drawn_from_its_original()
+    {
+        // B4b-7 is Scyther, the same artwork file as B2b-1. Its own set's directory is empty, and
+        // the original's is not.
+        var reprint = new PocketCard { Set = "B4b", Number = 7, Name = "Scyther", Rarity = "C",
+                                       Image = "cPK_10_016070_00_STRIKE_C.webp" };
+        var foil = new PocketCard { Set = "B4b", Number = 290, Name = "Scyther", Rarity = "C",
+                                    Image = "cPK_10_016070_01_STRIKE_C.webp" };
+        try
+        {
+            ArtSource.UseMissing(["B4b"]);
+            ArtSource.UseStandIns(new Dictionary<string, (string, int)> { ["B4b-7"] = ("B2b", 1) });
+
+            Assert.True(reprint.HasArt);
+            Assert.EndsWith("/B2b/1.webp", reprint.ArtUrl);
+
+            // A foil is new artwork, so it has nothing to borrow and waits as the placeholder.
+            Assert.False(foil.HasArt);
+        }
+        finally
+        {
+            ArtSource.UseStandIns(null);
+            ArtSource.UseMissing(null);
+        }
+    }
+
+    [Fact]
+    public async Task A_promo_set_short_of_its_newest_art_is_counted_from_the_top()
+    {
+        // PROMO-B 95 to 103 had no art anywhere in 2.11.0 and 94 did. A promo set's directory is
+        // always there, so the newest cards are what is asked about, down to the first that has art.
+        var (data, bare, probe) = await ProbedAsync(new Dictionary<string, string>
+        {
+            ["cards-by-set/PROMO-B/94.webp"] = "{}",
+        });
+
+        var gap = Assert.Single(bare, g => g.Set == "PROMO-B");
+        Assert.Equal(9, gap.Short);
+        Assert.Equal(data.Index.BySet["PROMO-B"].Count, gap.Of);
+        Assert.Contains("PROMO-B-95", probe.MissingCards);
+        Assert.DoesNotContain("PROMO-B-94", probe.MissingCards);
+    }
+
+    [Fact]
+    public async Task A_promo_set_whose_newest_card_has_art_costs_one_question()
+    {
+        var handler = new SnapshotHandler(remoteFiles: new Dictionary<string, string>
+        {
+            ["cards-by-set/PROMO-B/103.webp"] = "{}",
+        });
+        var loader = new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") },
+                                        Unhurried, clock: new ReleaseWeek());
+
+        var probe = await loader.ProbeArtAsync(await loader.LoadAsync());
+
+        Assert.DoesNotContain(probe.Gaps, g => g.Set == "PROMO-B");
+        Assert.Single(handler.Requests, u => u.Contains("cards-by-set/PROMO-B/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_403_that_says_the_package_is_too_big_counts_as_missing()
+    {
+        // jsDelivr refuses a file from a repository past its 50 MB limit with a 403 and says so in
+        // the body. That never passes, unlike the 403 it throttles with, so it is read and counted.
+        var (_, bare, _) = await ProbedAsync(onRemote: _ => Task.FromResult(
+            new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden)
+            {
+                Content = new StringContent("Package size exceeded the configured limit of 50 MB."),
+            }));
+
+        Assert.Contains(bare, g => g.Set == "B4b");
     }
 }

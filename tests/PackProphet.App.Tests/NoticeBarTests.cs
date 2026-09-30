@@ -53,13 +53,14 @@ public class NoticeBarTests : AppHost
     // ---- the gates --------------------------------------------------------------------
 
     [Fact]
-    public async Task A_brand_new_app_is_told_nothing_it_derived()
+    public async Task A_brand_new_app_is_told_what_it_derived_too()
     {
-        // A first visit is already a wall of onboarding, and "this set has no pull rates yet" is an
-        // answer to a question nobody with an empty collection has asked.
+        // It used to be told nothing until it held a card. But a first visit on release day is
+        // looking at exactly the set the bar is about, as a grid of placeholders, and without the
+        // bar that reads as a broken app rather than a waiting one.
         var layout = await LayoutAsync();
 
-        Assert.Empty(layout.FindAll(".site-notice"));
+        Assert.Contains("card database is unreachable", Text(layout));
     }
 
     [Fact]
@@ -204,10 +205,11 @@ public class NoticeBarTests : AppHost
         _feed = """[{"id":"down","level":"problem","text":"Screenshot import is broken."}]""";
         var layout = await LayoutAsync();
 
-        layout.WaitForAssertion(() => Assert.NotEmpty(layout.FindAll(".site-notice")));
+        layout.WaitForAssertion(() => Assert.Contains("Screenshot import", Text(layout)));
         layout.Find(".site-notice .x").Click();
 
-        layout.WaitForAssertion(() => Assert.Empty(layout.FindAll(".site-notice")));
+        // The derived notice behind it is free to show now; what is gone is this one.
+        layout.WaitForAssertion(() => Assert.DoesNotContain("Screenshot import", Text(layout) ?? ""));
         Assert.Contains("feed:down", Session.State.Prefs.DismissedNotices);
     }
 
@@ -265,14 +267,14 @@ public class NoticeBarTests : AppHost
         _feed = """[{"id":"down","level":"problem","text":"Screenshot import is broken."}]""";
         var layout = await LayoutAsync();
 
-        layout.WaitForAssertion(() => Assert.NotEmpty(layout.FindAll(".site-notice")));
+        layout.WaitForAssertion(() => Assert.Contains("Screenshot import", Text(layout)));
         layout.Find(".site-notice .x").Click();
-        layout.WaitForAssertion(() => Assert.Empty(layout.FindAll(".site-notice")));
+        layout.WaitForAssertion(() => Assert.DoesNotContain("Screenshot import", Text(layout) ?? ""));
 
         Assert.Equal(1, Session.DismissedNoticeCount);
         Session.ClearDismissedNotices();
 
-        layout.WaitForAssertion(() => Assert.NotEmpty(layout.FindAll(".site-notice")));
+        layout.WaitForAssertion(() => Assert.Contains("Screenshot import", Text(layout)));
         Assert.Equal(0, Session.DismissedNoticeCount);
     }
 

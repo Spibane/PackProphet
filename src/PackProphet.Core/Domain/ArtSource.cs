@@ -76,6 +76,45 @@ public static class ArtSource
     private static IReadOnlySet<string> _vendoredPacks =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+    private static IReadOnlySet<string> _missing =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Declare the sets neither remote source has art for yet, from the loader's boot-time probe.
+    /// A set here that this deployment did not vendor has no candidates at all, so its tiles draw
+    /// the placeholder at once instead of finding out one request at a time.
+    /// </summary>
+    public static void UseMissing(IEnumerable<string>? sets, IEnumerable<string>? cards = null)
+    {
+        _missing = Names(sets);
+        _missingCards = Names(cards);
+    }
+
+    /// <summary>Single cards with no art yet, by card key: a promo set's newest few.</summary>
+    private static IReadOnlySet<string> _missingCards =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    private static IReadOnlyDictionary<string, (string Set, int Number)> _standIns =
+        new Dictionary<string, (string Set, int Number)>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Other printings to draw reprints from, by card key, for sets with no art of their own.
+    ///
+    /// A reprint's artwork file is its original's, byte for byte, because the file name is the
+    /// card's identity (see <see cref="PocketCard.OwnershipKey"/>). So a Deluxe set whose own
+    /// directory is empty can still draw every card it reprints from the set it came from: 236
+    /// of B4b's 429. Only its new cards, and its foils, have to wait.
+    /// </summary>
+    public static void UseStandIns(IReadOnlyDictionary<string, (string Set, int Number)>? standIns) =>
+        _standIns = standIns ?? new Dictionary<string, (string Set, int Number)>();
+
+    /// <summary>Whether a card from this set has anywhere to be drawn from.</summary>
+    public static bool HasArt(string set) => _vendored.Contains(set) || !_missing.Contains(set);
+
+    /// <summary>Whether this card has anywhere to be drawn from, its own set's or a stand-in's.</summary>
+    public static bool HasArt(PocketCard card) =>
+        (HasArt(card.Set) && !_missingCards.Contains(card.Key)) || _standIns.ContainsKey(card.Key);
+
     /// <summary>Sets this deployment holds art for. Empty in development and in tests.</summary>
     public static IReadOnlySet<string> VendoredSets => _vendored;
 
@@ -101,12 +140,28 @@ public static class ArtSource
     private static HashSet<string> Names(IEnumerable<string>? values) =>
         new(values?.Where(v => !string.IsNullOrWhiteSpace(v)) ?? [], StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Every place this card's art might be, best first. Never empty.</summary>
-    public static IReadOnlyList<string> Candidates(PocketCard card) =>
-        Candidates(card.Set, card.Number);
+    /// <summary>
+    /// The two remote sources for one card, whatever is known about them. What the loader asks
+    /// when it wants to know whether a set has art anywhere yet.
+    /// </summary>
+    public static IReadOnlyList<string> RemoteCandidates(string set, int number) =>
+        [$"{Exchange}/{set}/{number}.webp", $"{Mirror}/{MirrorSetCode(set)}/{number:D3}.webp"];
+
+    /// <summary>
+    /// Every place this card's art might be, best first. Empty for a set known to have no art
+    /// yet, which is what draws the placeholder without a request.
+    /// </summary>
+    public static IReadOnlyList<string> Candidates(PocketCard card)
+    {
+        var own = HasArt(card.Set) && !_missingCards.Contains(card.Key);
+        if (own) return Candidates(card.Set, card.Number);
+        return _standIns.TryGetValue(card.Key, out var standIn) ? Candidates(standIn.Set, standIn.Number) : [];
+    }
 
     public static IReadOnlyList<string> Candidates(string set, int number)
     {
+        if (!HasArt(set)) return [];
+
         // Own origin only for a set it was actually built with. Trying it for every card would
         // spend one request per card of the back catalogue discovering a 404 on a set the deploy
         // never vendored -- 3,769 of them at the time of writing, all against this app's own host.

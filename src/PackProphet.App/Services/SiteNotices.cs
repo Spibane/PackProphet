@@ -91,7 +91,6 @@ public sealed class SiteNotices
     private object Signature() => (
         _session.Loaded,
         _session.Data,
-        _session.Profile.Collection.Count > 0,
         _feed.Notices,
         _session.DismissedNoticeCount,
         _forNow.Count);
@@ -115,10 +114,10 @@ public sealed class SiteNotices
 
     private IEnumerable<SiteNotice> Derived()
     {
-        // Not before the saved collection has been read back: Loaded is what separates "no cards"
-        // from "the cards have not arrived yet", and the gate below treats the two oppositely.
+        // Not before the saved state has been read back. Shown with or without a collection: a
+        // first visit on release day is looking at the set the bar is about, and an empty grid of
+        // placeholders reads as broken without it.
         if (!_session.Loaded || _session.Data is not { } data) yield break;
-        if (_session.Profile.Collection.Count == 0) yield break;
 
         if (data.Source == DataSource.VendoredSnapshot)
         {

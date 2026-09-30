@@ -80,7 +80,13 @@ public sealed class PocketCard
     /// Where to look for this card's art first. See <see cref="ArtSource"/> for why there is more
     /// than one place to look and what order they go in.
     /// </summary>
-    public string ArtUrl => ArtSource.Candidates(this)[0];
+    public string ArtUrl => ArtSource.Candidates(this) is [var first, ..] ? first : "";
+
+    /// <summary>
+    /// Whether there is anywhere to draw this card from. False for a set known to have no art
+    /// yet, whose tiles are rendered as the placeholder rather than queued to find that out.
+    /// </summary>
+    public bool HasArt => ArtSource.HasArt(this);
 
     /// <summary>
     /// The rest of the chain, in order, pipe-separated for the markup to hand to js/imgloader.js.

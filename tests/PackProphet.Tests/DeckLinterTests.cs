@@ -112,10 +112,17 @@ public class DeckLinterTests
         // Previously eight sets from B2 onward had no stage data at all, leaving this rule
         // unverifiable for them. Adopting a fully-covering source fixed that, so assert it —
         // if coverage ever regresses, the Basic rule silently stops working.
+        //
+        // Every card upstream has DESCRIBED, that is. A card nobody has published detail for yet
+        // has no stage to check anywhere, and 2.11.0 brought one: Mega Garchomp ex, PROMO-B-99,
+        // new in the promo run that arrived undescribed. Every other card in that run, and all
+        // 429 of B4b, is a new printing of a card the table already knows, so the rule reaches
+        // them regardless -- and they are still checked here, since the identity is what is
+        // looked up. Only a card with no known identity may sit in Snapshot.AwaitingDetail.
         var missing = Ix.All
-            .Select(Ix.DeckNrOf).Where(nr => nr is not null).Select(nr => nr!.Value)
-            .Distinct()
-            .Where(nr => !Snapshot.Facts().Knows(nr))
+            .Where(c => Ix.DeckNrOf(c) is int nr && !Snapshot.Facts().Knows(nr))
+            .Where(c => !Snapshot.AwaitingDetail().Contains(c.Key))
+            .Select(c => $"{c.Key} {c.Name}")
             .ToList();
 
         Assert.Empty(missing);

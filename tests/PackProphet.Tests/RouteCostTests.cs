@@ -79,8 +79,13 @@ public class RouteCostTests
     {
         // B4 has real packs but no published rates, which is a different problem from being
         // unavailable — and the user deserves to be told which.
-        var b4 = Snapshot.Index().BySet["B4"].First();
-        var pull = Routes.For(b4, new Collection()).Options.Single(o => o.Route == AcquisitionRoute.Pull);
+        //
+        // With B4's rates withheld, which is how it stood until 2.11.0 published them: named
+        // directly, this test stopped having an unpriced set to ask about. See
+        // Snapshot.RatesWithout.
+        var routes = new RouteCost(Ix, new PackOdds(Ix, Snapshot.RatesWithout("B4")), Snapshot.Rarities());
+        var b4 = Ix.BySet["B4"].First();
+        var pull = routes.For(b4, new Collection()).Options.Single(o => o.Route == AcquisitionRoute.Pull);
 
         Assert.False(pull.Available);
         Assert.Equal(RouteBlock.NoPullRates, pull.Block);

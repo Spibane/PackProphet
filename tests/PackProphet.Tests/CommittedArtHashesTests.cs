@@ -50,15 +50,57 @@ public class CommittedArtHashesTests
         }
     }
 
+    /// <summary>
+    /// Cards in the snapshot the table has no fingerprint for, by card key.
+    /// </summary>
+    private static HashSet<string> Unfingerprinted =>
+        Ix.All.Select(c => c.Key)
+              .Except(InSnapshotSets.Select(e => e.Key), StringComparer.OrdinalIgnoreCase)
+              .ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Cards whose art upstream has not published, which no refresh can fingerprint.
+    ///
+    /// Two shapes, the same two that <see cref="Snapshot.AwaitingDetail"/> allows for detail, and
+    /// for the same reason. The newest set may be short a handful -- the CDN and the release
+    /// archive both lacked B4b-310 and B4b-357 when 2.11.0 landed, the other 427 read fine -- but
+    /// only a handful, under the floor that makes the screenshot page warn. And a promo set may be
+    /// short its highest-numbered run, because promos arrive on the end of the list a few at a
+    /// time, art and all: PROMO-B 95-103 had none.
+    ///
+    /// Anything else is a card the refresh should have read and did not, which is what the test
+    /// below is for. An older set does not get the handful: by the time a set is not the newest,
+    /// its art has had weeks to arrive.
+    /// </summary>
+    private static HashSet<string> AwaitingArt()
+    {
+        var awaiting = new HashSet<string>(StringComparer.Ordinal);
+        var missing = Unfingerprinted;
+
+        var newest = Ix.BySet[Snapshot.NewestSet()];
+        var short_ = newest.Where(c => missing.Contains(c.Key)).ToArray();
+        if (short_.Length <= newest.Count * (1 - DataLag.CompleteEnough))
+            awaiting.UnionWith(short_.Select(c => c.Key));
+
+        foreach (var (set, cards) in Ix.BySet.Where(kv => CardIndex.IsPromoSet(kv.Key)))
+            awaiting.UnionWith(cards.OrderByDescending(c => c.Number)
+                                    .TakeWhile(c => missing.Contains(c.Key))
+                                    .Select(c => c.Key));
+
+        return awaiting;
+    }
+
     [Fact]
     public void EveryCardInTheSnapshotHasAFingerprint()
     {
         // A floor on the snapshot, not a census of the table -- see SnapshotSets. Every card that
-        // ships has a fingerprint, and the table may hold sets released since.
-        Assert.Equal(Ix.All.Count, InSnapshotSets.Length);
+        // ships has a fingerprint, bar the ones whose art does not exist yet anywhere the refresh
+        // can read (see AwaitingArt), and the table may hold sets released since.
+        var excused = AwaitingArt();
+        Assert.Empty(Unfingerprinted.Except(excused).Order(StringComparer.Ordinal).Take(10));
 
         foreach (var (set, cards) in Ix.BySet)
-            Assert.Equal(cards.Count, Table.Covered(set));
+            Assert.Equal(cards.Count(c => !excused.Contains(c.Key)), Table.Covered(set));
     }
 
     [Fact]
@@ -100,10 +142,17 @@ public class CommittedArtHashesTests
         // picture. Two independent routes, one answer.
         // Over the snapshot's own sets, because that is the population CardIndex counted. Include
         // a set the snapshot has never heard of and the two sides stop describing the same thing.
+        //
+        // And over the cards that HAVE a fingerprint. A card with no art has nothing for the
+        // pixels to say, so the ownership side counts the cards the table can see: 3,866 ownable
+        // less the eleven whose art is not published, none of which is a reprint of anything.
         var distinct = InSnapshotSets.Select(e => e.Hash).Distinct().Count();
+        var unread = Unfingerprinted;
+        var fingerprinted = Ix.All.Where(c => !unread.Contains(c.Key))
+                                  .Select(c => c.OwnershipKey).Distinct().Count();
 
-        Assert.Equal(Ix.DistinctOwnableCards, distinct);
-        Assert.Equal(3664, distinct);
+        Assert.Equal(fingerprinted, distinct);
+        Assert.Equal(3855, distinct);
     }
 
     [Fact]

@@ -13,9 +13,18 @@ public class PackArtCatalogTests
         // The awkward case: for single-pack sets one source says "Paradox Drive" and the other
         // just "Booster", so nothing matches by name. Every openable pack must still resolve,
         // or the log page silently falls back to low-resolution art.
+        //
+        // Every pack of a set the index LISTS, that is. The index is published by hand after a set
+        // lands, so the newest set is allowed to be absent from it -- wholly absent, which is
+        // B4b's state in 2.11.0, with no b4b entry to match against. A set the index lists and
+        // this still cannot match is the naming problem this test is for, newest or not.
         var catalog = Real();
+        var listed = Snapshot.Expansions().Select(e => e.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var awaiting = Snapshot.NewestSet();
+
         var unmatched = Snapshot.Index().OpenablePackKeys
             .Where(k => catalog.UrlFor(k) is null)
+            .Where(k => k.Split(':')[0] is var set && !(set == awaiting && !listed.Contains(set)))
             .ToArray();
 
         Assert.Empty(unmatched);

@@ -309,7 +309,7 @@ public sealed class CardDataLoader
             manifest = null;
         }
 
-        ArtSource.UseVendored(manifest?.Sets, manifest?.Packs);
+        ArtSource.UseVendored(manifest?.Sets, manifest?.Packs, _http.BaseAddress);
 
         // Reported from what THIS load read, not from the static it has just written.
         //

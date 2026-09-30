@@ -57,6 +57,19 @@ public static class ArtSource
     public const string OwnOrigin = "art";
 
     /// <summary>
+    /// <see cref="OwnOrigin"/> as an absolute address once the app's base is known, and as the
+    /// bare relative path until then.
+    ///
+    /// Absolute because a relative url() does not survive a CSS custom property. Every place that
+    /// draws art as a background passes it in as --art, and the stylesheet that reads --art lives
+    /// in css/, so "art/B4b/2.webp" was fetched as css/art/B4b/2.webp and 404'd: every vendored
+    /// card and booster drawn that way was a placeholder while the same file loaded in an img. The
+    /// base is the app's own, index.html's &lt;base href&gt;, so a fork served from /&lt;repo&gt;/
+    /// still gets its own path.
+    /// </summary>
+    private static string _ownOrigin = OwnOrigin;
+
+    /// <summary>
     /// Booster and expansion-logo art, which is not a chain.
     ///
     /// Both are drawn as CSS backgrounds rather than as &lt;img&gt; elements, and CSS has no
@@ -131,10 +144,12 @@ public static class ArtSource
     /// is set once during boot, before the first grid renders, in a single-threaded WebAssembly
     /// runtime.
     /// </summary>
-    public static void UseVendored(IEnumerable<string>? sets, IEnumerable<string>? packs = null)
+    /// <param name="root">The app's base address, which vendored art is served under.</param>
+    public static void UseVendored(IEnumerable<string>? sets, IEnumerable<string>? packs = null, Uri? root = null)
     {
         _vendored = Names(sets);
         _vendoredPacks = Names(packs);
+        _ownOrigin = root is null ? OwnOrigin : new Uri(root, OwnOrigin).ToString();
     }
 
     private static HashSet<string> Names(IEnumerable<string>? values) =>
@@ -166,7 +181,7 @@ public static class ArtSource
         // spend one request per card of the back catalogue discovering a 404 on a set the deploy
         // never vendored -- 3,769 of them at the time of writing, all against this app's own host.
         var urls = new List<string>(3);
-        if (_vendored.Contains(set)) urls.Add($"{OwnOrigin}/{set}/{number}.webp");
+        if (_vendored.Contains(set)) urls.Add($"{_ownOrigin}/{set}/{number}.webp");
 
         urls.Add($"{Exchange}/{set}/{number}.webp");
         urls.Add($"{Mirror}/{MirrorSetCode(set)}/{number:D3}.webp");
@@ -198,12 +213,12 @@ public static class ArtSource
     /// </summary>
     public static string PackArt(string packName) =>
         _vendoredPacks.Contains(packName)
-            ? $"{OwnOrigin}/packs/{Uri.EscapeDataString(packName)}.webp"
+            ? $"{_ownOrigin}/packs/{Uri.EscapeDataString(packName)}.webp"
             : $"{ExchangePacks}/{Uri.EscapeDataString(packName)}.webp";
 
     /// <summary>A set's expansion logo, used where a pack has no art of its own.</summary>
     public static string SetLogo(string setCode) =>
         _vendored.Contains(setCode)
-            ? $"{OwnOrigin}/sets/LOGO_expansion_{Uri.EscapeDataString(setCode)}_en_US.webp"
+            ? $"{_ownOrigin}/sets/LOGO_expansion_{Uri.EscapeDataString(setCode)}_en_US.webp"
             : $"{ExchangeSets}/LOGO_expansion_{Uri.EscapeDataString(setCode)}_en_US.webp";
 }

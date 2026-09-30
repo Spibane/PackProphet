@@ -345,6 +345,10 @@ until then the minor number tracks the roadmap phase.
   older release. It replaces `card-hashes.yml`: the snapshot refresh and fingerprints now follow a
   new release too, as one pull request, instead of waiting for a snapshot refreshed by hand and the
   next Monday
+- **Art the site serves itself draws everywhere, not only in the grid.** Its addresses were relative,
+  and the pages that draw art as a background pass it through a CSS variable read in `css/`, so the
+  browser asked for `css/art/…` and got nothing: no booster for B4b on Which Pack, and no card art on
+  a B4b card's own page. They are absolute now, under the app's own base
 
 ### v0.7.0 - 2026-09-01
 

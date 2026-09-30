@@ -159,4 +159,18 @@ public class ArtSourceTests : IDisposable
         ArtSource.UseVendored(["b4a"]);
         Assert.Equal("art/B4a/1.webp", ArtSource.Candidates(Card("B4a", 1))[0]);
     }
+
+    [Fact]
+    public void Own_art_is_an_absolute_address_under_the_apps_base()
+    {
+        // Relative, it was resolved against the stylesheet that reads --art, in css/, and 404'd.
+        ArtSource.UseVendored(["B4a"], ["Team Rocket"], new Uri("https://packprophet.spibane.com/"));
+
+        Assert.Equal("https://packprophet.spibane.com/art/B4a/1.webp", ArtSource.Candidates("B4a", 1)[0]);
+        Assert.Equal("https://packprophet.spibane.com/art/packs/Team%20Rocket.webp", ArtSource.PackArt("Team Rocket"));
+
+        // A fork served from a subpath keeps it.
+        ArtSource.UseVendored(["B4a"], null, new Uri("https://someone.github.io/PackProphet/"));
+        Assert.Equal("https://someone.github.io/PackProphet/art/B4a/1.webp", ArtSource.Candidates("B4a", 1)[0]);
+    }
 }

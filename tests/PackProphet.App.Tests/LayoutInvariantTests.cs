@@ -352,7 +352,7 @@ public class LayoutInvariantTests
         // paths drift apart and the generator reads an empty directory and does the same. Neither
         // shows up until someone notices a set has no types, which is months later and looks like a
         // reader bug.
-        var yaml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "card-hashes.yml"));
+        var yaml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "card-data.yml"));
 
         var vendor = Regex.Match(yaml, @"vendor-gap-art\.py\s+--out\s+(?<path>\S+)");
         var generate = Regex.Match(yaml, @"--art-dir\s+(?<path>\S+)");
@@ -363,6 +363,24 @@ public class LayoutInvariantTests
         Assert.Equal(vendor.Groups["path"].Value, generate.Groups["path"].Value);
         Assert.True(vendor.Index < generate.Index,
             "art has to be extracted BEFORE the generator reads the directory");
+    }
+
+    [Fact]
+    public void The_release_the_deploy_records_is_the_one_the_check_reads()
+    {
+        // card-data.yml starts a deploy whenever the live site's recorded release differs from
+        // the current one. If the two workflows disagree about the file's name, the live answer is
+        // always "unknown" and every three-hourly check deploys.
+        var deploy = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "deploy-pages.yml"));
+        var check = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "card-data.yml"));
+
+        var written = Regex.Match(deploy, @"> build/wwwroot/(?<file>[\w.-]+\.txt)");
+        Assert.True(written.Success, "the deploy no longer records its card-data release");
+        Assert.Contains($"packprophet.spibane.com/{written.Groups["file"].Value}", check);
+
+        // And the art it vendors is read from that same release, not from whatever "latest" a
+        // CDN edge is still caching.
+        Assert.Matches(@"vendor-gap-art\.py --out build/wwwroot/art --release ""\$\{\{ steps\.release\.outputs\.version \}\}""", deploy);
     }
 
     [Fact]

@@ -198,10 +198,23 @@ jobs:
       #
       # Never fatal. A CDN that is briefly unavailable must not block a deploy: the app falls back
       # to the remote chain, which is where it looked before any of this existed.
+      # The card-data release this deploy was built against, resolved once and written into the
+      # site, so .github/workflows/card-data.yml can tell from outside whether the live site is
+      # behind a release. Resolved rather than read off the vendored snapshot: the art below comes
+      # from the live card list, and that is the thing a new release changes.
+      - name: Record the card-data release
+        id: release
+        run: |
+          version=$(curl -fsSL https://registry.npmjs.org/pokemon-tcg-pocket-database/latest \
+                    | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$version" > build/wwwroot/card-data-release.txt
+          echo "built against card data $version"
+
       - name: Vendor the art upstream has not published yet
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python3 tools/vendor-gap-art.py --out build/wwwroot/art
+        run: python3 tools/vendor-gap-art.py --out build/wwwroot/art --release "${{ steps.release.outputs.version }}"
 
       # GitHub Pages runs Jekyll by default, which silently DROPS directories whose
       # names start with an underscore — including _framework. Without this file the

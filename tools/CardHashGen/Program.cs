@@ -10,7 +10,7 @@ namespace PackProphet.Tools;
 /// Generates the card art fingerprints that wwwroot/data/card-hashes.txt holds, by downloading every
 /// card's artwork once and reducing each one to 128 bits.
 ///
-/// This runs offline — from a maintainer's machine or from .github/workflows/card-hashes.yml — and
+/// This runs offline — from a maintainer's machine or from .github/workflows/card-data.yml — and
 /// never in a browser. That division is the point of the whole design: recognising a card on the
 /// device costs a Hamming distance against a 90 KB table, because the expensive half was paid for
 /// here, once, and committed.

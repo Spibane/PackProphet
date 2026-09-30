@@ -82,7 +82,7 @@ public static class DataLag
     /// Sets this deployment knows it cannot draw, from the manifest the deploy workflow writes.
     ///
     /// Knowing this at all takes the workflow's help, and it is worth being precise about why. The
-    /// app cannot discover a missing image without requesting it, and probing 3,879 of them to
+    /// app cannot discover a missing image without requesting it, and probing 4,317 of them to
     /// decide whether to show one sentence is absurd. The deploy already does the work for another
     /// reason — `tools/vendor-gap-art.py` asks the art repository which sets it has, and fills the
     /// gaps from a release archive — so it is the one place that knows, and it now writes down what

@@ -1,6 +1,6 @@
 // Which set you are looking at, while you scroll.
 //
-// The collection grid can hold every card ever printed — 3,546 of them across twenty-odd sets, in
+// The collection grid can hold every card ever printed — 3,866 of them across twenty-odd sets, in
 // set order — and once you are a screen into it there is nothing on screen that says which set the
 // cards under your thumb belong to. The set picker names the FILTER, which in that view is "every
 // set", so it is no help at all.

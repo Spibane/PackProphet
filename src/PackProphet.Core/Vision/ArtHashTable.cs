@@ -19,7 +19,7 @@ public readonly record struct ArtHashEntry(string Set, int Number, ArtHash Hash)
 ///
 /// Keyed by set and card number rather than by <see cref="PocketCard.OwnershipKey"/> even though
 /// ownership is what the app records. Two reasons. The table is a third of the size, because a
-/// number is shorter than an artwork filename and there are 3,761 of them. And the mapping from
+/// number is shorter than an artwork filename and there are 4,306 of them. And the mapping from
 /// set entry to ownable card is then made by the card data loaded at runtime rather than frozen
 /// into the table at generation time: the 215 re-listings share their art, so they share a hash,
 /// and resolving through <see cref="CardIndex.ByKey"/> collapses them onto one ownership key
@@ -38,9 +38,10 @@ public sealed class ArtHashTable
     /// Measured, not guessed, though not yet against real screenshots — those are the calibration
     /// this still wants. Two things were measured. Re-framing and rescaling the same art moves its
     /// fingerprint by 0 to 1 bit, and by no more than 4 in the worst combination tested
-    /// (ArtSamplerTests). And across the 3,546 distinct fingerprints in the committed table, the
-    /// distance from a card to the nearest <em>different</em> card is 23 bits at the median, 13 at
-    /// the 5th percentile, and 3 at the closest pair.
+    /// (ArtSamplerTests). And across the 3,855 distinct fingerprints in the committed table, the
+    /// distance from a card to the nearest <em>different</em> card is 28 bits at the median, 17 at
+    /// the 5th percentile, and 9 at the closest pair (measured 2026-09-30; 23, 13 and 3 when the
+    /// table held 3,546).
     ///
     /// 18 sits between those. Real screenshots, measured on the two three-across fixtures, land
     /// between 1 and 16 bits from their entries — the far end being a holo card — so the threshold
@@ -62,9 +63,11 @@ public sealed class ArtHashTable
     /// A tie is reported as unread rather than guessed at, because a wrong card silently added to a
     /// collection is worse than a slot the user has to fill in.
     ///
-    /// The cost is known and accepted: 2 of the 3,546 distinct fingerprints have a different card
-    /// within 6 bits, and about 1% have one within 9 — so the very tightest pairs, mostly full arts
-    /// of a card that also has a plain printing, come back unread however good the screenshot is.
+    /// The cost is known and accepted. When the table held 3,546, two fingerprints had a different
+    /// card within 6 bits and about 1% had one within 9; at 3,855 none is within 6 and 0.1% are
+    /// within 9. The tightest pairs, mostly full arts of a card that also has a plain printing,
+    /// come back unread however good the screenshot is. A Deluxe foil is not one of them: its art
+    /// file sits 9 to 34 bits from its plain card's, 21 at the median.
     /// A percent of coverage for not inventing ownership is the right way round.
     /// </summary>
     public const int AmbiguityMargin = 6;

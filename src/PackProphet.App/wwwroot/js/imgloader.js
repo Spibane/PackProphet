@@ -1,6 +1,6 @@
 // Managed image loader for the card grid.
 //
-// Native loading="lazy" on a 3,761-tile grid lets a fast scroll queue thousands of concurrent
+// Native loading="lazy" on a 4,317-tile grid lets a fast scroll queue thousands of concurrent
 // requests. Over HTTP/2 those all multiplex onto one connection, and once the server's
 // max-concurrent-stream limit is exceeded it sends GOAWAY, which the browser reports as
 // ERR_CONNECTION_CLOSED. Observed against jsDelivr with hundreds of art fetches failing at once.

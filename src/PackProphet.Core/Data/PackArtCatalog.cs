@@ -34,7 +34,7 @@ public sealed class PackArtCatalog
     // "A1:Mewtwo" -> their pack id
     private readonly Dictionary<string, string> _packIds = new(StringComparer.OrdinalIgnoreCase);
 
-    // Pack names more than one set uses, "Deluxe" for A4b and B4b.
+    // Pack names more than one set uses. None do yet: B4b named its Deluxe pack apart from A4b's.
     private readonly HashSet<string> _sharedNames = new(StringComparer.OrdinalIgnoreCase);
 
     public PackArtCatalog(

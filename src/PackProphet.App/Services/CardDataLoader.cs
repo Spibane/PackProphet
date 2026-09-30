@@ -177,7 +177,7 @@ public sealed class CardDataLoader
     /// exists to make. It used to hand the deadline's token to GetFromJsonAsync, and that call
     /// deserialises under the same token — so the clock ran through the parse as well as the
     /// download, and the parse is the slow half by two orders of magnitude. This app publishes
-    /// without AOT, so System.Text.Json runs in the IL interpreter: 3,879 cards is 470 KB that
+    /// without AOT, so System.Text.Json runs in the IL interpreter: 4,317 cards is 540 KB that
     /// arrives in under ten milliseconds and then takes seconds to turn into objects.
     ///
     /// The result was a fallback that fired every single time, on every device, and said the wrong

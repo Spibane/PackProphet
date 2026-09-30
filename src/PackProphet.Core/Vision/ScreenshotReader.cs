@@ -75,6 +75,11 @@ public sealed class ScreenshotReader
                 + "than a crop of one card.", fallbackKind);
 
         var kind = screen ?? Infer(scan);
+
+        // A host that offers "the cards from a pack" means the ten-pack list as much as one pack, and
+        // does not ask which. The layout says, so it is taken from the layout.
+        if (kind == CardScreen.PackReveal && IsAPackList(scan)) kind = CardScreen.PackList;
+
         var recognised = Recognise(scan.Cells);
 
         return kind switch
@@ -109,6 +114,7 @@ public sealed class ScreenshotReader
         // cards on a tall screen comes back with rows that are really the empty space around them.
         var filled = scan.Cells.Where(c => c.Detail >= DetailFloor).ToArray();
 
+        if (IsAPackList(scan)) return CardScreen.PackList;
         if (IsAHand(filled, lattice) || IsADeluxeHand(filled, lattice)) return CardScreen.PackReveal;
 
         return lattice.RelativeCellWidth >= ThreeAcross
@@ -194,6 +200,56 @@ public sealed class ScreenshotReader
 
         return rows is [{ Count: 2 } first, { Count: 2 } second]
                && Math.Abs(first.Start - second.Start) / lattice.CellWidth < StaggerMin;
+    }
+
+    /// <summary>
+    /// How much taller than the gap within a pack the gap under a "Pack no. N" heading is. Measured
+    /// on the ten-pack results screen at 1.23 to 1.27; a card list's rows agree to within a few
+    /// percent, and a missing row would be twice.
+    /// </summary>
+    private const double HeadingGapMin = 1.12;
+    private const double HeadingGapMax = 1.6;
+
+    /// <summary>
+    /// Row tops, by row, of the rows a picture shows whole. A row with a card cut off under the
+    /// title bar has only the cut for a top: it hides a heading where there is one, and would put
+    /// one where there is not.
+    /// </summary>
+    private static SortedDictionary<int, double> RowTops(ShotScan scan) => new(
+        scan.Cells
+            .Where(c => c.Box.Length == 4)
+            .GroupBy(c => c.Row)
+            .Where(g => g.All(c => !string.IsNullOrEmpty(c.Hash)))
+            .ToDictionary(g => g.Key, g => g.Min(c => c.Box[1])));
+
+    /// <summary>
+    /// Whether this is the several-packs results list: rows at two spacings, the wider one a
+    /// heading's height more than the narrower. A card list and a single pack space every row alike.
+    /// </summary>
+    public static bool IsAPackList(ShotScan scan)
+    {
+        if (scan.Lattice is not { Cols: > 0 and <= 3 }) return false;
+
+        var tops = RowTops(scan).Values.ToArray();
+        if (tops.Length < 3) return false;
+
+        var gaps = tops.Skip(1).Zip(tops, (b, a) => b - a).ToArray();
+        var within = gaps.Min();
+        return within > 0 && gaps.Any(g => g >= within * HeadingGapMin && g <= within * HeadingGapMax);
+    }
+
+    /// <summary>Each row, and whether the gap above it is a pack's heading.</summary>
+    private static IReadOnlyList<ShotRow> Rows(ShotScan scan)
+    {
+        var tops = RowTops(scan).ToArray();
+        if (tops.Length == 0) return [];
+
+        var gaps = tops.Skip(1).Zip(tops, (b, a) => b.Value - a.Value).ToArray();
+        var within = gaps.Length == 0 ? 0 : gaps.Min();
+
+        return tops.Select((row, i) => new ShotRow(row.Key,
+                i == 0 || within <= 0 ? null : gaps[i - 1] >= within * HeadingGapMin))
+            .ToArray();
     }
 
     private readonly record struct Recognition(ShotCell Cell, PocketCard Card, int Distance);
@@ -347,7 +403,12 @@ public sealed class ScreenshotReader
             .Select(r => new ShotMatch(r.Card, r.Cell.Row, r.Cell.Col, r.Distance, true, MatchSource.Art))
             .ToArray());
 
-        var unread = Unnamed(scan, recognised, _ => true);
+        // A slot laid where a card was expected rather than found, and not recognised: the ten-pack
+        // list's row under the Next button when the last row ended a pack, so a heading. Not asked
+        // about, because there is most likely no card there to name.
+        var unread = Unnamed(scan, recognised, _ => true)
+            .Where(u => !scan.Cells.Any(c => c.Guessed && c.Row == u.Row && c.Col == u.Col))
+            .ToList();
         if (kind == CardScreen.WonderPick && HourglassSlot(scan, recognised, matches) is { } hourglass)
             unread = unread.Where(u => (u.Row, u.Col) != hourglass).ToList();
         var notes = new List<string>();
@@ -359,7 +420,7 @@ public sealed class ScreenshotReader
         // it is asked where it can be re-asked — see ShotImport.
 
         AddSetSpreadNote(matches, notes);
-        return new ShotReading(true, null, kind, inferred, matches, unread, notes);
+        return new ShotReading(true, null, kind, inferred, matches, unread, notes) { Rows = Rows(scan) };
     }
 
     /// <summary>How much brighter than anything else in the shot the hourglass slot has to be.</summary>

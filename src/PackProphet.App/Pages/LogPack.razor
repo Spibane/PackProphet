@@ -116,8 +116,8 @@ else if (_pack is null)
         <div class="shot-panel" id="log-shots" hidden="@(!_shotsOpen)">
             <ShotImport @ref="_shots" Group="pack" Choices="@ShotChoices">
                 <Intro>
-                    Screenshot the <strong>Opening Results</strong> screen, all five cards
-                    showing.
+                    Screenshot the <strong>Opening Results</strong> screen with every card showing.
+                    After opening several packs at once, screenshot the whole list as you scroll.
                 </Intro>
                 <Actions Context="reading">
                     @{
@@ -230,7 +230,7 @@ else if (_pack is null)
                            logged notice, or the pack grid once the disclosure closes -- so the
                            button read as belonging to the thing under it. *@
                         <section class="mt-3 border-top pt-3 pb-2">
-                            <h2 class="sub-head">All @readings.Count Pictures</h2>
+                            <h2 class="sub-head">All @readings.Count Packs</h2>
 
                             @if (plan.Unidentified > 0)
                             {

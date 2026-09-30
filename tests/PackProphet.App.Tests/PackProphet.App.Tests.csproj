@@ -82,6 +82,8 @@
              Link="deploy-pages.yml" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\.github\workflows\card-data.yml"
              Link="card-data.yml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\PackProphet.Tests\fixtures\ten-pack-b4b.scans.json"
+             Link="ten-pack-b4b.scans.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Every page, as text. One invariant spans all of them: nothing below the bars may pad itself

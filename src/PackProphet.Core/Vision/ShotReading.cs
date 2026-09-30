@@ -47,7 +47,25 @@ public enum CardScreen
     /// already in hand, so a reading feeds an appraisal rather than a collection.
     /// </summary>
     WonderPick,
+
+    /// <summary>
+    /// The results of opening several packs at once: a scrolling list, each pack's cards under a
+    /// "Pack no. N" heading. No one screenshot holds all of it, so a reading of one is a stretch of
+    /// rows, and <see cref="OpeningStitcher"/> puts the stretches back together into packs. Told
+    /// from a pack's reveal by its rows: the gap under a heading is a quarter again the gap within a
+    /// pack, where a single pack's rows are evenly spaced.
+    /// </summary>
+    PackList,
 }
+
+/// <summary>
+/// One row of a reading, top to bottom, and whether the screen shows it starting a pack.
+/// </summary>
+/// <param name="StartsPack">
+/// True when the gap above it is a pack's heading, false when it is the ordinary gap between two
+/// rows of one pack, null when there is nothing above it on the screenshot to say.
+/// </param>
+public sealed record ShotRow(int Row, bool? StartsPack);
 
 /// <summary>How a card in a reading was identified, which is what decides how much to trust it.</summary>
 public enum MatchSource
@@ -158,6 +176,12 @@ public sealed record ShotReading(
 {
     public static ShotReading Failed(string error, CardScreen screen) =>
         new(false, error, screen, false, [], [], []);
+
+    /// <summary>
+    /// The rows the cards sit in, for a hand, with where the screen shows packs beginning. Empty on
+    /// the card lists, which have no packs in them.
+    /// </summary>
+    public IReadOnlyList<ShotRow> Rows { get; init; } = [];
 
     public int UnreadCells => UnreadSlots.Count;
 

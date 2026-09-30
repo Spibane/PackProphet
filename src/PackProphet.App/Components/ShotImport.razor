@@ -107,7 +107,22 @@
     <Notice Severity="Notice.Level.Warning">@_tooMany</Notice>
 }
 
-@foreach (var shot in _shots)
+@if (_opening is { } opening)
+{
+    @* The pictures of a several-pack opening are not shown one by one: each holds a stretch of the
+       list, not a pack, and what matters is the packs they make together, shown below as if each
+       had been a picture of its own. *@
+    <Notice Severity="Notice.Level.Info">
+        @OpeningSources.Count @Fmt.S(OpeningSources.Count, "picture") read as
+        @opening.Packs.Count @Fmt.S(opening.Packs.Count, "pack").
+    </Notice>
+    @foreach (var note in opening.Notes)
+    {
+        <Notice Severity="Notice.Level.Warning">@note</Notice>
+    }
+}
+
+@foreach (var shot in Shown)
 {
     var reading = shot.Fixed;
 
@@ -202,10 +217,10 @@
         @* A hand that came up short. Asked here rather than written into the reading's own notes,
            because the answer changes underneath it: name the missing slot and the hand is complete,
            and a note fixed at the moment of reading would still be saying four. *@
-        @if (IsHand(reading) && reading.NamedCount > 0 && reading.NamedCount < GameRules.WonderPickCardsShown)
+        @if (IsHand(reading) && reading.NamedCount > 0 && reading.NamedCount < CardsIn(reading))
         {
             <Notice Severity="Notice.Level.Warning">
-                Only @reading.NamedCount of the @GameRules.WonderPickCardsShown cards have been named.
+                Only @reading.NamedCount of the @CardsIn(reading) cards have been named.
                 Name the rest below, or retake the shot.
             </Notice>
         }
@@ -451,7 +466,65 @@
     /// arrives without the plan the first press computed.
     /// </summary>
     public IReadOnlyList<ShotReading> Readings =>
-        _shots.Where(s => s.Reading.Ok).Select(s => s.Fixed).ToArray();
+        Shown.Where(s => s.Reading.Ok).Select(s => s.Fixed).ToArray();
+
+    /// <summary>
+    /// The several-pack opening the pictures make, when some are of the results list; null
+    /// otherwise. Each of its packs is shown and acted on as a picture of its own, through
+    /// <see cref="_packs"/>, so a host logs them as it logs a run of single-pack screenshots.
+    /// </summary>
+    private Opening? _opening;
+    private readonly List<Shot> _packs = [];
+
+    /// <summary>What is on screen: the pictures, with an opening's in place of its packs.</summary>
+    private IEnumerable<Shot> Shown =>
+        _opening is null ? _shots : _shots.Where(s => !OpeningSources.Contains(s)).Concat(_packs);
+
+    /// <summary>
+    /// The pictures an opening is made from: every hand among them, once any is of the list. A
+    /// picture of the list that happens to show only one pack's rows reads as that one pack, and is
+    /// still a stretch of the same list.
+    /// </summary>
+    private IReadOnlyList<Shot> OpeningSources =>
+        _shots.Where(s => s.Reading.Ok && s.Reading.Screen is CardScreen.PackList or CardScreen.PackReveal).ToArray();
+
+    /// <summary>Puts the pictures back together into packs, or clears that when none is of the list.</summary>
+    private void Restitch()
+    {
+        _packs.Clear();
+        _opening = null;
+
+        // Only where the host takes a pack's cards. The collection import says to log a pack on its
+        // own page, and packs are the one thing it has nowhere to put.
+        if (!Choices.Any(c => c.Value == CardScreen.PackReveal)) return;
+        if (!_shots.Any(s => s.Reading.Ok && s.Reading.Screen == CardScreen.PackList)) return;
+
+        _opening = OpeningStitcher.Stitch(OpeningSources.Select(s => s.Fixed).ToArray(), SizesOf);
+        for (var i = 0; i < _opening.Packs.Count; i++)
+            _packs.Add(new Shot { Name = $"Pack {i + 1}", Id = 1000 + i, Reading = _opening.Packs[i] });
+    }
+
+    /// <summary>
+    /// How many cards a pack of this set holds: four for a Deluxe set, otherwise what its pull
+    /// rates list -- five, and six for the rarer larger pack -- and five or six where it has none.
+    /// </summary>
+    private IReadOnlySet<int> SizesOf(string? set)
+    {
+        if (set is null) return new HashSet<int> { 4, 5, 6 };
+        if (Session.IsDeluxeSet(set)) return new HashSet<int> { GameRules.DeluxePackCards };
+
+        var counts = Session.Odds?.Rates.CardCounts(set);
+        return counts is { Count: > 0 } ? counts : new HashSet<int> { 5, 6 };
+    }
+
+    /// <summary>How many cards this hand should hold, for saying when it is short.</summary>
+    private int CardsIn(ShotReading reading)
+    {
+        if (reading.Screen == CardScreen.WonderPick) return GameRules.WonderPickCardsShown;
+
+        var set = reading.Matches.Select(m => m.Card.Set).FirstOrDefault();
+        return SizesOf(set).Min();
+    }
 
     /// <summary>One picture and what it turned out to say. The scan is kept so the reading can be redone.</summary>
     private sealed class Shot
@@ -601,6 +674,8 @@
                 _shots.Add(await ReadOne(file, _shots.Count));
                 _done++;
             }
+
+            Restitch();
         }
         finally
         {
@@ -655,6 +730,8 @@
         foreach (var shot in _shots)
             if (shot.Scan is { } scan)
                 shot.Reading = Interpret(scan);
+
+        Restitch();
     }
 
     /// <summary>
@@ -669,6 +746,8 @@
     public void Clear()
     {
         _shots.Clear();
+        _packs.Clear();
+        _opening = null;
         _tooMany = null;
         _done = 0;
         _total = 0;
@@ -680,6 +759,7 @@
         CardScreen.OwnershipGrid => "a set's card list, five across",
         CardScreen.CopiesGrid => "your own cards, three across",
         CardScreen.PackReveal => "the cards from a pack",
+        CardScreen.PackList => "the cards from several packs",
         _ => "a Wonder Pick line-up",
     };
 

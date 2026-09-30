@@ -100,9 +100,31 @@ public class DeluxeScreenshotTests
         Assert.Equal(["Mega Manectric ex", "Frigibax", "Mesagoza", "Trapinch"], reading.Matches.Select(m => m.Card.Name));
         Assert.All(reading.Matches, m => Assert.Equal("B4b", m.Card.Set));
 
-        // The hourglasses are a slot the reader found and could not name, never a card.
+        // The hourglasses are neither a card nor a slot to name.
+        Assert.Empty(reading.UnreadSlots);
+    }
+
+    [Fact]
+    public void Read_as_a_pack_the_same_picture_still_offers_every_slot()
+    {
+        // Only a Wonder Pick has hourglasses in it, so only a Wonder Pick sets that slot aside.
+        var reading = new ScreenshotReader(Ix, Table).Read(DeluxeWonderPick(), CardScreen.PackReveal);
+
         var unread = Assert.Single(reading.UnreadSlots);
         Assert.Equal((0, 1), (unread.Row, unread.Col));
+    }
+
+    [Fact]
+    public void An_event_offer_with_no_slot_brighter_than_the_rest_keeps_its_unread_slot()
+    {
+        // Five cards and no hourglasses: an unread card there is as bright as the cards beside it,
+        // so nothing leads by enough to be taken for the hourglasses.
+        var scan = DeluxeWonderPick();
+        scan.Cells[1].Luma = scan.Cells.Where(c => c != scan.Cells[1]).Max(c => c.Luma) + 0.01;
+
+        var reading = new ScreenshotReader(Ix, Table).Read(scan, CardScreen.WonderPick);
+
+        Assert.Single(reading.UnreadSlots);
     }
 
     [Fact]

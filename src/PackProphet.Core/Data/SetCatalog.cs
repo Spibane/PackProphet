@@ -49,14 +49,30 @@ public sealed class SetCatalog
     private readonly Dictionary<string, SetInfo> _byCode = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<string>> _bySeries = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <param name="packKeysInUse">
+    /// The card data's own packs, as "B4a:Team Rocket". Where the card data has a set, its pack
+    /// names replace the set list's, because the two disagree and the card data is the one every
+    /// pack key comes from: sets.json gives B4a's pack as "Ruler of the Skies", B4's name, where
+    /// every B4a card says "Team Rocket". A set the card data does not have yet keeps the set
+    /// list's names, which are then the only ones there are.
+    /// </param>
     public SetCatalog(
         IReadOnlyDictionary<string, List<SetInfo>>? published,
-        IEnumerable<string> setCodesInUse)
+        IEnumerable<string> setCodesInUse,
+        IEnumerable<string>? packKeysInUse = null)
     {
+        var packsInUse = (packKeysInUse ?? [])
+            .Select(k => k.Split(':', 2))
+            .Where(p => p.Length == 2)
+            .GroupBy(p => p[0], StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Select(p => p[1]).Distinct().ToArray(), StringComparer.OrdinalIgnoreCase);
+
         foreach (var (series, sets) in published ?? new Dictionary<string, List<SetInfo>>())
         foreach (var set in sets)
         {
-            _byCode[set.Code] = set;
+            _byCode[set.Code] = packsInUse.TryGetValue(set.Code, out var packs)
+                ? new SetInfo { Code = set.Code, ReleaseDate = set.ReleaseDate, Count = set.Count, Name = set.Name, Packs = packs }
+                : set;
             Add(series, set.Code);
         }
 
@@ -66,7 +82,7 @@ public sealed class SetCatalog
         foreach (var code in setCodesInUse)
         {
             if (_byCode.ContainsKey(code)) continue;
-            _byCode[code] = new SetInfo { Code = code };
+            _byCode[code] = new SetInfo { Code = code, Packs = packsInUse.GetValueOrDefault(code) };
             Add(SeriesFromCode(code), code);
         }
 

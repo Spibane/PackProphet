@@ -395,14 +395,14 @@ public sealed class CardDataLoader
 
             var index = new CardIndex(cards, rarities);
             var published = await TryLoadSetsAsync(root, ct);
-            var catalog = new SetCatalog(published, index.BySet.Keys);
+            var catalog = new SetCatalog(published, index.BySet.Keys, index.AllPackKeys);
 
             // Small (about 20 KB) and it decides which booster image every tile shows, so it is
             // loaded up front unlike the card detail.
             var packArt = new PackArtCatalog(await TryLoadExpansionsAsync(root, ct), index.AllPackKeys);
 
             // Card detail is not loaded here. It is 4.4 MB against about 500 KB for everything
-            // else, and parsing 3,761 nested records in the WebAssembly interpreter takes long
+            // else, and parsing 4,317 nested records in the WebAssembly interpreter takes long
             // enough to look like the app has hung. It is enrichment — attacks and abilities —
             // rather than something a screen needs to function, so LoadFactsAsync fetches it
             // afterwards and folds it in.

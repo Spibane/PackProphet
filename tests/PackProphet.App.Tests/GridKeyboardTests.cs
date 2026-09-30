@@ -368,4 +368,33 @@ public class GridKeyboardTests : AppHost
         Assert.NotNull(grid.Instance);
         Assert.Null(focus.TakeReturn());
     }
+
+    // ---- the pointer's inverting gestures ----------------------------------------------
+
+    [Fact]
+    public async Task Off_means_off_for_a_right_click_and_a_shift_click_too()
+    {
+        // Right-click went on removing a copy in Off, on the grounds that nobody does it by
+        // accident. People did, and then had to switch to Add to put it back.
+        await ReadyAsync();
+        var grid = Grid(Cards(4));
+
+        grid.FindAll(".card-tile").ElementAt(0).ContextMenu();
+        grid.FindAll(".card-tile").ElementAt(1).Click(new Microsoft.AspNetCore.Components.Web.MouseEventArgs { ShiftKey = true });
+
+        Assert.Empty(_adjusted);
+    }
+
+    [Fact]
+    public async Task In_a_counting_mode_a_right_click_still_does_the_opposite()
+    {
+        await ReadyAsync();
+        var cards = Cards(4);
+        var grid = Grid(cards);
+
+        grid.FindAll("button").First(b => b.TextContent.Trim() == "Add").Click();
+        grid.FindAll(".card-tile").ElementAt(0).ContextMenu();
+
+        Assert.Equal((cards[0], -1), Assert.Single(_adjusted));
+    }
 }

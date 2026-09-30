@@ -75,8 +75,7 @@
                         @* Nothing, first and selected on arrival. Every visit to this page starts
                            in the state where the grid cannot change a count by being touched. *@
                         <button class="btn btn-sm @(Mode == Tap.Off ? "btn-secondary" : "btn-outline-secondary")"
-                                @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)"
-                                title="Right-click or shift-click still removes one.">
+                                @onclick="() => SetMode(Tap.Off)" aria-pressed="@Aria.Flag(Mode == Tap.Off)">
                             Off
                         </button>
                         <button class="btn btn-sm @(Mode == Tap.Add ? "btn-success" : "btn-outline-secondary")"
@@ -1078,10 +1077,10 @@ else
         Tap.Add => invert ? -1 : +1,
         Tap.Remove => invert ? +1 : -1,
 
-        // Off. A plain tap does nothing at all, which is the point -- but an inverting gesture
-        // still removes, because right-click has always meant remove and it is deliberate enough
-        // that nobody does it by accident while scrolling.
-        _ => invert ? -1 : null,
+        // Off, and off for every gesture. Right-click used to go on removing here, on the grounds
+        // that nobody does it by accident -- and people did, then had to switch to Add to put the
+        // copy back under a switch that said Off. Undo is the way back from a mistake here.
+        _ => null,
     };
 
     /// <summary>
@@ -1658,8 +1657,8 @@ else
     /// that is the gesture the whole screen is built around. Off is the one mode with the tap
     /// spare, and detail is the thing a card has to say that a tile cannot.
     ///
-    /// The inverting gesture is left alone. Right-click still removes a copy in every mode, which
-    /// is deliberate enough that nobody does it while scrolling.
+    /// A right-click or shift-click in Off does nothing at all: it is not a tap, so it does not
+    /// open the card, and Off does not count.
     /// </summary>
     private Task Activate((int Index, bool Invert) a)
     {

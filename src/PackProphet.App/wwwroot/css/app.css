@@ -6039,6 +6039,16 @@ tr.row-best {
 .avail-chip.off .st { color: var(--bs-secondary-color); }
 .avail-chip:hover { border-color: var(--bs-primary); }
 
+/* In a rail, one row per pack, the name over its state. Side by side, two names like "Deluxe
+   Pack: Mega" left each chip a third of the rail and broke the name over three lines beside its
+   state; a rail is too narrow for both on one line either. */
+.rail-group .avail { display: flex; flex-direction: column; align-items: stretch; gap: .35rem; }
+.rail-group .avail-chip {
+    display: flex; flex-direction: column; align-items: flex-start; gap: .1rem;
+    padding: .4rem .65rem; border-radius: var(--pp-r); text-align: start;
+}
+.rail-group .avail-chip .st { font-size: .72rem; }
+
 @media (width <= 1000px) {
     /* Stacked, the wishlist's search goes FIRST. Otherwise the original complaint comes straight
        back on a phone: a list above the search still pushes it down every time a card is added.

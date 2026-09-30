@@ -141,7 +141,7 @@ public sealed class WonderPickEval
 
         // The average over a uniform 1-in-5, not the best card in the offer. A Deluxe offer's
         // fifth slot is Pack Hourglasses, and those are packs: twelve bring one forward.
-        var deluxe = hourglassSlot ?? IsDeluxeOffer(offer);
+        var deluxe = hourglassSlot ?? HasHourglassSlot(offer);
         var cardsEv = cards.Sum(c => c.Value) * GameRules.WonderPickCardChance;
         var hourglassEv = deluxe
             ? GameRules.WonderPickCardChance * GameRules.DeluxeWonderPickHourglasses / GameRules.PackHourglassesPerPack
@@ -183,6 +183,13 @@ public sealed class WonderPickEval
     /// </summary>
     public static bool IsDeluxeOffer(IReadOnlyCollection<PocketCard> offer) =>
         offer.Count > 0 && offer.All(IsDeluxePrinting);
+
+    /// <summary>
+    /// Whether an offer's missing card is Pack Hourglasses: a Deluxe offer short of five cards.
+    /// Five cards from a Deluxe pack is the event offer, which has no hourglasses.
+    /// </summary>
+    public static bool HasHourglassSlot(IReadOnlyCollection<PocketCard> offer) =>
+        offer.Count < GameRules.WonderPickCardsShown && IsDeluxeOffer(offer);
 
     public static bool IsDeluxePrinting(PocketCard card) =>
         card.Packs is { Length: > 0 } packs && packs.Any(GameRules.IsDeluxePack);

@@ -306,6 +306,11 @@ until then the minor number tracks the roadmap phase.
   one set prints every card in a pack or Wonder Pick, each is named as that set's printing. The
   four-card results screen, two by two with a count on each card, was read as your own card list;
   it is read as a pack
+- **A Deluxe Wonder Pick can be five cards.** An event Wonder Pick from a Deluxe pack shows five
+  cards and no hourglasses, and `/wonder` cut such an offer to four. A Deluxe offer of four cards
+  still draws the 2 Pack Hourglasses as its fifth box; naming a fifth card makes it the event offer,
+  and the hourglasses leave the box, the expected value and the choices when logging a take. Where
+  the game puts the hourglasses among the five does not matter to the verdict
 
 ### v0.7.0 - 2026-09-01
 

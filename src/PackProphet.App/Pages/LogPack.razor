@@ -47,20 +47,19 @@ else if (_pack is null)
 
         <div class="rail-group">
             <span class="ttl">Limited-time</span>
-            @* The same setting as on the Packs page — one answer to "is Deluxe on sale", for every
-               Deluxe set — and it is repeated here because this is the page you are on when you
-               find out. It never filters the picker: you can log a pack you opened whatever the
-               app assumed about the shelf. *@
+            @* The same setting as on the Packs page, one chip per limited pack, repeated here
+               because this is the page you are on when you find out. It never filters the picker:
+               you can log a pack you opened whatever the app assumed about the shelf. *@
             @if (Session.LimitedPacks.Count > 0)
             {
                 <span class="avail">
-                    @foreach (var pack in Session.LimitedPackNames)
+                    @foreach (var pack in Session.LimitedPacks)
                     {
-                        var on = Session.IsLimitedPackNameAvailable(pack);
+                        var on = Session.IsLimitedPackAvailable(pack);
                         <button class="avail-chip @(on ? "on" : "off")"
-                                @onclick="() => Session.SetLimitedPackNameAvailable(pack, !on)"
+                                @onclick="() => Session.SetLimitedPackAvailable(pack, !on)"
                                 title="Affects recommendations only.">
-                            <span class="nm">@pack</span>
+                            <span class="nm">@Session.PackLabel(pack)</span>
                             <span class="st">@(on ? "On Sale" : "Off Sale")</span>
                         </button>
                     }

@@ -126,14 +126,13 @@ else
             <div class="rail-group">
             <span class="ttl">On Sale Now</span>
             <span class="avail">
-                @* One chip per pack name, so every Deluxe set shares one switch. *@
-                @foreach (var pack in Session.LimitedPackNames)
+                @foreach (var pack in Session.LimitedPacks)
                 {
-                    var on = Session.IsLimitedPackNameAvailable(pack);
+                    var on = Session.IsLimitedPackAvailable(pack);
                     <button class="avail-chip @(on ? "on" : "off")"
                             @onclick="() => ToggleLimited(pack, !on)"
                             title="@(on ? null : "Left out of the ranking.")">
-                        <span class="nm">@pack</span>
+                        <span class="nm">@Session.PackLabel(pack)</span>
                         <span class="st">@(on ? "On Sale" : "Off Sale")</span>
                     </button>
                 }
@@ -985,7 +984,7 @@ else
     /// are all at the app's assumption, which is the case that needs no words.
     /// </summary>
     private string OnSaleNow =>
-        string.Join(", ", Session.LimitedPackNames.Where(Session.IsLimitedPackNameAvailable));
+        string.Join(", ", Session.LimitedPacks.Where(Session.IsLimitedPackAvailable).Select(Session.PackLabel));
 
     /// <summary>Filled while its panel is open, outlined while it is not.</summary>
 
@@ -1778,12 +1777,13 @@ else
             Recompute();
         });
 
-    private Task ToggleLimited(string name, bool on)
+    private Task ToggleLimited(string packKey, bool on)
     {
+        var name = Session.PackLabel(packKey);
         var label = on ? $"Including {name}\u2026" : $"Excluding {name}\u2026";
         return Busy.RunAsync(label, () =>
             {
-                Session.SetLimitedPackNameAvailable(name, on);
+                Session.SetLimitedPackAvailable(packKey, on);
                 _advisor = [];   // stale for the new availability; repriced only if reopened
                 Recompute();
             });

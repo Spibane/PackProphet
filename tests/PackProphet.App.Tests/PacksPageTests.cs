@@ -234,4 +234,26 @@ public class PacksPageTests : AppHost
         Assert.Equal("everything",
             RenderComponent<Trades>().FindComponent<PackProphet.Components.ScopePicker>().Instance.Scope);
     }
+
+    [Fact]
+    public async Task Each_Deluxe_pack_goes_on_sale_by_itself()
+    {
+        // B4b's Deluxe pack went on sale without A4b's, so the two cannot share a switch. With
+        // B4b priced from A4b's rates, both are limited-time packs and each gets its own chip,
+        // under the name the game uses.
+        await ReadyAsync();
+        Session.SetAssumedRates("B4b", "A4b");
+
+        var page = await PageAsync();
+        Assert.Equal(["Deluxe Pack: Mega", "Deluxe Pack: ex"],
+            page.FindAll("#target-sheet .avail-chip .nm").Select(c => Flat(c.TextContent)));
+
+        page.Find("#target-sheet .avail-chip").Click();
+
+        page.WaitForAssertion(() =>
+        {
+            Assert.True(Session.IsLimitedPackAvailable("B4b:Deluxe Pack Mega"));
+            Assert.False(Session.IsLimitedPackAvailable("A4b:Deluxe"));
+        }, TimeSpan.FromSeconds(10));
+    }
 }

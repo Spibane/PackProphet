@@ -203,23 +203,29 @@ public sealed class ScreenshotReader
     }
 
     /// <summary>
-    /// How much taller than the gap within a pack the gap under a "Pack no. N" heading is. Measured
-    /// on the ten-pack results screen at 1.23 to 1.27; a card list's rows agree to within a few
-    /// percent, and a missing row would be twice.
+    /// The gap under a "Pack no. N" heading, as a multiple of the card's height. Within a pack rows
+    /// sit 1.06 to 1.12 apart and under a heading 1.36 to 1.39, measured on two openings of ten B4b
+    /// packs; a card list's rows sit about 1.03 apart, and a missing row would be over two. Against
+    /// the card rather than the picture's other gaps, because a picture can show only one gap.
     /// </summary>
-    private const double HeadingGapMin = 1.12;
+    private const double HeadingGapMin = 1.22;
     private const double HeadingGapMax = 1.6;
 
     /// <summary>
     /// Row tops, by row, of the rows a picture shows whole. A row with a card cut off under the
     /// title bar has only the cut for a top: it hides a heading where there is one, and would put
     /// one where there is not.
+    ///
+    /// A guessed row counts only where something in it was recognised: guessed rows are laid where
+    /// a card might be, and one over the title bar that matched nothing is not a row, and would make
+    /// the row below it look like the middle of a pack.
     /// </summary>
-    private static SortedDictionary<int, double> RowTops(ShotScan scan) => new(
+    private static SortedDictionary<int, double> RowTops(ShotScan scan, Func<ShotCell, bool>? read = null) => new(
         scan.Cells
             .Where(c => c.Box.Length == 4)
             .GroupBy(c => c.Row)
             .Where(g => g.All(c => !string.IsNullOrEmpty(c.Hash)))
+            .Where(g => !g.Any(c => c.Guessed) || (read is not null && g.Any(read)))
             .ToDictionary(g => g.Key, g => g.Min(c => c.Box[1])));
 
     /// <summary>
@@ -228,27 +234,25 @@ public sealed class ScreenshotReader
     /// </summary>
     public static bool IsAPackList(ShotScan scan)
     {
-        if (scan.Lattice is not { Cols: > 0 and <= 3 }) return false;
+        if (scan.Lattice is not { Cols: > 0 and <= 3, CellHeight: > 0 } lattice) return false;
 
         var tops = RowTops(scan).Values.ToArray();
-        if (tops.Length < 3) return false;
-
-        var gaps = tops.Skip(1).Zip(tops, (b, a) => b - a).ToArray();
-        var within = gaps.Min();
-        return within > 0 && gaps.Any(g => g >= within * HeadingGapMin && g <= within * HeadingGapMax);
+        return tops.Skip(1).Zip(tops, (b, a) => (b - a) / lattice.CellHeight)
+            .Any(r => r >= HeadingGapMin && r <= HeadingGapMax);
     }
 
-    /// <summary>Each row, and whether the gap above it is a pack's heading.</summary>
-    private static IReadOnlyList<ShotRow> Rows(ShotScan scan)
+    /// <summary>Each row, its slots, and whether the gap above it is a pack's heading.</summary>
+    private static IReadOnlyList<ShotRow> Rows(ShotScan scan, Dictionary<int, Recognition> recognised)
     {
-        var tops = RowTops(scan).ToArray();
-        if (tops.Length == 0) return [];
+        var tops = RowTops(scan, c => recognised.ContainsKey(CellKey(c))).ToArray();
+        var height = scan.Lattice?.CellHeight ?? 0;
 
-        var gaps = tops.Skip(1).Zip(tops, (b, a) => b.Value - a.Value).ToArray();
-        var within = gaps.Length == 0 ? 0 : gaps.Min();
+        IReadOnlyList<int> Columns(int row) =>
+            scan.Cells.Where(c => c.Row == row).Select(c => c.Col).Distinct().Order().ToArray();
 
         return tops.Select((row, i) => new ShotRow(row.Key,
-                i == 0 || within <= 0 ? null : gaps[i - 1] >= within * HeadingGapMin))
+                i == 0 || height <= 0 ? null : (row.Value - tops[i - 1].Value) / height >= HeadingGapMin,
+                Columns(row.Key)))
             .ToArray();
     }
 
@@ -420,7 +424,7 @@ public sealed class ScreenshotReader
         // it is asked where it can be re-asked — see ShotImport.
 
         AddSetSpreadNote(matches, notes);
-        return new ShotReading(true, null, kind, inferred, matches, unread, notes) { Rows = Rows(scan) };
+        return new ShotReading(true, null, kind, inferred, matches, unread, notes) { Rows = Rows(scan, recognised) };
     }
 
     /// <summary>How much brighter than anything else in the shot the hourglass slot has to be.</summary>

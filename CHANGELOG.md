@@ -349,6 +349,13 @@ until then the minor number tracks the roadmap phase.
   and the pages that draw art as a background pass it through a CSS variable read in `css/`, so the
   browser asked for `css/art/…` and got nothing: no booster for B4b on Which Pack, and no card art on
   a B4b card's own page. They are absolute now, under the app's own base
+- **Off means off on the Collection grid.** A right-click or shift-click went on removing a copy
+  with tapping set to Off, and putting it back meant switching to Add under a switch that said Off.
+  In Off they now do nothing; in Add and Remove they still do the opposite of the mode
+- **Wonder Pick's search takes a Deluxe offer whatever printing it starts from.** After the first
+  card the picker kept to that printing's set, so a Frigibax named from B2a shut out Mega Manectric,
+  though B4b's Deluxe pack holds both. It now narrows by every printing of the cards named, and once
+  one pack is left each card becomes its printing there, which makes the offer a Deluxe one
 
 ### v0.7.0 - 2026-09-01
 

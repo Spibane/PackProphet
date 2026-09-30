@@ -377,4 +377,34 @@ public class WonderPickPageTests : AppHost
         Assert.True(logged.ReceivedHourglasses);
         Assert.Null(logged.Received);
     }
+
+    [Fact]
+    public async Task A_card_named_from_its_original_set_still_opens_the_Deluxe_pack_that_reprints_it()
+    {
+        // Frigibax is B2a-34 and, reprinted, B4b-78. Named from B2a, the picker used to shut out
+        // everything outside B2a, so Mega Manectric -- in the same Deluxe pack -- could not be
+        // added. The offer is narrowed by every printing, and once one pack is left each card is
+        // its printing there, which is what makes it a Deluxe offer.
+        await ReadyAsync();
+        var page = RenderComponent<WonderPick>();
+        var frigibax = Session.Index.ByKey["B2a-34"];
+        var manectric = Session.Index.ByKey["B4b-92"];
+
+        var picker = page.FindComponent<PackProphet.Components.CardPicker>();
+        await page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(frigibax));
+
+        picker = page.FindComponent<PackProphet.Components.CardPicker>();
+        Assert.True(picker.Instance.CanPick(manectric));
+        await page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(manectric));
+
+        page.WaitForAssertion(() =>
+            Assert.Equal(2, page.FindAll(".box-strip .box .visually-hidden").Count),
+            TimeSpan.FromSeconds(10));
+        Assert.Contains("Deluxe Pack: Mega", Flat(page.Find(".sub-head").TextContent));
+
+        // A card only B2a's pack has is now out, since the offer can only be the Deluxe one.
+        var b2aOnly = Session.Index.BySet["B2a"].First(c =>
+            Session.Index.ByOwnershipKey[c.OwnershipKey].All(p => p.Set == "B2a") && c.Openable);
+        Assert.False(page.FindComponent<PackProphet.Components.CardPicker>().Instance.CanPick(b2aOnly));
+    }
 }

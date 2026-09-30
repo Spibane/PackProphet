@@ -226,6 +226,10 @@
                 <thead>
                     <tr>
                         <th scope="col" colspan="2">Card</th>
+                        @if (HasFoils(reading))
+                        {
+                            <th scope="col">Foil</th>
+                        }
                         <th scope="col">Read As</th>
                         @* Only the three-across list prints a count, so the column is only worth its
                            width on that screen. *@
@@ -248,18 +252,26 @@
                             <td>
                                 <a href="card/@match.Card.Key">@match.Card.Name</a>
                                 <span class="d-block small text-body-secondary">@match.Card.Key</span>
-                                @* A foil and its plain card look nearly alike in a screenshot. *@
-                                @if (Session.Index.FoilTwin(match.Card) is not null)
-                                {
-                                    var foil = match.Card.VariantIndex != 0;
-                                    <button type="button"
-                                            class="btn btn-sm py-0 mt-1 @(foil ? "btn-primary" : "btn-outline-secondary")"
-                                            aria-pressed="@Aria.Flag(foil)"
-                                            @onclick="() => FlipFoil(shot, match)">
-                                        Foil
-                                    </button>
-                                }
                             </td>
+                            @* A foil and its plain card look nearly alike in a screenshot. A column
+                               of its own, clear of the card's link, so the one is not tapped for
+                               the other. *@
+                            @if (HasFoils(reading))
+                            {
+                                <td>
+                                    @if (Session.Index.FoilTwin(match.Card) is not null)
+                                    {
+                                        var foil = match.Card.VariantIndex != 0;
+                                        <button type="button"
+                                                class="btn btn-sm @(foil ? "btn-primary" : "btn-outline-secondary")"
+                                                aria-pressed="@Aria.Flag(foil)"
+                                                aria-label="@($"Foil {match.Card.Name}")"
+                                                @onclick="() => FlipFoil(shot, match)">
+                                            Foil
+                                        </button>
+                                    }
+                                </td>
+                            }
                             <td class="small">@ReadAs(match)</td>
                             @if (ShowsCopies(reading))
                             {
@@ -509,6 +521,10 @@
 
         shot.Refold();
     }
+
+    /// <summary>Whether any card read has a foil twin, which is when the Foil column is worth its width.</summary>
+    private bool HasFoils(ShotReading reading) =>
+        reading.Matches.Any(m => Session.Index.FoilTwin(m.Card) is not null);
 
     /// <summary>
     /// Switches a named card between its plain and foil printing. Pressing it again goes back

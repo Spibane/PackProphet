@@ -58,6 +58,9 @@ public sealed class TypeBadgeTable
     public IReadOnlyList<string> For(string cardKey) =>
         _byKey.TryGetValue(cardKey, out var types) ? types : [];
 
+    /// <summary>Every row, by card key: what a partial regeneration merges into.</summary>
+    public IEnumerable<KeyValuePair<string, IReadOnlyList<string>>> Entries => _byKey;
+
     /// <summary>Sets this table covers at all, for a coverage report.</summary>
     public IReadOnlyCollection<string> Sets =>
         _byKey.Keys.Select(SetOf).Where(s => s.Length > 0)

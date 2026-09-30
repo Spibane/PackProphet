@@ -117,4 +117,15 @@ public class CommittedCardTypesTests
         Assert.True(covered > known.Count / 2,
             $"only {covered} of {known.Count} known Pokémon printings are covered");
     }
+
+    [Fact]
+    public void Every_committed_row_is_listed_including_cards_past_400()
+    {
+        // The generator merges a partial run into this list. It used to rebuild it by asking for
+        // numbers 1 to 400 of each set, and B4b's 401 to 429 fell off the end.
+        var entries = Table.Entries.ToArray();
+
+        Assert.Equal(Table.Count, entries.Length);
+        Assert.Contains(entries, kv => kv.Key == "B4b-429");
+    }
 }

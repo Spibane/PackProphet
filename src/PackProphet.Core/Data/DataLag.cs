@@ -37,11 +37,15 @@ public static class DataLag
     /// <summary>
     /// Below this share of a set, the set is called out rather than passed over.
     ///
-    /// Measured rather than chosen: across the 3,879 cards in the vendored snapshot, per-set detail
-    /// coverage is 3,879 of 3,879 — every set complete. The gap this reports is a set that has
-    /// arrived in the card list and not in the detail table at all, so in practice the reading is
-    /// 0% or 100% and any threshold between them behaves the same. The tenth of slack is for the
-    /// case measurement cannot rule out: upstream publishing a set a few cards short.
+    /// Measured rather than chosen: every numbered set in the vendored snapshot is either fully
+    /// described or not described at all — B4b had 0 of 429 the day it released. So in practice
+    /// the reading is 0% or 100% and any threshold between them behaves the same. The tenth of
+    /// slack is for the case measurement cannot rule out: upstream publishing a set a few cards
+    /// short.
+    ///
+    /// Not applied to a promo set, which is never published whole. It grows a few cards at a
+    /// time, so a tenth of Promo B is ten promos, and nine arrived on 2026-09-30 without detail
+    /// while the set read as complete. There any missing card is the news.
     ///
     /// The same number as <see cref="PackProphet.Vision.ArtHashCoverage"/>'s floor, and for the
     /// same reason — a handful of gaps is normal, a set's worth is not.
@@ -68,7 +72,7 @@ public static class DataLag
             if (cards.Count == 0) continue;
 
             var have = cards.Count(c => facts.ForPrinting(c) is not null);
-            if (have < cards.Count * CompleteEnough) short_.Add(new SetShortfall(set, have, cards.Count));
+            if (IsShort(set, have, cards.Count)) short_.Add(new SetShortfall(set, have, cards.Count));
         }
 
         return short_;
@@ -92,7 +96,11 @@ public static class DataLag
     /// is one nothing can draw, not one that might be fine.
     /// </summary>
     public static IReadOnlyList<SetShortfall> ArtShortfalls(IEnumerable<SetShortfall>? manifest) =>
-        manifest?.Where(g => g.Of > 0 && g.Have < g.Of * CompleteEnough).ToArray() ?? [];
+        manifest?.Where(g => g.Of > 0 && IsShort(g.Set, g.Have, g.Of)).ToArray() ?? [];
+
+    /// <summary>Short enough to say so: under <see cref="CompleteEnough"/>, or any card at all for a promo set.</summary>
+    private static bool IsShort(string set, int have, int of) =>
+        CardIndex.IsPromoSet(set) ? have < of : have < of * CompleteEnough;
 
     /// <summary>
     /// One notice for both gaps, or null when there is neither.
@@ -119,11 +127,11 @@ public static class DataLag
         // The common case by a distance: one new set, and the app has neither its pictures nor its
         // text. Said as one clause because it is one fact about one set.
         var text = artSets.SequenceEqual(detailSets, StringComparer.OrdinalIgnoreCase)
-            ? Clause(artSets, "card art and attack detail", sets)
+            ? Clause(artSets, "card art and attack detail", sets, art)
             : string.Join(" ", new[]
                 {
-                    artSets.Count > 0 ? Clause(artSets, "card art", sets) : null,
-                    detailSets.Count > 0 ? Clause(detailSets, "attack and ability detail", sets) : null,
+                    artSets.Count > 0 ? Clause(artSets, "card art", sets, art) : null,
+                    detailSets.Count > 0 ? Clause(detailSets, "attack and ability detail", sets, detail) : null,
                 }.Where(c => c is not null));
 
         var subject = artSets.Concat(detailSets)
@@ -157,13 +165,22 @@ public static class DataLag
             .OrderByDescending(sets.SortKey, StringComparer.Ordinal)
             .ToList();
 
-    private static string Clause(List<string> codes, string missing, SetCatalog sets)
+    private static string Clause(
+        List<string> codes, string missing, SetCatalog sets, IReadOnlyList<SetShortfall> gaps)
     {
         var named = codes.Take(Named).Select(sets.DisplayName).ToArray();
         var list = string.Join(", ", named);
         if (codes.Count > named.Length) list += $" and {codes.Count - named.Length} more";
 
-        return $"{list} {(codes.Count == 1 ? "is" : "are")} still missing {missing}.";
+        // A set nearly all there is said with its count. "Promo B is still missing detail" reads
+        // as the whole set, when it is the newest nine.
+        var some = codes.Count == 1
+                   && gaps.FirstOrDefault(g => g.Set == codes[0]) is { } gap
+                   && gap.Have >= gap.Of * CompleteEnough
+            ? $" for {gap.Short} {(gap.Short == 1 ? "card" : "cards")}"
+            : "";
+
+        return $"{list} {(codes.Count == 1 ? "is" : "are")} still missing {missing}{some}.";
     }
 
     /// <summary>

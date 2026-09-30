@@ -49,6 +49,8 @@
   <ItemGroup>
     <Content Include="..\..\src\PackProphet.App\wwwroot\service-worker.published.js"
              Link="service-worker.published.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\PackProphet.App\wwwroot\index.html"
+             Link="wwwroot-index.html" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- The app's own JavaScript, so the error surface's coverage of it can be asserted. diag.js

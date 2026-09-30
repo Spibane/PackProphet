@@ -109,4 +109,17 @@ public class ServiceWorkerPrecacheTests
         Assert.NotEmpty(Patterns("offlineAssetsExclude"));
         Assert.Contains(Patterns("offlineAssetsExclude"), p => p.ToString().Contains("service-worker"));
     }
+
+    [Fact]
+    public void An_update_check_reads_the_list_of_files_fresh()
+    {
+        // The worker imports its list of files, and by default an update check may take that from
+        // the HTTP cache. The host caches for four hours, so a new worker was handed the old list,
+        // every file failed its integrity hash, and the site stayed on the old version however
+        // often it was refreshed.
+        var index = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "wwwroot-index.html"));
+
+        Assert.Matches(@"serviceWorker\.register\([^;]*updateViaCache:\s*'none'", index);
+        Assert.Contains("importScripts('./service-worker-assets.js')", Source);
+    }
 }

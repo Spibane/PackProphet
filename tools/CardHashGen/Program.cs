@@ -350,18 +350,12 @@ internal static class Program
     {
         if (!File.Exists(path)) return [];
 
-        var table = TypeBadgeTable.Parse(File.ReadAllText(path));
-        var byKey = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var set in table.Sets)
-            for (var n = 1; n <= 400; n++)
-            {
-                var key = $"{set}-{n}";
-                var types = table.For(key);
-                if (types.Count > 0) byKey[key] = types.ToArray();
-            }
-
-        return byKey;
+        // Every row the table holds, rather than numbers 1 to 400 of each set it names. B4b has 429
+        // cards, and a run that did not decode 401 onwards dropped their types: its full arts, all
+        // 23 of them, on the first scheduled run after the set arrived.
+        return TypeBadgeTable.Parse(File.ReadAllText(path)).Entries
+            .Where(kv => kv.Value.Count > 0)
+            .ToDictionary(kv => kv.Key, kv => kv.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
     }
 
     private static (ArtHash? Hash, string? Type) Fingerprint(byte[] bytes)

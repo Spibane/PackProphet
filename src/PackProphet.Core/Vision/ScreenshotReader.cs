@@ -348,6 +348,8 @@ public sealed class ScreenshotReader
             .ToArray());
 
         var unread = Unnamed(scan, recognised, _ => true);
+        if (kind == CardScreen.WonderPick && HourglassSlot(scan, recognised, matches) is { } hourglass)
+            unread = unread.Where(u => (u.Row, u.Col) != hourglass).ToList();
         var notes = new List<string>();
 
         // No note here about a hand coming up short of five. It was one, and it could not stay one:
@@ -358,6 +360,35 @@ public sealed class ScreenshotReader
 
         AddSetSpreadNote(matches, notes);
         return new ShotReading(true, null, kind, inferred, matches, unread, notes);
+    }
+
+    /// <summary>How much brighter than anything else in the shot the hourglass slot has to be.</summary>
+    private const double HourglassLead = 0.05;
+
+    /// <summary>
+    /// The slot a Deluxe Wonder Pick's Pack Hourglasses sit in, so it is not offered for naming as
+    /// a card that could not be read. Null when this is not a Deluxe offer, or no slot stands out.
+    ///
+    /// The hourglasses are a small figure on the page's own pale background where every other slot
+    /// is a card edge to edge, so their slot is the brightest in the shot by a distance: 0.85 and
+    /// 0.89 in the two measured, against 0.77 for the brightest card beside them. Taken only when
+    /// the brightest unnamed slot leads every other slot by <see cref="HourglassLead"/>, so an
+    /// event offer, five cards and no hourglasses, keeps all of its unnamed slots.
+    /// </summary>
+    private static (int Row, int Col)? HourglassSlot(
+        ShotScan scan, Dictionary<int, Recognition> recognised, IReadOnlyList<ShotMatch> matches)
+    {
+        if (matches.Count == 0 || !matches.All(m => m.Card.Packs is { } packs && packs.Any(GameRules.IsDeluxePack)))
+            return null;
+
+        var slots = scan.Cells.Where(c => c.Detail >= DetailFloor).DistinctBy(CellKey).ToArray();
+        var brightest = slots.Where(c => !recognised.ContainsKey(CellKey(c)))
+                             .OrderByDescending(c => c.Luma)
+                             .FirstOrDefault();
+        if (brightest is null) return null;
+
+        var next = slots.Where(c => CellKey(c) != CellKey(brightest)).Select(c => c.Luma).DefaultIfEmpty(0).Max();
+        return brightest.Luma >= next + HourglassLead ? (brightest.Row, brightest.Col) : null;
     }
 
     /// <summary>

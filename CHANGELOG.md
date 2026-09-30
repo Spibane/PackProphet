@@ -330,6 +330,10 @@ until then the minor number tracks the roadmap phase.
   saying "not there" count, so a slow or throttled source changes nothing
 - **The notice bar shows on a first visit too.** It waited for a collection, but a first visit on
   release day is looking at exactly the set the bar is about
+- **A Deluxe Wonder Pick's hourglasses are not offered for naming.** The screenshot reader left
+  their slot unread, so it was asked about as a card it could not name. The slot is the brightest in
+  the picture by a distance, a small figure on the page's own background, and on a Wonder Pick from
+  a Deluxe set that is taken as the hourglasses
 
 ### v0.7.0 - 2026-09-01
 

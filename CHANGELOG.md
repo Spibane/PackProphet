@@ -338,6 +338,13 @@ until then the minor number tracks the roadmap phase.
   colour of the card's energy pip, on the Collection grid and on the card's own page, so a set
   whose art has not been drawn yet still reads by type. A card whose type is not known yet keeps the
   grey one
+- **The site redeploys itself when new card data is released.** A new set's art reaches the site
+  only through a deploy, and nothing deployed on a release: B4b's art was in the release archive
+  the day it came out and the site drew placeholders until a push happened to go out.
+  `card-data.yml` checks every three hours and deploys when the live site was built against an
+  older release. It replaces `card-hashes.yml`: the snapshot refresh and fingerprints now follow a
+  new release too, as one pull request, instead of waiting for a snapshot refreshed by hand and the
+  next Monday
 
 ### v0.7.0 - 2026-09-01
 

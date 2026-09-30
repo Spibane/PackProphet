@@ -1,20 +1,33 @@
-name: Refresh card art fingerprints and types
+name: Keep up with the card data
 
-# The screenshot import recognises a card by comparing it against a fingerprint of its artwork, and
-# those fingerprints are committed rather than fetched — generating one means downloading the art.
-# Everything else about a new set reaches users without a deploy, because card data comes live from
-# the community CDN. Fingerprints cannot, so this closes the gap: it looks for cards the table has
-# never seen, fingerprints those and only those, and opens a pull request when it found any.
+# The site has to be rebuilt for a new set to look right, and nothing rebuilt it.
 #
-# The distinction that matters, and the reason this is a scheduled job rather than a release step:
-# a set's CARD data appears upstream days or weeks before all of its ART does. Running weekly means
-# each visit picks up whatever art has landed since the last one, and a set that arrives half-drawn
-# is completed by a later run rather than being stuck at whatever the first attempt managed.
+# Card data reaches the app live from the community CDN, but a set's ART does not: it lands in the
+# art repository weeks later, and until then the only copy is inside the database's release
+# archive, which the deploy extracts into the site. So a set released since the last deploy has no
+# art on the site at all. B4b is the worked example: released 2026-09-30, its art in the archive the
+# same day, and every card a placeholder until the next push happened to deploy.
+#
+# Two jobs, on two clocks.
+#
+#   check    Every three hours, and cheaply: one registry request for the current release, one for
+#            the release the live site was built against (the deploy writes it to
+#            card-data-release.txt). Behind means a deploy, which vendors the new set's art. No
+#            commit is involved, so nothing waits on a review.
+#
+#   refresh  When the release has moved past the vendored snapshot, and weekly regardless for art
+#            that has landed since. Refreshes the snapshot, fingerprints what is new, and opens one
+#            pull request. It replaces card-hashes.yml, which did the fingerprinting weekly but
+#            only against a snapshot someone had refreshed by hand, so a new set waited for that,
+#            then for a Monday, then for a merge. Still a pull request rather than a commit: the
+#            snapshot is what every test renders against, and the counts it moves are written down
+#            on purpose, to be reconsidered rather than followed.
 
 on:
   schedule:
-    # Weekly, early Monday UTC. Sets do not arrive faster than that, and each run is a few hundred
-    # requests to a public CDN at most.
+    # Every three hours. A quiet run is two small requests and exits.
+    - cron: '41 */3 * * *'
+    # Weekly, early Monday UTC: the fingerprint sweep for art that has appeared since.
     - cron: '17 5 * * 1'
   workflow_dispatch:
     inputs:
@@ -26,13 +39,61 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # To start the deploy. A push made with this workflow's token starts nothing, by design; a
+  # workflow_dispatch is the one event that token can raise.
+  actions: write
 
 concurrency:
-  group: card-hashes
+  group: card-data
   cancel-in-progress: false
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      latest: ${{ steps.versions.outputs.latest }}
+      live: ${{ steps.versions.outputs.live }}
+      snapshot: ${{ steps.versions.outputs.snapshot }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: src/PackProphet.App/wwwroot/data/snapshot/VERSION
+          sparse-checkout-cone-mode: false
+
+      # The live marker is fetched past every cache: GitHub Pages serves it with a ten-minute
+      # max-age, and a stale answer would start a second deploy for a release already live.
+      - name: Which release is current, live, and vendored
+        id: versions
+        run: |
+          latest=$(curl -fsSL https://registry.npmjs.org/pokemon-tcg-pocket-database/latest \
+                   | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
+          live=$(curl -fsSL -H 'Cache-Control: no-cache' \
+                 "https://packprophet.spibane.com/card-data-release.txt?t=$(date +%s)" 2>/dev/null \
+                 | tr -d '[:space:]' || true)
+          snapshot=$(tr -d '[:space:]' < src/PackProphet.App/wwwroot/data/snapshot/VERSION)
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "live=$live" >> "$GITHUB_OUTPUT"
+          echo "snapshot=$snapshot" >> "$GITHUB_OUTPUT"
+          echo "current $latest · live ${live:-unknown} · vendored $snapshot"
+
+      # An unknown live release deploys too. It is what the first run after this workflow lands
+      # will see, since no deploy has written the marker yet, and a site that cannot say what it
+      # was built from is a site worth rebuilding.
+      - name: Deploy if the site is behind
+        if: steps.versions.outputs.live != steps.versions.outputs.latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run deploy-pages.yml --repo "${{ github.repository }}" \
+            --ref "${{ github.event.repository.default_branch }}"
+          echo "deploy started for card data ${{ steps.versions.outputs.latest }}"
+
   refresh:
+    needs: check
+    if: >-
+      needs.check.outputs.snapshot != needs.check.outputs.latest
+      || github.event.schedule == '17 5 * * 1'
+      || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +101,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      # The data first, so everything after reads the release this run is about. Skipped when the
+      # snapshot already is that release: the weekly sweep is then about art alone.
+      - name: Refresh the snapshot
+        if: needs.check.outputs.snapshot != needs.check.outputs.latest
+        run: bash tools/refresh-snapshot.sh
 
       # The set this job most needs is the one the art CDN cannot give it.
       #
@@ -59,7 +126,7 @@ jobs:
       - name: Vendor the art the CDN has not published yet
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python3 tools/vendor-gap-art.py --out /tmp/gap-art
+        run: python3 tools/vendor-gap-art.py --out /tmp/gap-art --release "${{ needs.check.outputs.latest }}"
 
       # By path, not through the solution. CardHashGen is deliberately not in PackProphet.slnx so
       # that the deploy workflow's `dotnet test` never restores a native image decoder it has no
@@ -113,6 +180,13 @@ jobs:
       - name: Did anything actually change
         id: changed
         run: |
+          # A refreshed snapshot is a change whatever the fingerprints did: it is the new card data.
+          if ! git diff --quiet -- src/PackProphet.App/wwwroot/data/snapshot; then
+            echo "changed=fingerprints" >> "$GITHUB_OUTPUT"
+            echo "snapshot refreshed"
+            exit 0
+          fi
+
           if git diff --quiet -- src/PackProphet.App/wwwroot/data/card-hashes.txt; then
             echo "changed=none" >> "$GITHUB_OUTPUT"
             echo "no change at all"
@@ -135,6 +209,10 @@ jobs:
       - name: Summarise coverage
         if: steps.changed.outputs.changed == 'fingerprints' || steps.types.outputs.types == 'changed'
         id: summary
+        env:
+          REFRESHED: ${{ needs.check.outputs.snapshot != needs.check.outputs.latest && '1' || '' }}
+          FROM: ${{ needs.check.outputs.snapshot }}
+          TO: ${{ needs.check.outputs.latest }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os
@@ -142,7 +220,14 @@ jobs:
           report = json.load(open('/tmp/coverage.json'))
           gaps = [s for s in report['sets'] if s['have'] < s['want']]
 
-          lines = [
+          lines = []
+          if os.environ.get('REFRESHED'):
+              lines += [
+                  f"Card data refreshed from {os.environ['FROM']} to {os.environ['TO']}. The test counts "
+                  "pinned against the snapshot move with it and are for whoever merges this to settle.",
+                  "",
+              ]
+          lines += [
               f"Fingerprinted {report['fetchedNow']} card(s) this run.",
               f"The table now holds {report['fingerprints']} fingerprints, stamped {report['generated']}.",
               "",
@@ -181,18 +266,22 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BODY: ${{ steps.summary.outputs.body }}
+          TITLE: ${{ needs.check.outputs.snapshot != needs.check.outputs.latest
+                     && format('Refresh the card data to {0}, and fingerprint what is new', needs.check.outputs.latest)
+                     || 'Fingerprint the card art that has appeared since the last run' }}
         run: |
           base="${{ github.event.repository.default_branch }}"
           # One branch, not one per run. A refresh nobody has merged yet should grow on the next
           # Monday rather than opening a second pull request beside the first.
-          branch="chore/card-hashes"
+          branch="chore/card-data"
 
           git config user.name  'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git checkout -b "$branch"
-          git add src/PackProphet.App/wwwroot/data/card-hashes.txt \
+          git add src/PackProphet.App/wwwroot/data/snapshot \
+                  src/PackProphet.App/wwwroot/data/card-hashes.txt \
                   src/PackProphet.App/wwwroot/data/card-types.txt
-          git commit -m 'Fingerprint the card art that has appeared since the last run'
+          git commit -m "${TITLE}"
 
           # A bare --force-with-lease reads the branch's remote-tracking ref, and this checkout has
           # none: it is a shallow clone of the base branch, fetching that branch alone. Git then
@@ -214,6 +303,6 @@ jobs:
             echo "updated the existing pull request"
           else
             gh pr create --base "$base" --head "$branch" \
-              --title 'Fingerprint the card art that has appeared since the last run' \
+              --title "${TITLE}" \
               --body "$BODY"
           fi

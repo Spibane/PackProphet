@@ -80,8 +80,8 @@
   <ItemGroup>
     <Content Include="..\..\.github\workflows\deploy-pages.yml"
              Link="deploy-pages.yml" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\..\.github\workflows\card-hashes.yml"
-             Link="card-hashes.yml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\.github\workflows\card-data.yml"
+             Link="card-data.yml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Every page, as text. One invariant spans all of them: nothing below the bars may pad itself

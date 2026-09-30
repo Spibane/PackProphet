@@ -397,7 +397,7 @@ PackProphet/
 │   ├── PackProphet.Tests/         # Engine suite, no browser — runs in about a second
 │   └── PackProphet.App.Tests/     # Page renders under bUnit, against the real snapshot
 ├── tools/CardHashGen/             # Fingerprint generator (deliberately outside the solution)
-├── .github/workflows/             # deploy-pages.yml, card-hashes.yml
+├── .github/workflows/             # deploy-pages.yml, card-data.yml
 └── PackProphet.slnx
 ```
 
@@ -469,8 +469,11 @@ re-hashes every precached asset and fails the deploy on a mismatch.
 
 ### Refreshing the fingerprints
 
-`.github/workflows/card-hashes.yml` runs weekly, looks for cards the fingerprint table has never
-seen, downloads only those, and opens a pull request if it found any. The pull request body lists
+`.github/workflows/card-data.yml` checks every three hours whether a new card-data release is out.
+If the live site was built against an older one it starts a deploy, which pulls the new set's art
+out of the release archive, so a new set has its pictures on the site within hours and without a
+commit. When the release is newer than the vendored snapshot, and weekly regardless, it also
+refreshes the snapshot, fingerprints cards the table has never seen, and opens one pull request. The pull request body lists
 every set the table still does not cover completely, with counts — a set far short of its card count
 is artwork upstream has not published yet, and a later run picks it up.
 

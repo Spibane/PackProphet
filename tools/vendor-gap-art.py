@@ -232,7 +232,15 @@ def main() -> int:
     ap.add_argument("--set", action="append", default=[],
                     help="vendor this set whatever the CDN has (repeatable; for testing)")
     ap.add_argument("--dry-run", action="store_true", help="report what would be written")
+    ap.add_argument("--release", help="read the card list from this database version, not latest")
     args = ap.parse_args()
+
+    # Pinned when the caller knows the version, as the deploy does: jsDelivr resolves "latest" per
+    # file and caches each answer for a week, so the unpinned card list can be a release behind
+    # the one the deploy is recording, and art would be vendored for the older one.
+    if args.release:
+        global DATA_CDN
+        DATA_CDN = f"https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-database@{args.release}/dist"
 
     try:
         known, packs_by_set = card_data()

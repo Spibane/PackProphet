@@ -9,7 +9,7 @@
 # it is allowed to be behind, and it is the version every test renders against.
 #
 # It drifts anyway, and the drift has a cost the tests will find. The fingerprint table is
-# generated against these files (see .github/workflows/card-hashes.yml), so a snapshot months
+# generated against these files (see .github/workflows/card-data.yml, which also runs this script when a new release appears), so a snapshot months
 # behind means new cards have no fingerprint and screenshot import cannot recognise them.
 #
 # AFTER RUNNING THIS

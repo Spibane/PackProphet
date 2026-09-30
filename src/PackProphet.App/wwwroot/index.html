@@ -17,7 +17,8 @@
          The value is in the NETWORK directives. Every card image and every dataset comes from one
          community CDN over which this project has no control, and default-src plus connect-src
          mean that even a tampered dataset cannot reach any other host: no beacon, no exfiltration,
-         no third-party script. img-src needs data: because a screenshot is handed to the QR
+         no third-party script. data.jsdelivr.com is the same operator's API, asked only which
+         release is current so every dataset can be pinned to it. img-src needs data: because a screenshot is handed to the QR
          decoder as a data URL, and blob: because a backup is downloaded as one.
 
          The supabase.co host in connect-src is cloud sync, and it is deliberately ONE host rather
@@ -32,7 +33,7 @@
         script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline';
         style-src 'self' 'unsafe-inline';
         img-src 'self' data: blob: https://cdn.jsdelivr.net;
-        connect-src 'self' https://cdn.jsdelivr.net https://gist.githubusercontent.com https://YOUR-PROJECT.supabase.co;
+        connect-src 'self' https://cdn.jsdelivr.net https://data.jsdelivr.com https://gist.githubusercontent.com https://YOUR-PROJECT.supabase.co;
         font-src 'self';
         manifest-src 'self';
         worker-src 'self';

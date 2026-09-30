@@ -156,12 +156,67 @@ public class OpeningStitcherTests
             [At(0, 0, 0), At(1, 0, 1), At(2, 0, 2), At(3, 1, 0), At(4, 1, 1),
              At(5, 2, 0), At(6, 2, 1), At(7, 2, 2), At(8, 3, 0), At(9, 3, 1)], [], [])
         {
-            Rows = [new ShotRow(0, null), new ShotRow(1, false), new ShotRow(2, true), new ShotRow(3, false)],
+            Rows = [new ShotRow(0, null, [0, 1, 2]), new ShotRow(1, false, [0, 1]), new ShotRow(2, true, [0, 1, 2]), new ShotRow(3, false, [0, 1])],
         };
 
         var opening = OpeningStitcher.Stitch([shot], _ => new HashSet<int> { 5, 6 });
 
         Assert.Equal(2, opening.Packs.Count);
         Assert.All(opening.Packs, p => Assert.Equal(5, p.Matches.Count));
+    }
+
+    // ---- a second opening ------------------------------------------------------------------
+
+    /// <summary>
+    /// Ten more B4b packs, five screenshots, none overlapping: each holds two packs, the second
+    /// pack's lower row under the Next button. fixtures/ten-pack-b4b-2.scans.json keeps four of each
+    /// card's nudged crops rather than all of them, so it reads with less to go on than the app has.
+    ///
+    /// It found three things the first opening did not. A screenshot with one heading and no other
+    /// gap to compare it with (1391) -- so a heading is judged against the card's height, not the
+    /// picture's other gaps. A top row of two pale cards the mask did not see at all (1391 again) --
+    /// so a row is guessed above the first as well as below the last. And a screenshot whose cards
+    /// all masked a few pixels small (1388), which read half of them -- so the list offers larger
+    /// crops too.
+    /// </summary>
+    private static readonly string[][] SecondTruth =
+    [
+        ["Pikachu", "Charmeleon", "Charmeleon", "Melmetal ex"],
+        ["Metapod", "Sylveon", "Yamper", "Milotic ex"],
+        ["Riolu", "Frigibax", "Magneton", "Mega Lucario ex"],
+        ["Zorua", "Peculiar Plaza", "Carvanha", "Magnezone ex"],
+        ["Meloetta", "Skeledirge", "Skrelp", "Rotom ex"],
+        ["Charmeleon", "Lucky Ice Pop", "Growlithe", "Magnezone ex"],
+        ["Dragonair", "Onix", "Darkrai", "Teal Mask Ogerpon ex"],
+        ["Galarian Perrserker", "Korrina", "Ponyta", "Mega Mawile ex"],
+        ["Hiking Trail", "Delcatty", "Sprigatito", "Greninja ex"],
+        ["Butterfree", "Ivysaur", "Gastly", "Rotom ex"],
+    ];
+
+    private static IReadOnlyList<ShotScan> SecondScans() =>
+        JsonSerializer.Deserialize<Dictionary<string, ShotScan>>(
+                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "fixtures", "ten-pack-b4b-2.scans.json")),
+                new JsonSerializerOptions(JsonSerializerDefaults.Web))!
+            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => kv.Value)
+            .ToArray();
+
+    [Fact]
+    public void Five_pictures_of_two_packs_each_make_the_ten_that_were_opened()
+    {
+        var opening = OpeningStitcher.Stitch(Read(SecondScans()), _ => Deluxe);
+
+        Assert.Equal(SecondTruth, opening.Packs.Select(p => p.Matches.Select(m => m.Card.Name).ToArray()));
+        Assert.All(opening.Packs, p => Assert.Empty(p.UnreadSlots));
+    }
+
+    [Fact]
+    public void One_heading_and_nothing_to_compare_it_with_still_splits_two_packs()
+    {
+        // 1391 shows pack 9's second row, a heading, and pack 10. Its one gap is all it has.
+        var reading = Read(SecondScans().TakeLast(1)).Single();
+
+        Assert.Equal(CardScreen.PackList, reading.Screen);
+        Assert.Contains(reading.Rows, r => r.StartsPack == true);
     }
 }

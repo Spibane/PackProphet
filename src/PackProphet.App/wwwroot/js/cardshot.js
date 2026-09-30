@@ -405,37 +405,66 @@ function findCards(gray, pixels) {
         columns: slotsInRow(cards, top, cardH, pitch, origin, cardW, gray.w, fullWidth),
     }));
 
-    const below = rowBehindTheButton(whole, rows, cardH, gray.h);
-    if (below) rows.push(below);
+    const guessed = listRows(whole, rows, cardH, gray.h);
+    if (guessed.above) rows.unshift(guessed.above);
+    if (guessed.below) rows.push(guessed.below);
 
-    return { cards, cardW, cardH, rows, origin, pitch, assembled };
+    // On the several-pack list the larger crops are offered as well. Its cards mask a few pixels
+    // short as a matter of course -- one screenshot of a ten-pack opening measured 172 by 244
+    // where every other measured 180 by 251, on the same screen -- and a box that small reads half
+    // its cards. See nudged().
+    const list = isPackList(whole, cardH);
+
+    return { cards, cardW, cardH, rows, origin, pitch, assembled, list };
 }
 
-/// One more row under the last, guessed, on the ten-pack results screen only.
-///
-/// The screen ends in a "Next" button drawn over the bottom of the list, and the list cannot scroll
-/// past it, so the last row of the last pack is never on screen whole -- and neither is any row that
-/// happens to sit under the button when a screenshot is taken. The mask sees card and button as one
-/// shape that is not card-shaped, and the row is not found. But the button covers a card's attack
-/// text, not its picture, and the picture is what is fingerprinted.
-///
-/// So where the rows are spaced the way that screen spaces them -- some gaps a heading taller than
-/// the others -- one row is laid at the within-pack spacing below the last, in the columns of the
-/// last row, and marked as guessed. If the row really is there it is recognised. If the last row
-/// ended a pack, a heading is there instead, nothing matches, and the reader drops a guessed slot it
-/// cannot name rather than asking about it.
-function rowBehindTheButton(whole, rows, cardH, imageHeight) {
-    if (whole.length < 2 || rows.length === 0) return null;
+/// A row's spacing, as a multiple of the card's height, on the ten-pack results screen: within a
+/// pack, and under a "Pack no. N" heading. Measured on two openings of ten B4b packs at 1.06 to
+/// 1.12 within and 1.36 to 1.39 under a heading, so the line between them sits in the middle.
+/// Measured against the card rather than against the other gaps in the same picture because a
+/// picture can show only one gap -- two rows, with a heading between -- and a gap compared with
+/// nothing says nothing.
+const WITHIN_PACK = 1.08;
+const HEADING_GAP_MIN = 1.22;
+const HEADING_GAP_MAX = 1.6;
 
-    const gaps = whole.slice(1).map((at, i) => at - whole[i]);
-    const within = Math.min(...gaps);
-    if (!gaps.some(gap => gap > within * (1 + ROW_FILL_TOLERANCE * 2))) return null;
+/// Whether these row tops are the several-pack results list: some gap between them a heading's.
+function isPackList(whole, cardH) {
+    return whole.slice(1).some((at, i) => {
+        const ratio = (at - whole[i]) / cardH;
+        return ratio >= HEADING_GAP_MIN && ratio <= HEADING_GAP_MAX;
+    });
+}
 
+/// A guessed row above the first and below the last, on the several-pack results list only.
+///
+/// Below: the screen ends in a "Next" button drawn over the bottom of the list, and the list cannot
+/// scroll past it, so the last row of the last pack is never on screen whole -- and neither is any
+/// row that happens to sit under the button. The mask sees card and button as one shape that is not
+/// card-shaped. But the button covers a card's text, not its picture, and the picture is what is
+/// fingerprinted.
+///
+/// Above: a row of pale cards -- a Stadium and a white-bodied Pokémon -- does not mask as cards at
+/// all, and when it is the first row on the screen nothing below it marks its place.
+///
+/// Each is laid at the within-pack spacing from the row beside it, in that row's columns, and
+/// marked as guessed. If a row really is there it is recognised. If a heading is there instead,
+/// nothing matches, and the reader drops a guessed slot it cannot name rather than asking about it.
+function listRows(whole, rows, cardH, imageHeight) {
+    if (whole.length < 2 || rows.length === 0 || !isPackList(whole, cardH)) return {};
+
+    const within = Math.round(cardH * WITHIN_PACK);
+    const first = rows[0];
     const last = rows[rows.length - 1];
-    const top = Math.round(whole[whole.length - 1] + within);
-    if (top <= last.top + cardH * 0.5 || top + cardH > imageHeight) return null;
+    const out = {};
 
-    return { top, columns: last.columns, guessed: true };
+    const up = Math.round(whole[0] - within);
+    if (up >= 0 && up < first.top - cardH * 0.5) out.above = { top: up, columns: first.columns, guessed: true };
+
+    const down = Math.round(whole[whole.length - 1] + within);
+    if (down > last.top + cardH * 0.5 && down + cardH <= imageHeight) out.below = { top: down, columns: last.columns, guessed: true };
+
+    return out;
 }
 
 /// The spacing between card columns, taken from the row that shows the most of them, or 0 when the
@@ -805,7 +834,7 @@ const quantile = (values, at) => {
 /// does not own — the most useful thing on that screen. On a hand of five there are no empty slots
 /// to report, which is why the columns are not tiled across the image in that case.
 function slots(gray, pixels, found) {
-    const { cards, cardW, cardH, rows, origin, pitch, assembled } = found;
+    const { cards, cardW, cardH, rows, origin, pitch, assembled, list } = found;
     const out = [];
 
     for (let row = 0; row < rows.length && out.length < MAX_CELLS; row++) {
@@ -867,7 +896,7 @@ function slots(gray, pixels, found) {
                 box: [box.x, box.y, box.w, box.h],
                 ...(rows[row].guessed ? { guessed: true } : {}),
                 ...measure(gray, pixels, box),
-                nearby: nudged(gray, pixels, box, assembled),
+                nearby: nudged(gray, pixels, box, assembled || list),
                 digits: readBadge(gray, box),
                 thumb: out.length < THUMB_CELLS ? thumbnail(pixels, box) : '',
             });

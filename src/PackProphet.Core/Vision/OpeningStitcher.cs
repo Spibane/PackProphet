@@ -112,7 +112,9 @@ public static class OpeningStitcher
             if (matches.Length == 0) continue;
 
             var unread = reading.UnreadSlots.Where(u => u.Row == row.Row).ToArray();
-            var cols = matches.Select(m => m.Col).Concat(unread.Select(u => u.Col)).Distinct().Order().ToArray();
+            var cols = row.Columns.Count > 0
+                ? row.Columns
+                : matches.Select(m => m.Col).Concat(unread.Select(u => u.Col)).Distinct().Order().ToArray();
 
             rows.Add(new Row
             {

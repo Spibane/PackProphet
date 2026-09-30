@@ -65,7 +65,11 @@ public enum CardScreen
 /// True when the gap above it is a pack's heading, false when it is the ordinary gap between two
 /// rows of one pack, null when there is nothing above it on the screenshot to say.
 /// </param>
-public sealed record ShotRow(int Row, bool? StartsPack);
+/// <param name="Columns">
+/// Every slot the row has, read or not, so a card that was not read still holds its place when
+/// rows from two pictures are laid over one another.
+/// </param>
+public sealed record ShotRow(int Row, bool? StartsPack, IReadOnlyList<int> Columns);
 
 /// <summary>How a card in a reading was identified, which is what decides how much to trust it.</summary>
 public enum MatchSource

@@ -1067,25 +1067,18 @@ public sealed class AppSession : IAsyncDisposable
                   .Where(p => !State.Prefs.AvailableLimitedPacks.Contains(p))
                   .ToHashSet();
 
-    /// <summary>Limited-time packs at all, by pack key.</summary>
-    public IReadOnlyList<string> LimitedPacks =>
-        Odds is null ? [] : Odds.LimitedTimePacks.OrderBy(p => p, StringComparer.Ordinal).ToArray();
-
     /// <summary>
-    /// One on-sale toggle per limited-time pack NAME, so A4b's and B4b's Deluxe packs share one
-    /// "Deluxe" switch. Whether re-releases bring them back together or apart is not known yet,
-    /// so the setting is still stored per pack key and splitting the toggle later needs no
-    /// migration.
+    /// Limited-time packs at all, by pack key, newest set first. One on-sale toggle each: B4b's
+    /// Deluxe pack went on sale without A4b's, so no two limited packs are assumed to come and go
+    /// together, whatever they are called.
     /// </summary>
-    public IReadOnlyList<string> LimitedPackNames =>
-        LimitedPacks.Select(p => p.Split(':')[1]).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-
-    /// <summary>On only when every pack sharing the name is on.</summary>
-    public bool IsLimitedPackNameAvailable(string packName) =>
-        LimitedPacks.Where(p => SameName(p, packName)).All(IsLimitedPackAvailable);
-
-    private static bool SameName(string packKey, string packName) =>
-        string.Equals(packKey.Split(':')[1], packName, StringComparison.OrdinalIgnoreCase);
+    public IReadOnlyList<string> LimitedPacks =>
+        Odds is null
+            ? []
+            : Odds.LimitedTimePacks
+                  .OrderByDescending(p => Sets.Info(p.Split(':')[0])?.ReleaseDate, StringComparer.Ordinal)
+                  .ThenBy(p => p, StringComparer.Ordinal)
+                  .ToArray();
 
     // ---- appearance -------------------------------------------------------------------
 
@@ -1421,25 +1414,16 @@ public sealed class AppSession : IAsyncDisposable
         State.Prefs.AvailableLimitedPacks.Contains(packKey);
 
     /// <summary>
-    /// Marks a pack on or off sale, together with every limited-time pack of the same name —
-    /// see <see cref="LimitedPackNames"/>.
+    /// Marks one pack on or off sale. Accepted even when the engine does not list the pack as
+    /// limited-time yet, which is the case for a set with no rates: logging a pack from it still
+    /// records that it is on the shelf.
     /// </summary>
-    public void SetLimitedPackAvailable(string packKey, bool available) =>
-        SetLimitedPackNameAvailable(packKey.Split(':').Last(), available, packKey);
-
-    public void SetLimitedPackNameAvailable(string packName, bool available) =>
-        SetLimitedPackNameAvailable(packName, available, null);
-
-    private void SetLimitedPackNameAvailable(string packName, bool available, string? packKey)
+    public void SetLimitedPackAvailable(string packKey, bool available)
     {
-        // The named key is included even when the engine does not list it as limited-time yet,
-        // which is the case for a set with no rates: logging a pack from it still records that
-        // it is on the shelf.
-        var keys = LimitedPacks.Where(p => SameName(p, packName))
-            .Append(packKey).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        if (string.IsNullOrWhiteSpace(packKey) || available == IsLimitedPackAvailable(packKey)) return;
 
-        var next = State.Prefs.AvailableLimitedPacks.Where(p => !keys.Contains(p)).ToList();
-        if (available) next.AddRange(keys.Order(StringComparer.Ordinal));
+        var next = State.Prefs.AvailableLimitedPacks.Where(p => p != packKey).ToList();
+        if (available) next.Add(packKey);
 
         State = State with { Prefs = State.Prefs with { AvailableLimitedPacks = next } };
         QueueSave();

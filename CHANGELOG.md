@@ -297,6 +297,10 @@ until then the minor number tracks the roadmap phase.
   Receiving them is a choice when logging a take, and credits them to Pack Hourglasses. Logged
   offers now record whether they were Deluxe; older ones are read by shape, four cards all sold in
   a Deluxe pack
+- **Each limited-time pack has its own On Sale switch.** B4b's Deluxe pack went on sale without
+  A4b's, so the shared "Deluxe" switch could not say so. One chip per pack now, under the name the
+  game uses (*Deluxe Pack: Mega*, *Deluxe Pack: ex*), newest first. The setting was always stored
+  per pack, so nothing was lost. A pack with no rates has no chip until its rates are estimated
 
 ### v0.7.0 - 2026-09-01
 

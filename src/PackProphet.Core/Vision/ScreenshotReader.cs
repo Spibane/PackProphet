@@ -109,7 +109,7 @@ public sealed class ScreenshotReader
         // cards on a tall screen comes back with rows that are really the empty space around them.
         var filled = scan.Cells.Where(c => c.Detail >= DetailFloor).ToArray();
 
-        if (IsAHand(filled, lattice)) return CardScreen.PackReveal;
+        if (IsAHand(filled, lattice) || IsADeluxeHand(filled, lattice)) return CardScreen.PackReveal;
 
         return lattice.RelativeCellWidth >= ThreeAcross
             ? CardScreen.CopiesGrid
@@ -170,6 +170,30 @@ public sealed class ScreenshotReader
 
         var offset = Math.Abs(rows[0] - rows[1]) / lattice.CellWidth;
         return offset is >= StaggerMin and <= StaggerMax;
+    }
+
+    /// <summary>
+    /// Whether this is a Deluxe pack's four cards: two rows of two, one above the other.
+    ///
+    /// Not staggered, so <see cref="IsAHand"/> does not see it, and three to a slot wide, so the
+    /// width test alone would call it the copies list, which it did — the Deluxe results screen
+    /// prints a copy count on every card as that list does. What a list cannot do is stop a row at
+    /// two and start another: it fills three across before it moves down. So two full rows of
+    /// exactly two cards, lined up, is a hand. And the detector agrees: both Deluxe results
+    /// screens measured come back as a two-column lattice, where every list page is three or five.
+    /// </summary>
+    private static bool IsADeluxeHand(IReadOnlyList<ShotCell> filled, ShotLattice lattice)
+    {
+        if (lattice.CellWidth <= 0 || lattice.Cols != 2) return false;
+
+        var rows = filled
+            .Where(c => c.Box.Length == 4)
+            .GroupBy(c => c.Row)
+            .Select(g => (Count: g.Count(), Start: g.Min(c => c.Box[0])))
+            .ToArray();
+
+        return rows is [{ Count: 2 } first, { Count: 2 } second]
+               && Math.Abs(first.Start - second.Start) / lattice.CellWidth < StaggerMin;
     }
 
     private readonly record struct Recognition(ShotCell Cell, PocketCard Card, int Distance);
@@ -318,10 +342,10 @@ public sealed class ScreenshotReader
     private ShotReading ReadHand(
         ShotScan scan, Dictionary<int, Recognition> recognised, CardScreen kind, bool inferred)
     {
-        var matches = recognised.Values
+        var matches = InOneSet(recognised.Values
             .OrderBy(r => r.Cell.Row).ThenBy(r => r.Cell.Col)
             .Select(r => new ShotMatch(r.Card, r.Cell.Row, r.Cell.Col, r.Distance, true, MatchSource.Art))
-            .ToArray();
+            .ToArray());
 
         var unread = Unnamed(scan, recognised, _ => true);
         var notes = new List<string>();
@@ -334,6 +358,44 @@ public sealed class ScreenshotReader
 
         AddSetSpreadNote(matches, notes);
         return new ShotReading(true, null, kind, inferred, matches, unread, notes);
+    }
+
+    /// <summary>
+    /// A hand's cards named as printings of one set, where exactly one set prints all of them.
+    ///
+    /// A hand is one pack, so it is one set. But a reprint shares its artwork with the card it
+    /// reprints, and the artwork is all the fingerprint sees, so it names whichever printing the
+    /// table holds. For a Deluxe set that is rarely the Deluxe one: B4b reprints 236 cards from
+    /// nine sets, and a B4b pack came back as four cards from four sets. Asking which set prints
+    /// every card in the hand answers it, and only a single answer is taken. Where the cards
+    /// already agree, or several sets fit, or none does, the reading is left as the art gave it.
+    /// </summary>
+    private ShotMatch[] InOneSet(ShotMatch[] matches)
+    {
+        if (matches.Select(m => m.Card.Set).Distinct(StringComparer.OrdinalIgnoreCase).Count() < 2)
+            return matches;
+
+        IEnumerable<PocketCard> Printings(PocketCard card) =>
+            _index.ByOwnershipKey.TryGetValue(card.OwnershipKey, out var all) ? all : [card];
+
+        var common = matches
+            .Select(m => Printings(m.Card).Where(p => p.Openable)
+                                          .Select(p => p.Set)
+                                          .ToHashSet(StringComparer.OrdinalIgnoreCase))
+            .Aggregate((a, b) => { a.IntersectWith(b); return a; });
+
+        if (common.Count != 1) return matches;
+        var set = common.Single();
+
+        return matches
+            .Select(m => m with
+            {
+                Card = Printings(m.Card)
+                    .Where(p => p.Openable && string.Equals(p.Set, set, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(p => p.Number)
+                    .First(),
+            })
+            .ToArray();
     }
 
     /// <summary>

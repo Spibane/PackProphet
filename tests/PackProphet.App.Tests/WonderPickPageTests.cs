@@ -340,8 +340,25 @@ public class WonderPickPageTests : AppHost
         Assert.Empty(page.FindAll(".box-strip .box.dead"));
         Assert.Contains("pack hourglasses", Flat(boxes[^1].TextContent));
 
-        // Four cards complete the offer, so the picker is gone.
-        Assert.Empty(page.FindComponents<PackProphet.Components.CardPicker>());
+        // Still open for a fifth card: an event offer from a Deluxe pack shows five cards and no
+        // hourglasses, and the only way to say so by hand is to name the fifth.
+        Assert.Contains("Add Card 5 of 5",
+            page.FindComponent<PackProphet.Components.CardPicker>().Instance.Heading);
+    }
+
+    [Fact]
+    public async Task A_fifth_Deluxe_card_is_an_event_offer_with_no_hourglasses()
+    {
+        await ReadyAsync();
+        var page = WithDeluxeOffer();
+
+        var picker = page.FindComponent<PackProphet.Components.CardPicker>();
+        var fifth = Session.Index.BySet["A4b"].Where(c => c.Rarity == "C").Skip(GameRules.DeluxePackCards).First();
+        page.InvokeAsync(() => picker.Instance.OnPick.InvokeAsync(fifth)).GetAwaiter().GetResult();
+
+        var boxes = page.FindAll(".box-strip .box").ToArray();
+        Assert.DoesNotContain(boxes, b => Flat(b.TextContent).Contains("pack hourglasses"));
+        Assert.DoesNotContain(page.FindAll(".offer-commit option"), o => o.GetAttribute("value") == "hourglasses");
     }
 
     [Fact]

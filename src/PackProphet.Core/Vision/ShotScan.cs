@@ -93,6 +93,13 @@ public sealed class ShotCell
     /// </summary>
     public List<string> Nearby { get; set; } = [];
 
+    /// <summary>
+    /// A slot the detector laid where it expected a card rather than where it found one: the row
+    /// under the "Next" button on the ten-pack results screen. Named if its picture matches, and
+    /// otherwise dropped rather than offered to be named, since it may be a heading, not a card.
+    /// </summary>
+    public bool Guessed { get; set; }
+
     /// <summary>Every crop of this cell, the centre first.</summary>
     public IEnumerable<string> AllHashes =>
         string.IsNullOrEmpty(Hash) ? Nearby : Nearby.Prepend(Hash);

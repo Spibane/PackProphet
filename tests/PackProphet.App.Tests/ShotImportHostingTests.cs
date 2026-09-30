@@ -970,4 +970,47 @@ public class ShotImportHostingTests : AppHost
         FoilButton().Click();
         Assert.Contains("B4b-78", page.Markup);
     }
+
+    // ------------------------------------------------------------------ several packs at once
+
+    [Fact]
+    public async Task Pictures_of_a_ten_pack_opening_are_logged_as_its_ten_packs()
+    {
+        // Eight screenshots of one results list: each a stretch of it, overlapping. The page shows
+        // the packs they make together rather than the pictures, and logs those. The scans are the
+        // detector's own output on the real screenshots -- see OpeningStitcherTests.
+        var scans = System.Text.Json.JsonSerializer
+            .Deserialize<Dictionary<string, ShotScan>>(
+                File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "ten-pack-b4b.scans.json")),
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!
+            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => kv.Value)
+            .ToArray();
+
+        var module = JSInterop.SetupModule("./js/cardshot.js");
+        for (var i = 0; i < scans.Length; i++)
+        {
+            var bytes = new[] { (byte)(i + 1) };
+            module.Setup<ShotScan>("scan", inv => Sent(inv, bytes)).SetResult(scans[i]);
+        }
+
+        await ReadyAsync();
+        var page = RenderComponent<LogPack>();
+        page.FindComponent<InputFile>().UploadFiles(scans
+            .Select((_, i) => InputFileContent.CreateFromBinary([(byte)(i + 1)], $"IMG_{1379 + i}.PNG"))
+            .ToArray());
+
+        page.WaitForAssertion(() =>
+            Assert.Contains("8 pictures read as 10 packs", Collapse(page.Markup)), TimeSpan.FromSeconds(10));
+
+        // Each pack under a heading of its own, and none of the pictures'.
+        var headings = page.FindAll("h2").Select(h => Collapse(h.TextContent)).ToArray();
+        Assert.Contains("Pack 1", headings);
+        Assert.Contains("Pack 10", headings);
+        Assert.DoesNotContain(headings, h => h.Contains(".PNG", StringComparison.Ordinal));
+
+        var logAll = page.Find("#log-all");
+        Assert.Contains("Log 10 packs", Collapse(logAll.TextContent));
+        Assert.Contains("40 cards", Collapse(logAll.TextContent));
+    }
 }

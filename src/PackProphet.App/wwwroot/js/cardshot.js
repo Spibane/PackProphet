@@ -361,30 +361,81 @@ function findCards(gray, pixels) {
     // the top as "bottom minus the card's height" lands within a pixel or two where taking the
     // region's own top lands six out.
     const columns = lines(cards.map(r => r.x), cardW * LINE_TOLERANCE, Math.min);
-    const rowTops = lines(cards.map(r => r.y), cardH * LINE_TOLERANCE, Math.min)
-        .map(top => {
-            const inRow = cards.filter(c => Math.abs(c.y - top) <= cardH * LINE_TOLERANCE);
 
+    // A row is every card the chain of nearby tops put in it, not only those near its highest top.
+    // Measured from the highest alone, a row whose cards masked differently lost the better one: on
+    // the ten-pack results screen a white trainer masked sixty pixels short and a card with a "NEW"
+    // flash masked tall, the flash put the two just over the tolerance apart, and the row was
+    // anchored on the short one.
+    const anchored = groups(cards, c => c.y, cardH * LINE_TOLERANCE)
+        .map(inRow => {
             // Only cards the screen shows whole may anchor a row. A card cut off at the bottom of
             // the screen has a bottom edge that is the screen's, not the card's, so anchoring from
             // it puts the row wherever the cut happened to fall — and one such row is enough to
             // throw off the pitch every other row is then placed by.
+            //
+            // The lower bottom edge of two, where a row has only two. quantile() rounds down, so a
+            // high quantile of two values is the smaller one -- the card the mask fell furthest
+            // short on, which on a white trainer is sixty pixels.
             const whole = inRow.filter(c => c.h >= cardH * 0.9);
-            return whole.length > 0 ? quantile(whole.map(c => c.y + c.h), 0.9) - cardH : top;
+            const bottoms = whole.map(c => c.y + c.h);
+            return whole.length > 0
+                ? { top: (bottoms.length === 2 ? Math.max(...bottoms) : quantile(bottoms, 0.9)) - cardH, whole: true }
+                : { top: Math.min(...inRow.map(c => c.y)), whole: false };
         })
-        .filter(top => top >= 0);
+        .filter(r => r.top >= 0);
 
-    if (rowTops.length === 0) return null;
+    if (anchored.length === 0) return null;
+
+    // The spacing and the layout come from rows the screen shows whole. A row cut off under the
+    // title bar has only the cut for a top, and laying a grid from it puts every row below out by
+    // however far the cut fell from a card edge. Such a row cannot be read anyway, so it keeps its
+    // own position and joins the grid only to be reported.
+    const whole = anchored.filter(r => r.whole).map(r => r.top);
+    const cut = anchored.filter(r => !r.whole).map(r => r.top);
+    const laid = whole.length > 0 ? interpolate(whole) : [];
+    const rowTops = [...laid, ...cut.filter(t => laid.every(l => Math.abs(l - t) > cardH * 0.5))]
+        .sort((a, b) => a - b);
 
     const pitch = columnPitch(cards, columns, cardW, cardH);
     const origin = Math.min(...columns);
     const fullWidth = columns.length >= GRID_COLUMNS;
-    const rows = interpolate(rowTops).map(top => ({
+    const rows = rowTops.map(top => ({
         top,
         columns: slotsInRow(cards, top, cardH, pitch, origin, cardW, gray.w, fullWidth),
     }));
 
+    const below = rowBehindTheButton(whole, rows, cardH, gray.h);
+    if (below) rows.push(below);
+
     return { cards, cardW, cardH, rows, origin, pitch, assembled };
+}
+
+/// One more row under the last, guessed, on the ten-pack results screen only.
+///
+/// The screen ends in a "Next" button drawn over the bottom of the list, and the list cannot scroll
+/// past it, so the last row of the last pack is never on screen whole -- and neither is any row that
+/// happens to sit under the button when a screenshot is taken. The mask sees card and button as one
+/// shape that is not card-shaped, and the row is not found. But the button covers a card's attack
+/// text, not its picture, and the picture is what is fingerprinted.
+///
+/// So where the rows are spaced the way that screen spaces them -- some gaps a heading taller than
+/// the others -- one row is laid at the within-pack spacing below the last, in the columns of the
+/// last row, and marked as guessed. If the row really is there it is recognised. If the last row
+/// ended a pack, a heading is there instead, nothing matches, and the reader drops a guessed slot it
+/// cannot name rather than asking about it.
+function rowBehindTheButton(whole, rows, cardH, imageHeight) {
+    if (whole.length < 2 || rows.length === 0) return null;
+
+    const gaps = whole.slice(1).map((at, i) => at - whole[i]);
+    const within = Math.min(...gaps);
+    if (!gaps.some(gap => gap > within * (1 + ROW_FILL_TOLERANCE * 2))) return null;
+
+    const last = rows[rows.length - 1];
+    const top = Math.round(whole[whole.length - 1] + within);
+    if (top <= last.top + cardH * 0.5 || top + cardH > imageHeight) return null;
+
+    return { top, columns: last.columns, guessed: true };
 }
 
 /// The spacing between card columns, taken from the row that shows the most of them, or 0 when the
@@ -652,6 +703,20 @@ function cardShaped(regions, imageWidth) {
 
 /// Positions grouped into lines, each line reported by `pick` over its members. Which statistic is
 /// right depends on the direction the mask errs in — see findCards.
+/// Items chained into groups by a position: each within the tolerance of the one before it.
+function groups(items, at, tolerance) {
+    const sorted = [...items].sort((a, b) => at(a) - at(b));
+    const out = [];
+
+    for (const item of sorted) {
+        const last = out[out.length - 1];
+        if (last && at(item) - at(last[last.length - 1]) <= tolerance) last.push(item);
+        else out.push([item]);
+    }
+
+    return out;
+}
+
 function lines(positions, tolerance, pick = median) {
     const sorted = [...positions].sort((a, b) => a - b);
     const groups = [];
@@ -668,22 +733,58 @@ function lines(positions, tolerance, pick = median) {
 /// Fills gaps between the first and last row using the closest spacing seen. Interpolation only: a
 /// screenshot's card area is bounded by the game's own bars, and extending past the last row would
 /// invent slots in the navigation.
+///
+/// Two layouts, told apart by whether every gap is a whole number of rows.
+///
+/// A grid whose gaps all are -- the card lists, a hand -- is laid out uniformly from its first row
+/// at the median spacing, as it always was. That spacing is better evidence than any one row's own
+/// anchor, which can be off by several pixels, and on those lists the uniform grid is what the
+/// recognition was measured against.
+///
+/// A gap that is not is a gap with something else in it: on the ten-pack results screen every
+/// second row is followed by a "Pack no. N" heading, and that gap is a quarter again the one within
+/// a pack. A uniform grid put every row past the first heading a quarter of a card off, where it
+/// read as nothing. There the rows stay where they were found, and only a gap that IS a clean
+/// multiple of the spacing is filled.
 function interpolate(rows) {
     if (rows.length < 2) return rows;
 
     // The median gap, not the smallest. A row anchored badly — the last one on screen, half cut off
     // — shortens one gap, and taking the smallest would then re-space every row by it.
-    const pitch = median(...rows.slice(1).map((at, i) => at - rows[i]));
+    const gaps = rows.slice(1).map((at, i) => at - rows[i]);
+    const pitch = median(...gaps);
     if (pitch <= 0) return rows;
 
-    const out = [];
-    for (let at = rows[0]; at <= rows[rows.length - 1] + pitch * 0.4; at += pitch) {
-        out.push(Math.round(at));
-        if (out.length > 40) break;
+    const offBy = gap => Math.abs(gap - Math.max(1, Math.round(gap / pitch)) * pitch);
+    const regular = gaps.every(gap => offBy(gap) <= pitch * ROW_FILL_TOLERANCE);
+
+    if (regular) {
+        const out = [];
+        for (let at = rows[0]; at <= rows[rows.length - 1] + pitch * 0.4; at += pitch) {
+            out.push(Math.round(at));
+            if (out.length > 40) break;
+        }
+        return out;
+    }
+
+    const out = [rows[0]];
+    for (let i = 1; i < rows.length && out.length <= 40; i++) {
+        const gap = gaps[i - 1];
+        const steps = Math.round(gap / pitch);
+
+        if (steps >= 2 && offBy(gap) <= pitch * ROW_FILL_TOLERANCE) {
+            for (let k = 1; k < steps; k++) out.push(Math.round(rows[i - 1] + gap * k / steps));
+        }
+
+        out.push(rows[i]);
     }
 
     return out;
 }
+
+/// How far from a whole number of rows a gap may be and still count as rows. A heading between two
+/// packs adds a quarter of the spacing; a card list's own anchors wander by well under a tenth.
+const ROW_FILL_TOLERANCE = 0.12;
 
 const median = (...values) => {
     const sorted = [...values].sort((a, b) => a - b);
@@ -764,6 +865,7 @@ function slots(gray, pixels, found) {
             out.push({
                 row, col,
                 box: [box.x, box.y, box.w, box.h],
+                ...(rows[row].guessed ? { guessed: true } : {}),
                 ...measure(gray, pixels, box),
                 nearby: nudged(gray, pixels, box, assembled),
                 digits: readBadge(gray, box),

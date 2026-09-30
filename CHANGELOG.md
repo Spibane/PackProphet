@@ -356,6 +356,11 @@ until then the minor number tracks the roadmap phase.
   card the picker kept to that printing's set, so a Frigibax named from B2a shut out Mega Manectric,
   though B4b's Deluxe pack holds both. It now narrows by every printing of the cards named, and once
   one pack is left each card becomes its printing there, which makes the offer a Deluxe one
+- **Ten packs opened at once can be logged from screenshots.** The results list is longer than a
+  screen and arrives as a run of overlapping screenshots, and each pack sits under a "Pack no. N"
+  heading. Chosen together on Log a Pack, they are read back into the packs they show, whatever
+  size those packs are, and logged as a batch. The row the Next button covers is read from its
+  picture, and a card no screenshot held is left as a slot to name by hand
 
 ### v0.7.0 - 2026-09-01
 

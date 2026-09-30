@@ -5,7 +5,19 @@ using PackProphet.Domain;
 namespace PackProphet.Services;
 
 /// <summary>Where the loaded card data came from, so the UI can be honest about staleness.</summary>
-public enum DataSource { Cdn, VendoredSnapshot }
+public enum DataSource
+{
+    Cdn,
+
+    /// <summary>The snapshot, because the CDN could not be resolved or read. Possibly behind.</summary>
+    VendoredSnapshot,
+
+    /// <summary>
+    /// The snapshot, because the CDN answered with a release no newer than it. The same bytes the
+    /// CDN would have served, or newer ones, so nothing about it is stale and nothing should say so.
+    /// </summary>
+    CurrentSnapshot,
+}
 
 /// <param name="Rarities">
 /// The raw rarity table, kept alongside the index because the point and shinedust prices live
@@ -44,8 +56,41 @@ public sealed record CardData(
 /// </summary>
 public sealed class CardDataLoader
 {
-    private const string Cdn = "https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-database/dist";
     private const string Local = "data/snapshot";
+
+    /// <summary>
+    /// The card database package, with no version and no path. Never fetched as it stands: every
+    /// data file is read from <see cref="PinnedRoot"/> at the version <see cref="Resolver"/> named.
+    ///
+    /// It used to be fetched unpinned, which jsDelivr resolves to "latest" separately for every
+    /// file and then caches for a week. The day a set launched, one browser got cards.min.json
+    /// from 2.10.0 and sets.json from 2.11.0: a set list naming B4b over a card list without it.
+    /// And a visitor could stay on the old card list for up to that week, while the vendored
+    /// snapshot, which is only meant to be the fallback, already had the new set.
+    /// </summary>
+    private const string Package = "https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-database";
+
+    private static string PinnedRoot(string version) => $"{Package}@{version}/dist";
+
+    /// <summary>
+    /// What "latest" is right now, asked once per load. jsDelivr's own answer rather than the npm
+    /// registry's, for two reasons: it names a version the CDN is ready to serve, and it is a host
+    /// run by the same operator connect-src already trusts with every dataset, rather than a new
+    /// party. It is cached for five minutes, not a week, and a pinned file is immutable, so the
+    /// week-long cache on the files stops mattering: a new release changes the URL.
+    /// </summary>
+    private const string Resolver =
+        "https://data.jsdelivr.com/v1/packages/npm/pokemon-tcg-pocket-database/resolved?specifier=latest";
+
+    private sealed record Resolved(string? Version);
+
+    /// <summary>
+    /// What a version has to look like before it goes into a URL. The answer is read from the
+    /// network, and a path segment such as "../../gh/someone/else@main" would otherwise point the
+    /// whole card load at a different package on the same allowed host.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex Semver =
+        new(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Card detail comes from a different project to the rest, so it has its own root rather than
@@ -277,15 +322,66 @@ public sealed class CardDataLoader
 
         var art = await ReadArtManifestAsync(ct);
 
-        var loaded = await TryLoadAsync(Cdn, DataSource.Cdn, ct)
-            ?? await TryLoadAsync(Local, DataSource.VendoredSnapshot, ct)
+        var vendored = await TryReadVersionAsync(Local, ct);
+
+        var loaded = await TryLoadLiveAsync(vendored, ct)
+            ?? await TryLoadAsync(Local, DataSource.VendoredSnapshot, vendored, ct)
             ?? throw new InvalidOperationException(
                 "Neither the CDN nor the vendored snapshot could be loaded.");
 
         return _cached = loaded with { VendoredArtSets = art.Sets, ArtGaps = art.Gaps };
     }
 
-    private async Task<CardData?> TryLoadAsync(string root, DataSource source, CancellationToken ct)
+    /// <summary>
+    /// The live card data, all four files from one release, or null for the snapshot fallback.
+    ///
+    /// A resolution that fails is a fallback, not a reason to read the unpinned URLs instead: those
+    /// are the mixed-release files this exists to avoid, and the snapshot is at least one release
+    /// throughout.
+    ///
+    /// A snapshot at or past the resolved release is read in place of the CDN. Equal means the same
+    /// files, since an npm version cannot be republished, so there is nothing to download. Newer is
+    /// the resolver's five-minute cache or a CDN edge lagging a deploy, and loading the older CDN
+    /// copy then would take a set away that the snapshot already has.
+    /// </summary>
+    private async Task<CardData?> TryLoadLiveAsync(string? vendored, CancellationToken ct)
+    {
+        var live = await TryResolveVersionAsync(ct);
+        if (live is null) return null;
+
+        if (IsAtLeast(vendored, live))
+            return await TryLoadAsync(Local, DataSource.CurrentSnapshot, vendored, ct);
+
+        return await TryLoadAsync(PinnedRoot(live), DataSource.Cdn, live, ct);
+    }
+
+    private async Task<string?> TryResolveVersionAsync(CancellationToken ct)
+    {
+        try
+        {
+            var resolved = await GetAsync<Resolved>(Resolver, Resolver, CdnDeadline, ct);
+            return resolved?.Version is { } v && Semver.IsMatch(v) ? v : null;
+        }
+        catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Compared as numbers, because as strings 2.9.0 sorts after 2.10.0. A prerelease suffix is
+    /// dropped rather than ordered: "latest" never names one, and a snapshot is only ever written
+    /// from "latest". Anything that does not parse is not at least anything, so an unreadable
+    /// VERSION file leaves the CDN in charge.
+    /// </summary>
+    private static bool IsAtLeast(string? vendored, string live) =>
+        Core(vendored) is { } have && Core(live) is { } want && have >= want;
+
+    private static Version? Core(string? semver) =>
+        semver is not null && Version.TryParse(semver.Split('-', 2)[0], out var v) ? v : null;
+
+    private async Task<CardData?> TryLoadAsync(
+        string root, DataSource source, string? version, CancellationToken ct)
     {
         try
         {
@@ -296,10 +392,6 @@ public sealed class CardDataLoader
 
             if (cards is null or { Count: 0 } || rarities is null or { Count: 0 } || rates is null)
                 return null;
-
-            var version = source == DataSource.VendoredSnapshot
-                ? await TryReadVersionAsync(root, ct)
-                : null;
 
             var index = new CardIndex(cards, rarities);
             var published = await TryLoadSetsAsync(root, ct);

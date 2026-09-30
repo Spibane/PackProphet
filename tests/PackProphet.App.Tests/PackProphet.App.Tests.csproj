@@ -110,6 +110,10 @@
     <Content Include="..\..\src\PackProphet.App\wwwroot\data\snapshot\*.json"
              Link="snapshot\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" />
+    <!-- And the marker naming its release, which decides whether the loader prefers it to the CDN. -->
+    <Content Include="..\..\src\PackProphet.App\wwwroot\data\snapshot\VERSION"
+             Link="snapshot\VERSION"
+             CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 

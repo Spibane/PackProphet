@@ -166,6 +166,116 @@ public class CardDataLoaderTests
         Assert.True(facts.Count > 0, "no card detail loaded");
     }
 
+    // ------------------------------------------------------------------ one release per load
+    //
+    // jsDelivr resolves an unpinned URL to "latest" per file and caches each answer for a week,
+    // so on launch day the card list and the set list came from different releases. The loader
+    // now asks once which release is current and pins every data file to it. These cover which
+    // URLs it asks for, since a load that quietly read the unpinned files would still pass on
+    // card counts alone.
+
+    private const string Resolver = "/resolved?specifier=latest";
+
+    private static string Resolves(string version) => $$"""{"type":"npm","version":"{{version}}"}""";
+
+    private static string Snapshot(string file) =>
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "snapshot", file));
+
+    private static IEnumerable<string> DatabaseRequests(SnapshotHandler handler) =>
+        handler.Requests.Where(u => u.Contains("cdn.jsdelivr.net/npm/pokemon-tcg-pocket-database"));
+
+    [Fact]
+    public async Task Every_data_file_comes_from_the_one_release_resolved()
+    {
+        // A version no snapshot will reach, so the CDN is the newer of the two. The files are only
+        // served at the pinned path: an unpinned request would 404 and land on the snapshot.
+        var pinned = "@99.0.0/dist/";
+        var handler = new SnapshotHandler(remoteFiles: new Dictionary<string, string>
+        {
+            [Resolver] = Resolves("99.0.0"),
+            [pinned + "cards.min.json"] = Snapshot("cards.min.json"),
+            [pinned + "rarities.json"] = Snapshot("rarities.json"),
+            [pinned + "pullRates.json"] = Snapshot("pullRates.json"),
+            [pinned + "sets.json"] = Snapshot("sets.json"),
+        });
+        var loader = new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") },
+                                        Unhurried);
+
+        var data = await loader.LoadAsync();
+
+        Assert.Equal(DataSource.Cdn, data.Source);
+        Assert.Equal("99.0.0", data.Version);
+
+        var asked = DatabaseRequests(handler).ToList();
+        Assert.Equal(4, asked.Count);
+        Assert.All(asked, u => Assert.Contains(pinned, u));
+
+        // Asked once, not once per file, which would reopen the gap between them.
+        Assert.Single(handler.Requests, u => u.EndsWith(Resolver, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_release_that_cannot_be_resolved_falls_back_rather_than_reading_unpinned()
+    {
+        // The unpinned files are the mixed-release ones. The snapshot is at least one release all
+        // the way through, so it is the better answer to not knowing which release is current.
+        var (loader, handler) = Detail(null);
+
+        var data = await loader.LoadAsync();
+
+        Assert.Equal(DataSource.VendoredSnapshot, data.Source);
+        Assert.Equal(Snapshot("VERSION").Trim(), data.Version);
+        Assert.Empty(DatabaseRequests(handler));
+    }
+
+    [Theory]
+    [InlineData("../../gh/someone/else@main")]
+    [InlineData("latest")]
+    [InlineData("")]
+    public async Task A_resolved_version_that_is_not_a_version_never_reaches_a_url(string version)
+    {
+        // The answer comes off the network and goes into a path. Unchecked, the first of these
+        // would point the whole card load at a different package on the same allowed host.
+        var (loader, handler) = Detail(new Dictionary<string, string> { [Resolver] = Resolves(version) });
+
+        var data = await loader.LoadAsync();
+
+        Assert.Equal(DataSource.VendoredSnapshot, data.Source);
+        Assert.Empty(DatabaseRequests(handler));
+    }
+
+    [Theory]
+    [InlineData("1.0.0")]
+    // Older than any snapshot this repo will ship, and the case a string comparison gets wrong:
+    // "2.9.0" sorts after "2.10.0".
+    [InlineData("2.9.0")]
+    public async Task A_snapshot_at_least_as_new_as_the_cdn_is_used_in_its_place(string live)
+    {
+        // The resolver's cache or a lagging edge can name a release the deploy has already moved
+        // past. Loading the CDN then would take away a set the snapshot has. And it is not an
+        // outage, so it must not be reported as one.
+        var (loader, handler) = Detail(new Dictionary<string, string> { [Resolver] = Resolves(live) });
+
+        var data = await loader.LoadAsync();
+
+        Assert.Equal(DataSource.CurrentSnapshot, data.Source);
+        Assert.Equal(Snapshot("VERSION").Trim(), data.Version);
+        Assert.Empty(DatabaseRequests(handler));
+    }
+
+    [Fact]
+    public async Task The_same_release_as_the_snapshot_is_not_downloaded_again()
+    {
+        // An npm version cannot be republished, so equal means the same bytes already on the origin.
+        var vendored = Snapshot("VERSION").Trim();
+        var (loader, handler) = Detail(new Dictionary<string, string> { [Resolver] = Resolves(vendored) });
+
+        var data = await loader.LoadAsync();
+
+        Assert.Equal(DataSource.CurrentSnapshot, data.Source);
+        Assert.Empty(DatabaseRequests(handler));
+    }
+
     // ------------------------------------------------------------------ card detail top-up
     //
     // The vendored detail table is read on every visit and is whatever was last deployed; the card

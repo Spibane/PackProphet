@@ -794,9 +794,14 @@
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 
-    private string SourceLabel => Session.Data!.Source == DataSource.Cdn
-        ? "Live community database"
-        : $"Bundled snapshot{(Session.Data.Version is { } v ? $" (v{v})" : "")}, CDN unreachable";
+    private string SourceLabel => Session.Data!.Source switch
+    {
+        DataSource.Cdn => $"Live community database{Tag}",
+        DataSource.CurrentSnapshot => $"Bundled snapshot{Tag}, up to date",
+        _ => $"Bundled snapshot{Tag}, CDN unreachable",
+    };
+
+    private string Tag => Session.Data!.Version is { } v ? $" (v{v})" : "";
 
     private async Task Export()
     {

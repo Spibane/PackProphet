@@ -21,8 +21,8 @@ public sealed class PocketCard
 
     /// <summary>
     /// Identifies the ownable card. The game treats owning a card as owning it for every set it
-    /// appears in, and 215 of the 3,761 entries are re-listings of a card first printed elsewhere —
-    /// A4b alone re-lists 214, because Deluxe packs reprint earlier sets. Keying ownership by
+    /// appears in, and 451 of the 4,317 entries are re-listings of a card first printed elsewhere —
+    /// A4b re-lists 214 and B4b 236, because Deluxe packs reprint earlier sets. Keying ownership by
     /// set-number would demand the same card once per set and overstate what is left to collect:
     /// A4b would look like 379 cards to chase when 214 may already be owned.
     ///

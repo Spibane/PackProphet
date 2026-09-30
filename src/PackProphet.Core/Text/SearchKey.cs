@@ -40,7 +40,7 @@ public static class SearchKey
     /// matched could no longer use it.
     ///
     /// Returns the SAME INSTANCE when there is nothing to fold, which is the overwhelming majority:
-    /// this runs over every card name on every keystroke, and 3,829 of 3,879 names are plain ASCII.
+    /// this runs over every card name on every keystroke, and 4,232 of 4,317 names are plain ASCII.
     /// </summary>
     public static string Fold(string? text)
     {

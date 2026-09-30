@@ -29,7 +29,7 @@ public sealed class CardIndex
 
     /// <summary>
     /// Ownable cards, keyed by <see cref="PocketCard.OwnershipKey"/>, each mapped to every
-    /// set entry that lists it. 3,546 ownable cards across 3,761 entries: 215 entries are
+    /// set entry that lists it. 3,866 ownable cards across 4,317 entries: 451 entries are
     /// re-listings, since owning a card counts for every set it appears in.
     /// </summary>
     public IReadOnlyDictionary<string, IReadOnlyList<PocketCard>> ByOwnershipKey { get; }

@@ -1842,7 +1842,7 @@ public sealed class AppSession : IAsyncDisposable
         {
             // Cached with the report, not rebuilt per call. The collection filter asks this once
             // per card, so building the set inside the property put a walk of every gap's every
-            // printing inside a 3,546-iteration loop.
+            // printing inside a 3,866-iteration loop.
             if (_fillKeysRevision == CollectionRevision && _fillKeys is not null) return _fillKeys;
 
             _fillKeys = Gaps is null

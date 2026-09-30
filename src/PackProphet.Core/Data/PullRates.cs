@@ -5,7 +5,7 @@ using PackProphet.Domain;
 /// <summary>
 /// Per-set pack pull rates, the data every odds calculation is built on.
 ///
-/// Coverage is not total. In the current snapshot the newest set (B4) and both promo sets have no
+/// Coverage is not total. In the current snapshot the newest set (B4b) and both promo sets have no
 /// rate data at all, so the odds engine can price neither. Callers disclose that rather than
 /// dropping the sets, since a set missing from a ranking reads as "nothing to gain here".
 /// </summary>

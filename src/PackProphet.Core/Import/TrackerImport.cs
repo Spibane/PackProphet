@@ -113,7 +113,7 @@ public sealed record ColumnMap(int CardColumn, int SetColumn, int CountColumn, i
 ///
 /// The identifier has to be translated, not copied. Other trackers key ownership by set entry;
 /// this one keys it by artwork (see <see cref="PocketCard.OwnershipKey"/>), because the game counts
-/// a card as owned in every set it appears in. 3,761 entries collapse to 3,546 ownable cards, so
+/// a card as owned in every set it appears in. 4,317 entries collapse to 3,866 ownable cards, so
 /// an import necessarily merges rows.
 /// </summary>
 public static class TrackerImport
@@ -316,7 +316,7 @@ public static class TrackerImport
     /// The identifier is "set-number", which is this project's <see cref="PocketCard.Key"/>
     /// exactly — but only for the numbered sets. Promos are the one place the two datasets
     /// disagree on spelling: tcgpocketcollectiontracker writes "P-A-12" where this project writes
-    /// "PROMO-A-12". With that aliased, all 3,761 of its entries resolve.
+    /// "PROMO-A-12". With that aliased, all 4,317 of its entries resolve.
     ///
     /// Case and zero padding are normalised too, so an export writing "a1-001" reads the same.
     /// Cheap to do and a silent failure on every row to omit.

@@ -11,7 +11,7 @@ namespace PackProphet.Vision;
 ///
 /// The approach is nearest-neighbour over a table of art fingerprints generated offline, and the
 /// reason it works on a device with no model and no server is that the search space is tiny and
-/// closed: a screenshot can only contain cards that exist, there are about 3,761 of them, and the
+/// closed: a screenshot can only contain cards that exist, there are about 4,300 of them, and the
 /// game renders their art from the same files the table was built from. There is no generalisation
 /// to do. The hard part is not recognition, it is the near-duplicates — see
 /// <see cref="ArtHashTable.AmbiguityMargin"/> — and knowing when to say nothing.
@@ -255,7 +255,7 @@ public sealed class ScreenshotReader
     private (PocketCard Card, int Distance)? Identify(ShotCell cell)
     {
         // The centre crop first, and if it already identifies the card comfortably that is the
-        // answer. Searching all nine costs nine passes over 3,761 fingerprints per cell, which is
+        // answer. Searching all nine costs nine passes over 4,306 fingerprints per cell, which is
         // several seconds on a phone for a full page of cards — and most crops are good enough that
         // the extra eight would only confirm what the first one said.
         if (ArtHash.TryParse(cell.Hash, out var centre)

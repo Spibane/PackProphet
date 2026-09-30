@@ -8,7 +8,7 @@
 // Nothing leaves the device. Like js/qrscan.js, the image is drawn to an off-screen canvas and the
 // pixels are read locally, so a screenshot import works offline and uploads nothing. Unlike
 // qrscan.js there is no library to vendor: the whole method is a fingerprint comparison, and the
-// 3,761 fingerprints it compares against ship as a 150 KB text file.
+// 4,306 fingerprints it compares against ship as a 170 KB text file.
 //
 // Why a grid detector rather than object detection. The screens worth importing — a set's card
 // list, a pack's five cards, a Wonder Pick's line-up — are all the same shape to a computer: cards

@@ -10,7 +10,7 @@ namespace PackProphet.Vision;
 /// photographs but card art, where near-duplicates are the norm: the same Pokémon drawn twice,
 /// a full art beside the plain printing, a foil beside its non-foil. A single 64-bit row hash
 /// put pairs like those close enough together to be confused. Adding the column hash doubles the
-/// signal for eight more bytes a card, which at 3,761 cards is 30 KB — cheaper than being wrong.
+/// signal for eight more bytes a card, which at 4,306 cards is 34 KB — cheaper than being wrong.
 ///
 /// Both halves are gradient signs, not brightnesses, so the hash survives what a screenshot does
 /// to art: rescaling, JPEG/WebP ringing, and the uniform darkening the game applies to a card the

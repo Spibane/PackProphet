@@ -11,7 +11,7 @@ using PackProphet.Domain;
 /// Dual-typed Pokémon arrive in October, and the natural way for upstream to express two energies
 /// is to turn this field into an array. System.Text.Json throws on a type mismatch, and it throws
 /// while reading the DOCUMENT — so the first dual-typed card would take the whole 4.4 MB table
-/// with it, and the app would lose attacks, abilities, HP and stage for all 3,761 cards in every
+/// with it, and the app would lose attacks, abilities, HP and stage for all 4,317 cards in every
 /// set, not just the new ones. A blank type column on one set is a cosmetic gap; that is the app
 /// silently losing half its data.
 ///

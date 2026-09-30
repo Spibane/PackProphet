@@ -18,8 +18,8 @@ using PackProphet.Domain;
 /// looking for either finds it, and neither is a guess about what some particular site wants.
 ///
 /// The mirror of <see cref="TrackerImport"/>, and expanding where that collapses. This app keys
-/// ownership by artwork; a set list keys it by entry. So an import folds 3,761 rows into 3,546
-/// cards, and an export writes those cards back out as 3,761 rows — a card re-listed in a later
+/// ownership by artwork; a set list keys it by entry. So an import folds 4,317 rows into 3,866
+/// cards, and an export writes those cards back out as 4,317 rows — a card re-listed in a later
 /// set appears once per set that lists it, at the same count.
 ///
 /// That is not padding to make the totals agree. The game counts a card as owned in every set it

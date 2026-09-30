@@ -334,6 +334,10 @@ until then the minor number tracks the roadmap phase.
   their slot unread, so it was asked about as a card it could not name. The slot is the brightest in
   the picture by a distance, a small figure on the page's own background, and on a Wonder Pick from
   a Deluxe set that is taken as the hourglasses
+- **A card with no art is outlined in its type's colour.** The placeholder's card outline takes the
+  colour of the card's energy pip, on the Collection grid and on the card's own page, so a set
+  whose art has not been drawn yet still reads by type. A card whose type is not known yet keeps the
+  grey one
 
 ### v0.7.0 - 2026-09-01
 

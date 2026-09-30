@@ -670,6 +670,7 @@ else
                               Picked="@(PickedOf?.Invoke(card) ?? 0)"
                               Wanted="@(WantedOf?.Invoke(card) ?? 0)"
                               Rung="@RungOf?.Invoke(card)"
+                              Type="@(TypeOf?.Invoke(card) is [var type, ..] ? type : null)"
                               OnWant="OnWant"
                               ShowInfo="@(!Sweeping)"
                               OnHold="OpenDetail"

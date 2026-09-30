@@ -51,17 +51,28 @@ public class SiteNoticeTests
         })).ToList());
 
     [Fact]
-    public void The_shipped_snapshot_has_detail_for_every_card_it_lists()
+    public void The_shipped_snapshot_is_short_of_detail_only_for_a_set_that_has_not_arrived()
     {
         // The measurement this feature's threshold was chosen from: 3,879 of 3,879, every set
         // complete. Pinned here because the threshold is only defensible while the reading stays
         // bimodal — a set is covered or it has not arrived — and a snapshot that starts coming in
         // 85% covered would make a tenth of slack the wrong number rather than a safe one.
+        //
+        // 2.11.0 is the other half of that reading, and the case the bar exists for: B4b's 429
+        // cards and none of their detail. So what is pinned is the shape rather than a clean
+        // result — the newest set may be short, and short of everything, and nothing else may be
+        // short at all. A set coming in part-described fails here, which is the point.
+        //
+        // The one partial reading is a promo set's newest run, PROMO-B 94 of 103 in 2.11.0,
+        // which the tenth of slack passes over. That is the right answer for nine promos, and
+        // the margin is two: eleven undescribed would name Promo B on every page.
         var short_ = DataLag.DetailShortfalls(Snapshot.Index(), Snapshot.Facts());
 
-        Assert.True(short_.Count == 0,
-            "sets short of detail in the shipped snapshot: "
-            + string.Join(", ", short_.Select(g => $"{g.Set} {g.Have}/{g.Of}")));
+        Assert.All(short_, g =>
+        {
+            Assert.True(g.Set == Snapshot.NewestSet() && g.Nothing,
+                $"{g.Set} is short of detail in the shipped snapshot, {g.Have}/{g.Of}");
+        });
     }
 
     [Fact]

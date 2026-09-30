@@ -44,7 +44,7 @@ public class TrackerExportTests
 
     /// <summary>
     /// The same for a whole collection rather than three cards. A round trip that works on a
-    /// handful and drops something among the 215 re-listed entries would pass the case above.
+    /// handful and drops something among the 451 re-listed entries would pass the case above.
     /// </summary>
     [Fact]
     public void A_complete_collection_survives_a_round_trip()
@@ -56,10 +56,10 @@ public class TrackerExportTests
 
         Assert.Empty(back.Problems);
         Assert.Equal(index.DistinctOwnableCards, back.DistinctOwned);
-        Assert.Equal(3664, back.DistinctOwned);
+        Assert.Equal(3866, back.DistinctOwned);
 
         // Every re-listing goes out as its own row and folds back in on the way home.
-        Assert.Equal(215, back.RowsCollapsed);
+        Assert.Equal(451, back.RowsCollapsed);
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ public class TrackerExportTests
     {
         var lines = Lines(TrackerExport.ToCsv(Sample(), Snapshot.Index()));
 
-        Assert.Equal(3879, lines.Length - 1);
+        Assert.Equal(4317, lines.Length - 1);
         Assert.Contains("A1,5,A1-5,Caterpie,C,0", lines);
     }
 
@@ -184,8 +184,8 @@ public class TrackerExportTests
         var csv = TrackerExport.ToCsv(new Collection(), index);
         var back = TrackerImport.FromCsv(csv, index);
 
-        Assert.Equal(3879, Lines(csv).Length - 1);
-        Assert.Equal(3879, back.RowsMatched);
+        Assert.Equal(4317, Lines(csv).Length - 1);
+        Assert.Equal(4317, back.RowsMatched);
         Assert.Equal(0, back.DistinctOwned);
     }
 

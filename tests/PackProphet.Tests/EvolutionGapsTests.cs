@@ -1,5 +1,6 @@
 namespace PackProphet.Tests;
 
+using PackProphet.Deck;
 using PackProphet.Domain;
 using PackProphet.Engine;
 
@@ -65,7 +66,21 @@ public class EvolutionGapsTests
         var report = Gaps.Find(everything);
 
         Assert.True(report.Complete);
-        Assert.Equal(0, report.Unverified);
+
+        // Unverified counts the Pokémon nobody has published a stage for, which is a property of
+        // upstream rather than of this code: zero for as long as the detail table covered every
+        // card, and one in 2.11.0, where Mega Garchomp ex arrived in PROMO-B's undescribed run.
+        // So the count is held to exactly those cards, the ones Snapshot.AwaitingDetail excuses
+        // and whose identity the table does not know under any other printing. One more is a
+        // described card the lookup lost; one fewer is a card with no stage passed as checked.
+        var undescribed = ix.All
+            .DistinctBy(c => c.OwnershipKey)
+            .Where(c => Snapshot.AwaitingDetail().Contains(c.Key))
+            .Count(c => ix.DeckNrOf(c) is int nr
+                        && nr < DeckBuilderNr.TrainerOffset
+                        && !Snapshot.Facts().Knows(nr));
+
+        Assert.Equal(undescribed, report.Unverified);
     }
 
     [Fact]

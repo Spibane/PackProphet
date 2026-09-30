@@ -43,8 +43,12 @@ public class CardCountTests
     public void An_unpriced_set_reports_nothing_rather_than_guessing()
     {
         // B4 has no published rates. Saying "5" would invent a check the data cannot support.
-        Assert.Empty(Rates.CardCounts("B4"));
-        Assert.Equal(0, Rates.LikelyCardCount("B4"));
+        //
+        // Withheld here rather than taken as found: 2.11.0 published B4's rates, and the real
+        // table now answers 5 and 6 for it, which is right. See Snapshot.RatesWithout.
+        var unpriced = Snapshot.RatesWithout("B4");
+        Assert.Empty(unpriced.CardCounts("B4"));
+        Assert.Equal(0, unpriced.LikelyCardCount("B4"));
 
         Assert.Empty(Rates.CardCounts("not-a-set"));
     }

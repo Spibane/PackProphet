@@ -213,20 +213,21 @@ public class PackOddsTests
     {
         var sets = Odds.UnpriceablePacks.Select(k => k.Split(':')[0]).Distinct().OrderBy(s => s);
 
-        // B4 and B4a have real, purchasable packs but NO rate data, so the two newest sets
-        // cannot be priced. Omitting them from a ranking would read as "nothing to gain from
-        // B4", the opposite of the truth — so they must be disclosed.
+        // B4b has real, purchasable packs but NO rate data, so the newest set cannot be priced.
+        // Omitting it from a ranking would read as "nothing to gain from B4b", the opposite of
+        // the truth — so it must be disclosed.
         //
-        // Two of them now rather than one, and that is the normal state rather than a problem:
-        // card data appears upstream as soon as a set is announced and pull rates are worked out
-        // from what people open, so the newest set or two is always unpriced. The list shrinking
-        // is the good news worth noticing.
+        // One of them again, after two: 2.11.0 published rates for B4 and B4a and brought B4b
+        // without any. That is the normal state rather than a problem: card data appears
+        // upstream as soon as a set is announced and pull rates are worked out from what people
+        // open, so the newest set or two is always unpriced. The list shrinking is the good news
+        // worth noticing.
         //
         // Promos are NOT listed. They have no rates either, but they are not packs anyone can
         // choose to open, so warning about them would report a problem the user cannot act on.
-        Assert.Equal(new[] { "B4", "B4a" }, sets);
+        Assert.Equal(new[] { "B4b" }, sets);
 
-        foreach (var set in new[] { "B4", "B4a" })
+        foreach (var set in new[] { "B4b" })
         {
             Assert.False(Snapshot.Rates().Covers(set));
             Assert.NotEmpty(Snapshot.Index().BySet[set]);

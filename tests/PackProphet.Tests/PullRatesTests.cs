@@ -134,14 +134,14 @@ public class PullRatesTests
     [Fact]
     public void CoverageIsIncomplete_AndTheGapMustBeDisclosed()
     {
-        // The two newest sets and both promo sets have NO rate data. The engine cannot price
+        // The newest set and both promo sets have NO rate data. The engine cannot price
         // them; the UI has to say so rather than omit them and imply there is nothing
         // to gain. If this list shrinks upstream, that is good news worth noticing.
         var setsWithCards = Snapshot.Index().BySet.Keys.ToHashSet();
         var unpriceable = setsWithCards.Where(s => !Snapshot.Rates().Covers(s))
                                       .OrderBy(s => s).ToArray();
 
-        Assert.Equal(new[] { "B4", "B4a", "PROMO-A", "PROMO-B" }, unpriceable);
+        Assert.Equal(new[] { "B4b", "PROMO-A", "PROMO-B" }, unpriceable);
     }
 
     // ---- borrowed rates ---------------------------------------------------------------
@@ -156,17 +156,29 @@ public class PullRatesTests
 
         Assert.NotNull(donor);
         Assert.True(rates.Covers(donor!));
-        // B3b (2026-06-30) is the newest measured set. B4 is newer but has no rates to lend, and
-        // the Deluxe set is excluded on principle: four cards and a guaranteed 4-diamond would
-        // price an ordinary set as far better than it is.
-        Assert.Equal("B3b", donor);
+        // B4a (2026-08-27) is the newest measured ordinary set. B4b is newer, but has no rates
+        // to lend and would not be asked if it had: the Deluxe sets are excluded on principle,
+        // since four cards and a guaranteed 4-diamond would price an ordinary set as far better
+        // than it is.
+        Assert.Equal("B4a", donor);
         Assert.NotEqual("A4b", donor);
     }
+
+    /// <summary>
+    /// The table the Assuming tests borrow into: this snapshot's, with B4's rates withheld, which
+    /// is the table the app ran on until 2.11.0 published them. See Snapshot.RatesWithout.
+    ///
+    /// B4 was named directly while it had no rates. Once it had them, two of these tests failed
+    /// and the other two went on passing without testing anything: Assuming never overwrites a
+    /// published set, so B4 was priced by its own rates and the borrowing they were about never
+    /// happened. B3b stays the donor, being what B4 borrowed.
+    /// </summary>
+    private static PullRates Unpriced => Snapshot.RatesWithout("B4");
 
     [Fact]
     public void Assuming_PricesASetThatHadNoRates()
     {
-        var rates = Snapshot.Rates();
+        var rates = Unpriced;
         Assert.False(rates.Covers("B4"));
 
         var assumed = rates.Assuming(["B4"], "B3b");
@@ -197,8 +209,11 @@ public class PullRatesTests
         // The point of the whole feature: a released set with no published rates goes from
         // "nothing here can be pulled" to a real, labelled estimate.
         var index = Snapshot.Index();
-        var assumed = Snapshot.Rates().Assuming(["B4"], "B3b");
+        var assumed = Unpriced.Assuming(["B4"], "B3b");
         var odds = new PackOdds(index, assumed);
+
+        // From nothing, first: without the borrowing, not one B4 pack can be priced.
+        Assert.DoesNotContain(new PackOdds(index, Unpriced).PriceablePacks, p => p.StartsWith("B4:"));
 
         var b4Packs = odds.PriceablePacks.Where(p => p.StartsWith("B4:")).ToArray();
         Assert.NotEmpty(b4Packs);
@@ -216,7 +231,7 @@ public class PullRatesTests
         // number of cards of that rung the pack holds, so two sets with the same donor still
         // price their commons differently when they hold different numbers of them.
         var index = Snapshot.Index();
-        var odds = new PackOdds(index, Snapshot.Rates().Assuming(["B4"], "B3b"));
+        var odds = new PackOdds(index, Unpriced.Assuming(["B4"], "B3b"));
 
         var pack = odds.PriceablePacks.First(p => p.StartsWith("B4:"));
         var expected = odds.ExpectedCopies(pack);
@@ -231,7 +246,7 @@ public class PullRatesTests
     [Fact]
     public void Assuming_AnUnknownDonor_ChangesNothing()
     {
-        var rates = Snapshot.Rates();
+        var rates = Unpriced;
         var assumed = rates.Assuming(["B4"], "NOPE");
 
         Assert.False(assumed.Covers("B4"));

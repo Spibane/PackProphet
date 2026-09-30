@@ -86,7 +86,13 @@ public class CrossValidationTests
     {
         // Their promo sets are "pa"/"pb"; ours are "PROMO-A"/"PROMO-B". A silent mismatch
         // there would drop 203 cards from every detail lookup.
-        var unjoined = Ix.All.Where(c => Facts.ForPrinting(c) is null).ToList();
+        //
+        // Less the printings upstream has not described yet, which have nothing to join TO: the
+        // newest set while it has no detail at all, and a promo set's newest run. That allowance
+        // is shaped so a broken join cannot hide in it -- see Snapshot.AwaitingDetail.
+        var unjoined = Ix.All.Where(c => Facts.ForPrinting(c) is null)
+                             .Where(c => !Snapshot.AwaitingDetail().Contains(c.Key))
+                             .ToList();
 
         Assert.Empty(unjoined.Take(20).Select(c => $"{c.Key} {c.Name}"));
         Assert.NotNull(Facts.ForPrinting("PROMO-A-1"));

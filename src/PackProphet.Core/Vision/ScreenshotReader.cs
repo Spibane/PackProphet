@@ -74,13 +74,14 @@ public sealed class ScreenshotReader
                 "No cards were found in that image. A screenshot of the whole screen works better "
                 + "than a crop of one card.", fallbackKind);
 
+        var recognised = Recognise(scan.Cells);
+        scan = Settled(scan, recognised);
+
         var kind = screen ?? Infer(scan);
 
         // A host that offers "the cards from a pack" means the ten-pack list as much as one pack, and
         // does not ask which. The layout says, so it is taken from the layout.
         if (kind == CardScreen.PackReveal && IsAPackList(scan)) kind = CardScreen.PackList;
-
-        var recognised = Recognise(scan.Cells);
 
         return kind switch
         {
@@ -91,6 +92,61 @@ public sealed class ScreenshotReader
             _ => ReadHand(scan, recognised, kind, screen is null),
         };
     }
+
+    /// <summary>
+    /// The scan with its guesses settled, before anything is read from its layout.
+    ///
+    /// The detector lays guessed rows on the several-pack list wherever a row could be that it did
+    /// not find one, at more than one spacing, so most of them are background or a heading and
+    /// some overlap each other. What was recognised decides which were rows. A guessed row nothing
+    /// was recognised in is dropped whole. Of two rows less than a card apart where one is a guess, the
+    /// one with more recognised in it stays -- the other is the same cards seen a fifth of a card
+    /// off, or a row the detector assembled from pieces in the wrong place. Neither is a row, and
+    /// left in, the first would read a heading where there is none and the second would ask to
+    /// have nothing named.
+    ///
+    /// Settled before the screen is told from the layout, because the layout of a guess is only
+    /// where the detector looked.
+    /// </summary>
+    private static ShotScan Settled(ShotScan scan, Dictionary<int, Recognition> recognised)
+    {
+        if (!scan.Cells.Any(c => c.Guessed)) return scan;
+
+        var height = scan.Lattice?.CellHeight ?? 0;
+        var rows = scan.Cells
+            .GroupBy(c => c.Row)
+            .Select(g => (
+                Row: g.Key,
+                Top: g.Where(c => c.Box.Length == 4).Select(c => c.Box[1]).DefaultIfEmpty(double.NaN).Min(),
+                Guessed: g.Any(c => c.Guessed),
+                Named: g.Count(c => recognised.ContainsKey(CellKey(c))),
+                Distance: g.Sum(c => recognised.TryGetValue(CellKey(c), out var r) ? r.Distance : 0)))
+            .Where(r => !r.Guessed || r.Named > 0)
+            .OrderByDescending(r => r.Named).ThenBy(r => r.Guessed).ThenBy(r => r.Distance)
+            .ToList();
+
+        var kept = new List<(int Row, double Top, bool Guessed)>();
+        foreach (var row in rows)
+        {
+            var clashes = height > 0 && !double.IsNaN(row.Top) && kept.Any(k =>
+                (k.Guessed || row.Guessed) && Math.Abs(k.Top - row.Top) < height * RowsApart);
+            if (!clashes) kept.Add((row.Row, row.Top, row.Guessed));
+        }
+
+        var keep = kept.Select(k => k.Row).ToHashSet();
+        return new ShotScan
+        {
+            Ok = scan.Ok, Error = scan.Error, Width = scan.Width, Height = scan.Height, Lattice = scan.Lattice,
+            // A guessed row that stays keeps the slots nothing was recognised in, so that it is as
+            // wide as the row is: the several-pack list is pieced together row by row, and a row of
+            // two with one card named lines up with the same row in another picture where a row of
+            // one would not. They are still not asked about -- see ReadHand.
+            Cells = scan.Cells.Where(c => keep.Contains(c.Row)).ToList(),
+        };
+    }
+
+    /// <summary>How far apart two rows' tops are at the least, as a multiple of the card's height.</summary>
+    private const double RowsApart = 0.97;
 
     /// <summary>
     /// Which screen this is, from geometry alone — a default the user can override, never a
@@ -106,7 +162,7 @@ public sealed class ScreenshotReader
     /// answers with the pack, because a pack is opened far more often than a Wonder Pick is
     /// screenshotted.
     /// </summary>
-    public static CardScreen Infer(ShotScan scan)
+    private static CardScreen Infer(ShotScan scan)
     {
         if (scan.Lattice is not { } lattice) return CardScreen.OwnershipGrid;
 
@@ -216,23 +272,23 @@ public sealed class ScreenshotReader
     /// title bar has only the cut for a top: it hides a heading where there is one, and would put
     /// one where there is not.
     ///
-    /// A guessed row counts only where something in it was recognised: guessed rows are laid where
-    /// a card might be, and one over the title bar that matched nothing is not a row, and would make
-    /// the row below it look like the middle of a pack.
+    /// Guessed rows count as any other, because by the time this is asked only the guessed rows
+    /// something was recognised in are left -- see <see cref="Settled"/>. One over the title bar
+    /// that matched nothing is not a row, and would make the row below it look like the middle of
+    /// a pack; one that did match is the row the mask missed, and may be the only heading there is.
     /// </summary>
-    private static SortedDictionary<int, double> RowTops(ShotScan scan, Func<ShotCell, bool>? read = null) => new(
+    private static SortedDictionary<int, double> RowTops(ShotScan scan) => new(
         scan.Cells
             .Where(c => c.Box.Length == 4)
             .GroupBy(c => c.Row)
             .Where(g => g.All(c => !string.IsNullOrEmpty(c.Hash)))
-            .Where(g => !g.Any(c => c.Guessed) || (read is not null && g.Any(read)))
             .ToDictionary(g => g.Key, g => g.Min(c => c.Box[1])));
 
     /// <summary>
     /// Whether this is the several-packs results list: rows at two spacings, the wider one a
     /// heading's height more than the narrower. A card list and a single pack space every row alike.
     /// </summary>
-    public static bool IsAPackList(ShotScan scan)
+    private static bool IsAPackList(ShotScan scan)
     {
         if (scan.Lattice is not { Cols: > 0 and <= 3, CellHeight: > 0 } lattice) return false;
 
@@ -242,9 +298,9 @@ public sealed class ScreenshotReader
     }
 
     /// <summary>Each row, its slots, and whether the gap above it is a pack's heading.</summary>
-    private static IReadOnlyList<ShotRow> Rows(ShotScan scan, Dictionary<int, Recognition> recognised)
+    private static IReadOnlyList<ShotRow> Rows(ShotScan scan)
     {
-        var tops = RowTops(scan, c => recognised.ContainsKey(CellKey(c))).ToArray();
+        var tops = RowTops(scan).ToArray();
         var height = scan.Lattice?.CellHeight ?? 0;
 
         IReadOnlyList<int> Columns(int row) =>
@@ -424,7 +480,7 @@ public sealed class ScreenshotReader
         // it is asked where it can be re-asked — see ShotImport.
 
         AddSetSpreadNote(matches, notes);
-        return new ShotReading(true, null, kind, inferred, matches, unread, notes) { Rows = Rows(scan, recognised) };
+        return new ShotReading(true, null, kind, inferred, matches, unread, notes) { Rows = Rows(scan) };
     }
 
     /// <summary>How much brighter than anything else in the shot the hourglass slot has to be.</summary>

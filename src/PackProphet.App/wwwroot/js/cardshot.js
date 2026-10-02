@@ -326,7 +326,14 @@ function findCards(gray, pixels) {
     // across two screenshots of the same screen: the median gives 192x268 on one and 184x260 on the
     // other, where the truth is 192x268 both times, and eight pixels is enough to make every card
     // unrecognisable. The quantile gives 192x268 for both.
-    const cardW = quantile(found.map(r => r.w), 0.9);
+    //
+    // Rounded up, not down, on fewer than five regions. quantile() rounds its position down, which
+    // on four values is the second widest, on three the middle and on two the narrower: a ten-pack
+    // results picture with four regions -- 168, 172, 172 and 180 wide, the true width 180 -- read
+    // 172, and every box laid from it came out too small to recognise. From five up the position
+    // is left as it was, which is what every other screen was measured against.
+    const widths = found.map(r => r.w);
+    const cardW = widths.length < 5 ? quantileUp(widths, 0.9) : quantile(widths, 0.9);
 
     // The height needs the same high quantile and cannot have it, because the reasoning that
     // justifies one for the width — the mask can fall short of a card's edge but never reach past
@@ -367,6 +374,7 @@ function findCards(gray, pixels) {
     // the ten-pack results screen a white trainer masked sixty pixels short and a card with a "NEW"
     // flash masked tall, the flash put the two just over the tolerance apart, and the row was
     // anchored on the short one.
+    const fromMask = new Set(regions);
     const anchored = groups(cards, c => c.y, cardH * LINE_TOLERANCE)
         .map(inRow => {
             // Only cards the screen shows whole may anchor a row. A card cut off at the bottom of
@@ -379,11 +387,19 @@ function findCards(gray, pixels) {
             // short on, which on a white trainer is sixty pixels.
             const whole = inRow.filter(c => c.h >= cardH * 0.9);
             const bottoms = whole.map(c => c.y + c.h);
+            const pieced = !inRow.some(c => fromMask.has(c));
             return whole.length > 0
-                ? { top: (bottoms.length === 2 ? Math.max(...bottoms) : quantile(bottoms, 0.9)) - cardH, whole: true }
-                : { top: Math.min(...inRow.map(c => c.y)), whole: false };
+                ? { top: (bottoms.length === 2 ? Math.max(...bottoms) : quantile(bottoms, 0.9)) - cardH, whole: true, pieced }
+                : { top: Math.min(...inRow.map(c => c.y)), whole: false, pieced };
         })
-        .filter(r => r.top >= 0);
+        .filter(r => r.top >= 0)
+        // Rows do not overlap. A row assembled from pieces that starts less than a card from one the
+        // mask found is not a row: it is the pieces of two cards either side of a gap, chained into
+        // something card-shaped that straddles it. On a ten-pack results picture whose white cards
+        // did not mask, two of those sat a third of a card off the real rows, and the grid laid
+        // through them read half the picture as cards that were not there.
+        .filter((r, _, all) => !r.pieced
+            || all.every(o => o.pieced || Math.abs(o.top - r.top) >= cardH * ROWS_APART));
 
     if (anchored.length === 0) return null;
 
@@ -391,11 +407,19 @@ function findCards(gray, pixels) {
     // title bar has only the cut for a top, and laying a grid from it puts every row below out by
     // however far the cut fell from a card edge. Such a row cannot be read anyway, so it keeps its
     // own position and joins the grid only to be reported.
+    //
+    // Two cards across is the several-pack list, or one Deluxe pack, and neither is laid out as a
+    // grid: the list puts a heading under every pack, so its rows stay where they were found. See
+    // interpolate().
+    const twoAcross = columns.length === 2;
     const whole = anchored.filter(r => r.whole).map(r => r.top);
     const cut = anchored.filter(r => !r.whole).map(r => r.top);
-    const laid = whole.length > 0 ? interpolate(whole) : [];
-    const rowTops = [...laid, ...cut.filter(t => laid.every(l => Math.abs(l - t) > cardH * 0.5))]
-        .sort((a, b) => a - b);
+    const laid = whole.length > 0 ? (twoAcross ? whole : interpolate(whole)) : [];
+    const rowTops = [...laid];
+    for (const t of cut) {
+        if (rowTops.every(l => Math.abs(l - t) > cardH * 0.5)) rowTops.push(t);
+    }
+    rowTops.sort((a, b) => a - b);
 
     const pitch = columnPitch(cards, columns, cardW, cardH);
     const origin = Math.min(...columns);
@@ -405,15 +429,23 @@ function findCards(gray, pixels) {
         columns: slotsInRow(cards, top, cardH, pitch, origin, cardW, gray.w, fullWidth),
     }));
 
-    const guessed = listRows(whole, rows, cardH, gray.h);
-    if (guessed.above) rows.unshift(guessed.above);
-    if (guessed.below) rows.push(guessed.below);
+    // The several-pack list, or what may be a stretch of it: two cards across. A picture of the
+    // list that happens to show no heading between its found rows -- two rows of one pack, the
+    // pale ones around them not masking -- looks like one Deluxe pack, and is treated as the list
+    // anyway. Guessing around a single pack costs nothing: the guesses land on the background,
+    // and a guess nothing is recognised in is dropped.
+    const list = isPackList(whole, cardH) || twoAcross;
+
+    if (list) {
+        const solid = anchored.filter(r => r.whole && !r.pieced).map(r => r.top);
+        rows.push(...listRows(rows, solid.length > 0 ? solid : whole, cardH, gray.h));
+        rows.sort((a, b) => a.top - b.top);
+    }
 
     // On the several-pack list the larger crops are offered as well. Its cards mask a few pixels
     // short as a matter of course -- one screenshot of a ten-pack opening measured 172 by 244
     // where every other measured 180 by 251, on the same screen -- and a box that small reads half
     // its cards. See nudged().
-    const list = isPackList(whole, cardH);
 
     return { cards, cardW, cardH, rows, origin, pitch, assembled, list };
 }
@@ -425,8 +457,13 @@ function findCards(gray, pixels) {
 /// picture can show only one gap -- two rows, with a heading between -- and a gap compared with
 /// nothing says nothing.
 const WITHIN_PACK = 1.08;
+const UNDER_HEADING = 1.375;
 const HEADING_GAP_MIN = 1.22;
 const HEADING_GAP_MAX = 1.6;
+
+/// How far apart two rows' tops are at the least, as a multiple of the card's height. Rows butt up
+/// against each other on every screen: a card list's sit 1.03 apart, a pack's 1.06 and more.
+const ROWS_APART = 0.97;
 
 /// Whether these row tops are the several-pack results list: some gap between them a heading's.
 function isPackList(whole, cardH) {
@@ -436,33 +473,49 @@ function isPackList(whole, cardH) {
     });
 }
 
-/// A guessed row above the first and below the last, on the several-pack results list only.
+/// Guessed rows on the several-pack results list, wherever a row could be that none was found.
 ///
-/// Below: the screen ends in a "Next" button drawn over the bottom of the list, and the list cannot
-/// scroll past it, so the last row of the last pack is never on screen whole -- and neither is any
-/// row that happens to sit under the button. The mask sees card and button as one shape that is not
-/// card-shaped. But the button covers a card's text, not its picture, and the picture is what is
-/// fingerprinted.
+/// Rows are missed there in three ways. The screen ends in a "Next" button drawn over the bottom of
+/// the list, and the list cannot scroll past it, so the last row of the last pack is never on screen
+/// whole -- and neither is any row that happens to sit under the button; the mask sees card and
+/// button as one shape that is not card-shaped, but the button covers a card's text, not its
+/// picture, and the picture is what is fingerprinted. A row of pale cards -- a Stadium, a trainer, a
+/// white-bodied Pokémon -- does not mask as cards at all. And a row assembled from pieces can land
+/// a fifth of a card off where the cards are.
 ///
-/// Above: a row of pale cards -- a Stadium and a white-bodied Pokémon -- does not mask as cards at
-/// all, and when it is the first row on the screen nothing below it marks its place.
-///
-/// Each is laid at the within-pack spacing from the row beside it, in that row's columns, and
-/// marked as guessed. If a row really is there it is recognised. If a heading is there instead,
-/// nothing matches, and the reader drops a guessed slot it cannot name rather than asking about it.
-function listRows(whole, rows, cardH, imageHeight) {
-    if (whole.length < 2 || rows.length === 0 || !isPackList(whole, cardH)) return {};
+/// So from every row the mask found, rows are guessed outward at both spacings the list uses --
+/// within a pack, and under a heading -- and from those again, as far as the picture goes. Which
+/// spacing comes next depends on where in its pack the row is, and that is not known here; trying
+/// both costs a few more fingerprints. A guess is not laid within a card of a row the mask found,
+/// and is laid beside a row assembled from pieces, since that one may be the wrong one. Each is
+/// marked as guessed: where a card is, it is recognised, and the reader drops a guess it cannot
+/// name rather than asking about it, and settles two that overlap by which it recognised.
+function listRows(rows, solid, cardH, imageHeight) {
+    if (rows.length === 0 || solid.length === 0) return [];
 
-    const within = Math.round(cardH * WITHIN_PACK);
-    const first = rows[0];
-    const last = rows[rows.length - 1];
-    const out = {};
+    const steps = [WITHIN_PACK, UNDER_HEADING].map(s => Math.round(cardH * s));
+    const taken = rows.map(r => r.top);
+    const columnsAt = top => rows.reduce((a, b) => Math.abs(b.top - top) < Math.abs(a.top - top) ? b : a).columns;
+    const out = [];
 
-    const up = Math.round(whole[0] - within);
-    if (up >= 0 && up < first.top - cardH * 0.5) out.above = { top: up, columns: first.columns, guessed: true };
+    const clear = top => top >= 0 && top + cardH <= imageHeight
+        && solid.every(s => Math.abs(s - top) >= cardH * ROWS_APART)
+        && taken.every(t => Math.abs(t - top) >= cardH * 0.1);
 
-    const down = Math.round(whole[whole.length - 1] + within);
-    if (down > last.top + cardH * 0.5 && down + cardH <= imageHeight) out.below = { top: down, columns: last.columns, guessed: true };
+    let frontier = solid.flatMap(top => [-1, 1].map(dir => ({ top, dir, columns: columnsAt(top) })));
+    for (let depth = 0; depth < 4 && frontier.length > 0; depth++) {
+        const next = [];
+        for (const from of frontier) {
+            for (const step of steps) {
+                const top = from.top + from.dir * step;
+                if (!clear(top)) continue;
+                taken.push(top);
+                out.push({ top, columns: from.columns, guessed: true });
+                next.push({ top, dir: from.dir, columns: from.columns });
+            }
+        }
+        frontier = next;
+    }
 
     return out;
 }
@@ -825,6 +878,12 @@ const median = (...values) => {
 const quantile = (values, at) => {
     const sorted = [...values].sort((a, b) => a - b);
     return sorted[Math.min(sorted.length - 1, Math.floor(at * (sorted.length - 1)))];
+};
+
+/// quantile(), its position rounded up rather than down.
+const quantileUp = (values, at) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.ceil(at * (sorted.length - 1)))];
 };
 
 /// One cell per slot of the grid, each at the consensus card size.

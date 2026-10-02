@@ -219,4 +219,87 @@ public class OpeningStitcherTests
         Assert.Equal(CardScreen.PackList, reading.Screen);
         Assert.Contains(reading.Rows, r => r.StartsPack == true);
     }
+
+    // ---- a third opening, photographed twice ---------------------------------------------------
+
+    /// <summary>
+    /// Ten more B4b packs, photographed two ways: five pictures of two packs each (1404-1408), then
+    /// ten scrolling down a pack at a time (1409-1418). fixtures/ten-pack-b4b-3.scans.json keeps
+    /// every nudged crop, as the app does; with eight of each, Mega Camerupt ex in pack 4 is in no
+    /// picture of the second set that reads.
+    ///
+    /// Both ways read nine packs before. Pack 8 opens with two pale cards, Meltan and Aegislash,
+    /// and in 1407 nothing of pack 8 masked, and of pack 7 only its two coloured cards on the right:
+    /// the card size came out of two regions and was a card's worth small, and two rows assembled
+    /// from pieces straddled the gaps between real ones. In 1410 the rows were laid out as a grid,
+    /// which on this list is a heading's worth wrong by the third row.
+    /// </summary>
+    private static readonly string[][] ThirdTruth =
+    [
+        ["Drizzile", "Mareep", "Budew", "Miraidon ex"],
+        ["Ivysaur", "Magneton", "Honedge", "Mega Sableye ex"],
+        ["Eevee", "Deceptive Needle", "Onix", "Typhlosion ex"],
+        ["Haunter", "Slowpoke", "Haxorus", "Mega Camerupt ex"],
+        ["Hiking Trail", "Sobble", "Lilligant", "Bellibolt ex"],
+        ["Mareep", "Calem", "Eevee", "Mega Gengar ex"],
+        ["Delcatty", "Fuecoco", "Fragrant Forest", "Mega Gyarados ex"],
+        ["Meltan", "Aegislash", "Dragonair", "Mega Gallade ex"],
+        ["Ivysaur", "Eevee", "Axew", "Terapagos ex"],
+        ["Charmeleon", "Copycat", "Alolan Grimer", "Mega Camerupt ex"],
+    ];
+
+    private static IReadOnlyDictionary<string, ShotScan> ThirdScans() =>
+        JsonSerializer.Deserialize<Dictionary<string, ShotScan>>(
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "fixtures", "ten-pack-b4b-3.scans.json")),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+
+    private static IReadOnlyList<ShotScan> Pictures(int from, int to) =>
+        ThirdScans().Where(kv => int.Parse(kv.Key[4..]) is var n && n >= from && n <= to)
+            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => kv.Value)
+            .ToArray();
+
+    [Fact]
+    public void Five_pictures_of_two_packs_each_make_the_ten_when_one_pack_masked_nothing()
+    {
+        var opening = OpeningStitcher.Stitch(Read(Pictures(1404, 1408)), _ => Deluxe);
+
+        Assert.Equal(ThirdTruth, opening.Packs.Select(p => p.Matches.Select(m => m.Card.Name).ToArray()));
+        Assert.Empty(opening.Notes);
+    }
+
+    [Fact]
+    public void Ten_pictures_a_pack_apart_make_the_same_ten()
+    {
+        var opening = OpeningStitcher.Stitch(Read(Pictures(1409, 1418)), _ => Deluxe);
+
+        Assert.Equal(ThirdTruth, opening.Packs.Select(p => p.Matches.Select(m => m.Card.Name).ToArray()));
+        Assert.Empty(opening.Notes);
+    }
+
+    [Fact]
+    public void A_heading_only_a_guessed_row_shows_still_makes_it_the_list()
+    {
+        // 1407's two masked rows are one pack's. The heading is between the second of them and
+        // pack 8's first row, which is there only because it was guessed and then recognised.
+        var reading = Read(Pictures(1407, 1407)).Single();
+
+        Assert.Equal(CardScreen.PackList, reading.Screen);
+        Assert.Equal(["Delcatty", "Fuecoco", "Fragrant Forest", "Mega Gyarados ex",
+                      "Meltan", "Aegislash", "Dragonair", "Mega Gallade ex"],
+            reading.Matches.Select(m => m.Card.Name));
+        Assert.Empty(reading.UnreadSlots);
+    }
+
+    [Fact]
+    public void Guesses_nothing_was_recognised_in_are_not_rows()
+    {
+        // Every picture is guessed around at both spacings; most of those land on headings and the
+        // title bar. None of them may be offered for naming or counted as a row.
+        foreach (var reading in Read(ThirdScans().Values))
+        {
+            var named = reading.Matches.Select(m => m.Row).ToHashSet();
+            Assert.All(reading.Rows, r => Assert.Contains(r.Row, named));
+        }
+    }
 }

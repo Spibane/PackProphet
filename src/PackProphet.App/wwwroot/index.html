@@ -14,10 +14,11 @@
          close to no injection surface anyway, since the only raw markup it renders is a QR SVG
          built entirely from integers.
 
-         The value is in the NETWORK directives. Every card image and every dataset comes from one
-         community CDN over which this project has no control, and default-src plus connect-src
-         mean that even a tampered dataset cannot reach any other host: no beacon, no exfiltration,
-         no third-party script. data.jsdelivr.com is the same operator's API, asked only which
+         The value is in the NETWORK directives. Every dataset comes from one community CDN over
+         which this project has no control, and default-src plus connect-src mean that even a
+         tampered dataset cannot reach any other host: no beacon, no exfiltration, no third-party
+         script. Card art comes from two more hosts besides, TCGdex and Limitless (see ArtSource),
+         which is why they are in img-src and nowhere else. data.jsdelivr.com is the same operator's API, asked only which
          release is current so every dataset can be pinned to it. img-src needs data: because a screenshot is handed to the QR
          decoder as a data URL, and blob: because a backup is downloaded as one.
 
@@ -32,7 +33,7 @@
         default-src 'self';
         script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline';
         style-src 'self' 'unsafe-inline';
-        img-src 'self' data: blob: https://cdn.jsdelivr.net;
+        img-src 'self' data: blob: https://cdn.jsdelivr.net https://assets.tcgdex.net https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com;
         connect-src 'self' https://cdn.jsdelivr.net https://data.jsdelivr.com https://gist.githubusercontent.com https://YOUR-PROJECT.supabase.co;
         font-src 'self';
         manifest-src 'self';

@@ -555,7 +555,7 @@ public class CardDataLoaderTests
     {
         var (_, bare, _) = await ProbedAsync(new Dictionary<string, string>
         {
-            ["cards-by-set/B4b/1.webp"] = "{}",
+            ["B4b/B4b_001_EN.webp"] = "{}",
         });
 
         Assert.DoesNotContain(bare, g => g.Set == "B4b");
@@ -626,7 +626,7 @@ public class CardDataLoaderTests
             ArtSource.UseStandIns(new Dictionary<string, (string, int)> { ["B4b-7"] = ("B2b", 1) });
 
             Assert.True(reprint.HasArt);
-            Assert.EndsWith("/B2b/1.webp", reprint.ArtUrl);
+            Assert.EndsWith("/B2b/B2b_001_EN.webp", reprint.ArtUrl);
 
             // A foil is new artwork, so it has nothing to borrow and waits as the placeholder.
             Assert.False(foil.HasArt);
@@ -645,7 +645,7 @@ public class CardDataLoaderTests
         // always there, so the newest cards are what is asked about, down to the first that has art.
         var (data, bare, probe) = await ProbedAsync(new Dictionary<string, string>
         {
-            ["cards-by-set/PROMO-B/94.webp"] = "{}",
+            ["P-B/P-B_094_EN.webp"] = "{}",
         });
 
         var gap = Assert.Single(bare, g => g.Set == "PROMO-B");
@@ -660,7 +660,7 @@ public class CardDataLoaderTests
     {
         var handler = new SnapshotHandler(remoteFiles: new Dictionary<string, string>
         {
-            ["cards-by-set/PROMO-B/103.webp"] = "{}",
+            ["P-B/P-B_103_EN.webp"] = "{}",
         });
         var loader = new CardDataLoader(new HttpClient(handler) { BaseAddress = new Uri("https://test.local/") },
                                         Unhurried, clock: new ReleaseWeek());
@@ -668,7 +668,7 @@ public class CardDataLoaderTests
         var probe = await loader.ProbeArtAsync(await loader.LoadAsync());
 
         Assert.DoesNotContain(probe.Gaps, g => g.Set == "PROMO-B");
-        Assert.Single(handler.Requests, u => u.Contains("cards-by-set/PROMO-B/", StringComparison.Ordinal));
+        Assert.Single(handler.Requests, u => u.Contains("/P-B/P-B_", StringComparison.Ordinal));
     }
 
     [Fact]

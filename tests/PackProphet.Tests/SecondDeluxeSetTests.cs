@@ -157,6 +157,6 @@ public class SecondDeluxeSetTests
     public void AUniquePackName_StillFallsBackToTheLowResolutionArt()
     {
         var catalog = new PackArtCatalog([], ["ZZ:Only Here", Shared, "A4b:Deluxe"]);
-        Assert.StartsWith(ArtSource.ExchangePacks, catalog.Url("ZZ:Only Here"), StringComparison.Ordinal);
+        Assert.StartsWith(ArtSource.DatabasePacks, catalog.Url("ZZ:Only Here"), StringComparison.Ordinal);
     }
 }

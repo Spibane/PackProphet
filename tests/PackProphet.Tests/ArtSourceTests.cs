@@ -17,21 +17,29 @@ using PackProphet.Domain;
 /// </summary>
 public class ArtSourceTests : IDisposable
 {
-    public ArtSourceTests() => ArtSource.UseVendored(null, null);
+    public ArtSourceTests()
+    {
+        ArtSource.UseVendored(null, null);
+        ArtSource.UseTcgDex(null);
+    }
 
-    public void Dispose() => ArtSource.UseVendored(null, null);
+    public void Dispose()
+    {
+        ArtSource.UseVendored(null, null);
+        ArtSource.UseTcgDex(null);
+    }
 
     private static PocketCard Card(string set, int number) =>
         new() { Set = set, Number = number, Name = "x", Image = "x.webp" };
 
     [Fact]
-    public void With_no_manifest_the_chain_is_the_two_remote_mirrors()
+    public void With_no_manifest_the_chain_is_limitless_then_the_mirror()
     {
-        // A development build and a deploy that found nothing missing both look like this.
+        // A development build looks like this: no manifest, so nothing is known about TCGdex.
         var chain = ArtSource.Candidates(Card("A1", 1));
 
         Assert.Equal(2, chain.Count);
-        Assert.StartsWith(ArtSource.Exchange, chain[0], StringComparison.Ordinal);
+        Assert.StartsWith(ArtSource.Limitless, chain[0], StringComparison.Ordinal);
         Assert.StartsWith(ArtSource.Mirror, chain[1], StringComparison.Ordinal);
     }
 
@@ -44,7 +52,7 @@ public class ArtSourceTests : IDisposable
 
         Assert.Equal(3, chain.Count);
         Assert.Equal("art/B4a/7.webp", chain[0]);
-        Assert.StartsWith(ArtSource.Exchange, chain[1], StringComparison.Ordinal);
+        Assert.StartsWith(ArtSource.Limitless, chain[1], StringComparison.Ordinal);
         Assert.StartsWith(ArtSource.Mirror, chain[2], StringComparison.Ordinal);
     }
 
@@ -87,38 +95,56 @@ public class ArtSourceTests : IDisposable
         Assert.Equal($"{ArtSource.Mirror}/{tail}", chain[^1]);
     }
 
-    [Fact]
-    public void The_primary_source_does_not_pad_a_number()
+    [Theory]
+    // Upper case, zero-padded to three, the set code twice -- and the promos are P-A and P-B.
+    [InlineData("A1", 1, "A1/A1_001_EN.webp")]
+    [InlineData("B4b", 233, "B4b/B4b_233_EN.webp")]
+    [InlineData("PROMO-A", 7, "P-A/P-A_007_EN.webp")]
+    [InlineData("PROMO-B", 86, "P-B/P-B_086_EN.webp")]
+    public void Limitless_spells_a_card_its_own_way(string set, int number, string tail)
     {
-        // The two mirrors disagree about this, which is the entire reason MirrorSet exists. A pad
-        // applied to both would 404 every card on the primary.
-        Assert.Equal($"{ArtSource.Exchange}/A1/1.webp", ArtSource.Candidates(Card("A1", 1))[0]);
+        Assert.Equal($"{ArtSource.Limitless}/{tail}", ArtSource.Candidates(Card(set, number))[0]);
+    }
+
+    [Fact]
+    public void TCGdex_is_tried_first_only_for_the_sets_the_deploy_found_it_has()
+    {
+        // It trails the game by months. Offered for a set it has not reached, it would be a 404
+        // ahead of every card of the newest set -- the one people are opening.
+        ArtSource.UseTcgDex(["A1", "PROMO-A"]);
+
+        Assert.Equal($"{ArtSource.TcgDex}/A1/001/high.webp", ArtSource.Candidates(Card("A1", 1))[0]);
+        Assert.Equal($"{ArtSource.TcgDex}/P-A/007/high.webp", ArtSource.Candidates(Card("PROMO-A", 7))[0]);
+        Assert.StartsWith(ArtSource.Limitless, ArtSource.Candidates(Card("A1", 1))[1], StringComparison.Ordinal);
+
+        Assert.DoesNotContain(ArtSource.Candidates(Card("B4b", 1)),
+                              url => url.StartsWith(ArtSource.TcgDex, StringComparison.Ordinal));
     }
 
     [Fact]
     public void Booster_art_follows_the_manifest_and_escapes_the_pack_name()
     {
-        Assert.StartsWith(ArtSource.ExchangePacks, PocketCard.PackArtUrl("Team Rocket"),
+        Assert.StartsWith(ArtSource.DatabasePacks, PocketCard.PackArtUrl("Team Rocket"),
                           StringComparison.Ordinal);
 
         ArtSource.UseVendored(["B4a"], ["Team Rocket"]);
 
         // A space in a pack name has to survive into the URL as an escape, both ways round.
         Assert.Equal("art/packs/Team%20Rocket.webp", PocketCard.PackArtUrl("Team Rocket"));
-        Assert.StartsWith(ArtSource.ExchangePacks, PocketCard.PackArtUrl("Mewtwo"),
+        Assert.StartsWith(ArtSource.DatabasePacks, PocketCard.PackArtUrl("Mewtwo"),
                           StringComparison.Ordinal);
     }
 
     [Fact]
     public void A_set_logo_follows_the_manifest_too()
     {
-        Assert.StartsWith(ArtSource.ExchangeSets, PocketCard.SetLogoUrl("B4a"),
+        Assert.StartsWith(ArtSource.DatabaseSets, PocketCard.SetLogoUrl("B4a"),
                           StringComparison.Ordinal);
 
         ArtSource.UseVendored(["B4a"]);
 
         Assert.Equal("art/sets/LOGO_expansion_B4a_en_US.webp", PocketCard.SetLogoUrl("B4a"));
-        Assert.StartsWith(ArtSource.ExchangeSets, PocketCard.SetLogoUrl("A1"),
+        Assert.StartsWith(ArtSource.DatabaseSets, PocketCard.SetLogoUrl("A1"),
                           StringComparison.Ordinal);
     }
 

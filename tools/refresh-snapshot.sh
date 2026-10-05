@@ -45,10 +45,14 @@ REPO="https://cdn.jsdelivr.net/gh/chase-mew/pokemon-tcg-pocket-cards@main/data/v
 # mirrors CardDataLoader, which reads expansions from the git repo and the facts file from a
 # different package than the card list. A snapshot assembled from different sources than the app
 # reads live is a snapshot that disagrees with the CDN it is standing in for.
+#
+# Retried, because a cold jsDelivr edge can answer a large file it has not cached with a 503. The
+# 4.7 MB facts file did that to two scheduled runs on 2026-10-05, and served fine 37 seconds into
+# a later ask.
 fetch() {
     local name="$1" url="$2"
     printf '  %-18s <- %s\n' "$name" "$url"
-    curl -fsSL "$url" -o "${TMP}/${name}"
+    curl -fsSL --retry 4 --retry-delay 15 --retry-all-errors "$url" -o "${TMP}/${name}"
 }
 
 TMP="$(mktemp -d)"

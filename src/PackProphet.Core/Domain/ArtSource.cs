@@ -15,29 +15,40 @@ namespace PackProphet.Domain;
 ///
 ///   1. This deployment's own origin, for sets it was built with. Written into the published
 ///      output by the deploy workflow and never committed — see <see cref="UseVendored"/>.
-///   2. flibustier/pokemon-tcg-exchange, the complete back catalogue and the source this app has
-///      always used.
-///   3. chase-mew/pokemon-tcg-pocket-cards, a second mirror on an independent schedule. Already a
-///      dependency of this app for card detail and expansion logos, and already credited in
-///      NOTICE.md, so it costs no new origin and no new licence.
+///   2. TCGdex, for the sets the deploy found it has — see <see cref="UseTcgDex"/>. An open
+///      project that serves its assets for exactly this, at 600x825, but sets reach it late.
+///   3. Limitless TCG, where the card data itself is compiled from. Every set, on release day.
+///   4. chase-mew/pokemon-tcg-pocket-cards, a mirror on an independent schedule. Already a
+///      dependency of this app for card detail and expansion logos.
 ///
-/// Every remote entry is jsDelivr, which is the single remote host index.html's img-src allows.
-/// Adding a source that is not on that origin means editing the Content-Security-Policy, and the
-/// policy is deliberately one host wide.
+/// There used to be flibustier/pokemon-tcg-exchange in second place, the source this app was
+/// built on. On 2026-10-05 its card and booster directories became symlinks to a checkout outside
+/// the repository, and every URL under them 404s.
+///
+/// Each remote host is named in index.html's img-src, and a new one has to be too.
 /// </summary>
 public static class ArtSource
 {
     /// <summary>
-    /// Verified working pattern: cards-by-set/{SET}/{number}.webp, with the number NOT zero-padded
-    /// (unlike the TCGdex id, and unlike <see cref="Mirror"/> below).
+    /// {set}/{number}/high.webp, the number zero-padded to three and the promos spelled P-A and
+    /// P-B — see <see cref="PublishedSetCode"/>.
     /// </summary>
-    public const string Exchange =
-        "https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-exchange@main/public/images/cards-by-set";
+    public const string TcgDex = "https://assets.tcgdex.net/en/tcgp";
 
     /// <summary>
-    /// The second mirror. Its own dataset publishes these as raw.githubusercontent.com URLs and
-    /// this deliberately does not use those: GitHub rate-limits raw as an asset host, and it is not
-    /// on the one origin this app's img-src permits. jsDelivr serves the same bytes.
+    /// {set}/{set}_{number}_EN.webp, padded and spelled as <see cref="TcgDex"/> is.
+    ///
+    /// It sends no CORS headers, so a fetch from the browser cannot read its answer, and it
+    /// answers a missing file with 403 rather than 404. An img needs neither. The deploy, which
+    /// is not a browser, is what asks it which sets it has.
+    /// </summary>
+    public const string Limitless = "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/pocket";
+
+    /// <summary>
+    /// The last resort. Its own dataset publishes these as raw.githubusercontent.com URLs and this
+    /// deliberately does not use those: GitHub rate-limits raw as an asset host, and it is not in
+    /// this app's img-src. jsDelivr serves the same bytes -- the ones it has cached: the repository
+    /// is past jsDelivr's 50 MB limit, so a file it has not cached is refused with a 403.
     ///
     /// Note the repository name. The dataset says `chase-manning/...`, which 301-redirects to
     /// `chase-mew/...` — and jsDelivr does not follow the rename, so the old path 403s while the
@@ -76,12 +87,18 @@ public static class ArtSource
     /// fallback for an image that fails -- `background-image: url(a), url(b)` layers the two, it
     /// does not try the second one. So these get one URL, chosen from the manifest, and a set
     /// whose booster has not been vendored keeps the drawn placeholder it has always had.
+    ///
+    /// From the database repository, which is where pokemon-tcg-exchange's own copies now point.
+    /// It holds data and these and nothing else, 5.5 MB in all, so jsDelivr serves every file of it.
     /// </summary>
-    public const string ExchangePacks =
-        "https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-exchange@main/public/images/packs";
+    public const string DatabasePacks =
+        "https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-pocket-database@main/dist/images/packs";
 
-    public const string ExchangeSets =
-        "https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-exchange@main/public/images/sets";
+    public const string DatabaseSets =
+        "https://cdn.jsdelivr.net/gh/flibustier/pokemon-tcg-pocket-database@main/dist/images/sets";
+
+    private static IReadOnlySet<string> _tcgDex =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     private static IReadOnlySet<string> _vendored =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -156,11 +173,26 @@ public static class ArtSource
         new(values?.Where(v => !string.IsNullOrWhiteSpace(v)) ?? [], StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// The two remote sources for one card, whatever is known about them. What the loader asks
-    /// when it wants to know whether a set has art anywhere yet.
+    /// Declare which sets TCGdex has, from the manifest the deploy workflow writes. Its catalogue
+    /// trails the game by months, so a set it does not list is left off the chain rather than
+    /// costing a 404 per card. Empty in development and in tests, where the chain starts at
+    /// <see cref="Limitless"/>.
     /// </summary>
-    public static IReadOnlyList<string> RemoteCandidates(string set, int number) =>
-        [$"{Exchange}/{set}/{number}.webp", $"{Mirror}/{MirrorSetCode(set)}/{number:D3}.webp"];
+    public static void UseTcgDex(IEnumerable<string>? sets) => _tcgDex = Names(sets);
+
+    /// <summary>
+    /// The remote sources for one card, whatever is known about them. What the loader asks when it
+    /// wants to know whether a set has art anywhere yet.
+    /// </summary>
+    public static IReadOnlyList<string> RemoteCandidates(string set, int number)
+    {
+        var code = PublishedSetCode(set);
+        var urls = new List<string>(3);
+        if (_tcgDex.Contains(set)) urls.Add($"{TcgDex}/{code}/{number:D3}/high.webp");
+        urls.Add($"{Limitless}/{code}/{code}_{number:D3}_EN.webp");
+        urls.Add($"{Mirror}/{MirrorSetCode(set)}/{number:D3}.webp");
+        return urls;
+    }
 
     /// <summary>
     /// Every place this card's art might be, best first. Empty for a set known to have no art
@@ -180,13 +212,20 @@ public static class ArtSource
         // Own origin only for a set it was actually built with. Trying it for every card would
         // spend one request per card of the back catalogue discovering a 404 on a set the deploy
         // never vendored -- 3,769 of them at the time of writing, all against this app's own host.
-        var urls = new List<string>(3);
-        if (_vendored.Contains(set)) urls.Add($"{_ownOrigin}/{set}/{number}.webp");
-
-        urls.Add($"{Exchange}/{set}/{number}.webp");
-        urls.Add($"{Mirror}/{MirrorSetCode(set)}/{number:D3}.webp");
-        return urls;
+        var remote = RemoteCandidates(set, number);
+        return _vendored.Contains(set) ? [$"{_ownOrigin}/{set}/{number}.webp", .. remote] : remote;
     }
+
+    /// <summary>
+    /// How TCGdex and Limitless spell a set code: as this app does, but for the promos, which are
+    /// P-A and P-B there.
+    /// </summary>
+    public static string PublishedSetCode(string set) => set.ToUpperInvariant() switch
+    {
+        "PROMO-A" => "P-A",
+        "PROMO-B" => "P-B",
+        _ => set,
+    };
 
     /// <summary>
     /// The mirror's own spelling of a set code: lower case, and the promos are two letters rather
@@ -214,11 +253,11 @@ public static class ArtSource
     public static string PackArt(string packName) =>
         _vendoredPacks.Contains(packName)
             ? $"{_ownOrigin}/packs/{Uri.EscapeDataString(packName)}.webp"
-            : $"{ExchangePacks}/{Uri.EscapeDataString(packName)}.webp";
+            : $"{DatabasePacks}/{Uri.EscapeDataString(packName)}.webp";
 
     /// <summary>A set's expansion logo, used where a pack has no art of its own.</summary>
     public static string SetLogo(string setCode) =>
         _vendored.Contains(setCode)
             ? $"{_ownOrigin}/sets/LOGO_expansion_{Uri.EscapeDataString(setCode)}_en_US.webp"
-            : $"{ExchangeSets}/LOGO_expansion_{Uri.EscapeDataString(setCode)}_en_US.webp";
+            : $"{DatabaseSets}/LOGO_expansion_{Uri.EscapeDataString(setCode)}_en_US.webp";
 }

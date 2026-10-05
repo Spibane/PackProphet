@@ -7,8 +7,8 @@ was published 2026-08-27 and its art was still absent a week later, so every car
 set drew as a placeholder -- which looks like a broken app rather than an upstream gap.
 
 The art does exist by then, just not on a per-file CDN: the database repository attaches it to each
-release as one zip. So this reads that zip, takes only the sets the CDN is missing, and writes them
-into the published output. Nothing is committed -- see the note on --out below -- so the repository
+release as one zip. So this reads that zip, takes only the sets Limitless is missing, and writes
+them into the published output. Nothing is committed -- see the note on --out below -- so the repository
 never grows and a fresh clone in ten years is the same size as one today.
 
 The zip is ~400 MB and this downloads about 6 MB of it. A zip's index lives at the END of the file,
@@ -54,7 +54,8 @@ import urllib.request
 import zlib
 
 DATA_CDN = "https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-database/dist"
-ART_REPO = "flibustier/pokemon-tcg-exchange"
+LIMITLESS = "https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/pocket"
+TCGDEX_SERIES = "https://api.tcgdex.net/v2/en/series/tcgp"
 DB_REPO = "flibustier/pokemon-tcg-pocket-database"
 UA = "PackProphet-deploy (+https://packprophet.spibane.com)"
 
@@ -118,17 +119,53 @@ def card_data() -> tuple[dict[str, list[int]], dict[str, set[str]]]:
     return {k: sorted(v) for k, v in numbers.items()}, packs
 
 
-def sets_on_cdn() -> set[str]:
-    """
-    Sets the art repository actually has a directory for.
+def published_code(code: str) -> str:
+    """How Limitless and TCGdex spell a set code. Mirrors ArtSource.PublishedSetCode."""
+    return {"PROMO-A": "P-A", "PROMO-B": "P-B"}.get(code.upper(), code)
 
-    Listed through the API rather than probed by fetching a card, because a probe cannot tell the
-    two failures apart: jsDelivr answers a missing file with 404 and a throttled request with 403,
-    and treating a throttle as a missing set would vendor the entire back catalogue.
+
+def sets_on_limitless(known: dict[str, list[int]]) -> set[str]:
     """
-    url = f"https://api.github.com/repos/{ART_REPO}/contents/public/images/cards-by-set"
-    listing = get_json(url, headers=gh_headers())
-    return {e["name"] for e in listing if e.get("type") == "dir"}
+    Sets Limitless has art for, the app's first source that has every set.
+
+    Asked one card per set, and the HIGHEST-numbered one: a promo set is never published whole,
+    so its newest card is the one that goes missing, and for any other set the last card is the
+    last to be drawn. Limitless answers a missing file with 403, since its bucket does not let a
+    stranger list it, and with 404 as well; either one is "not there". Anything else -- a timeout,
+    a 5xx -- is counted as present, because vendoring a set costs megabytes of deploy and a set
+    wrongly left out costs nothing the remote chain does not already cover.
+    """
+    have = set()
+    for code, numbers in known.items():
+        pub = published_code(code)
+        url = f"{LIMITLESS}/{pub}/{pub}_{max(numbers):03d}_EN.webp"
+        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": UA})
+        try:
+            with urllib.request.urlopen(req, timeout=30):
+                have.add(code)
+        except urllib.error.HTTPError as e:
+            if e.code not in (403, 404):
+                warn(f"Limitless answered {e.code} for {code}; counting it as present")
+                have.add(code)
+        except (urllib.error.URLError, TimeoutError) as e:
+            warn(f"could not ask Limitless about {code} ({e}); counting it as present")
+            have.add(code)
+    return have
+
+
+def sets_on_tcgdex(known: dict[str, list[int]]) -> list[str]:
+    """
+    Sets TCGdex lists, in the app's spelling, for the manifest. The app tries TCGdex first for
+    these and skips it for the rest, so one request here saves a 404 per card of every set
+    TCGdex has not reached yet. Empty, with a warning, when it cannot be asked: the chain then
+    starts at Limitless, which is complete.
+    """
+    try:
+        listed = {s["id"] for s in get_json(TCGDEX_SERIES)["sets"]}
+    except (urllib.error.URLError, urllib.error.HTTPError, KeyError, TypeError, ValueError) as e:
+        warn(f"could not read TCGdex's set list ({e}); the app will start at Limitless")
+        return []
+    return sorted(code for code in known if published_code(code) in listed)
 
 
 # --------------------------------------------------------------------------- reading the zip
@@ -246,10 +283,12 @@ def main() -> int:
         known, packs_by_set = card_data()
         # --set is the testing path and says "vendor this whatever upstream has", so it skips the
         # listing rather than being filtered by it.
-        have = set() if args.set else sets_on_cdn()
+        have = set() if args.set else sets_on_limitless(known)
     except (urllib.error.URLError, urllib.error.HTTPError, RuntimeError, ValueError, KeyError) as e:
         warn(f"could not work out which sets are missing ({e}); deploying with no vendored art")
         return 0
+
+    tcgdex = sets_on_tcgdex(known)
 
     unknown = [s for s in args.set if s not in known]
     if unknown:
@@ -259,15 +298,15 @@ def main() -> int:
     missing = sorted(args.set) if args.set else sorted(s for s in known if s not in have)
 
     if not missing:
-        log(f"every one of the {len(known)} sets is on the art CDN; nothing to vendor")
+        log(f"every one of the {len(known)} sets is on Limitless; nothing to vendor")
         # Still written, and written empty: it is the difference between "this deploy vendored
         # nothing" and a manifest that failed to appear, and only one of those is worth a warning
         # in the browser console later.
-        write_manifest(args.out, [], [], {}, args.dry_run)
+        write_manifest(args.out, [], [], {}, tcgdex, args.dry_run)
         return 0
 
     cards = sum(len(known[s]) for s in missing)
-    log(f"missing from the art CDN: {', '.join(missing)} ({cards} cards)")
+    log(f"missing from Limitless: {', '.join(missing)} ({cards} cards)")
 
     try:
         url, size = resolved_length(release_zip_url())
@@ -331,7 +370,7 @@ def main() -> int:
         }
         write_manifest(args.out, sorted(s for s in missing if coverage[s]["have"] > 0),
                        [p for p in packs if f"images/packs/{p}.webp" in by_suffix],
-                       coverage, dry=True)
+                       coverage, tcgdex, dry=True)
         return 0
 
     written, absent, bytes_out = 0, [], 0
@@ -389,23 +428,23 @@ def main() -> int:
         if c["have"] < c["of"]:
             log(f"{s}: art for {c['have']} of {c['of']} cards")
 
-    write_manifest(args.out, served, served_packs, coverage, args.dry_run)
+    write_manifest(args.out, served, served_packs, coverage, tcgdex, args.dry_run)
     return 0
 
 
 def write_manifest(out: str, sets: list[str], packs: list[str],
-                   coverage: dict[str, dict[str, int]], dry: bool) -> None:
+                   coverage: dict[str, dict[str, int]], tcgdex: list[str], dry: bool) -> None:
     if dry:
-        log(f"would write index.json: sets={sets} packs={packs} art={coverage}")
+        log(f"would write index.json: sets={sets} packs={packs} art={coverage} tcgdex={tcgdex}")
         return
     os.makedirs(out, exist_ok=True)
     path = os.path.join(out, "index.json")
     with io.open(path, "w", encoding="utf-8") as f:
-        # "art" is additive: a deployment written by an older copy of this script has none, and the
-        # app reads that as "nothing known to be missing" rather than as an error.
-        json.dump({"sets": sets, "packs": packs, "art": coverage}, f)
+        # "art" and "tcgdex" are additive: a deployment written by an older copy of this script has
+        # neither, and the app reads that as "nothing known" rather than as an error.
+        json.dump({"sets": sets, "packs": packs, "art": coverage, "tcgdex": tcgdex}, f)
         f.write("\n")
-    log(f"wrote {path}: sets={sets or 'none'} packs={packs or 'none'}")
+    log(f"wrote {path}: sets={sets or 'none'} packs={packs or 'none'} tcgdex={len(tcgdex)} set(s)")
 
 
 if __name__ == "__main__":

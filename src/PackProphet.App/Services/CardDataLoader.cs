@@ -176,8 +176,11 @@ public sealed class CardDataLoader
     /// own only where the wall clock is not a measure of anything, which in practice means tests.
     /// </param>
     /// <param name="probeArt">
-    /// Whether to ask the art CDN about new sets at boot — see <see cref="ProbeArtAsync"/>. Off
-    /// only in tests, where every remote request is a 404 and would read as every new set missing.
+    /// Whether to ask the art sources about new sets at boot — see <see cref="ProbeArtAsync"/>.
+    /// Off in the app since Limitless joined the chain: a browser cannot read its answer, so the
+    /// probe could never conclude a set was missing and would only spend requests finding that
+    /// out. Off in most tests too, where every remote request is a 404 and would read as every new
+    /// set missing.
     /// </param>
     /// <param name="clock">What "recent" is measured from. The system clock but in tests.</param>
     public CardDataLoader(HttpClient http, TimeSpan? artManifestDeadline = null, bool probeArt = true,
@@ -252,8 +255,12 @@ public sealed class CardDataLoader
     /// recorded it, which reads as "nothing known to be missing" rather than as an error — the
     /// field is additive on purpose, so an old deploy and a new app do not disagree.
     /// </param>
+    /// <param name="TcgDex">
+    /// The sets TCGdex had art for when the site was deployed. Additive like Art: absent means
+    /// the chain starts at Limitless, which has every set.
+    /// </param>
     private sealed record VendoredArt(
-        List<string>? Sets, List<string>? Packs, Dictionary<string, ArtHave>? Art);
+        List<string>? Sets, List<string>? Packs, Dictionary<string, ArtHave>? Art, List<string>? TcgDex);
 
     private sealed record ArtHave(int Have, int Of);
 
@@ -310,6 +317,7 @@ public sealed class CardDataLoader
         }
 
         ArtSource.UseVendored(manifest?.Sets, manifest?.Packs, _http.BaseAddress);
+        ArtSource.UseTcgDex(manifest?.TcgDex);
 
         // Reported from what THIS load read, not from the static it has just written.
         //

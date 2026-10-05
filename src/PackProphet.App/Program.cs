@@ -14,7 +14,10 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 // may not depend on a scoped service — DI validation rejects it at startup, taking down every page.
 // In Blazor WebAssembly there is a single scope for the app's lifetime anyway, so Scoped gives the
 // same one-instance behaviour these services need.
-builder.Services.AddScoped<CardDataLoader>();
+//
+// The boot-time art probe is off: the most complete art source cannot be asked from a browser.
+// See the probeArt parameter.
+builder.Services.AddScoped(sp => new CardDataLoader(sp.GetRequiredService<HttpClient>(), probeArt: false));
 builder.Services.AddScoped<LocalStorageStateStore>();
 builder.Services.AddScoped<IStateStore>(sp => sp.GetRequiredService<LocalStorageStateStore>());
 builder.Services.AddScoped<AppSession>();

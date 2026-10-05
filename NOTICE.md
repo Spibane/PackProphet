@@ -12,9 +12,10 @@ information, a dataset with no licence at all, and scraping the origin directly.
 
 | Source | Used for | Licence |
 | --- | --- | --- |
-| [chase-mew/pokemon-tcg-pocket-cards](https://github.com/chase-mew/pokemon-tcg-pocket-cards) v5 | Attacks, abilities, evolution stage, element, HP, retreat, weakness, evolves-from; expansion logos; **card artwork, as the second source in the chain** | AGPL-3.0-or-later |
-| [flibustier/pokemon-tcg-pocket-database](https://github.com/flibustier/pokemon-tcg-pocket-database) | **Pull rates** (published nowhere else), pack membership, rarity economics (pack points, shinedust), set/series grouping, artwork filenames | MIT, © Jon (flibustier) |
-| [flibustier/pokemon-tcg-exchange](https://github.com/flibustier/pokemon-tcg-exchange) | Card and booster artwork, as the first source in the chain | MIT, © Jon (flibustier) |
+| [chase-mew/pokemon-tcg-pocket-cards](https://github.com/chase-mew/pokemon-tcg-pocket-cards) v5 | Attacks, abilities, evolution stage, element, HP, retreat, weakness, evolves-from; expansion logos; **card artwork, as the last source in the chain** | AGPL-3.0-or-later |
+| [flibustier/pokemon-tcg-pocket-database](https://github.com/flibustier/pokemon-tcg-pocket-database) | **Pull rates** (published nowhere else), pack membership, rarity economics (pack points, shinedust), set/series grouping, artwork filenames; booster artwork and expansion logos | MIT, © Jon (flibustier) |
+| [TCGdex](https://tcgdex.dev) | Card artwork, as the first source in the chain, for the sets it has | MIT |
+| [Limitless TCG](https://pocket.limitlesstcg.com/cards) | Card artwork, as the second source in the chain, and the first for sets TCGdex has not reached | No published terms |
 
 ### Why artwork has more than one source
 
@@ -23,11 +24,15 @@ cadences. The data ships within days of a set going live; the artwork is a manua
 lands when it lands. B4a's data was published on 2026-08-27 and its artwork was still absent a
 week later, which drew every card in the newest set as a placeholder.
 
-So artwork is a chain rather than a single URL — see `PackProphet.Core/Domain/ArtSource.cs`. Both
-remote sources are already listed above, both are reached over jsDelivr, and neither is a new
-dependency: the chain is an ordering of what this project already used.
+So artwork is a chain rather than a single URL — see `PackProphet.Core/Domain/ArtSource.cs`. Until
+2026-10-05 it began at flibustier/pokemon-tcg-exchange, which that day replaced its card and
+booster directories with links to a checkout outside the repository. TCGdex and Limitless TCG took
+its place: the only two hosts found with the whole catalogue between them.
 
-Artwork for a set neither source has published yet is taken from the
+The licences above cover each project's code and data. The artwork itself is © The Pokémon
+Company, Nintendo, Creatures Inc. and GAME FREAK inc., and none of these sources can license it.
+
+Artwork for a set Limitless has not published yet is taken from the
 [pokemon-tcg-pocket-database release archive](https://github.com/flibustier/pokemon-tcg-pocket-database/releases)
 at deploy time — the same MIT source as the second row above, and the same artwork, distributed by
 its author as a release asset rather than per file. It is written into the published site and never committed;

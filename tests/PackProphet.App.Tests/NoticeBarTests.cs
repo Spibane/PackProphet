@@ -21,6 +21,9 @@ public class NoticeBarTests : AppHost
 
     private string? _feed;
 
+    /// <summary>Dismissals the app starts with, as a returning visitor's save would hold.</summary>
+    private List<string> _dismissed = [];
+
     protected override NoticeOptions NoticeSettings() => new()
     {
         GistUrl = _feed is null
@@ -33,6 +36,7 @@ public class NoticeBarTests : AppHost
     protected override AppState Start()
     {
         var state = AppState.Fresh();
+        state = state with { Prefs = state.Prefs with { DismissedNotices = _dismissed } };
         if (!_collected) return state;
 
         return state with
@@ -276,6 +280,23 @@ public class NoticeBarTests : AppHost
 
         layout.WaitForAssertion(() => Assert.Contains("Screenshot import", Text(layout)));
         Assert.Equal(0, Session.DismissedNoticeCount);
+    }
+
+    [Fact]
+    public async Task Dismissing_hides_the_bar_when_the_dismissal_list_does_not_grow()
+    {
+        // A dismissal can replace a key rather than add one: a "waiting:" notice prunes the last
+        // one, and a full list drops its oldest. Either way the count holds still, and a memo
+        // keyed on the count kept showing a notice that had just been hidden.
+        _dismissed = Enumerable.Range(0, AppSession.RememberedDismissals).Select(i => $"feed:n{i}").ToList();
+        _feed = """[{"id":"down","level":"problem","text":"Screenshot import is broken."}]""";
+        var layout = await LayoutAsync();
+
+        layout.WaitForAssertion(() => Assert.Contains("Screenshot import", Text(layout)));
+        layout.Find(".site-notice .x").Click();
+
+        layout.WaitForAssertion(() => Assert.DoesNotContain("Screenshot import", Text(layout) ?? ""));
+        Assert.Equal(AppSession.RememberedDismissals, Session.DismissedNoticeCount);
     }
 
     [Fact]

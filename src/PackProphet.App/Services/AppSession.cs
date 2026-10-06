@@ -1808,6 +1808,13 @@ public sealed class AppSession : IAsyncDisposable
     public int DismissedNoticeCount => State.Prefs.DismissedNotices.Count;
 
     /// <summary>
+    /// The dismissed keys themselves. Replaced wholesale on every change and never mutated, so a
+    /// caller can tell that the set changed by reference — which the count cannot, since pruning
+    /// a superseded "waiting:" key or dropping the oldest at the cap leaves it where it was.
+    /// </summary>
+    public IReadOnlyList<string> DismissedNotices => State.Prefs.DismissedNotices;
+
+    /// <summary>
     /// Unhide every notice. All of them at once rather than one at a time, for the reason above:
     /// the keys are not readable, so there is nothing to choose between.
     /// </summary>

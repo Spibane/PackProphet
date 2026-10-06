@@ -83,16 +83,21 @@ public sealed class SiteNotices
     /// Everything <see cref="Pick"/> reads, in a form that compares. Data and the feed's list are
     /// compared by reference: both are replaced wholesale when they change and never mutated.
     ///
-    /// The two dismissal counts are here rather than a revision this class bumps itself, because
-    /// dismissing is not the only thing that changes them: the settings page can clear the
-    /// persisted ones, and a counter incremented in <see cref="Dismiss"/> would not notice — the
-    /// bar would stay hidden after being switched back on, until something unrelated moved.
+    /// The dismissals are here rather than a revision this class bumps itself, because dismissing
+    /// is not the only thing that changes them: the settings page can clear the persisted ones,
+    /// and a counter incremented in <see cref="Dismiss"/> would not notice — the bar would stay
+    /// hidden after being switched back on, until something unrelated moved.
+    ///
+    /// The persisted list by reference, not by count. A dismissal can replace a key rather than
+    /// add one — a new "waiting:" notice prunes the last, a full list drops its oldest — and the
+    /// count holding still kept a just-dismissed notice on screen. The session-only set only ever
+    /// grows, so its count is enough.
     /// </summary>
     private object Signature() => (
         _session.Loaded,
         _session.Data,
         _feed.Notices,
-        _session.DismissedNoticeCount,
+        _session.DismissedNotices,
         _forNow.Count);
 
     private SiteNotice? Pick()

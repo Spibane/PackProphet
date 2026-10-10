@@ -1,5 +1,5 @@
 # PackProphet card type badges
-# generated 2026-09-30
+# generated 2026-10-10
 # set number type[/type] · see src/PackProphet.Core/Vision/TypeBadge.cs
 A1 1 Grass
 A1 2 Grass
@@ -3622,6 +3622,7 @@ B4b 353 Colorless
 B4b 354 Colorless
 B4b 355 Colorless
 B4b 356 Colorless
+B4b 357 Colorless
 B4b 358 Colorless
 B4b 359 Colorless
 B4b 360 Colorless
@@ -3853,3 +3854,10 @@ PROMO-B 91 Psychic
 PROMO-B 92 Fighting
 PROMO-B 93 Fire
 PROMO-B 94 Psychic
+PROMO-B 95 Darkness
+PROMO-B 97 Dragon
+PROMO-B 98 Dragon
+PROMO-B 99 Dragon
+PROMO-B 100 Colorless
+PROMO-B 102 Dragon
+PROMO-B 103 Lightning

@@ -186,11 +186,13 @@ public class SetCatalogTests
     [Fact]
     public void A_sets_packs_are_the_card_datas_where_the_two_disagree()
     {
-        // sets.json names B4a's pack after B4's; every B4a card says otherwise.
-        Assert.Equal(["Ruler of the Skies"], Real().Info("B4a")!.Packs);
+        // Until 2.12.0, sets.json named B4a's pack after B4's while every B4a card said
+        // otherwise. Upstream has fixed it, so the mistake is put back here.
+        var published = Snapshot.PublishedSets();
+        published["B"].Single(s => s.Code == "B4a").Packs = ["Ruler of the Skies"];
 
         var ix = Snapshot.Index();
-        var catalog = new SetCatalog(Snapshot.PublishedSets(), ix.BySet.Keys, ix.AllPackKeys);
+        var catalog = new SetCatalog(published, ix.BySet.Keys, ix.AllPackKeys);
 
         Assert.Equal(ix.AllPackKeys.Where(k => k.StartsWith("B4a:", StringComparison.Ordinal))
                                    .Select(k => k[4..]),

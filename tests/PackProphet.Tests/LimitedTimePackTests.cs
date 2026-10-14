@@ -10,8 +10,10 @@ public class LimitedTimePackTests
     [Fact]
     public void DeluxeIsRecognisedAsLimitedTime_AndNothingElseIs()
     {
-        Assert.Equal(new[] { "A4b:Deluxe" }, Snapshot.Odds().LimitedTimePacks.OrderBy(p => p));
+        Assert.Equal(new[] { "A4b:Deluxe", "B4b:Deluxe Pack Mega" },
+                     Snapshot.Odds().LimitedTimePacks.OrderBy(p => p));
         Assert.True(GameRules.IsLimitedTimePack("Deluxe"));
+        Assert.True(GameRules.IsLimitedTimePack("Deluxe Pack Mega"));
         Assert.False(GameRules.IsLimitedTimePack("Mewtwo"));
     }
 
@@ -110,11 +112,14 @@ public class LimitedTimePackTests
 
         var foils = odds.FoilOwnershipKeys;
 
-        // 64 C + 50 U + 25 R, paired exactly against their plain prints.
-        Assert.Equal(139, foils.Count);
-
+        // A4b's 64 C + 50 U + 25 R and B4b's 71 C + 65 U + 30 R, paired exactly against their
+        // plain prints.
         var cards = index.All.Where(c => foils.Contains(c.OwnershipKey)).ToArray();
-        Assert.All(cards, c => Assert.Equal("A4b", c.Set));
+        Assert.Equal(139, cards.Count(c => c.Set == "A4b"));
+        Assert.Equal(166, cards.Count(c => c.Set == "B4b"));
+        Assert.Equal(139 + 166, foils.Count);
+
+        Assert.All(cards, c => Assert.Contains(c.Set, new[] { "A4b", "B4b" }));
         Assert.All(cards, c => Assert.True(c.VariantIndex > 0));
         Assert.All(cards, c => Assert.Contains(c.Rarity, new[] { "C", "U", "R" }));
     }
@@ -160,9 +165,9 @@ public class LimitedTimePackTests
     }
 
     [Fact]
-    public void OnlyTheDeluxeSetHasFoils()
+    public void OnlyTheDeluxeSetsHaveFoils()
     {
-        Assert.Equal(new[] { "A4b" }, Snapshot.Odds().SetsWithFoils.OrderBy(s => s).ToArray());
+        Assert.Equal(new[] { "A4b", "B4b" }, Snapshot.Odds().SetsWithFoils.OrderBy(s => s).ToArray());
     }
 
     [Fact]

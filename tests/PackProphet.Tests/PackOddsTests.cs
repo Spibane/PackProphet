@@ -66,11 +66,12 @@ public class PackOddsTests
                 $"foil {c.Key} {c.Name} was priced as unobtainable"));
         }
 
-        // RF's share (20.3295%) exactly equals R's in the same slot, over equal card
-        // counts — so a plain rare and its foil twin must come out identically priced.
+        // R and RF share one slot (31.666% and 8.993% since 2.12.0, an even 20.3295% each
+        // before) over equal card counts, so a plain rare and its foil twin are priced in
+        // exactly that ratio.
         var plainR = inPack.First(c => c.Rarity == "R" && c.VariantIndex == 0);
         var foilR = inPack.First(c => c.Rarity == "R" && c.VariantIndex > 0);
-        AssertClose(ec[plainR.Key], ec[foilR.Key], 1e-9, 1e-15);
+        AssertClose(31.666 / 8.993, ec[plainR.Key] / ec[foilR.Key], 1e-9, 1e-15);
 
         // Commons appear in slots 1 and 2 as well, so a plain common must beat its foil.
         var plainC = inPack.First(c => c.Rarity == "C" && c.VariantIndex == 0);
@@ -213,25 +214,26 @@ public class PackOddsTests
     {
         var sets = Odds.UnpriceablePacks.Select(k => k.Split(':')[0]).Distinct().OrderBy(s => s);
 
-        // B4b has real, purchasable packs but NO rate data, so the newest set cannot be priced.
-        // Omitting it from a ranking would read as "nothing to gain from B4b", the opposite of
-        // the truth — so it must be disclosed.
-        //
-        // One of them again, after two: 2.11.0 published rates for B4 and B4a and brought B4b
-        // without any. That is the normal state rather than a problem: card data appears
-        // upstream as soon as a set is announced and pull rates are worked out from what people
-        // open, so the newest set or two is always unpriced. The list shrinking is the good news
-        // worth noticing.
+        // None. 2.12.0 published rates for B4b, the one set still waiting.
+        // That is not the normal state: card data appears upstream as soon as a set is
+        // announced and pull rates are worked out from what people open, so the newest set or
+        // two is usually unpriced. When the next set arrives this list grows again, and that set
+        // must be listed: omitting it from a ranking would read as "nothing to gain from it",
+        // the opposite of the truth.
         //
         // Promos are NOT listed. They have no rates either, but they are not packs anyone can
         // choose to open, so warning about them would report a problem the user cannot act on.
-        Assert.Equal(new[] { "B4b" }, sets);
+        Assert.Empty(sets);
+        Assert.True(Snapshot.Rates().Covers("B4b"));
+    }
 
-        foreach (var set in new[] { "B4b" })
-        {
-            Assert.False(Snapshot.Rates().Covers(set));
-            Assert.NotEmpty(Snapshot.Index().BySet[set]);
-        }
+    [Fact]
+    public void ASetWithoutPullRates_IsListedAsUnpriceable()
+    {
+        // B4b as it stood before 2.12.0: real, purchasable packs and no rates.
+        var odds = new PackOdds(Snapshot.Index(), Snapshot.RatesWithout("B4b"));
+
+        Assert.Equal(new[] { "B4b" }, odds.UnpriceablePacks.Select(k => k.Split(':')[0]).Distinct());
     }
 
     [Fact]

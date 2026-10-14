@@ -275,31 +275,67 @@ jobs:
           # Monday rather than opening a second pull request beside the first.
           branch="chore/card-data"
 
-          git config user.name  'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git checkout -b "$branch"
-          git add src/PackProphet.App/wwwroot/data/snapshot \
-                  src/PackProphet.App/wwwroot/data/card-hashes.txt \
-                  src/PackProphet.App/wwwroot/data/card-types.txt
-          git commit -m "${TITLE}"
+          bot='github-actions[bot]@users.noreply.github.com'
+          data="src/PackProphet.App/wwwroot/data/snapshot
+                src/PackProphet.App/wwwroot/data/card-hashes.txt
+                src/PackProphet.App/wwwroot/data/card-types.txt"
 
-          # A bare --force-with-lease reads the branch's remote-tracking ref, and this checkout has
-          # none: it is a shallow clone of the base branch, fetching that branch alone. Git then
-          # rejects the push as stale info rather than falling back to a plain one, which is what
-          # broke this step. Naming the value the lease expects asks the same question -- has
-          # anything else written this branch since -- without needing a ref to read it from.
-          # An empty answer means the branch is not there at all, and a first push cannot be forced.
-          remote_sha=$(git ls-remote --heads origin "$branch" | awk '{print $1}')
-          if [ -n "$remote_sha" ]; then
-            git push --force-with-lease="refs/heads/$branch:$remote_sha" origin "$branch"
+          git config user.name  'github-actions[bot]'
+          git config user.email "$bot"
+
+          # Commits on the open pull request that this job did not write. A refresh moves counts
+          # the tests pin on purpose, so someone pushes the test changes onto this branch before it
+          # can merge. Rebuilding the branch from the base would throw that work away, and did:
+          # 2.12.0's pull request needed ten tests updated, and the next run, three hours later
+          # and every three hours until a merge, would have force-pushed them out of existence.
+          # A closed pull request has nothing left to keep, so it counts none.
+          others=$(BOT="$bot" gh pr view "$branch" --json state,commits --jq \
+                     'if .state == "OPEN" then [.commits[].authors[] | select(.email != env.BOT)] | length
+                      else 0 end' 2>/dev/null || echo 0)
+
+          if [ "${others:-0}" -gt 0 ]; then
+            # Then the new data goes on top of the branch as it stands, and the push is an ordinary
+            # one: it adds a commit and removes nothing. The files are carried over whole, so the
+            # data still matches what this run generated from the base, as a rebuild would have.
+            echo "the pull request carries $others commit(s) from someone else; adding to it"
+            out=$(mktemp -d)
+            for path in $data; do mkdir -p "$out/$(dirname "$path")"; cp -R "$path" "$out/$path"; done
+            git reset -q --hard
+            git fetch -q --depth=1 origin "refs/heads/$branch"
+            git checkout -q -b "$branch" FETCH_HEAD
+            for path in $data; do rm -rf "$path"; cp -R "$out/$path" "$path"; done
+            git add $data
+            if git diff --cached --quiet; then
+              echo "the branch already holds this data"
+            else
+              git commit -m "${TITLE}"
+              git push origin "$branch"
+            fi
           else
-            git push origin "$branch"
+            git checkout -b "$branch"
+            git add $data
+            git commit -m "${TITLE}"
+
+            # A bare --force-with-lease reads the branch's remote-tracking ref, and this checkout
+            # has none: it is a shallow clone of the base branch, fetching that branch alone. Git
+            # then rejects the push as stale info rather than falling back to a plain one, which is
+            # what broke this step. Naming the value the lease expects asks the same question --
+            # has anything else written this branch since -- without needing a ref to read it
+            # from. An empty answer means the branch is not there at all, and a first push cannot
+            # be forced.
+            remote_sha=$(git ls-remote --heads origin "$branch" | awk '{print $1}')
+            if [ -n "$remote_sha" ]; then
+              git push --force-with-lease="refs/heads/$branch:$remote_sha" origin "$branch"
+            else
+              git push origin "$branch"
+            fi
           fi
 
           # Reuse an open pull request from the same branch rather than stacking a new one every
           # week: an unmerged refresh should grow, not multiply.
           if gh pr view "$branch" --json state --jq .state 2>/dev/null | grep -q OPEN; then
-            gh pr edit "$branch" --body "$BODY"
+            # The title too: it names the release, and the release it named may be behind.
+            gh pr edit "$branch" --title "${TITLE}" --body "$BODY"
             echo "updated the existing pull request"
           else
             gh pr create --base "$base" --head "$branch" \

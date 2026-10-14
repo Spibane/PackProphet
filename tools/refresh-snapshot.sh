@@ -41,6 +41,12 @@ DB="https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-database@${VERSION}/dist"
 FACTS="https://cdn.jsdelivr.net/npm/pokemon-tcg-pocket-cards@5/data/v5"
 REPO="https://cdn.jsdelivr.net/gh/chase-mew/pokemon-tcg-pocket-cards@main/data/v5"
 
+# The same files from somewhere that is not jsDelivr, pinned the same way. Checked byte for byte
+# against the jsDelivr copies on 2026-10-14.
+DB_MIRROR="https://unpkg.com/pokemon-tcg-pocket-database@${VERSION}/dist"
+FACTS_MIRROR="https://unpkg.com/pokemon-tcg-pocket-cards@5/data/v5"
+REPO_MIRROR="https://raw.githubusercontent.com/chase-mew/pokemon-tcg-pocket-cards/main/data/v5"
+
 # Each line is: local name <- url. The pairing is not obvious and is not ours to choose -- it
 # mirrors CardDataLoader, which reads expansions from the git repo and the facts file from a
 # different package than the card list. A snapshot assembled from different sources than the app
@@ -49,22 +55,28 @@ REPO="https://cdn.jsdelivr.net/gh/chase-mew/pokemon-tcg-pocket-cards@main/data/v
 # Retried, because a cold jsDelivr edge can answer a large file it has not cached with a 503. The
 # 4.7 MB facts file did that to two scheduled runs on 2026-10-05, and served fine 37 seconds into
 # a later ask.
+#
+# Then the mirror, because retrying is not always enough. On 2026-10-14 jsDelivr answered 503 for
+# expansions.json through a full minute of retries and failed the run, while the mirrors served
+# every file.
 fetch() {
-    local name="$1" url="$2"
+    local name="$1" url="$2" mirror="$3"
     printf '  %-18s <- %s\n' "$name" "$url"
-    curl -fsSL --retry 4 --retry-delay 15 --retry-all-errors "$url" -o "${TMP}/${name}"
+    curl -fsSL --retry 2 --retry-delay 15 --retry-all-errors "$url" -o "${TMP}/${name}" && return
+    printf '  %-18s <- %s\n' "" "$mirror"
+    curl -fsSL --retry 4 --retry-delay 15 --retry-all-errors "$mirror" -o "${TMP}/${name}"
 }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
 
 echo "fetching:"
-fetch cards.min.json  "${DB}/cards.min.json"
-fetch rarities.json   "${DB}/rarities.json"
-fetch pullRates.json  "${DB}/pullRates.json"
-fetch sets.json       "${DB}/sets.json"
-fetch expansions.json "${REPO}/expansions.json"
-fetch cards.v5.json   "${FACTS}/cards.min.json"
+fetch cards.min.json  "${DB}/cards.min.json"      "${DB_MIRROR}/cards.min.json"
+fetch rarities.json   "${DB}/rarities.json"       "${DB_MIRROR}/rarities.json"
+fetch pullRates.json  "${DB}/pullRates.json"      "${DB_MIRROR}/pullRates.json"
+fetch sets.json       "${DB}/sets.json"           "${DB_MIRROR}/sets.json"
+fetch expansions.json "${REPO}/expansions.json"   "${REPO_MIRROR}/expansions.json"
+fetch cards.v5.json   "${FACTS}/cards.min.json"   "${FACTS_MIRROR}/cards.min.json"
 
 # Every file parses and none is empty, checked before anything is overwritten. A CDN that answers
 # 200 with an error page would otherwise replace a working snapshot with rubbish, and the app

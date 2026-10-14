@@ -144,15 +144,15 @@ public class CommittedArtHashesTests
         // a set the snapshot has never heard of and the two sides stop describing the same thing.
         //
         // And over the cards that HAVE a fingerprint. A card with no art has nothing for the
-        // pixels to say, so the ownership side counts the cards the table can see: 3,866 ownable
-        // less the eleven whose art is not published, none of which is a reprint of anything.
+        // pixels to say, so the ownership side counts the cards the table can see. Since 2.12.0
+        // that is all 3,866 ownable cards; before it, eleven had no published art.
         var distinct = InSnapshotSets.Select(e => e.Hash).Distinct().Count();
         var unread = Unfingerprinted;
         var fingerprinted = Ix.All.Where(c => !unread.Contains(c.Key))
                                   .Select(c => c.OwnershipKey).Distinct().Count();
 
         Assert.Equal(fingerprinted, distinct);
-        Assert.Equal(3855, distinct);
+        Assert.Equal(3866, distinct);
     }
 
     [Fact]

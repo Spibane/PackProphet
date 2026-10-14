@@ -10,7 +10,8 @@ namespace PackProphet.Tests;
 ///
 /// Written before B4b's data existed, against a copy of A4b under a new set code and a pack also
 /// called "Deluxe". 2.11.0 published the real thing, and the rates tests now run against it: 429
-/// cards, 166 foil pairs where A4b has 139, and no published rates of its own yet, so it borrows.
+/// cards and 166 foil pairs where A4b has 139. 2.12.0 published B4b's own rates, so the borrowing
+/// test takes them away again: that is how B4b stood until then, and how the next Deluxe set will.
 ///
 /// The copy got one thing wrong. B4b's pack is "Deluxe Pack Mega", not "Deluxe", so the two Deluxe
 /// sets do not share a pack name after all. The booster art tests below were about exactly that
@@ -65,7 +66,8 @@ public class SecondDeluxeSetTests
     public void BorrowedDeluxeRates_KeepFourCards_TheGuarantee_AndTheFoils()
     {
         var index = Snapshot.Index();
-        var rates = Snapshot.Rates().Assuming(["B4b"], "A4b");
+        // Assuming never replaces published rates, so B4b's own have to go first.
+        var rates = Snapshot.RatesWithout("B4b").Assuming(["B4b"], "A4b");
         var odds = new PackOdds(index, rates);
 
         Assert.Equal(4, rates.LikelyCardCount("B4b"));

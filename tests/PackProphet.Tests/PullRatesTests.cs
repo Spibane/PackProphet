@@ -134,14 +134,15 @@ public class PullRatesTests
     [Fact]
     public void CoverageIsIncomplete_AndTheGapMustBeDisclosed()
     {
-        // The newest set and both promo sets have NO rate data. The engine cannot price
-        // them; the UI has to say so rather than omit them and imply there is nothing
-        // to gain. If this list shrinks upstream, that is good news worth noticing.
+        // Both promo sets have NO rate data, and usually the newest set or two as well; B4b
+        // was one until 2.12.0. The engine cannot price them; the UI has to say so rather
+        // than omit them and imply there is nothing to gain. If this list shrinks upstream,
+        // that is good news worth noticing.
         var setsWithCards = Snapshot.Index().BySet.Keys.ToHashSet();
         var unpriceable = setsWithCards.Where(s => !Snapshot.Rates().Covers(s))
                                       .OrderBy(s => s).ToArray();
 
-        Assert.Equal(new[] { "B4b", "PROMO-A", "PROMO-B" }, unpriceable);
+        Assert.Equal(new[] { "PROMO-A", "PROMO-B" }, unpriceable);
     }
 
     // ---- borrowed rates ---------------------------------------------------------------
@@ -156,8 +157,8 @@ public class PullRatesTests
 
         Assert.NotNull(donor);
         Assert.True(rates.Covers(donor!));
-        // B4a (2026-08-27) is the newest measured ordinary set. B4b is newer, but has no rates
-        // to lend and would not be asked if it had: the Deluxe sets are excluded on principle,
+        // B4a (2026-08-27) is the newest measured ordinary set. B4b is newer and has rates since
+        // 2.12.0, but is not asked: the Deluxe sets are excluded on principle,
         // since four cards and a guaranteed 4-diamond would price an ordinary set as far better
         // than it is.
         Assert.Equal("B4a", donor);

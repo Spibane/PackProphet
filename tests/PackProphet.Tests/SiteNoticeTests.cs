@@ -84,9 +84,11 @@ public class SiteNoticeTests
     {
         // Nine of 103 is under the tenth of slack a numbered set gets, and it is still news: a
         // promo set is never published whole, so any gap in it is the newest promos arriving.
+        // PROMO-B stood exactly so until 2.12.0 caught its detail up.
         var sets = new SetCatalog(Snapshot.PublishedSets(), Snapshot.Index().BySet.Keys);
         var promo = Assert.Single(
-            DataLag.DetailShortfalls(Snapshot.Index(), Snapshot.Facts()), g => g.Set == "PROMO-B");
+            DataLag.DetailShortfalls(IndexOf(("PROMO-B", 103)), FactsFor(("PROMO-B", 94))));
+        Assert.Equal(9, promo.Short);
 
         var notice = DataLag.Waiting([], [promo], sets);
 

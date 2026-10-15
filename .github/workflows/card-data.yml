@@ -96,7 +96,31 @@ jobs:
       || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
+      # The pull request is pushed and opened as a GitHub App, not with this workflow's token.
+      #
+      # GitHub holds the checks on any pull request that this workflow's own token opens or
+      # pushes to, until someone clicks "Approve and run", so that one workflow cannot set off
+      # another without a person in the loop. Every refresh pull request sat untested behind that
+      # click: #12 waited nine days for its first run. An app's token is not held.
+      #
+      # The app is set up by hand, outside this file: its client ID is the repository variable
+      # CARD_DATA_APP_CLIENT_ID and its private key the secret CARD_DATA_APP_PRIVATE_KEY. Until
+      # both exist the job falls back to the workflow's token and the click comes back, which is
+      # a slower refresh rather than a broken one.
+      - name: Borrow the card-data app's token
+        id: app
+        if: vars.CARD_DATA_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.CARD_DATA_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CARD_DATA_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      # The checkout's credentials are the ones the final step's git push uses.
       - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app.outputs.token || github.token }}
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -264,7 +288,7 @@ jobs:
       - name: Open a pull request
         if: steps.changed.outputs.changed == 'fingerprints' || steps.types.outputs.types == 'changed'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app.outputs.token || github.token }}
           BODY: ${{ steps.summary.outputs.body }}
           TITLE: ${{ needs.check.outputs.snapshot != needs.check.outputs.latest
                      && format('Refresh the card data to {0}, and fingerprint what is new', needs.check.outputs.latest)

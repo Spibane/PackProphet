@@ -18,8 +18,14 @@ ALLOWED_ORIGIN = "https://packprophet.spibane.com"
 #
 # `period` accepts 10 or 60, and namespace_id is any number you pick that stays put -- changing it
 # starts the counting again.
-[[unsafe.bindings]]
+#
+# The binding only exists if wrangler deploys this file. The dashboard can neither show nor set
+# it, and a deploy from the dashboard's editor leaves the worker running with no limiter at all --
+# which the worker survives silently, by design, so check for the 429s after every deploy.
+[[ratelimits]]
 name = "RATE_LIMIT"
-type = "ratelimit"
 namespace_id = "1001"
-simple = { limit = 60, period = 60 }
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60

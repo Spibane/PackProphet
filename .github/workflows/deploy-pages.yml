@@ -10,10 +10,11 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+# Read-only by default. Only the deploy job, which never runs for a pull request, is given the
+# rights to publish -- so the build, which runs whatever a pull request's branch contains, never
+# holds them.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Let a newer push cancel an in-flight deploy, but never interrupt one mid-publish.
 #
@@ -277,6 +278,9 @@ jobs:
     # without the second.
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

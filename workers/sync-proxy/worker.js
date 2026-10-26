@@ -63,10 +63,13 @@ export default {
         try {
             upstream = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${call}`, {
                 method: 'POST',
+                // The key on `apikey` alone. A publishable key (sb_publishable_...) is not a JWT, and
+                // Supabase wants it kept out of `Authorization`; with no bearer the call runs as
+                // `anon`, which is the only role the three functions are granted to. A legacy anon
+                // JWT works the same way here, so the secret can be swapped either side of a deploy.
                 headers: {
                     'content-type': 'application/json',
                     apikey: env.SUPABASE_ANON_KEY,
-                    authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
                 },
                 body,
             });

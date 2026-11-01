@@ -12,11 +12,13 @@
 @inject AppSession Session
 
 @{
-    var rungs = Session.Index.Ladder.Rungs.Where(r => Plan.Copies(r.Index) > 0).ToList();
+    var wanted = Session.Index.Ladder.Rungs.Where(r => Plan.Copies(r.Index) > 0).ToList();
+    var rungs = wanted.Where(r => !r.SetApart).ToList();
+    var apart = wanted.Where(r => r.SetApart).ToList();
     var first = true;
 }
 
-@if (rungs.Count == 0 && Foils == 0)
+@if (wanted.Count == 0 && Foils == 0)
 {
     <text>Nothing</text>
 }
@@ -46,6 +48,21 @@ else
            two together, which is what the rungs get for free by carrying their mark inside
            their own label. *@
         <span class="glyphs foil">@RarityLadder.FoilMark</span><text>&#160;Foils</text>@(Foils > 1 ? $"×{Foils}" : "")
+    }
+
+    @* Anomaly in the same place, after one divider shared with the foils: the chips set it apart
+       beside them, and the line reads the same way. *@
+    @if (apart.Count > 0)
+    {
+        @if (!first && Foils == 0)
+        {
+            <span class="plan-sep" aria-hidden="true"></span>
+        }
+        foreach (var rung in apart)
+        {
+            @(Foils > 0 ? " " : "")
+            <span class="glyphs @rung.GlyphClass">@rung.Symbol</span>@(Plan.Copies(rung.Index) > 1 ? $"×{Plan.Copies(rung.Index)}" : "")
+        }
     }
 }
 

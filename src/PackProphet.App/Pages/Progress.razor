@@ -649,6 +649,8 @@ else
         // property walks every openable set and checks the rate table on each call.
         var awaiting = Session.SetsAwaitingRates.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        // Hourglass sets: every panel leads with packs away and the shared daily allowance, and a
+        // Special Pack is opened when an event hands one out, so it has no packs-away to give.
         var candidates = Session.Index.OpenableSets
             .Where(set => Session.ProgressIncludeUnreleased || Session.Sets.IsReleased(set, today))
             .ToArray();

@@ -70,12 +70,14 @@ public class TradeBoardAdvisorTests
     }
 
     [Fact]
-    public void The_unobtainable_case_is_dormant_until_promos_can_be_traded()
+    public void Only_Special_Pack_cards_are_tradeable_with_no_other_route()
     {
-        // Pins a measured fact the ranking rests on. A card with no route at all would be the
-        // best possible use of a slot — and today no TRADEABLE card is in that position. A set
-        // without published pull rates is not unobtainable: it still sells packs, so its points
-        // shop still works, and its commons price at seven packs rather than infinity.
+        // Pins a measured fact the ranking rests on. A card with no route at all is the best
+        // possible use of a slot, and the only TRADEABLE cards in that position are Special Pack
+        // ones: their packs come from events rather than hourglasses and earn no points, so a
+        // trade is the one route anyone can choose. A set without published pull rates is not
+        // unobtainable: it still sells packs, so its points shop still works, and its commons
+        // price at seven packs rather than infinity.
         var routes = new RouteCost(Ix, Snapshot.Odds(), Snapshot.Rarities());
         var queue = new TradeQueue(Ix, Snapshot.Odds(), Snapshot.Rarities());
         var owned = new Collection();
@@ -85,7 +87,8 @@ public class TradeBoardAdvisorTests
             .Where(c => routes.For(c, owned).Cheapest is null)
             .ToArray();
 
-        Assert.Empty(tradeableWithNoRoute);
+        Assert.NotEmpty(tradeableWithNoRoute);
+        Assert.All(tradeableWithNoRoute, c => Assert.True(CardIndex.IsSpecialSet(c.Set), c.Key));
 
         // The cards that genuinely have no route are promos, and they are exactly what the switch
         // will let in. When it flips, this stops being dormant on its own.

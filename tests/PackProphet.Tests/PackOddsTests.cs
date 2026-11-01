@@ -214,7 +214,9 @@ public class PackOddsTests
     {
         var sets = Odds.UnpriceablePacks.Select(k => k.Split(':')[0]).Distinct().OrderBy(s => s);
 
-        // C1 and SP1, both released 2026-10-29 and published in 2.13.1 without rates. That is
+        // C1, released 2026-10-29 and published in 2.13.1 without rates. SP1 came without them
+        // too, and is not listed: a Special Pack is never bought with hourglasses, so a missing
+        // price for it is not a gap in any plan. That is
         // the normal state: card data appears upstream as soon as a set is announced and pull
         // rates are worked out from what people open, so the newest set or two is usually
         // unpriced. Every such set must be listed: omitting it from a ranking would read as
@@ -222,7 +224,7 @@ public class PackOddsTests
         //
         // Promos are NOT listed. They have no rates either, but they are not packs anyone can
         // choose to open, so warning about them would report a problem the user cannot act on.
-        Assert.Equal(new[] { "C1", "SP1" }, sets);
+        Assert.Equal(new[] { "C1" }, sets);
         Assert.True(Snapshot.Rates().Covers("B4b"));
     }
 

@@ -304,19 +304,22 @@ else
         // typed into while reading down the game's own shop list, and a table that reorders itself
         // as values are entered would lose the reader's place. Capped rows are tinted instead, so
         // the warning survives without moving.
+        // Only sets that earn points: a balance logged against a Special Pack before it was known
+        // to earn none is a figure for a shop that does not exist.
         _pointRows = balances.Keys
             .Union(_pointsShown, StringComparer.OrdinalIgnoreCase)
+            .Where(CardIndex.EarnsPackPoints)
             .Select(set => Session.Points.Describe(
                 set, balances.GetValueOrDefault(set), Session.Owned,
                 Session.Profile.Targets.PlanFor(set)))
             .OrderBy(r => Session.Sets.SortKey(r.Set), StringComparer.Ordinal)
             .ToArray();
 
-        // Promo sets are excluded: their packs award no points at all, so a balance there could
-        // only ever be a mistake.
+        // Promo sets and Special Packs are excluded: neither earns points at all, so a balance
+        // there could only ever be a mistake.
         _pointsAddable = Session.Index.OpenableSets
             .Where(set => !balances.ContainsKey(set) && !_pointsShown.Contains(set))
-            .Where(set => !CardIndex.IsPromoSet(set))
+            .Where(CardIndex.EarnsPackPoints)
             .OrderBy(Session.Sets.SortKey, StringComparer.Ordinal)
             .ToArray();
     }

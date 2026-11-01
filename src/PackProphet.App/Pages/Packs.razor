@@ -26,9 +26,9 @@ else
             {
                 <span class="seg">
                     <PlanSummary Plan="Draft" Foils="@(ScopeHasFoils ? Session.FoilCopies : 0)" />
-                    @if (PlanScope is not null)
+                    @if (PlanSets.Length > 0)
                     {
-                        <text>, </text><span>@ScopedSet only</span>
+                        <text>, </text><span>@OwnPlanName only</span>
                     }
                 </span>
             }
@@ -96,21 +96,21 @@ else
                now says what to do at every scope. Every other set follows the default; the
                override starts as a copy of it. *@
             <p class="plan-scope">
-                @if (PlanScope is not null)
+                @if (PlanSets.Length > 0)
                 {
-                    <span><strong>@ScopedSet</strong> only.</span>
+                    <span><strong>@OwnPlanName</strong> only.</span>
                     <button class="chip-link" @onclick="ClearOverride">Use the Default Here</button>
                 }
-                else if (ScopedSet is not null)
+                else if (OwnPlanSets.Length > 0)
                 {
                     <span>The <strong>default</strong> plan.</span>
                     <button class="chip-link" @onclick="StartOverride">
-                        Give @ScopedSet Its Own
+                        Give @OwnPlanName Its Own
                     </button>
                 }
                 else
                 {
-                    <span>The <strong>default</strong> plan. Pick one set above to give it its own.</span>
+                    <span>The <strong>default</strong> plan. Pick a set or series above to give it its own.</span>
                 }
             </p>
             </div>
@@ -966,10 +966,32 @@ else
         : Scope == "everything" ? "Open this next"
         : "Best for this target";
 
-    private string? PlanScope =>
-        ScopedSet is { } set && Session.HasPlanOverride(set) ? set : null;
+    /// <summary>
+    /// The sets a target of this scope's own would cover: the scoped set, or every set in the
+    /// scoped series. Empty for "everything" and chase lists, which only ever follow the default.
+    ///
+    /// A series has no plan of its own to store. Giving it one gives each of its sets the same
+    /// plan, which is what every screen already reads, so nothing downstream has to know series
+    /// plans exist.
+    /// </summary>
+    private string[] OwnPlanSets =>
+        ScopedSet is { } set ? [set]
+        : !IsChaseScope && Scope.StartsWith("series:", StringComparison.Ordinal) ? Session.SetsInSeries(Scope[7..])
+        : [];
 
-    private RarityPlan Plan => Session.Plan(PlanScope);
+    /// <summary>What the scope's own plan is called: the set's code, or "Series A".</summary>
+    private string OwnPlanName =>
+        ScopedSet ?? (Scope.StartsWith("series:", StringComparison.Ordinal) ? SetCatalog.SeriesLabel(Scope[7..]) : "");
+
+    /// <summary>
+    /// The sets the chips are editing, or empty when they edit the default. A series counts as
+    /// on its own plan only when every set in it is: one set given its own months ago does not
+    /// make the chips speak for the other nine.
+    /// </summary>
+    private string[] PlanSets =>
+        OwnPlanSets is { Length: > 0 } sets && sets.All(Session.HasPlanOverride) ? sets : [];
+
+    private RarityPlan Plan => PlanSets is [var first, ..] ? Session.Plan(first) : Session.Plan();
 
     /// <summary>
     /// The chips edit a local draft, not the saved plan. Re-ranking on every tap made
@@ -1031,7 +1053,7 @@ else
     private string _rankedFor = "";
 
     private string RankSignature() =>
-        $"{Scope}|{PlanScope}|{string.Join('.', Plan.CopiesByTier.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}:{kv.Value}"))}|" +
+        $"{Scope}|{string.Join(',', PlanSets)}|{string.Join('.', Plan.CopiesByTier.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}:{kv.Value}"))}|" +
         $"{Session.CollectionRevision}|{string.Join(',', Session.UnavailablePacks)}|" +
         // Borrowed rates change every number, so they belong in the signature — otherwise
         // arriving back on the page after assuming a set's rates would show the old ranking.
@@ -1143,6 +1165,7 @@ else
         RarityPlan PlanFor(string set) => Session.Profile.Targets.PlanFor(set);
 
         _pointRows = _sets
+            .Where(CardIndex.EarnsPackPoints)
             .Select(set => Session.Points.Describe(
                 set, balances.GetValueOrDefault(set), Session.Owned, PlanFor(set)))
             .OrderByDescending(r => r.Balance)
@@ -1403,9 +1426,10 @@ else
         var priceable = Session.Odds.PriceablePacks.ToHashSet(StringComparer.Ordinal);
         var rows = new List<(string, int, bool, DateOnly?)>();
 
-        // Openable only: promo "Vol. N" groupings record how a card was handed out at an event,
-        // not something anyone can choose to open, so listing them as packs would offer a route
-        // that does not exist.
+        // Hourglass packs only: promo "Vol. N" groupings record how a card was handed out at an
+        // event, not something anyone can choose to open, so listing them as packs would offer a
+        // route that does not exist -- and a Special Pack is opened when an event hands one out,
+        // never chosen with hourglasses.
         foreach (var pack in Session.Index.OpenablePackKeys)
         {
             if (priceable.Contains(pack)) continue;
@@ -1683,7 +1707,8 @@ else
         {
             _advisor = [];
             _batches = [];
-            Session.SetPlan(plan, PlanScope);
+            if (PlanSets is { Length: > 0 } sets) Session.SetPlan(plan, sets);
+            else Session.SetPlan(plan);
             _draft = null;          // saved plan is now the source of truth again
         });
     }
@@ -1731,13 +1756,13 @@ else
 
     private Task StartOverride()
     {
-        if (IsChaseScope || !_sets.Contains(Scope)) return Task.CompletedTask;
+        if (OwnPlanSets is not { Length: > 0 } sets) return Task.CompletedTask;
 
         var seed = Session.Plan();
-        return Busy.RunAsync($"Giving {Scope} its own plan\u2026", () =>
+        return Busy.RunAsync($"Giving {OwnPlanName} its own plan\u2026", () =>
         {
             _draft = null;
-            Session.SetPlan(seed, Scope);
+            Session.SetPlan(seed, sets);
             _advisor = [];
             Recompute();
         });
@@ -1745,13 +1770,12 @@ else
 
     private Task ClearOverride()
     {
-        if (IsChaseScope || !_sets.Contains(Scope)) return Task.CompletedTask;
+        if (OwnPlanSets is not { Length: > 0 } sets) return Task.CompletedTask;
 
-        var set = Scope;
-        return Busy.RunAsync($"Returning {set} to the default plan\u2026", () =>
+        return Busy.RunAsync($"Returning {OwnPlanName} to the default plan\u2026", () =>
         {
             _draft = null;
-            Session.ClearPlanOverride(set);
+            Session.ClearPlanOverrides(sets);
             _advisor = [];
             Recompute();
         });

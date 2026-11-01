@@ -7,7 +7,7 @@
 
 @inject AppSession Session
 
-@foreach (var rung in Session.Index.Ladder.Rungs)
+@foreach (var rung in Session.Index.Ladder.Rungs.Where(r => !r.SetApart))
 {
     var want = Plan.Copies(rung.Index);
     <button class="rarity-chip @(want > 0 ? "on" : "")"
@@ -20,9 +20,14 @@
 @* A different axis from rarity, so it sits apart from the rungs rather than in the row as if it
    were one. Only shown where foils exist at all: Deluxe sets are the only ones whose rates name
    foil slot codes. *@
-@if (ShowFoils)
+@* Anomaly goes beside them: a rung to the engine, but a special printing on screen, like a foil. *@
+@if (ShowFoils || Apart.Count > 0)
 {
     <span class="bar-sep" aria-hidden="true"></span>
+}
+
+@if (ShowFoils)
+{
     @* Cycles like a rarity chip but carries its own count rather than inheriting a rung's: a
        parallel foil is a separate printing, so wanting two of every diamond says nothing about how
        many foils you want. *@
@@ -33,6 +38,16 @@
            with nothing to scan for, and it is the longest label of the eleven. *@
         <span class="glyphs foil">@RarityLadder.FoilMark</span>
         Parallel Foils@(Session.FoilCopies > 1 ? $" x{Session.FoilCopies}" : "")
+    </button>
+}
+
+@foreach (var rung in Apart)
+{
+    var want = Plan.Copies(rung.Index);
+    <button class="rarity-chip @(want > 0 ? "on" : "")"
+            aria-pressed="@Aria.Flag(want > 0)"
+            @onclick="() => OnCycle.InvokeAsync(rung.Index)">
+        <span class="glyphs @rung.GlyphClass">@rung.Symbol</span>@(want > 1 ? $" x{want}" : "")
     </button>
 }
 
@@ -49,4 +64,6 @@
     [Parameter] public bool ShowFoils { get; set; }
 
     [Parameter] public EventCallback OnCycleFoils { get; set; }
+
+    private IReadOnlyList<RarityRung> Apart => Session.Index.Ladder.Rungs.Where(r => r.SetApart).ToArray();
 }

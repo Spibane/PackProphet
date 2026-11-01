@@ -26,6 +26,9 @@ public class PackLabelTests
     [InlineData("A3:Solgaleo", "CG: Solgaleo")]
     [InlineData("A4:Lugia", "WSS: Lugia")]
     [InlineData("B1:Mega Blaziken", "MR: Mega Blaziken")]
+    [InlineData("C1:Dual Fusion Mega Mewtwo X", "DF: Mega Mewtwo X")]
+    [InlineData("C1:Dual Fusion Pikachu", "DF: Pikachu")]
+    [InlineData("SP1:First Partners", "First Partners")]   // promo rules: no set name, as a Vol. N has none
     public void PackLabels(string packKey, string expected) =>
         Assert.Equal(expected, Snapshot.Index().PackLabel(packKey, Sets));
 

@@ -100,7 +100,7 @@ public static class DataLag
 
     /// <summary>Short enough to say so: under <see cref="CompleteEnough"/>, or any card at all for a promo set.</summary>
     private static bool IsShort(string set, int have, int of) =>
-        CardIndex.IsPromoSet(set) ? have < of : have < of * CompleteEnough;
+        CardIndex.IsPromoRun(set) ? have < of : have < of * CompleteEnough;
 
     /// <summary>
     /// One notice for both gaps, or null when there is neither.

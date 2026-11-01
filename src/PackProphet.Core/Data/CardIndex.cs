@@ -158,9 +158,22 @@ public sealed class CardIndex
     /// <summary>Every pack key in the data, e.g. "A1:Mewtwo". Includes promo groupings.</summary>
     public IEnumerable<string> AllPackKeys => ByPack.Keys;
 
-    /// <summary>A promo set, whose "Vol. N" groupings are not openable packs.</summary>
+    /// <summary>
+    /// A set played by promo rules: its cards come from events, so it is not a pack anyone
+    /// chooses to open, it earns no pack points, and no target or completion figure counts it.
+    /// The PROMO sets, whose "Vol. N" groupings record how a card was handed out, and the Special
+    /// Packs, which events hand out whole.
+    /// </summary>
     public static bool IsPromoSet(string set) =>
-        set.StartsWith("PROMO", StringComparison.OrdinalIgnoreCase);
+        set.StartsWith("PROMO", StringComparison.OrdinalIgnoreCase) || IsSpecialSet(set);
+
+    /// <summary>
+    /// A PROMO set proper, issued a card or two at a time as events run: numbered in the order the
+    /// cards arrive and never published whole. Narrower than <see cref="IsPromoSet"/>, which also
+    /// takes in the Special Packs, and asked where that order is the point -- the newest promos,
+    /// and the art that lags at the end of the run.
+    /// </summary>
+    public static bool IsPromoRun(string set) => PromoLetter(set) is not null;
 
     /// <summary>
     /// The series letter of a promo set — 'C' for "PROMO-C" — or null for any other set. The
@@ -185,10 +198,8 @@ public sealed class CardIndex
     }
 
     /// <summary>
-    /// A Special Pack set — SP1, "First Partners", the first. Openable, but on its own weekly
-    /// hourglass rather than the one every other pack shares, and only for a window. So it is a
-    /// pack you open when the game hands you the currency, never the set you are working through,
-    /// and nothing should land on it by default.
+    /// A Special Pack set — SP1, "First Partners", the first. Opened on Special Pack Hourglasses
+    /// that only events hand out, so it follows promo rules; see <see cref="IsPromoSet"/>.
     ///
     /// By code rather than by upstream's "Special" series, because the card list runs ahead of the
     /// set list and a new SP set has to be recognised the day its cards arrive.
@@ -204,9 +215,23 @@ public sealed class CardIndex
     public IEnumerable<string> OpenablePackKeys =>
         ByPack.Keys.Where(k => !IsPromoSet(k.Split(':')[0]));
 
-    /// <summary>Sets that contain openable packs, in a stable order. Excludes promo sets.</summary>
+    /// <summary>Sets that contain openable packs, in a stable order. Excludes promo sets, Special Packs included.</summary>
     public IEnumerable<string> OpenableSets =>
         OpenablePackKeys.Select(k => k.Split(':')[0]).Distinct().OrderBy(s => s, StringComparer.Ordinal);
+
+    /// <summary>
+    /// Whether opening a pack of <paramref name="set"/> is paid for in pack hourglasses: not for
+    /// a promo set, Special Packs included, whose packs events hand out.
+    /// </summary>
+    public static bool UsesPackHourglasses(string set) => !IsPromoSet(set);
+
+    /// <summary>
+    /// Whether opening a pack of <paramref name="set"/> earns pack points, and so whether the set
+    /// has a points balance and a points shop at all. Not a promo set, Special Packs included.
+    /// The same sets as <see cref="UsesPackHourglasses"/>, but a separate rule in the game, so
+    /// asked by name.
+    /// </summary>
+    public static bool EarnsPackPoints(string set) => !IsPromoSet(set);
 
     /// <summary>
     /// What a pack is called on screen. A set with one pack shows the set's name, which is what the
@@ -231,6 +256,12 @@ public sealed class CardIndex
 
         if (!_packsPerSet.TryGetValue(set, out var n)) return pack;
         if (n == 1) return sets.Info(set) is null ? pack : sets.DisplayName(set);
+
+        // C1's packs carry the set's name in front of their own -- "Dual Fusion Mega Mewtwo X" --
+        // and the prefix already says Dual Fusion, so it would be said twice.
+        var name = sets.DisplayName(set);
+        if (pack.Length > name.Length + 1 && pack.StartsWith(name + " ", StringComparison.OrdinalIgnoreCase))
+            pack = pack[(name.Length + 1)..];
 
         return $"{SetPrefix(set, sets)}: {pack}";
     }

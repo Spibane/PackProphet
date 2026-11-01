@@ -405,11 +405,13 @@ public sealed class CardDataLoader
             .ToArray();
 
         var asked = unknown
-            .Where(kv => !CardIndex.IsPromoSet(kv.Key))
+            .Where(kv => !CardIndex.IsPromoRun(kv.Key))
             .Where(kv => data.Sets.Info(kv.Key)?.ReleasedOn is not { } released || released >= since)
             .ToArray();
 
-        var promos = unknown.Where(kv => CardIndex.IsPromoSet(kv.Key)).ToArray();
+        // Issued card by card, so the art lags at the end of the run. A Special Pack is published
+        // whole and is asked about like any other set.
+        var promos = unknown.Where(kv => CardIndex.IsPromoRun(kv.Key)).ToArray();
 
         if (asked.Length == 0 && promos.Length == 0) return ArtProbe.None;
 

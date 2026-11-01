@@ -102,7 +102,7 @@ else
                 </div>
                 <div class="stat">
                     <span class="label">Points Earned</span>
-                    <span class="value">@((_log.Count * GameRules.PackPointsPerPack).ToString("N0"))</span>
+                    <span class="value">@((_log.Count(e => CardIndex.EarnsPackPoints(e.Set)) * GameRules.PackPointsPerPack).ToString("N0"))</span>
                     @* Earned over all time, not held: the balance after spending lives on the
                        Which pack page, and conflating the two would misreport both. *@
                     <span class="sub">Across Every Set, All Time</span>
@@ -294,7 +294,9 @@ else
                             <td class="num">@row.Count</td>
                             @* Earned, not held: what you have now is the balance after spending,
                                which the points panel on Which pack owns. *@
-                            <td class="num">@((row.Count * GameRules.PackPointsPerPack).ToString("N0"))</td>
+                            @* A Special Pack earns no points, which is a dash rather than a zero: there
+                               is no balance for that set to have earned into. *@
+                            <td class="num">@(CardIndex.EarnsPackPoints(row.Set) ? (row.Count * GameRules.PackPointsPerPack).ToString("N0") : "—")</td>
                             <td style="width:10rem">
                                 @* Redundant with the packs column for anyone who cannot see the bar
                                    fill, so it stays out of the accessibility tree entirely. *@
@@ -694,10 +696,14 @@ else
             foreach (var entry in entries)
             {
                 // Floored at zero: the points may already have been spent, and a negative
-                // balance would make every downstream estimate nonsense.
-                var before = points.GetValueOrDefault(entry.Set);
-                var after = Math.Max(0, before - GameRules.PackPointsPerPack);
-                if (after > 0) points[entry.Set] = after; else points.Remove(entry.Set);
+                // balance would make every downstream estimate nonsense. A Special Pack earned
+                // none, so it has none to give back.
+                if (CardIndex.EarnsPackPoints(entry.Set))
+                {
+                    var before = points.GetValueOrDefault(entry.Set);
+                    var after = Math.Max(0, before - GameRules.PackPointsPerPack);
+                    if (after > 0) points[entry.Set] = after; else points.Remove(entry.Set);
+                }
 
                 if (!alsoCards) continue;
 

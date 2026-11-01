@@ -1,5 +1,6 @@
 namespace PackProphet.Engine;
 
+using PackProphet.Data;
 using PackProphet.Domain;
 using PackProphet.State;
 
@@ -216,10 +217,12 @@ public static class ResourcePlan
 
     /// <summary>
     /// Packs logged on a given day, in the reader's own time zone: the allowance resets by
-    /// calendar day where the user is, not at UTC midnight.
+    /// calendar day where the user is, not at UTC midnight. Special Packs are not counted: they
+    /// open on their own event hourglasses and take nothing from the day's free packs.
     /// </summary>
     public static int PacksOpenedOn(IEnumerable<PackOpenEvent> log, DateOnly day) =>
-        log.Count(e => DateOnly.FromDateTime(e.At.ToLocalTime().DateTime) == day);
+        log.Count(e => CardIndex.UsesPackHourglasses(e.Set)
+                       && DateOnly.FromDateTime(e.At.ToLocalTime().DateTime) == day);
 
     /// <summary>
     /// Trades the dust balance can fund at a given price.

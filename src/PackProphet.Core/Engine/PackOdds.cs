@@ -128,7 +128,11 @@ public sealed class PackOdds
     public IEnumerable<string> SetsWithFoils =>
         _rates.ModelledSets.Where(set => FoilRungs(set).Count > 0);
 
-    /// <summary>Pack keys the engine can actually price, i.e. those whose set has rate data.</summary>
+    /// <summary>
+    /// Pack keys the engine can actually price, i.e. those whose set has rate data. Hourglass
+    /// packs only: everything that reads this list is choosing where to spend pack hourglasses,
+    /// and a Special Pack is never bought with them.
+    /// </summary>
     public IEnumerable<string> PriceablePacks =>
         _index.OpenablePackKeys.Where(k => _rates.Covers(k.Split(':')[0]));
 
@@ -138,7 +142,8 @@ public sealed class PackOdds
     /// omitting them, since a set missing from a ranking reads as "nothing to gain here".
     ///
     /// Promo groupings are not included. They have no rates either, but they are not packs
-    /// anyone can choose to open.
+    /// anyone can choose to open. Nor are Special Packs, which events hand out: a missing price
+    /// for one is not a gap in a plan, because no plan spends on it.
     /// </summary>
     public IEnumerable<string> UnpriceablePacks =>
         _index.OpenablePackKeys.Where(k => !_rates.Covers(k.Split(':')[0]));

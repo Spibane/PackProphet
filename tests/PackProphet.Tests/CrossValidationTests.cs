@@ -27,8 +27,11 @@ public class CrossValidationTests
             var ours = Ix.DeckNrOf(card);
             if (ours is null) continue;
 
+            // Joined BY identity, so null only skips gaps. A 0 is a number upstream did not
+            // publish rather than one that disagrees: C1 and Promo C arrived with every record at
+            // 0, and are joined by printing instead (see CardFacts' constructor).
             var theirs = Facts.For(ours.Value)?.DeckBuilderNr;
-            if (theirs is null) continue;   // joined BY identity, so this only skips gaps
+            if (theirs is null or 0) continue;
 
             compared++;
             if (theirs != ours) mismatches.Add($"{card.Key} {card.Name}: ours={ours} theirs={theirs}");

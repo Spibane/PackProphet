@@ -47,7 +47,7 @@ internal static class Snapshot
 
     public static List<ExpansionInfo> Expansions() => Load<List<ExpansionInfo>>("expansions.json");
 
-    public static CardFacts Facts() => _facts ??= new CardFacts(Load<List<CardFact>>("cards.v5.json"));
+    public static CardFacts Facts() => _facts ??= new CardFacts(Load<List<CardFact>>("cards.v5.json"), Index());
 
     /// <summary>
     /// The rate table as it stood before <paramref name="set"/>'s rates were published.

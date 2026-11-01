@@ -325,14 +325,11 @@ public static class TrackerImport
     {
         var trimmed = id.Trim();
 
-        // Split on the LAST dash: a set code can contain one ("P-A"), a card number never does.
-        var cut = trimmed.LastIndexOf('-');
-        if (cut <= 0 || cut == trimmed.Length - 1) return null;
+        // A set code can contain a dash ("P-A"), and an unnumbered card's number is negative
+        // ("SP1--3"); PocketCard.TrySplitKey knows both.
+        if (!PocketCard.TrySplitKey(trimmed, out var code, out var number)) return null;
 
-        if (!int.TryParse(trimmed[(cut + 1)..], System.Globalization.NumberStyles.Integer,
-                System.Globalization.CultureInfo.InvariantCulture, out var number)) return null;
-
-        var set = CanonicalSet(trimmed[..cut], index);
+        var set = CanonicalSet(code, index);
         if (set is null) return null;
 
         return index.ByKey.TryGetValue($"{set}-{number}", out var card) ? card : null;
@@ -355,10 +352,7 @@ public static class TrackerImport
         var set = raw.Trim();
 
         // The promo sets are the only codes the two datasets spell differently.
-        if (set.Equals("P-A", StringComparison.OrdinalIgnoreCase)
-            || set.Equals("PA", StringComparison.OrdinalIgnoreCase)) set = "PROMO-A";
-        else if (set.Equals("P-B", StringComparison.OrdinalIgnoreCase)
-            || set.Equals("PB", StringComparison.OrdinalIgnoreCase)) set = "PROMO-B";
+        set = CardIndex.PromoSetFromShortCode(set) ?? set;
 
         if (index.BySet.ContainsKey(set)) return set;
 

@@ -799,7 +799,7 @@ else
         outstanding
             .Select(d => d.SuppliedBy[0])
             .OrderByDescending(c => Session.Index.Rung(c)?.Index ?? -1)
-            .ThenBy(c => c.Number)
+            .ThenBy(c => c.SortNumber)
             .ToArray();
 
     /// <summary>

@@ -41,6 +41,17 @@ public class LogPackTests : AppHost
     }
 
     [Fact]
+    public async Task It_opens_on_the_newest_series_rather_than_the_Special_one()
+    {
+        // Special sorts last, so "the last series" opened the picker on SP1 alone.
+        var page = await PageAsync();
+
+        var series = page.Find("select[aria-label='Series'] option[selected]").GetAttribute("value");
+        Assert.Equal(Session.Sets.NewestSeries, series);
+        Assert.NotEqual(SetCatalog.SpecialSeries, series);
+    }
+
+    [Fact]
     public async Task A_pin_survives_a_change_of_series()
     {
         var page = await PageAsync();
@@ -279,6 +290,11 @@ public class LogPackTests : AppHost
         // whole time you are tapping, because one card into a five-card pack it is already "not
         // five". So the alarm belongs to the moment the question is asked, not to the task.
         var page = await PageAsync();
+
+        // A priced pack: a set with no published rates has no pack size to fall short of, and the
+        // series the page opens on is the newest, which is usually still waiting for its rates.
+        var priced = Session.Sets.Series.First(s => Session.Sets.SetsIn(s).Any(set => Session.Odds!.Rates.Covers(set)));
+        page.Find("select[aria-label='Series']").Change(priced);
         page.FindAll(".pack-choice").First().Click();
         page.WaitForElement(".todo-strip");
 

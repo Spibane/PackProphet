@@ -196,7 +196,7 @@ public static class GameRules
 
     /// <summary>Trades must be same-rarity, and these rarities cannot be traded at all.</summary>
     public static bool IsTradeable(string rarityCode) =>
-        rarityCode is not ("IM" or "UR");
+        rarityCode is not ("IM" or "UR" or "AN");
 
     /// <summary>
     /// Whether this card may be traded: its rarity, plus the promo rule that rarity cannot

@@ -39,7 +39,7 @@ else if (_pack is null)
             <select class="form-select form-select-sm" aria-label="Series" @onchange="OnSeries">
                 @foreach (var series in Session.Sets.Series)
                 {
-                    <option value="@series" selected="@(_series == series)">Series @series</option>
+                    <option value="@series" selected="@(_series == series)">@SetCatalog.SeriesLabel(series)</option>
                 }
             </select>
 
@@ -770,8 +770,9 @@ else
             // Openable packs only. Promo "Vol. N" groupings describe how a promo was given
             // away, not something you can decide to open.
             _packs = Session.Index.OpenablePackKeys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
-            // Newest series first: that is where packs are actually being opened.
-            _series = Session.Sets.Series.LastOrDefault() ?? "A";
+            // Newest series first: that is where packs are actually being opened. Not the Special
+            // series, which sorts last: its packs wait on their own weekly hourglass.
+            _series = Session.Sets.NewestSeries ?? "A";
 
             // Resolved once. The set is a fact about the data rather than about the page, and
             // the list under it is ten cards that only change when a snapshot does -- so
@@ -957,7 +958,7 @@ else
     /// here instead, where it can be a sentence.
     /// </summary>
     private static string AddLabel(PocketCard card, int held) =>
-        $"Add a copy of {card.Name}, {card.Set} {card.Number}. "
+        $"Add a copy of {card.Name}, {card.Set} {card.NumberLabel}. "
         + (held == 0 ? "You have none." : $"You have {held}.");
 
     /// <summary>

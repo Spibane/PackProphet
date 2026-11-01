@@ -108,7 +108,7 @@
 
        aria-hidden because the tile's own label already names the set and number, and a screen
        reader meeting it twice per tile across three thousand tiles is noise. *@
-    <span class="no" aria-hidden="true">@Card.Number</span>
+    <span class="no" aria-hidden="true">@Card.NumberLabel</span>
 
     @* The card's name, and the way into its detail page.
        ==================================================================================
@@ -273,7 +273,7 @@
     }
 
     /// <summary>Caption for the hover art: enough to identify the card without reading the image.</summary>
-    private string Tip => $"{Card.Name}\n{Card.Set} {Card.Number} · {Card.Rarity}";
+    private string Tip => $"{Card.Name}\n{Card.Set} {Card.NumberLabel} · {Card.Rarity}";
 
     // ---- long press --------------------------------------------------------------------
 

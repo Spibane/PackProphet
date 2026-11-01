@@ -140,7 +140,7 @@ else
                                   title="@_showcase.Rung.Symbol">@_showcase.Rung.Glyphs</span>
                             <a href="card/@_showcase.Card.Key">@_showcase.Card.Name</a>
                             <span class="small text-body-secondary">
-                                @_showcase.Card.Set&thinsp;@_showcase.Card.Number
+                                @_showcase.Card.Set&thinsp;@_showcase.Card.NumberLabel
                                 &middot; pulled @_showcase.At.ToLocalTime().ToString("d MMM yyyy")
                             </span>
                         </div>
@@ -324,7 +324,7 @@ else
                         @foreach (var series in ScopedSeries())
                         {
                             <option value="series:@series" selected="@(_scope == $"series:{series}")">
-                                Series @series
+                                @SetCatalog.SeriesLabel(series)
                             </option>
                         }
                     </optgroup>

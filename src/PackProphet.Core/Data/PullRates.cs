@@ -93,7 +93,8 @@ public sealed class PullRates
     /// a Deluxe pack looks far better than it is; a Deluxe set priced from an ordinary pack
     /// loses its fourth-slot guarantee, its four-card shape, and its foil codes — and without
     /// those codes its parallel foils are counted as plain cards. Null rather than an ordinary
-    /// donor, because no estimate is better than that one.
+    /// donor, because no estimate is better than that one. The same holds for a Special Pack set,
+    /// which is null until a second one has published rates.
     /// </summary>
     /// <param name="deluxe">
     /// Whether <paramref name="set"/> sells Deluxe packs. The caller says so rather than this
@@ -101,7 +102,11 @@ public sealed class PullRates
     /// list does.
     /// </param>
     public string? DonorFor(string set, bool deluxe, SetCatalog sets) =>
-        deluxe
+        // A Special Pack has no donor of its kind yet. SP1 is twenty-seven 1-star cards and three
+        // Anomalies, with no diamond at all, so an ordinary pack's slots would price rungs it does
+        // not hold and miss the one it does.
+        CardIndex.IsSpecialSet(set) ? null
+        : deluxe
             ? NewestMeasured(sets, s => !string.Equals(s, set, StringComparison.OrdinalIgnoreCase)
                                         && sets.Info(s)?.Packs is { } packs
                                         && packs.Any(GameRules.IsDeluxePack))

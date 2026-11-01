@@ -20,6 +20,44 @@ public sealed class PocketCard
     public string Key => $"{Set}-{Number}";
 
     /// <summary>
+    /// The inverse of <see cref="Key"/>. Split on the LAST dash, because a set code can hold one
+    /// ("PROMO-A") and a number cannot — except that an unnumbered card's number is negative, so
+    /// SP1's first secret Mew is "SP1--3", and a dash doubled there belongs to the number.
+    /// </summary>
+    public static bool TrySplitKey(string key, out string set, out int number)
+    {
+        set = "";
+        number = 0;
+
+        var cut = key.LastIndexOf('-');
+        if (cut > 1 && key[cut - 1] == '-') cut--;
+        if (cut <= 0 || cut == key.Length - 1) return false;
+
+        if (!int.TryParse(key.AsSpan(cut + 1), System.Globalization.NumberStyles.AllowLeadingSign,
+                System.Globalization.CultureInfo.InvariantCulture, out number)) return false;
+
+        set = key[..cut];
+        return true;
+    }
+
+    /// <summary>
+    /// A card the game prints with no number. Upstream numbers them -1, -2, -3 so that they still
+    /// have a key — the three Anomaly Mews of SP1 are the first — and showing that as "SP1 -3"
+    /// would invent a number the card does not have.
+    /// </summary>
+    public bool IsUnnumbered => Number <= 0;
+
+    /// <summary>The number as the card shows it: a dash for one that shows none.</summary>
+    public string NumberLabel => IsUnnumbered ? "—" : Number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// The number to sort on. Unnumbered cards go after every numbered one, in upstream's order —
+    /// a negative number formatted with a sign sorts ahead of card 1, which put the set's secret
+    /// cards at the front of it.
+    /// </summary>
+    public int SortNumber => IsUnnumbered ? 99_999 + Number : Number;
+
+    /// <summary>
     /// Identifies the ownable card. The game treats owning a card as owning it for every set it
     /// appears in, and 451 of the 4,317 entries are re-listings of a card first printed elsewhere —
     /// A4b re-lists 214 and B4b 236, because Deluxe packs reprint earlier sets. Keying ownership by

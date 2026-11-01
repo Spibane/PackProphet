@@ -96,9 +96,36 @@ public sealed class SetCatalog
         if (!list.Contains(code)) list.Add(code);
     }
 
-    /// <summary>Series keys, in order. "A" before "B", and so on.</summary>
+    /// <summary>
+    /// What upstream calls the series its Special Pack sets sit in, and what a new SP set with no
+    /// catalogue entry is filed under.
+    /// </summary>
+    public const string SpecialSeries = "Special";
+
+    /// <summary>
+    /// Series keys, in order. "A" before "B", and so on, with <see cref="SpecialSeries"/> after
+    /// all of them: it is not a step in the release sequence, so it is never "the newest series".
+    /// </summary>
     public IReadOnlyList<string> Series =>
-        _bySeries.Keys.OrderBy(s => s, StringComparer.Ordinal).ToArray();
+        _bySeries.Keys
+            .OrderBy(s => s.Equals(SpecialSeries, StringComparison.OrdinalIgnoreCase))
+            .ThenBy(s => s, StringComparer.Ordinal)
+            .ToArray();
+
+    /// <summary>
+    /// What a series is called on screen: "Series B", but "Special Packs" rather than "Series
+    /// Special", which reads as a series that happens to be special.
+    /// </summary>
+    public static string SeriesLabel(string series) =>
+        series.Equals(SpecialSeries, StringComparison.OrdinalIgnoreCase) ? "Special Packs" : $"Series {series}";
+
+    /// <summary>
+    /// The newest series of ordinary sets: the one a page opens on. <see cref="SpecialSeries"/>
+    /// sorts last but is skipped here, since its packs are opened on their own currency.
+    /// </summary>
+    public string? NewestSeries =>
+        Series.LastOrDefault(s => !s.Equals(SpecialSeries, StringComparison.OrdinalIgnoreCase))
+        ?? Series.LastOrDefault();
 
     public IReadOnlyList<string> SetsIn(string series) =>
         _bySeries.TryGetValue(series, out var sets) ? sets : [];
@@ -151,7 +178,10 @@ public sealed class SetCatalog
 
     private string BuildSortKey(string setCode)
     {
-        var series = SeriesOf(setCode);
+        // "~" sorts after every letter, so Special Packs follow the newest lettered series here as
+        // they do in Series, rather than landing wherever "Special" falls in the alphabet.
+        var series = SeriesOf(setCode) is var s && s.Equals(SpecialSeries, StringComparison.OrdinalIgnoreCase)
+            ? "~" : s;
         var promo = CardIndex.IsPromoSet(setCode) ? "1" : "0";
 
         // Letters, digits, then an optional suffix — "A2b" is series A, set 2, revision b. Read by
@@ -176,16 +206,19 @@ public sealed class SetCatalog
     }
 
     /// <summary>The same ordering applied to a card, so a flat list of cards sorts by set then number.</summary>
-    public string SortKey(PocketCard card) => $"{SortKey(card.Set)}{card.Number:D5}";
+    public string SortKey(PocketCard card) => $"{SortKey(card.Set)}{card.SortNumber:D5}";
 
     /// <summary>
     /// Series implied by a set code: the leading letters, except that "PROMO-A" belongs to
-    /// series A rather than to a series called "PROMO".
+    /// series A rather than to a series called "PROMO", and "SP1" to <see cref="SpecialSeries"/>.
     /// </summary>
     public static string SeriesFromCode(string code)
     {
         if (code.StartsWith("PROMO-", StringComparison.OrdinalIgnoreCase))
             return code["PROMO-".Length..].ToUpperInvariant();
+
+        // "SP2" is not series SP: upstream files Special Packs under a series of their own.
+        if (CardIndex.IsSpecialSet(code)) return SpecialSeries;
 
         var letters = new string(code.TakeWhile(char.IsLetter).ToArray());
         return letters.Length > 0 ? letters.ToUpperInvariant() : code.ToUpperInvariant();

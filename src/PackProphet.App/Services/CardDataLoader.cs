@@ -680,11 +680,15 @@ public sealed class CardDataLoader
     /// and therefore ahead of anything vendored. Passing none disables the top-up, which is what a
     /// caller that only wants the vendored table asks for.
     ///
+    /// <paramref name="index"/> is the card list, for records upstream published without their
+    /// identity — see <see cref="CardFacts(IEnumerable{CardFact}, CardIndex)"/>.
+    ///
     /// Returns <see cref="CardFacts.Empty"/> on failure, so a fetch that cannot be completed costs
     /// some columns rather than the app.
     /// </summary>
     public async Task<CardFacts> LoadFactsAsync(
-        IReadOnlyCollection<string>? coveringSets = null, CancellationToken ct = default)
+        IReadOnlyCollection<string>? coveringSets = null, CancellationToken ct = default,
+        CardIndex? index = null)
     {
         var (facts, _) = await TryFactsAsync(Local, $"{Local}/cards.v5.json", FactsDeadline, ct);
 
@@ -698,7 +702,7 @@ public sealed class CardDataLoader
         if (gaps.Count > MostGapsWorthFetchingSetBySet)
         {
             var whole = await WholeTableAsync(ct);
-            if (whole is { Count: > 0 }) return new CardFacts(whole);
+            if (whole is { Count: > 0 }) return new CardFacts(whole, index);
         }
         else
         {
@@ -715,7 +719,7 @@ public sealed class CardDataLoader
         // CardFacts indexes with TryAdd, so the vendored entries win any collision. Ordering the
         // concatenation the other way would let a per-set file silently replace the trimmed copy
         // the app was built against.
-        return new CardFacts(facts);
+        return new CardFacts(facts, index);
     }
 
     /// <summary>

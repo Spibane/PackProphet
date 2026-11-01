@@ -112,7 +112,7 @@ else
             <option value="@AllSets" selected="@(_series == AllSets)">Every Series</option>
             @foreach (var series in Session.Sets.Series)
             {
-                <option value="@series" selected="@(_series == series)">Series @series</option>
+                <option value="@series" selected="@(_series == series)">@SetCatalog.SeriesLabel(series)</option>
             }
         </select>
 
@@ -304,7 +304,7 @@ else
                     <div class="pack-picks" role="group" aria-labelledby="pack-picks-label">
                     @foreach (var p in PackChoices)
                     {
-                        <button class="pack-pick @(_pack == p ? "on" : "")"
+                        <button class="pack-pick @(_pack == p ? "on" : "")" title="@p"
                                 @onclick="() => TogglePack(p)" aria-pressed="@Aria.Flag(_pack == p)">
                             <span class="pack-thumb" aria-hidden="true"
                                   style="--art:url('@Session.PackArtUrl($"{_set}:{p}")')"></span>
@@ -592,8 +592,10 @@ else
             // actually opening are for the set that just came out.
             //
             // Promo sets are skipped even though they sort last: they are not openable, so the
-            // newest of them is never the set you are working through.
-            var newest = _sets.LastOrDefault(set => !CardIndex.IsPromoSet(set)) ?? _sets.LastOrDefault() ?? "A1";
+            // newest of them is never the set you are working through. Special Packs likewise:
+            // they sort after every series and are opened on their own weekly hourglass.
+            var newest = _sets.LastOrDefault(set => !CardIndex.IsPromoSet(set) && !CardIndex.IsSpecialSet(set))
+                         ?? _sets.LastOrDefault() ?? "A1";
             (_set, _series) = FromQuery() ?? (newest, Session.Sets.SeriesOf(newest));
             _allCards = Session.Index.All
                 .DistinctBy(c => c.OwnershipKey)

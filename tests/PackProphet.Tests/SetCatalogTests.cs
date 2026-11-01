@@ -8,16 +8,48 @@ public class SetCatalogTests
         new(Snapshot.PublishedSets(), Snapshot.Index().BySet.Keys);
 
     [Fact]
-    public void GroupsTheRealDataIntoSeriesAAndB()
+    public void GroupsTheRealDataIntoItsSeries_WithSpecialLast()
     {
         var catalog = Real();
-        Assert.Equal(new[] { "A", "B" }, catalog.Series);
+        Assert.Equal(new[] { "A", "B", "C", "Special" }, catalog.Series);
 
         // Promo sets belong to their series, not a series of their own.
         Assert.Contains("PROMO-A", catalog.SetsIn("A"));
         Assert.Contains("PROMO-B", catalog.SetsIn("B"));
+        Assert.Contains("PROMO-C", catalog.SetsIn("C"));
         Assert.Equal("A", catalog.SeriesOf("A4b"));
         Assert.Equal("B", catalog.SeriesOf("PROMO-B"));
+        Assert.Equal(SetCatalog.SpecialSeries, catalog.SeriesOf("SP1"));
+    }
+
+    [Fact]
+    public void TheNewestSeriesIsTheNewestLetteredOne_NotSpecial()
+    {
+        // Special sorts last and is never where a page should open: its packs are opened on
+        // their own weekly hourglass.
+        var catalog = Real();
+        Assert.Equal("Special", catalog.Series[^1]);
+        Assert.Equal("C", catalog.NewestSeries);
+    }
+
+    [Fact]
+    public void SpecialPackSetsSortAfterEveryLetteredSet()
+    {
+        // "Special" alphabetically would land between R and T. A future series T is unlikely,
+        // but the order should not depend on that.
+        var catalog = new SetCatalog(null, ["SP1", "C1", "T1", "PROMO-T"]);
+
+        Assert.Equal(new[] { "C", "T", "Special" }, catalog.Series);
+        Assert.True(string.CompareOrdinal(catalog.SortKey("SP1"), catalog.SortKey("PROMO-T")) > 0);
+    }
+
+    [Fact]
+    public void ANewSpecialPackSetIsFiledUnderSpecial_BeforeTheSetListKnowsIt()
+    {
+        var catalog = new SetCatalog(Snapshot.PublishedSets(), ["SP1", "SP2"]);
+
+        Assert.Equal(new[] { "SP1", "SP2" }, catalog.SetsIn(SetCatalog.SpecialSeries));
+        Assert.DoesNotContain("SP", catalog.Series);
     }
 
     [Fact]
@@ -35,11 +67,11 @@ public class SetCatalogTests
     {
         // sets.json lags cards.json for a brand-new set. It must appear anyway, or it would
         // vanish from the picker entirely and its cards become unreachable.
-        var catalog = new SetCatalog(Snapshot.PublishedSets(), ["A1", "B1", "C1", "C2a"]);
+        var catalog = new SetCatalog(Snapshot.PublishedSets(), ["A1", "B1", "D1", "D2a"]);
 
-        Assert.Contains("C", catalog.Series);
-        Assert.Equal(new[] { "C1", "C2a" }, catalog.SetsIn("C"));
-        Assert.Equal("C", catalog.SeriesOf("C1"));
+        Assert.Contains("D", catalog.Series);
+        Assert.Equal(new[] { "D1", "D2a" }, catalog.SetsIn("D"));
+        Assert.Equal("D", catalog.SeriesOf("D1"));
     }
 
     [Fact]

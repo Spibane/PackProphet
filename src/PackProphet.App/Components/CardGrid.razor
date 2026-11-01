@@ -512,7 +512,7 @@ else
                     <a href="card/@card.Key" title="@card.Name"
                        @onclick:stopPropagation="true">@card.Name</a>
                 </span>
-                <span class="c-id" role="gridcell">@card.Set&thinsp;@card.Number</span>
+                <span class="c-id" role="gridcell">@card.Set&thinsp;@card.NumberLabel</span>
                 @{ var types = TypeOf?.Invoke(card) ?? []; }
                 <span class="c-ty" role="gridcell">
                     @* Icon and label. The icon is the fast read; the word is unambiguous, scannable
@@ -749,7 +749,7 @@ else
     [Parameter] public Func<PocketCard, string>? SortKeyOf { get; set; }
 
     private string OrderKey(PocketCard card) =>
-        SortKeyOf?.Invoke(card) ?? $"{card.Set}{card.Number:D5}";
+        SortKeyOf?.Invoke(card) ?? $"{card.Set}{card.SortNumber:D5}";
 
     /// <summary>
     /// Set an absolute owned count. Optional: where it is absent the list shows the count as
@@ -1244,7 +1244,7 @@ else
             ListSort.Rarity => c => RungOf?.Invoke(c)?.Index ?? -1,
             ListSort.Count => c => CountOf(c),
             ListSort.Health => c => FactOf?.Invoke(c)?.Health ?? -1,
-            _ => c => c.Number
+            _ => c => c.SortNumber
         };
 
         // Set-then-number as the tie-break, so equal keys keep a stable, meaningful order — and
@@ -1279,7 +1279,7 @@ else
             1 => "1 owned",
             _ => $"{count} owned"
         };
-        return $"{card.Name}, {card.Set} {card.Number}, {rarity}, {held}";
+        return $"{card.Name}, {card.Set} {card.NumberLabel}, {rarity}, {held}";
     }
 
     private Task Bump(PocketCard card, int delta) => OnAdjust.InvokeAsync((card, delta));

@@ -245,7 +245,7 @@
             .ThenByDescending(h => h.Rank)
             .ThenBy(h => h.Card.Name, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(h => h.Card.Set, StringComparer.Ordinal)
-            .ThenBy(h => h.Card.Number)
+            .ThenBy(h => h.Card.SortNumber)
             .ToArray();
 
         _more = Math.Max(0, hits.Length - MaxResults);

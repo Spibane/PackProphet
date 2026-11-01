@@ -253,7 +253,7 @@ else
                                 <span class="slot-cap">
                                     @* Set and number: the pair printed in the card's own corner,
                                        and what you match against walking the list in the game. *@
-                                    <span class="no">@card.Set @card.Number</span>
+                                    <span class="no">@card.Set @card.NumberLabel</span>
                                     <a class="nm" href="card/@card.Key">@card.Name</a>
                                     <span class="rr glyphs @Session.Index.GlyphClass(card)"
                                           title="@Session.Index.Symbol(card)"
@@ -325,7 +325,7 @@ else
                                     </span>
                                 }
                             </td>
-                            <td data-pri="1">@slot.Card.Set @slot.Card.Number</td>
+                            <td data-pri="1">@slot.Card.Set @slot.Card.NumberLabel</td>
                             <td data-pri="2">
                                 <span class="glyphs @Session.Index.GlyphClass(slot.Card)" title="@Session.Index.Symbol(slot.Card)">
                                     @Session.Index.Glyphs(slot.Card)
@@ -468,7 +468,7 @@ else
     private IEnumerable<BoardSlot> Transcription() =>
         (_plan?.Slots ?? [])
             .OrderByDescending(s => Session.Sets.SortKey(s.Card.Set), StringComparer.Ordinal)
-            .ThenBy(s => s.Card.Number);
+            .ThenBy(s => s.Card.SortNumber);
 
     private bool OnBoard(BoardSlot slot) =>
         Session.TradeBoard.Contains(slot.Card.OwnershipKey, StringComparer.OrdinalIgnoreCase);
@@ -685,7 +685,7 @@ else
     /// </summary>
     private IEnumerable<BoardEdit> Reading(IEnumerable<PocketCard> cards, string label, string mark) =>
         cards.OrderByDescending(c => Session.Sets.SortKey(c.Set), StringComparer.Ordinal)
-             .ThenBy(c => c.Number)
+             .ThenBy(c => c.SortNumber)
              .Select(c => new BoardEdit(c, label, mark));
 
     /// <summary>

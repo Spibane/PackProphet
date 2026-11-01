@@ -134,15 +134,15 @@ public class PullRatesTests
     [Fact]
     public void CoverageIsIncomplete_AndTheGapMustBeDisclosed()
     {
-        // Both promo sets have NO rate data, and usually the newest set or two as well; B4b
-        // was one until 2.12.0. The engine cannot price them; the UI has to say so rather
-        // than omit them and imply there is nothing to gain. If this list shrinks upstream,
-        // that is good news worth noticing.
+        // The promo sets have NO rate data, and usually the newest set or two as well: C1 and
+        // SP1 as of 2.13.1, as B4b was until 2.12.0. The engine cannot price them; the UI has to
+        // say so rather than omit them and imply there is nothing to gain. If this list shrinks
+        // upstream, that is good news worth noticing.
         var setsWithCards = Snapshot.Index().BySet.Keys.ToHashSet();
         var unpriceable = setsWithCards.Where(s => !Snapshot.Rates().Covers(s))
                                       .OrderBy(s => s).ToArray();
 
-        Assert.Equal(new[] { "PROMO-A", "PROMO-B" }, unpriceable);
+        Assert.Equal(new[] { "C1", "PROMO-A", "PROMO-B", "PROMO-C", "SP1" }, unpriceable);
     }
 
     // ---- borrowed rates ---------------------------------------------------------------

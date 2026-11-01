@@ -387,7 +387,7 @@ public sealed class AppSession : IAsyncDisposable
             // what to top up, and Data is reassigned below.
             var sets = Data?.Index.BySet.Keys.ToArray();
 
-            var facts = await _loader.LoadFactsAsync(sets);
+            var facts = await _loader.LoadFactsAsync(sets, index: Data?.Index);
             if (Data is null) return;
 
             Data = Data with { Facts = facts };

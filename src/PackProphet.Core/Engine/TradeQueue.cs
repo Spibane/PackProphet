@@ -197,7 +197,9 @@ public sealed class TradeQueue
                 .OrderBy(c => _rarities.TryGetValue(c.Rarity, out var r) ? r.TradePrice ?? int.MaxValue : int.MaxValue)
                 .First();
 
-            var points = _rarities.TryGetValue(card.Rarity, out var rarity) ? rarity.Points : 0;
+            // No price at all in a set that earns no points: there is no shop to buy it in.
+            var points = CardIndex.EarnsPackPoints(card.Set)
+                         && _rarities.TryGetValue(card.Rarity, out var rarity) ? rarity.Points : 0;
 
             // Points are earned and spent inside one set, so the gap is measured against that
             // set's balance and nowhere else.

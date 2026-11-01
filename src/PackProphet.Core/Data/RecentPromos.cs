@@ -65,7 +65,7 @@ public static class RecentPromos
 
         foreach (var set in index.BySet.Keys)
         {
-            if (!CardIndex.IsPromoSet(set)) continue;
+            if (!CardIndex.IsPromoRun(set)) continue;
 
             if (best is null
                 || string.CompareOrdinal(sets.SortKey(set), sets.SortKey(best)) > 0)

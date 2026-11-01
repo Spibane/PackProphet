@@ -6,7 +6,7 @@ using PackProphet.Domain;
 public enum AcquisitionRoute { Pull, PackPoints, Trade, Share, WonderPick }
 
 /// <summary>Why a route is unavailable for a card, so the UI can explain rather than omit.</summary>
-public enum RouteBlock { None, NotSoldInPacks, NoPullRates, NotTradeable, NotShareable, NotInWonderPick, NoDustPrice }
+public enum RouteBlock { None, NotSoldInPacks, NoPullRates, NotTradeable, NotShareable, NotInWonderPick, NoDustPrice, EventPacksOnly }
 
 /// <param name="PacksEquivalent">
 /// Cost in packs. Only Pull and PackPoints are expressed this way, since both are packs. Trade
@@ -57,7 +57,7 @@ public sealed class RouteCost
         _index = index;
         _odds = odds;
         _rarities = rarities;
-        _setsWithPoints = index.OpenableSets.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _setsWithPoints = index.OpenableSets.Where(CardIndex.EarnsPackPoints).ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public CardRoutes For(PocketCard card, Collection owned)
@@ -87,6 +87,12 @@ public sealed class RouteCost
             return new(AcquisitionRoute.Pull, false, RouteBlock.NotSoldInPacks,
                 Note: "Not sold in packs — promos come from events.");
 
+        // Sold in a pack, but not one hourglasses open. Said apart from "no pull rates", which
+        // would read as a price still to come.
+        if (CardIndex.IsSpecialSet(card.Set))
+            return new(AcquisitionRoute.Pull, false, RouteBlock.EventPacksOnly,
+                Note: "Only from Special Packs, which events hand out rather than hourglasses open.");
+
         var rate = _odds.BestRatesByCard().GetValueOrDefault(card.Key);
         if (rate <= 0)
             return new(AcquisitionRoute.Pull, false, RouteBlock.NoPullRates,
@@ -106,6 +112,10 @@ public sealed class RouteCost
         // with no openable packs has no point economy. The card carries a point price — every
         // rarity does — but for a promo there is no pack to earn the points in and no shop to
         // spend them at.
+        if (CardIndex.IsSpecialSet(card.Set))
+            return new(AcquisitionRoute.PackPoints, false, RouteBlock.EventPacksOnly,
+                Note: "Special Packs earn no pack points, so there are none to spend on it.");
+
         if (!_setsWithPoints.Contains(card.Set))
             return new(AcquisitionRoute.PackPoints, false, RouteBlock.NotSoldInPacks,
                 Note: $"Points are earned and spent within one set, and {card.Set} has no " +

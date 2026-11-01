@@ -97,7 +97,7 @@ public sealed class PocketCard
     /// rather than something purchasable, so IsPackObtainable is true for them while no amount of
     /// opening will produce one.
     /// </summary>
-    public bool Openable => IsPackObtainable && !IsPromo;
+    public bool Openable => IsPackObtainable && !PackProphet.Data.CardIndex.IsPromoSet(Set);
 
     /// <summary>
     /// Booster art for a pack, from the same community CDN as the card art. Files are named

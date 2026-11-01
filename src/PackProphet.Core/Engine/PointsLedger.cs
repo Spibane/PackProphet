@@ -147,6 +147,7 @@ public sealed class PointsLedger
         IReadOnlyDictionary<string, int> balances, Collection owned, Func<string, RarityPlan> planFor)
     {
         return balances
+            .Where(kv => CardIndex.EarnsPackPoints(kv.Key))
             .Select(kv => Describe(kv.Key, kv.Value, owned, planFor(kv.Key)))
             .Where(s => s.AtCap || s.PacksUntilCap <= 20)
             .OrderBy(s => s.PacksUntilCap)

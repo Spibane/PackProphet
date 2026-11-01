@@ -40,7 +40,9 @@
 
     @if (Grouped)
     {
-        @foreach (var series in Session.Sets.Series)
+        @* Only series with a set to aim at: Special Packs follow promo rules, so a series of
+           nothing but them would be an option that resolves to everything. *@
+        @foreach (var series in Session.Sets.Series.Where(name => Session.SetsInSeries(name).Length > 0))
         {
             <optgroup label="@SetCatalog.SeriesLabel(series)">
                 @* A whole series is a scope people actually think in — "am I done with the A

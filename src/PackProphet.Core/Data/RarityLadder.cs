@@ -80,6 +80,14 @@ public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyLis
 
     /// <summary>CSS class for colouring the glyphs by family.</summary>
     public string GlyphClass => Group.ToLowerInvariant();
+
+    /// <summary>
+    /// Drawn apart from the ladder, beside the parallel foil chip, rather than as the next step up
+    /// it. Anomaly is a rung to the engine -- a target can want it like any other -- but on screen
+    /// it is what a foil is: three special printings of a card, from one event pack, and not a
+    /// step anyone climbs on the way to a Crown.
+    /// </summary>
+    public bool SetApart => Group == "Anomaly";
 }
 
 /// <summary>

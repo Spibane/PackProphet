@@ -41,6 +41,28 @@ public class PacksPageTests : AppHost
         System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
 
     [Fact]
+    public async Task A_series_can_be_given_its_own_target()
+    {
+        // Series are in the Target picker, and the chips under them used to edit the default
+        // for every set, with no way to give the series a target of its own -- only a single
+        // set could have one.
+        var page = await PageAsync();
+        page.Find("select[aria-label='Target']").Change("series:B");
+
+        page.WaitForAssertion(() => Assert.Contains("Give Series B Its Own", Flat(page.Find(".plan-scope").TextContent)));
+        page.FindAll(".plan-scope button").First(b => b.TextContent.Contains("Its Own")).Click();
+
+        var series = Session.SetsInSeries("B");
+        page.WaitForAssertion(() => Assert.All(series, set => Assert.True(Session.HasPlanOverride(set), set)));
+        Assert.DoesNotContain(Session.SetsInSeries("A"), Session.HasPlanOverride);
+        Assert.Contains("Series B only", Flat(page.Find(".plan-scope").TextContent));
+
+        // And back, in one go.
+        page.FindAll(".plan-scope button").First(b => b.TextContent.Contains("Default")).Click();
+        page.WaitForAssertion(() => Assert.DoesNotContain(series, Session.HasPlanOverride));
+    }
+
+    [Fact]
     public async Task The_page_stacks_no_bar_of_its_own_beyond_the_page_bar()
     {
         // It had two: a header, and a tools bar carrying the scope picker with the rarity plan and

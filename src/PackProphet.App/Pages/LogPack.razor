@@ -37,7 +37,8 @@ else if (_pack is null)
                name like "Mewtwo" does not. Defaults to the newest series, where packs are usually
                being opened. *@
             <select class="form-select form-select-sm" aria-label="Series" @onchange="OnSeries">
-                @foreach (var series in Session.Sets.Series)
+                @* Series with a pack to open: Special Packs follow promo rules and are not logged here. *@
+                @foreach (var series in Session.Sets.Series.Where(name => Session.SetsInSeries(name).Length > 0))
                 {
                     <option value="@series" selected="@(_series == series)">@SetCatalog.SeriesLabel(series)</option>
                 }
@@ -631,7 +632,10 @@ else
         <PageShell Class="py-2">
         <Notice Severity="Notice.Level.Success" Class="mb-0">
             Logged @_justLogged.Value.cards cards.
-            Pack points for @_justLogged.Value.set: <strong>@_justLogged.Value.points</strong>
+            @if (CardIndex.EarnsPackPoints(_justLogged.Value.set))
+            {
+                <span>Pack points for @_justLogged.Value.set: <strong>@_justLogged.Value.points</strong></span>
+            }
             @* Only when it spent something. The setting is off by default and most packs are free
                ones, so this line is the exception rather than a permanent postscript. *@
             @if (_paid.Hourglasses > 0)
@@ -1177,6 +1181,8 @@ else
             if (_pack is null) return "";
 
             var set = _pack.Split(':')[0];
+            if (!CardIndex.EarnsPackPoints(set)) return "Special Packs earn no pack points.";
+
             var before = Session.Profile.Resources.PackPointsBySet.TryGetValue(set, out var p) ? p : 0;
             var after = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
 
@@ -1268,16 +1274,19 @@ else
                 collection[key] = (collection.TryGetValue(key, out var c) ? c : 0) + 1;
 
             // Pack points accrue per set and stop dead at the cap: packs opened while capped
-            // earn nothing at all, which is worth telling the user about.
+            // earn nothing at all, which is worth telling the user about. A Special Pack earns
+            // none in the first place.
             var points = new Dictionary<string, int>(p.Resources.PackPointsBySet);
-            var before = points.TryGetValue(set, out var pts) ? pts : 0;
-            var after = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
-            points[set] = after;
+            if (CardIndex.EarnsPackPoints(set))
+            {
+                var before = points.TryGetValue(set, out var pts) ? pts : 0;
+                points[set] = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
+            }
 
             // What the pack cost, if it was past the day's free ones and the setting is on. Read
             // from p before the log below is appended, so this pack is not counted against its
-            // own allowance.
-            paid = Session.PayForPacks(p, 1);
+            // own allowance. A Special Pack costs nothing here: events hand it out.
+            paid = CardIndex.UsesPackHourglasses(set) ? Session.PayForPacks(p, 1) : PackSpend.None;
 
             var log = new List<PackOpenEvent>(p.PackLog)
             {
@@ -1303,7 +1312,8 @@ else
         });
 
         var nowPoints = Session.Profile.Resources.PackPointsBySet.GetValueOrDefault(set);
-        _justLogged = (count, set, nowPoints, nowPoints >= GameRules.PackPointsCap);
+        _justLogged = (count, set, nowPoints,
+                       CardIndex.EarnsPackPoints(set) && nowPoints >= GameRules.PackPointsCap);
         _paid = paid;
         _miscount = null;
         _picked.Clear();
@@ -1596,7 +1606,10 @@ else
             // The whole batch against the day's allowance in one go, before any of it is logged:
             // priced pack by pack it would charge the first free pack to the first picture and
             // then the allowance to the rest of them.
-            paid = Session.PayForPacks(p, opened.Count);
+            //
+            // Special Packs are left out of the count: they open on event hourglasses, so they
+            // neither use a free pack nor cost one.
+            paid = Session.PayForPacks(p, opened.Count(o => CardIndex.UsesPackHourglasses(o.Pack.Split(':')[0])));
 
             // Which packs of the batch the hourglasses paid for: the day's free ones are used up
             // first, so it is the next `paid.FromHourglasses` of them, in order. Spread per row
@@ -1610,18 +1623,25 @@ else
                 var set = parts[0];
                 var keys = cards.Select(c => c.OwnershipKey).ToList();
 
+                // A Special Pack was left out of the count above, so it takes no share of either.
                 var cost = 0;
-                if (free > 0) free--;
-                else if (bought > 0) { bought--; cost = GameRules.PackHourglassesPerPack; }
+                if (CardIndex.UsesPackHourglasses(set))
+                {
+                    if (free > 0) free--;
+                    else if (bought > 0) { bought--; cost = GameRules.PackHourglassesPerPack; }
+                }
 
                 foreach (var key in keys)
                     collection[key] = collection.GetValueOrDefault(key) + 1;
 
-                var before = points.GetValueOrDefault(set);
-                var after = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
-                points[set] = after;
+                if (CardIndex.EarnsPackPoints(set))
+                {
+                    var before = points.GetValueOrDefault(set);
+                    var after = Math.Min(GameRules.PackPointsCap, before + GameRules.PackPointsPerPack);
+                    points[set] = after;
 
-                if (after >= GameRules.PackPointsCap && !capped.Contains(set)) capped.Add(set);
+                    if (after >= GameRules.PackPointsCap && !capped.Contains(set)) capped.Add(set);
+                }
 
                 // Variant is unknown from the user's point of view; they just opened "a pack".
                 log.Add(new PackOpenEvent(now, set, parts[1], "unknown", keys)

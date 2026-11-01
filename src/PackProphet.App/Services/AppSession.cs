@@ -349,6 +349,8 @@ public sealed class AppSession : IAsyncDisposable
             if (Data is null) return [];
 
             var today = DateOnly.FromDateTime(DateTime.Now);
+            // Hourglass sets only: borrowing rates is for planning what to open, and a Special
+            // Pack is not something anyone plans to open.
             return Index.OpenableSets
                 .Where(set => !Data.Rates.Covers(set))
                 .Where(set => Sets.IsReleased(set, today))
@@ -1614,6 +1616,42 @@ public sealed class AppSession : IAsyncDisposable
                     }
                 }
             }, undoable: false);
+    }
+
+    /// <summary>
+    /// One plan for several sets at once: a series given its own target is every set in it given
+    /// the same one. One edit rather than a SetPlan per set, so a save cannot land between them
+    /// and leave a series half on its own plan.
+    /// </summary>
+    public void SetPlan(RarityPlan plan, IReadOnlyCollection<string> sets)
+    {
+        if (plan.IsEmpty || sets.Count == 0) return;
+
+        var map = plan.CopiesByTier.Where(kv => kv.Value > 0)
+                      .OrderBy(kv => kv.Key)
+                      .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        Mutate(p =>
+        {
+            var bySet = new Dictionary<string, Dictionary<int, int>>(p.Targets.PlanBySet);
+            foreach (var set in sets) bySet[set] = new Dictionary<int, int>(map);
+            return p with { Targets = p.Targets with { PlanBySet = bySet } };
+        }, undoable: false);
+    }
+
+    /// <summary>Hand several sets back to the default plan, in one edit.</summary>
+    public void ClearPlanOverrides(IReadOnlyCollection<string> sets)
+    {
+        if (!sets.Any(HasPlanOverride)) return;
+
+        Mutate(p => p with
+        {
+            Targets = p.Targets with
+            {
+                PlanBySet = p.Targets.PlanBySet.Where(kv => !sets.Contains(kv.Key))
+                             .ToDictionary(kv => kv.Key, kv => kv.Value)
+            }
+        }, undoable: false);
     }
 
     /// <summary>Hand a set back to the default plan.</summary>

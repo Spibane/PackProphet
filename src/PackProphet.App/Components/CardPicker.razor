@@ -92,7 +92,7 @@
         <option value="">Any Set</option>
         @foreach (var series in Session.Sets.Series)
         {
-            <optgroup label="Series @series">
+            <optgroup label="@SetCatalog.SeriesLabel(series)">
                 @* Not named `code`: @code is a Razor directive, so a variable of that name is
                    parsed as one and the file stops compiling. *@
                 @foreach (var setCode in Session.Sets.SetsIn(series))
@@ -360,7 +360,7 @@ else
         : $"{owned} owned";
 
     private static string SpreadTip(IReadOnlyList<(PocketCard Card, int Count)> spread) =>
-        string.Join("\n", spread.Select(x => $"{x.Card.Set} {x.Card.Number} ×{x.Count}"));
+        string.Join("\n", spread.Select(x => $"{x.Card.Set} {x.Card.NumberLabel} ×{x.Count}"));
 
     /// <summary>Copies of this identity already in the deck.</summary>
     [Parameter] public Func<int, int> InDeck { get; set; } = _ => 0;

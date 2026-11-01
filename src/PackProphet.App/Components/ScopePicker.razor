@@ -42,14 +42,14 @@
     {
         @foreach (var series in Session.Sets.Series)
         {
-            <optgroup label="Series @series">
+            <optgroup label="@SetCatalog.SeriesLabel(series)">
                 @* A whole series is a scope people actually think in — "am I done with the A
                    sets" — and it sits above its own sets rather than in a separate list, so the
                    dropdown reads as one hierarchy. *@
                 @if (Merged)
                 {
                     <option value="series:@series" selected="@(Scope == $"series:{series}")">
-                        Series @series
+                        @SetCatalog.SeriesLabel(series)
                     </option>
                 }
                 @foreach (var set in Session.SetsInSeries(series))

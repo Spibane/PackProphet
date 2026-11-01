@@ -60,6 +60,10 @@ public sealed class PackArtCatalog
             var setCode = MatchSetCode(exp.Id, ours.Keys);
             if (setCode is null || !ours.TryGetValue(setCode, out var ourNames)) continue;
 
+            // A promo set's "packs" are its Vol. N groupings, which no booster stands for. Promo C
+            // has one so far, and the one-pack pairing below would hand it their promo booster.
+            if (CardIndex.IsPromoSet(setCode)) continue;
+
             foreach (var ourName in ourNames)
             {
                 var match = theirs.FirstOrDefault(t => Slug(t.Name) == Slug(ourName));
@@ -69,6 +73,14 @@ public sealed class PackArtCatalog
                 // unambiguous regardless of what it is called.
                 if (match is null && theirs.Count == 1 && ourNames.Length == 1)
                     match = theirs[0];
+
+                // Or ours carries the set's name in front of theirs: C1 sells "Dual Fusion
+                // Pikachu" where they say "Pikachu". Taken only when exactly one of theirs fits,
+                // so a set with a "Mewtwo" and a "Mega Mewtwo X" cannot hand one the other's art.
+                if (match is null
+                    && theirs.Where(t => Slug(t.Name).Length > 0 && Slug(ourName).EndsWith(Slug(t.Name), StringComparison.Ordinal))
+                             .ToArray() is [var only])
+                    match = only;
 
                 if (match is not null) _packIds[$"{setCode}:{ourName}"] = match.Id;
             }
@@ -103,20 +115,14 @@ public sealed class PackArtCatalog
             : "";
     }
 
-    /// <summary>Their set ids are lower-case and promos are "pa"/"pb" where ours are "PROMO-A".</summary>
+    /// <summary>Their set ids are lower-case and promos are "pa", "pb", "pc" where ours are "PROMO-A".</summary>
     private static string? MatchSetCode(string theirId, IEnumerable<string> ourSets)
     {
-        var candidates = theirId.ToUpperInvariant() switch
-        {
-            "PA" => new[] { "PROMO-A" },
-            "PB" => new[] { "PROMO-B" },
-            var other => [other]
-        };
+        var candidate = CardIndex.PromoSetFromShortCode(theirId) ?? theirId;
 
-        foreach (var candidate in candidates)
-            foreach (var ourSet in ourSets)
-                if (string.Equals(ourSet, candidate, StringComparison.OrdinalIgnoreCase))
-                    return ourSet;
+        foreach (var ourSet in ourSets)
+            if (string.Equals(ourSet, candidate, StringComparison.OrdinalIgnoreCase))
+                return ourSet;
 
         return null;
     }

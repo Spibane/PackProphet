@@ -9,7 +9,7 @@ public class CardIndexTests
     [Fact]
     public void IndexesEveryCard_AndKeysAreUnique()
     {
-        Assert.Equal(4317, Ix.All.Count);
+        Assert.Equal(4577, Ix.All.Count);
         Assert.Equal(Ix.All.Count, Ix.ByKey.Count); // no duplicate set+number upstream
         Assert.Equal("A1-1", Ix.All[0].Key);
     }
@@ -116,8 +116,8 @@ public class CardIndexTests
     {
         // The game treats owning a card as owning it for every set it appears in.
         var ix = Ix;
-        Assert.Equal(4317, ix.All.Count);
-        Assert.Equal(3866, ix.DistinctOwnableCards);
+        Assert.Equal(4577, ix.All.Count);
+        Assert.Equal(4126, ix.DistinctOwnableCards);
         Assert.Equal(451, ix.All.Count - ix.DistinctOwnableCards);
     }
 

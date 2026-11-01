@@ -296,12 +296,7 @@ public sealed class CardFact
         {
             if (SetCode is not { Length: > 0 } code) return null;
 
-            var set = code.ToUpperInvariant() switch
-            {
-                "PA" => "PROMO-A",
-                "PB" => "PROMO-B",
-                var other => other
-            };
+            var set = CardIndex.PromoSetFromShortCode(code) ?? code.ToUpperInvariant();
 
             var dash = Id.LastIndexOf('-');
             if (dash < 0 || !int.TryParse(Id[(dash + 1)..], out var number)) return null;
@@ -335,7 +330,15 @@ public sealed class CardFacts
     private readonly Dictionary<int, CardFact> _byIdentity;
     private readonly Dictionary<string, CardFact> _byPrinting;
 
-    public CardFacts(IEnumerable<CardFact>? facts)
+    /// <param name="index">
+    /// The card list, for a record that arrives without its identity. Upstream published C1 and
+    /// Promo C with every deckBuilderNr at 0, which left all 230 cards with no attacks, stage or
+    /// type although the rest of each record was there. The card list derives the same number
+    /// from the artwork, and agrees with upstream's on every card both have, so the printing a
+    /// record describes says which card it is. Optional: without it such a record is reachable
+    /// by printing only, as before.
+    /// </param>
+    public CardFacts(IEnumerable<CardFact>? facts, CardIndex? index = null)
     {
         _byIdentity = new();
         _byPrinting = new(StringComparer.OrdinalIgnoreCase);
@@ -346,7 +349,12 @@ public sealed class CardFacts
             // stats belong to the card and are shared by all its arts. Pack points belong to the
             // printing — an art rare costs 400 where its base card costs 35 — so reading those off
             // an identity lookup returns the base card's price.
-            if (f.DeckBuilderNr is int nr && nr > 0) _byIdentity.TryAdd(nr, f);
+            var identity = f.DeckBuilderNr is int nr && nr > 0
+                ? nr
+                : f.CardKey is { Length: > 0 } k && index?.ByKey.GetValueOrDefault(k) is { } card
+                    ? index.DeckNrOf(card)
+                    : null;
+            if (identity is int id) _byIdentity.TryAdd(id, f);
             if (f.CardKey is { Length: > 0 } key) _byPrinting.TryAdd(key, f);
         }
     }

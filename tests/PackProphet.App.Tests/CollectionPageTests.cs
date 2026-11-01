@@ -18,6 +18,28 @@ public class CollectionPageTests : AppHost
     }
 
     [Fact]
+    public async Task It_opens_on_the_newest_set_rather_than_a_Special_Pack()
+    {
+        // SP1 sorts after every set in every series, so "the last set that is not a promo" was
+        // SP1: a pack opened on its own weekly hourglass, and never the set being worked through.
+        var page = await PageAsync();
+
+        var active = page.Find(".set-tab.active .lbl").TextContent;
+        Assert.Contains("C1", active);
+        Assert.DoesNotContain("SP1", active);
+    }
+
+    [Fact]
+    public async Task A_Special_Pack_is_still_one_tap_away()
+    {
+        // Not shown by default is not hidden: its cards are collectable, and a link to it lands.
+        var page = await PageAsync();
+        Services.GetRequiredService<NavigationManager>().NavigateTo("collection?set=SP1");
+
+        page.WaitForAssertion(() => Assert.Contains("SP1", page.Find(".set-tab.active .lbl").TextContent));
+    }
+
+    [Fact]
     public async Task The_bar_sentence_is_readings_rather_than_a_run_of_text()
     {
         // On a phone this line wraps to two, and as a run of text it broke wherever the width ran

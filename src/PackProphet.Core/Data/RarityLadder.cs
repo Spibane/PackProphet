@@ -7,7 +7,7 @@ using PackProphet.Domain;
 /// "I want all diamonds" or "up to 2 star".
 /// </summary>
 /// <param name="Index">Position in the ladder. A completion target IS this index.</param>
-/// <param name="Group">Diamond / Star / Shiny / Crown.</param>
+/// <param name="Group">Diamond / Star / Shiny / Crown / Anomaly.</param>
 /// <param name="Count">Number of symbols, e.g. 2 for 2-star.</param>
 /// <param name="Codes">Rarity codes on this rung — 2-star covers both SR and SAR.</param>
 public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyList<string> Codes)
@@ -30,6 +30,7 @@ public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyLis
         "Star" => $"{Count}★",
         "Shiny" => $"Shiny {new string('✦', Count)}",
         "Crown" => "Crown ♛",
+        "Anomaly" => $"Anomaly {AnomalyMark}",
         _ => $"{Group} {Count}"
     };
 
@@ -43,6 +44,7 @@ public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyLis
         "Star" => new string('★', Count),
         "Shiny" => new string('✦', Count),
         "Crown" => "♛",
+        "Anomaly" => AnomalyMark,
         _ => Symbol
     };
 
@@ -64,8 +66,17 @@ public sealed record RarityRung(int Index, string Group, int Count, IReadOnlyLis
         "Star" => $"{Count}★",
         "Shiny" => $"{Count}✦",
         "Crown" => "♛",
+        "Anomaly" => AnomalyMark,
         _ => Symbol
     };
+
+    /// <summary>
+    /// The mark for the Anomaly rung: the three RGB Mews of SP1, which the game prints without a
+    /// number and the data gives no symbol count. Not one of the four family marks, because it is
+    /// not a step on any of their ladders, and a reference mark rather than anything star-shaped so
+    /// it cannot be read as a shiny.
+    /// </summary>
+    public const string AnomalyMark = "※";
 
     /// <summary>CSS class for colouring the glyphs by family.</summary>
     public string GlyphClass => Group.ToLowerInvariant();
@@ -102,6 +113,9 @@ public sealed class RarityLadder
         ["Star"] = 1,
         ["Shiny"] = 2,
         ["Crown"] = 3,
+        // Above Crown: SP1's three secret Mews, untradeable and unbuyable, so the pack is the only
+        // route. Upstream publishes no symbol count for it, so it is a rung of one.
+        ["Anomaly"] = 4,
     };
 
     public static bool IsKnownGroup(string group) => GroupOrder.ContainsKey(group);

@@ -46,13 +46,13 @@ public class TrackerImportTests
         var preview = TrackerImport.FromCsv(csv.ToString(), index);
 
         Assert.Empty(preview.Problems);
-        Assert.Equal(4317, preview.RowsRead);
-        Assert.Equal(4317, preview.RowsMatched);
+        Assert.Equal(4577, preview.RowsRead);
+        Assert.Equal(4577, preview.RowsMatched);
         Assert.Equal(0, preview.RowsUnmatched);
 
         // The 451 rows that collapse are re-listings — the same artwork printed in a later set.
         Assert.Equal(451, preview.RowsCollapsed);
-        Assert.Equal(3866, preview.DistinctOwned);
+        Assert.Equal(4126, preview.DistinctOwned);
         Assert.Equal(index.DistinctOwnableCards, preview.DistinctOwned);
     }
 

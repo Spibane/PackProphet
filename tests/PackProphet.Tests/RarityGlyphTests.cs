@@ -39,7 +39,7 @@ public class RarityGlyphTests
         Assert.All(Ladder.Rungs, r =>
         {
             Assert.False(string.IsNullOrWhiteSpace(r.Glyphs));
-            Assert.Contains(r.GlyphClass, new[] { "diamond", "star", "shiny", "crown" });
+            Assert.Contains(r.GlyphClass, new[] { "diamond", "star", "shiny", "crown", "anomaly" });
         });
     }
 }

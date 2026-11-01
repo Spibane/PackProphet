@@ -344,7 +344,7 @@
             .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
             .Take(8)
             .Select(c => new Item("Card", c.Name,
-                $"{c.Set} {c.Number} · {Owned(c)}", $"card/{c.Key}", null, c.ArtUrl));
+                $"{c.Set} {c.NumberLabel} · {Owned(c)}", $"card/{c.Key}", null, c.ArtUrl));
 
     private string Owned(PocketCard card)
     {

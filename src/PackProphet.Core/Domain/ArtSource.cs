@@ -1,5 +1,7 @@
 namespace PackProphet.Domain;
 
+using PackProphet.Data;
+
 /// <summary>
 /// Where a card's artwork is fetched from, in the order to try.
 ///
@@ -218,14 +220,10 @@ public static class ArtSource
 
     /// <summary>
     /// How TCGdex and Limitless spell a set code: as this app does, but for the promos, which are
-    /// P-A and P-B there.
+    /// P-A, P-B, P-C there.
     /// </summary>
-    public static string PublishedSetCode(string set) => set.ToUpperInvariant() switch
-    {
-        "PROMO-A" => "P-A",
-        "PROMO-B" => "P-B",
-        _ => set,
-    };
+    public static string PublishedSetCode(string set) =>
+        CardIndex.PromoLetter(set) is char series ? $"P-{series}" : set;
 
     /// <summary>
     /// The mirror's own spelling of a set code: lower case, and the promos are two letters rather
@@ -239,12 +237,8 @@ public static class ArtSource
     /// The reverse direction — their spelling back into this app's — lives on
     /// <see cref="PackProphet.Data.CardFact.CardKey"/>.
     /// </summary>
-    public static string MirrorSetCode(string set) => set.ToLowerInvariant() switch
-    {
-        "promo-a" => "pa",
-        "promo-b" => "pb",
-        var other => other,
-    };
+    public static string MirrorSetCode(string set) =>
+        CardIndex.PromoLetter(set) is char series ? $"p{char.ToLowerInvariant(series)}" : set.ToLowerInvariant();
 
     /// <summary>
     /// Booster art for a pack. Escaped because pack names carry spaces -- "Team Rocket" -- and

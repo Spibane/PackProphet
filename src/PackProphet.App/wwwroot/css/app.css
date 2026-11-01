@@ -3212,6 +3212,12 @@ h1[tabindex="-1"]:focus-visible { outline: none; }
 /* Sized so the chip lands on --ctl-h rather than pushing past it: the wrapper is the tallest thing
    in the chip, so its height plus the chip's padding and border IS the chip's height. */
 .pack-pick .pack-thumb { width: 1.3rem; height: 1.8rem; margin: 0; flex: none; }
+/* A name that does not fit is cut, not allowed to widen the rail. C1 sells "Dual Fusion Mega
+   Mewtwo X", and a nowrap chip that long pushed the rail into a horizontal scrollbar. The chip
+   carries the whole name as its title. */
+.pack-picks { min-width: 0; }
+.pack-pick { max-width: 100%; min-width: 0; }
+.pack-pick .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* A grid, not a flex row: with eight statistics the flex version wrapped into ragged rows whose
    columns did not line up. auto-fill keeps them aligned at any width without breakpoints. */
@@ -4316,11 +4322,15 @@ img[data-state="loading"] ~ .art-wait {
 .glyphs.star    { color: #775604; }
 .glyphs.shiny   { color: #156563; }
 .glyphs.crown   { color: #8038a3; }
+/* Anomaly is a fifth rung rather than a fifth family, but a chip needs a colour all the same.
+   Measured as the others were: 7.1:1 on the page, 5.3 on a selected chip, in both themes. */
+.glyphs.anomaly { color: #a12a4a; }
 
 [data-bs-theme="dark"] .glyphs.diamond { color: #9fbad2; }
 [data-bs-theme="dark"] .glyphs.star    { color: #e3b334; }
 [data-bs-theme="dark"] .glyphs.shiny   { color: #3fbdbd; }
 [data-bs-theme="dark"] .glyphs.crown   { color: #c288dd; }
+[data-bs-theme="dark"] .glyphs.anomaly { color: #f08ca6; }
 
 /* The parallel foil mark is not one of the four families and is not coloured like one -- see
    RarityLadder.FoilMark. Stated rather than inherited, because the chip it sits on dims its own

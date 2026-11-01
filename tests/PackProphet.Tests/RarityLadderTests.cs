@@ -21,11 +21,13 @@ public class RarityLadderTests
     }
 
     [Fact]
-    public void LadderIsOrdered_DiamondsThenStarsThenShinyThenCrown()
+    public void LadderIsOrdered_DiamondsThenStarsThenShinyThenCrownThenAnomaly()
     {
+        // Anomaly last for a second reason beside rarity: a saved target is a set of rung
+        // indices, so a rung added anywhere else would shift every target anyone has saved.
         var symbols = Ladder.Rungs.Select(r => r.Symbol).ToArray();
         Assert.Equal(
-            new[] { "1◆", "2◆", "3◆", "4◆", "1★", "2★", "3★", "Shiny ✦", "Shiny ✦✦", "Crown ♛" },
+            new[] { "1◆", "2◆", "3◆", "4◆", "1★", "2★", "3★", "Shiny ✦", "Shiny ✦✦", "Crown ♛", "Anomaly ※" },
             symbols);
     }
 

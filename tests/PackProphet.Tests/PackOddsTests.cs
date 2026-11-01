@@ -214,26 +214,28 @@ public class PackOddsTests
     {
         var sets = Odds.UnpriceablePacks.Select(k => k.Split(':')[0]).Distinct().OrderBy(s => s);
 
-        // None. 2.12.0 published rates for B4b, the one set still waiting.
-        // That is not the normal state: card data appears upstream as soon as a set is
-        // announced and pull rates are worked out from what people open, so the newest set or
-        // two is usually unpriced. When the next set arrives this list grows again, and that set
-        // must be listed: omitting it from a ranking would read as "nothing to gain from it",
-        // the opposite of the truth.
+        // C1 and SP1, both released 2026-10-29 and published in 2.13.1 without rates. That is
+        // the normal state: card data appears upstream as soon as a set is announced and pull
+        // rates are worked out from what people open, so the newest set or two is usually
+        // unpriced. Every such set must be listed: omitting it from a ranking would read as
+        // "nothing to gain from it", the opposite of the truth.
         //
         // Promos are NOT listed. They have no rates either, but they are not packs anyone can
         // choose to open, so warning about them would report a problem the user cannot act on.
-        Assert.Empty(sets);
+        Assert.Equal(new[] { "C1", "SP1" }, sets);
         Assert.True(Snapshot.Rates().Covers("B4b"));
     }
 
     [Fact]
     public void ASetWithoutPullRates_IsListedAsUnpriceable()
     {
-        // B4b as it stood before 2.12.0: real, purchasable packs and no rates.
+        // B4b as it stood before 2.12.0: real, purchasable packs and no rates. Listed beside
+        // whatever the snapshot has not priced yet, which is not this test's subject.
+        var already = Odds.UnpriceablePacks.Select(k => k.Split(':')[0]).ToHashSet();
         var odds = new PackOdds(Snapshot.Index(), Snapshot.RatesWithout("B4b"));
 
-        Assert.Equal(new[] { "B4b" }, odds.UnpriceablePacks.Select(k => k.Split(':')[0]).Distinct());
+        Assert.Equal(new[] { "B4b" },
+            odds.UnpriceablePacks.Select(k => k.Split(':')[0]).Distinct().Where(s => !already.Contains(s)));
     }
 
     [Fact]

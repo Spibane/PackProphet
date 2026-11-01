@@ -163,6 +163,40 @@ public sealed class CardIndex
         set.StartsWith("PROMO", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// The series letter of a promo set — 'C' for "PROMO-C" — or null for any other set. The
+    /// other datasets spell promo sets from this letter, "P-C" or "pc", and each of the places
+    /// translating had "A" and "B" written out, so Promo C arrived spelled in a way none knew.
+    /// </summary>
+    public static char? PromoLetter(string set) =>
+        set.Length == "PROMO-A".Length && set.StartsWith("PROMO-", StringComparison.OrdinalIgnoreCase)
+        && char.IsAsciiLetter(set[^1])
+            ? char.ToUpperInvariant(set[^1]) : null;
+
+    /// <summary>
+    /// This app's spelling of a promo set from another dataset's short one — "pc", "PC" or "P-C"
+    /// to "PROMO-C" — or null when <paramref name="code"/> is not one.
+    /// </summary>
+    public static string? PromoSetFromShortCode(string code)
+    {
+        var c = code.Trim();
+        if (c.Length is not (2 or 3) || char.ToUpperInvariant(c[0]) != 'P' || !char.IsAsciiLetter(c[^1])) return null;
+        if (c.Length == 3 && c[1] != '-') return null;
+        return $"PROMO-{char.ToUpperInvariant(c[^1])}";
+    }
+
+    /// <summary>
+    /// A Special Pack set — SP1, "First Partners", the first. Openable, but on its own weekly
+    /// hourglass rather than the one every other pack shares, and only for a window. So it is a
+    /// pack you open when the game hands you the currency, never the set you are working through,
+    /// and nothing should land on it by default.
+    ///
+    /// By code rather than by upstream's "Special" series, because the card list runs ahead of the
+    /// set list and a new SP set has to be recognised the day its cards arrive.
+    /// </summary>
+    public static bool IsSpecialSet(string set) =>
+        set.Length > 2 && set.StartsWith("SP", StringComparison.OrdinalIgnoreCase) && char.IsAsciiDigit(set[2]);
+
+    /// <summary>
     /// Packs a player can actually decide to open. Promo "Vol. N" groupings are excluded: they
     /// describe how a promo was handed out rather than something available to open, so they are
     /// neither offered as choices nor counted as packs with missing data.

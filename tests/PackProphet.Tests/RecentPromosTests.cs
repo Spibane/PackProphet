@@ -76,14 +76,16 @@ public class RecentPromosTests
     [Fact]
     public void TheCurrentPromoSetIsTheNewestSeriesOne()
     {
-        // PROMO-B while series B is the newest. Asserted through the catalogue's own ordering
-        // rather than by naming B, so a series C does not make this a lie.
+        // PROMO-C while series C is the newest. Asserted through the catalogue's own ordering
+        // rather than by naming C, so a series D does not make this a lie. NewestSeries rather
+        // than the last series: the Special series sorts after every lettered one and has no
+        // promo set.
         var current = RecentPromos.CurrentSet(Ix, Sets);
 
         Assert.NotNull(current);
         Assert.True(CardIndex.IsPromoSet(current));
 
-        var newestSeries = Sets.Series.Last();
+        var newestSeries = Sets.NewestSeries;
         Assert.Equal(newestSeries, SetCatalog.SeriesFromCode(current));
     }
 

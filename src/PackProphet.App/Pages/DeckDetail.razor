@@ -584,7 +584,7 @@ else
             {
                 var card = Session.PrintingOf(g.Key);
                 return new Entry(g.Key, card?.Name ?? $"#{g.Key}",
-                                 card is null ? "" : $"{card.Set} {card.Number}",
+                                 card is null ? "" : $"{card.Set} {card.NumberLabel}",
                                  g.Count(), Session.OwnedCopiesOfIdentity(g.Key), card);
             })
             .OrderBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)

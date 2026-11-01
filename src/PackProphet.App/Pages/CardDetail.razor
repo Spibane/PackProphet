@@ -32,7 +32,7 @@ else
         <BackLink Label="Back" OnBack="Back"
                   Title="Back (Escape)" />
         <h1 class="title">@_card.Name</h1>
-        <span class="subtitle">@_card.Set&thinsp;@_card.Number</span>
+        <span class="subtitle">@_card.Set&thinsp;@_card.NumberLabel</span>
         <span class="actions">
             @if (_rung is not null)
             {
@@ -157,7 +157,7 @@ else
             {
                 <p class="small text-body-secondary mb-0">
                     Also listed as
-                    @string.Join(", ", _reprints.Where(c => c.Key != _card.Key).Select(c => $"{c.Set} {c.Number}"));
+                    @string.Join(", ", _reprints.Where(c => c.Key != _card.Key).Select(c => $"{c.Set} {c.NumberLabel}"));
                     one copy counts for all.
                 </p>
             }

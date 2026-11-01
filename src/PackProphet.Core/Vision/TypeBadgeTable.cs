@@ -1,5 +1,7 @@
 namespace PackProphet.Vision;
 
+using PackProphet.Domain;
+
 /// <summary>
 /// The types read off every card's badge, as generated offline by tools/CardHashGen and committed
 /// to wwwroot beside the art fingerprints.
@@ -66,11 +68,8 @@ public sealed class TypeBadgeTable
         _byKey.Keys.Select(SetOf).Where(s => s.Length > 0)
               .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
-    private static string SetOf(string key)
-    {
-        var dash = key.LastIndexOf('-');
-        return dash <= 0 ? "" : key[..dash];
-    }
+    private static string SetOf(string key) =>
+        PocketCard.TrySplitKey(key, out var set, out _) ? set : "";
 
     /// <summary>
     /// Reads the committed format: a comment header, then one card per line as set, number and
@@ -135,9 +134,6 @@ public sealed class TypeBadgeTable
         return string.Join('\n', lines) + "\n";
     }
 
-    private static int NumberOf(string key)
-    {
-        var dash = key.LastIndexOf('-');
-        return dash > 0 && int.TryParse(key[(dash + 1)..], out var n) ? n : 0;
-    }
+    private static int NumberOf(string key) =>
+        PocketCard.TrySplitKey(key, out _, out var n) ? n : 0;
 }

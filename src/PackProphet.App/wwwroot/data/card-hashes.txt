@@ -1,5 +1,5 @@
 # PackProphet card art fingerprints
-# generated 2026-11-01
+# generated 2026-11-28
 # set number 128-bit-dhash · see src/PackProphet.Core/Vision/ArtHash.cs
 A1 1 8eb2b6dc86acdaf2c6ff05ff833c51b7
 A1 2 8eb2b60c2d33b1b1c2ff058c0130ccff

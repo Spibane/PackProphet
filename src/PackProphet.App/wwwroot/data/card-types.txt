@@ -1,5 +1,5 @@
 # PackProphet card type badges
-# generated 2026-11-01
+# generated 2026-11-28
 # set number type[/type] · see src/PackProphet.Core/Vision/TypeBadge.cs
 A1 1 Grass
 A1 2 Grass
